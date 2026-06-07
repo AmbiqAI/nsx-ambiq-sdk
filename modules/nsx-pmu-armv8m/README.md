@@ -32,4 +32,4 @@ CMSIS-6's `cmsis_<compiler>.h`.
 ## Dependencies
 
 - `nsx-cmsis-core` (required) — CMSIS-6 core + PMU headers.
-- `nsx-core` — for `ns_printf` and runtime sequencing helpers.
+- `nsx-core` — for shared status, delay, and runtime helper APIs used by the PMU layer.

@@ -5,10 +5,18 @@ if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-audio is added.")
 endif()
 
-if(NSX_SOC_FAMILY STREQUAL "apollo5b" OR NSX_SOC_FAMILY STREQUAL "apollo510" OR NSX_SOC_FAMILY STREQUAL "apollo510b" OR NSX_SOC_FAMILY STREQUAL "apollo510L" OR NSX_SOC_FAMILY STREQUAL "apollo330P")
+if(DEFINED NSX_MODULE_DIR_nsx_core)
+    set(NSX_AUDIO_CORE_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_core}")
+else()
+    set(NSX_AUDIO_CORE_DIR "${NSX_ROOT}/modules/nsx-core")
+endif()
+
+if(NSX_SOC_FAMILY STREQUAL "apollo3" OR NSX_SOC_FAMILY STREQUAL "apollo3p")
+    set(NSX_AUDIO_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo3/nsx_pdm_apollo3.c)
+elseif(NSX_SOC_FAMILY STREQUAL "apollo5b" OR NSX_SOC_FAMILY STREQUAL "apollo510" OR NSX_SOC_FAMILY STREQUAL "apollo510b" OR NSX_SOC_FAMILY STREQUAL "apollo510L" OR NSX_SOC_FAMILY STREQUAL "apollo330P")
     set(NSX_AUDIO_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/nsx_pdm_apollo5.c)
 else()
-    message(FATAL_ERROR "Unsupported NSX_SOC_FAMILY for nsx-audio: ${NSX_SOC_FAMILY}. Supported: apollo5b/apollo510/apollo510b/apollo510L/apollo330P.")
+    message(FATAL_ERROR "Unsupported NSX_SOC_FAMILY for nsx-audio: ${NSX_SOC_FAMILY}. Supported: apollo3/apollo3p/apollo5b/apollo510/apollo510b/apollo510L/apollo330P.")
 endif()
 
 add_library(nsx_audio STATIC ${NSX_AUDIO_SOURCE})
@@ -16,13 +24,13 @@ set_target_properties(nsx_audio PROPERTIES EXPORT_NAME audio)
 add_library(nsx::audio ALIAS nsx_audio)
 
 target_link_libraries(nsx_audio PUBLIC
-    nsx_soc_hal
-    nsx_core
+    nsx::soc_hal
+    nsx::core
 )
 
 target_include_directories(nsx_audio PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_ROOT}/modules/nsx-core/includes-api>
+    $<BUILD_INTERFACE:${NSX_AUDIO_CORE_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-audio/includes-api>
 )
 

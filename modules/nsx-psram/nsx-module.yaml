@@ -9,7 +9,7 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: BSP-aware external PSRAM initialization shim for supported R5 EVBs.
+summary: BSP-aware external PSRAM initialization shim for supported Apollo3p, Apollo4, Apollo5, and Apollo330 NSX boards.
 
 capabilities:
   - psram
@@ -43,6 +43,13 @@ depends:
 
 compatibility:
   boards:
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
     - apollo330mP_evb
     - apollo510_evb
     - apollo510b_evb
@@ -52,6 +59,8 @@ compatibility:
     - apollo510
     - apollo510b
     - apollo510L
+    - apollo4l
+    - apollo4p
     - apollo3p
   toolchains:
     - arm-none-eabi-gcc

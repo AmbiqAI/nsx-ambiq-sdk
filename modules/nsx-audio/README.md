@@ -1,12 +1,13 @@
 # nsx-audio
 
-PDM audio capture helper for AmbiqSuite R5 Apollo5-family targets.
+PDM audio capture helper for AmbiqSuite-backed NSX targets with staged PDM support.
 
 This module exposes the shared NSX audio API over the PDM HAL and board PDM pin
-helpers staged in `nsx-ambiqsuite-r5`. It initializes the PDM peripheral, sets
-up DMA-backed capture, and invokes an application callback when samples are
-available. Buffer ownership, sample processing, transport, and application
-protocols remain the caller's responsibility.
+helpers staged in the AmbiqSuite provider tiers used by the selected SoC. It
+initializes the PDM peripheral, sets up DMA-backed capture, and invokes an
+application callback when samples are available. Buffer ownership, sample
+processing, transport, and application protocols remain the caller's
+responsibility.
 
 ## Design notes
 
@@ -23,6 +24,8 @@ protocols remain the caller's responsibility.
 
 | SoC | PDM |
 |-----|-----|
+| Apollo3 | Yes |
+| Apollo3P | Yes |
 | Apollo5B | Yes |
 | Apollo510 | Yes |
 | Apollo510B | Yes |

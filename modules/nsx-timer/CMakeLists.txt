@@ -21,12 +21,18 @@ else()
 endif()
 
 nsx_select_soc_arch_dir(NSX_TIMER_ARCH_DIR
+    APOLLO3 apollo3
+    APOLLO4 apollo4
     APOLLO5 apollo5
     APOLLO330 apollo330
 )
 
 set(NSX_TIMER_ARCH_SOURCE "")
-if(NSX_TIMER_ARCH_DIR STREQUAL "apollo5")
+if(NSX_TIMER_ARCH_DIR STREQUAL "apollo3")
+    set(NSX_TIMER_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo3/nsx_timer_ap3.c)
+elseif(NSX_TIMER_ARCH_DIR STREQUAL "apollo4")
+    set(NSX_TIMER_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo4/nsx_timer_ap4.c)
+elseif(NSX_TIMER_ARCH_DIR STREQUAL "apollo5")
     set(NSX_TIMER_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/nsx_timer_ap5.c)
 elseif(NSX_TIMER_ARCH_DIR STREQUAL "apollo330")
     set(NSX_TIMER_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo330/nsx_timer_ap330.c)

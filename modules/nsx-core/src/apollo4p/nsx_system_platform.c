@@ -80,9 +80,9 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
     if (cfg == NULL) return 0;
 
     if (cfg->transport == NSX_DEBUG_ITM) {
-        am_bsp_itm_printf_enable();
+        return am_bsp_itm_printf_enable();
     } else if (cfg->transport == NSX_DEBUG_UART) {
-        am_bsp_uart_printf_enable();
+        return am_bsp_uart_printf_enable();
     }
 
     return 0;

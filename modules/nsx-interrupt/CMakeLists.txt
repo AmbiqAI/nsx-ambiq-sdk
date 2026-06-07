@@ -12,12 +12,18 @@ else()
 endif()
 
 nsx_select_soc_arch_dir(NSX_INTERRUPT_ARCH_DIR
+    APOLLO3 apollo3
+    APOLLO4 apollo4
     APOLLO5 apollo5
     APOLLO330 apollo330
 )
 
 set(NSX_INTERRUPT_ARCH_SOURCE "")
-if(NSX_INTERRUPT_ARCH_DIR STREQUAL "apollo5")
+if(NSX_INTERRUPT_ARCH_DIR STREQUAL "apollo3")
+    set(NSX_INTERRUPT_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo3/nsx_interrupt_vectors.c)
+elseif(NSX_INTERRUPT_ARCH_DIR STREQUAL "apollo4")
+    set(NSX_INTERRUPT_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo4/nsx_interrupt_vectors.c)
+elseif(NSX_INTERRUPT_ARCH_DIR STREQUAL "apollo5")
     set(NSX_INTERRUPT_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/nsx_interrupt_vectors.c)
 elseif(NSX_INTERRUPT_ARCH_DIR STREQUAL "apollo330")
     set(NSX_INTERRUPT_ARCH_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo330/nsx_interrupt_vectors.c)

@@ -93,6 +93,8 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
         };
         NSX_TRY(nsx_irq_register(&irq_cfg), "Failed to register timer interrupt");
     }
+
+    ui32Status = am_hal_timer_start(cfg->timer);
     return ui32Status;
 }
 

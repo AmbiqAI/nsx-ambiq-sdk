@@ -39,12 +39,19 @@ depends:
     - nsx-core
     - nsx-timer
     - nsx-soc-hal
+  optional:
+    - nsx-ambiq-usb-r4
     - nsx-ambiq-usb-r5
-  optional: []
 
 compatibility:
   boards:
-    - "*"
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
   socs:
     - apollo330P
     - apollo510

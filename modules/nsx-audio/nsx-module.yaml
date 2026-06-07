@@ -6,13 +6,13 @@ module:
 support:
   ambiqsuite: true
   zephyr: false
-summary: PDM audio capture helper for AmbiqSuite R5 Apollo5-family targets.
+summary: PDM audio capture helper for AmbiqSuite-backed NSX targets with staged PDM support.
 capabilities: [audio, pdm, microphone, dma]
 use_cases:
   - initialize board-supported PDM capture with caller-owned buffers
   - receive DMA-backed PCM sample callbacks from a PDM microphone
   - provide a stable NSX audio API across AmbiqSuite releases
-agent_keywords: [audio, pdm, microphone, capture, dma, sampling, r5]
+agent_keywords: [audio, pdm, microphone, capture, dma, sampling]
 build:
   cmake:
     package: nsx_audio
@@ -31,8 +31,6 @@ compatibility:
     - apollo510
     - apollo510b
     - apollo510L
-    - apollo4l
-    - apollo4p
     - apollo3
     - apollo3p
   toolchains: [arm-none-eabi-gcc, armclang, atfe]

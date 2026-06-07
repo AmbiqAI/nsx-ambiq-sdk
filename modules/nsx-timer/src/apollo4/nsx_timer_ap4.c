@@ -1,12 +1,6 @@
 /**
  * @file nsx_timer_ap4.c
- * @author Ambiq
- * @brief Apollo5-family timer implementation
- * @version 0.1
- * @date 2022-10-11
- *
- * @copyright Copyright (c) 2024
- *
+ * @brief Apollo4-specific timer implementation
  */
 
 #include "nsx_timer.h"
@@ -15,7 +9,6 @@
 #include "am_util.h"
 #include "nsx_core.h"
 #include "nsx_interrupt.h"
-#include "nsx_core.h"
 
 extern nsx_timer_config_t *nsx_timer_config[NSX_TIMER_TEMPCO + 1];
 
@@ -50,23 +43,20 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
     uint32_t ui32Status = AM_HAL_STATUS_SUCCESS;
 
 #ifndef NSX_DISABLE_API_VALIDATION
-    // Apollo5-family API validation
+    // Apollo4-specific API validation
 #endif
 
     am_hal_timer_config_t TimerConfig;
 
-    // Set the timer configuration
-    // The default timer configuration is HFRC_DIV16, EDGE, compares=0, no trig.
     am_hal_timer_default_config_set(&TimerConfig);
 
-    // modify the default
     if (cfg->timer == NSX_TIMER_TEMPCO) {
         TimerConfig.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV16;
     }
 
-    if ((cfg->enableInterrupt)) {
+    if (cfg->enableInterrupt) {
         TimerConfig.eFunction = AM_HAL_TIMER_FN_UPCOUNT;
-        TimerConfig.ui32Compare1 = cfg->periodInMicroseconds / 6; // 6 ticks per uS
+        TimerConfig.ui32Compare1 = cfg->periodInMicroseconds / 6;
     }
 
     ui32Status = am_hal_timer_config(cfg->timer, &TimerConfig);
@@ -75,12 +65,9 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
         return ui32Status;
     }
 
-    //
-    // Stop and clear the timer.
-    //
     am_hal_timer_clear(cfg->timer);
 
-    if ((cfg->enableInterrupt)) {
+    if (cfg->enableInterrupt) {
         am_hal_timer_interrupt_clear(AM_HAL_TIMER_MASK(cfg->timer, AM_HAL_TIMER_COMPARE1));
         am_hal_timer_interrupt_enable(AM_HAL_TIMER_MASK(cfg->timer, AM_HAL_TIMER_COMPARE1));
         nsx_irq_config_t irq_cfg = {
@@ -91,7 +78,10 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
             .priority = AM_IRQ_PRIORITY_DEFAULT,
             .enable = true,
         };
-        NSX_TRY(nsx_irq_register(&irq_cfg), "Failed to register timer interrupt");
+        ui32Status = nsx_irq_register(&irq_cfg);
+        if (ui32Status != NSX_STATUS_SUCCESS) {
+            return ui32Status;
+        }
     }
 
     ui32Status = am_hal_timer_start(cfg->timer);
@@ -104,7 +94,7 @@ uint32_t nsx_timer_us_read(nsx_timer_config_t *cfg) {
         return 0xDEADBEEF;
     }
 #endif
-    return am_hal_timer_read(cfg->timer) / 6; // 6 ticks per uS
+    return am_hal_timer_read(cfg->timer) / 6;
 }
 
 uint32_t nsx_timer_clear(nsx_timer_config_t *cfg) {

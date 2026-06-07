@@ -7,8 +7,9 @@ support:
   ambiqsuite: true
   zephyr: false
 summary: >-
-  Power-management helpers for sleep policy, shutdown control, and low-power
-  workflows.
+  AmbiqSuite power-management helpers for sleep policy, shutdown control,
+  and low-power workflows across supported Apollo3, Apollo4, and Apollo5
+  targets.
 capabilities:
   - power
   - low_power
@@ -34,12 +35,29 @@ depends:
   optional: []
 compatibility:
   boards:
-    - '*'
+    - apollo3_evb
+    - apollo3_evb_cygnus
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
   socs:
+    - apollo3
+    - apollo3p
+    - apollo4l
+    - apollo4p
     - apollo330P
     - apollo510
     - apollo510b
     - apollo510L
   toolchains:
     - arm-none-eabi-gcc
+    - armclang
     - atfe

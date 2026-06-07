@@ -405,6 +405,10 @@ void Reset_Handler(void) {
     // Call CPP constructor init
     __asm("    bl      __libc_init_array\n");
 
+    // Secure boot handoff may leave global interrupts masked. Restore the
+    // architectural app-entry expectation before user code runs.
+    __asm("    cpsie   i\n");
+
     //
     // Call the application's entry point.
     //

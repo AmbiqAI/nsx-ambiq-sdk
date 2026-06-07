@@ -86,7 +86,11 @@ uint32_t nsx_spi_read(
     am_hal_iom_transfer_t Transaction;
     Transaction.ui8Priority = 1;
     Transaction.ui32InstrLen = regLen;
+#if defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     Transaction.ui64Instr = reg;
+#else
+    Transaction.ui32Instr = (uint32_t)reg;
+#endif
     Transaction.eDirection = AM_HAL_IOM_RX;
     Transaction.ui32NumBytes = bufLen;
     Transaction.pui32RxBuffer = (uint32_t *)buf;
@@ -120,7 +124,11 @@ uint32_t nsx_spi_read_dma(
     am_hal_iom_transfer_t Transaction;
     Transaction.ui8Priority = 1;
     Transaction.ui32InstrLen = regLen;
+#if defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     Transaction.ui64Instr = reg;
+#else
+    Transaction.ui32Instr = (uint32_t)reg;
+#endif
     Transaction.eDirection = AM_HAL_IOM_RX;
     Transaction.ui32NumBytes = bufLen;
     Transaction.pui32RxBuffer = (uint32_t *)buf;
@@ -149,7 +157,11 @@ uint32_t nsx_spi_write(
     Transaction.ui8Priority = 1;
 
     Transaction.ui32InstrLen = regLen;
+#if defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     Transaction.ui64Instr = reg;
+#else
+    Transaction.ui32Instr = (uint32_t)reg;
+#endif
     Transaction.eDirection = AM_HAL_IOM_TX;
     Transaction.ui32NumBytes = bufLen;
     Transaction.pui32TxBuffer = (uint32_t *)buf;
@@ -176,7 +188,11 @@ uint32_t nsx_spi_transfer(
      */
     am_hal_iom_transfer_t Transaction;
     Transaction.ui32InstrLen = 1;
+#if defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     Transaction.ui64Instr = 0;
+#else
+    Transaction.ui32Instr = 0;
+#endif
     Transaction.eDirection = AM_HAL_IOM_FULLDUPLEX;
     Transaction.ui32NumBytes = size;
     Transaction.pui32TxBuffer = (uint32_t *)txBuf;

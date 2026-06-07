@@ -162,7 +162,7 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
         /* Steps 2-3: BSP helper handles TPIU/ITM/SWO pin/printf.
          * Trace clock on these parts = XTAL_HS 48 MHz.
          * JLink SWO viewer: -cpufreq 48000000 -swofreq 1000000 */
-        am_bsp_itm_printf_enable();
+    return am_bsp_itm_printf_enable();
 #else
         /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
          * Trace clock = HFRC_96MHz (fixed, independent of CPU perf mode).
@@ -193,7 +193,7 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
         am_util_stdio_printf_init((am_util_stdio_print_char_t)am_hal_itm_print);
 #endif
     } else if (cfg->transport == NSX_DEBUG_UART) {
-        am_bsp_uart_printf_enable();
+        return am_bsp_uart_printf_enable();
     }
 
     return 0;

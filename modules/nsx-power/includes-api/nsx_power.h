@@ -1,7 +1,7 @@
 /**
  * @file nsx_power.h
  * @author Ambiq
- * @brief NSX power-management helpers for AmbiqSuite R5 targets.
+ * @brief NSX power-management helpers for supported AmbiqSuite Apollo targets.
  * @version 0.1
  * @date 2022-09-02
  *
@@ -45,7 +45,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
-// This interface is staged for AmbiqSuite R5-backed NSX targets.
+// This interface is staged for supported AmbiqSuite-backed NSX Apollo targets.
 //
 //*****************************************************************************
 #ifndef NSX_POWER_H
@@ -95,7 +95,7 @@ typedef struct {
     bool need_iom;                  ///< Keep IOM interfaces powered
     bool need_uart;                 ///< Keep alternative UART powered
     bool small_tcm;                 ///< Use 32K ITCM + 128K DTCM (vs full)
-    bool need_tempco;               ///< Enable temperature compensation
+    bool need_tempco;               ///< Enable Apollo4 TempCo where supported
     bool need_itm;                  ///< Keep ITM/SWO debug output
     bool need_xtal;                 ///< Keep XTAL oscillator
     bool spotmgr_collapse;          ///< SpotManager STM state collapse (Apollo5 family)
