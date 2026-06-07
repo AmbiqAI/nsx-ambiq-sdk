@@ -4,7 +4,7 @@ module:
   name: nsx-ambiq-hal-r2
   type: backend_specific
   category: sdk_component
-  version: "3.2.1"
+  version: "2.5.1"
 
 support:
   ambiqsuite: true

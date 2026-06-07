@@ -8,5 +8,5 @@ the board BSP include path together with the prebuilt `libam_bsp.a` dependency.
 
 ## Toolchains
 
-Validated under `arm-none-eabi-gcc`, `armclang`, and `clang`/ATfE. The
-prebuilt `libam_bsp.a` is AAPCS-compatible and consumed by all three.
+Reference builds use `arm-none-eabi-gcc`. `armclang` and `clang`/ATfE consume
+the same GCC-built `libam_bsp.a` archive because it is AAPCS-compatible.

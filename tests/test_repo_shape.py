@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 
 MODULE_REPO_RESIDUE = {
     ".github",
     ".git",
-    ".gitignore",
     "release-please-config.json",
     ".release-please-manifest.json",
 }
@@ -26,8 +24,16 @@ OUT_OF_CORE_PATH_SUFFIXES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
+    ("modules", "nsx-ambiq-usb-r4"),
     ("modules", "nsx-ambiq-usb-r5"),
     ("modules", "nsx-usb"),
+}
+
+PROVIDER_MODULE_PREFIXES = {
+    ("modules", "nsx-ambiqsuite-r2"),
+    ("modules", "nsx-ambiqsuite-r3"),
+    ("modules", "nsx-ambiqsuite-r4"),
+    ("modules", "nsx-ambiqsuite-r5"),
 }
 
 FORBIDDEN_POLICY_TERMS = (
@@ -44,6 +50,32 @@ FORBIDDEN_POLICY_TERMS = (
 FORBIDDEN_CORE_MODULES = {
     "nsx-peripherals",
 }
+
+MULTI_SOC_CURATED_MODULES = {
+    "nsx-audio",
+    "nsx-core",
+    "nsx-interrupt",
+    "nsx-power",
+    "nsx-psram",
+    "nsx-timer",
+    "nsx-uart",
+}
+
+PROVIDER_SDK_MODULE_PREFIXES = {
+    ("modules", "nsx-ambiqsuite-r2", "sdk"),
+    ("modules", "nsx-ambiqsuite-r3", "sdk"),
+    ("modules", "nsx-ambiqsuite-r4", "sdk"),
+    ("modules", "nsx-ambiqsuite-r5", "sdk"),
+    ("modules", "nsx-ambiq-usb-r4", "sdk"),
+    ("modules", "nsx-ambiq-usb-r5", "sdk"),
+}
+
+LEGACY_NEURALSPOT_COMPAT_TERMS = (
+    "g_ns_state",
+    "ns_debug_log",
+    "ns_micro_profiler",
+    "ns_ambiqsuite_harness",
+)
 
 
 def test_modules_are_logical_directories(module_dirs: list[Path]) -> None:
@@ -67,6 +99,8 @@ def test_boards_are_logical_modules(board_dirs: list[Path]) -> None:
 def test_no_nested_repo_scaffolding(repo_root: Path) -> None:
     offenders = []
     for path in (repo_root / "modules").glob("*/*"):
+        if path.name == ".gitignore":
+            continue
         if path.name in MODULE_REPO_RESIDUE:
             offenders.append(path.relative_to(repo_root).as_posix())
     assert offenders == []
@@ -266,31 +300,35 @@ def test_core_bundle_does_not_import_optional_middleware(repo_root: Path) -> Non
     assert offenders == []
 
 
-def test_curated_modules_do_not_ship_non_r5_implementation_residue(repo_root: Path) -> None:
-    non_r5_path_names = {"apollo3", "apollo3p", "apollo4", "apollo4l", "apollo4p"}
-    non_r5_text = re.compile(
-        r"\b(AP3|AP4|Apollo3|Apollo4|apollo3p|apollo3|apollo4l|apollo4p|apollo4|"
-        r"AM_PART_APOLLO3|AM_PART_APOLLO4|APOLLO3|APOLLO4|"
-        r"NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b|release_sdk_[34]"
-    )
+def test_curated_modules_limit_multi_soc_impl_dirs_to_opted_in_modules(repo_root: Path) -> None:
+    multi_soc_path_names = {"apollo3", "apollo3p", "apollo4", "apollo4l", "apollo4p"}
     offenders = []
     for path in (repo_root / "modules").rglob("*"):
         relative = path.relative_to(repo_root)
         relative_parts = relative.parts
         if ".git" in relative_parts:
             continue
-        if relative_parts[:3] == ("modules", "nsx-ambiqsuite-r5", "sdk"):
+        if any(relative_parts[:len(prefix)] == prefix for prefix in PROVIDER_SDK_MODULE_PREFIXES):
             continue
-        if relative_parts[:3] == ("modules", "nsx-ambiq-usb-r5", "sdk"):
+        if not path.is_dir() or path.name not in multi_soc_path_names:
             continue
-        if path.is_dir() and path.name in non_r5_path_names:
+        module_name = relative_parts[1]
+        if module_name not in MULTI_SOC_CURATED_MODULES:
             offenders.append(relative.as_posix())
-            continue
-        if not path.is_file() or path.name == "CHANGELOG.md":
+    assert offenders == []
+
+
+def test_curated_modules_do_not_reference_legacy_neuralspot_compat_state(repo_root: Path) -> None:
+    offenders = []
+    for path in (repo_root / "modules").rglob("*"):
+        relative = path.relative_to(repo_root)
+        relative_parts = relative.parts
+        if ".git" in relative_parts or not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
-        if non_r5_text.search(text):
-            offenders.append(relative.as_posix())
+        for term in LEGACY_NEURALSPOT_COMPAT_TERMS:
+            if term in text:
+                offenders.append((relative.as_posix(), term))
     assert offenders == []
 
 
@@ -300,6 +338,8 @@ def test_nsx_modules_do_not_ship_freertos_allocator_residue(repo_root: Path) -> 
         if not path.is_file() or "nsx-ambiqsuite-r5/sdk" in path.as_posix():
             continue
         relative_parts = path.relative_to(repo_root).parts
+        if any(relative_parts[:len(prefix)] == prefix for prefix in PROVIDER_MODULE_PREFIXES):
+            continue
         if any(relative_parts[:len(prefix)] == prefix for prefix in OPTIONAL_MIDDLEWARE_MODULE_PREFIXES):
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")

@@ -37,6 +37,7 @@ FORBIDDEN_CORE_CAPABILITIES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULES = {
+    "nsx-ambiq-usb-r4",
     "nsx-ambiq-usb-r5",
     "nsx-audio",
     "nsx-usb",
@@ -48,6 +49,63 @@ STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"
 EXPECTED_SDK_RELEASE = "R5.2.0"
 EXPECTED_UPSTREAM_REVISION = "release_sdk5p2p0-bee737faa"
+EXPECTED_PROVIDER_METADATA = {
+    "nsx-ambiqsuite-r2": {
+        "version": "2.5.1",
+        "sdk_release": "R2.5.1",
+        "upstream_revision": "stable-AT110e",
+    },
+    "nsx-ambiqsuite-r3": {
+        "version": "3.2.1",
+        "sdk_release": "R3.2.0",
+        "upstream_revision": "release_sdk_3_2_0-dd5f40c14b",
+    },
+    "nsx-ambiqsuite-r4": {
+        "version": "4.5.1",
+        "sdk_release": "R4.5.0",
+        "upstream_revision": "release_sdk_4_5_0-a1ef3b89f9",
+    },
+    "nsx-ambiqsuite-r5": {
+        "version": EXPECTED_NSX_RELEASE_VERSION,
+        "sdk_release": EXPECTED_SDK_RELEASE,
+        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
+    },
+}
+EXPECTED_VERSION_BY_MODULE_NAME = {
+    "nsx-ambiqsuite-r2": "2.5.1",
+    "nsx-ambiq-hal-r2": "2.5.1",
+    "nsx-ambiq-bsp-r2": "2.5.1",
+    "nsx-ambiqsuite-r3": "3.2.1",
+    "nsx-ambiq-hal-r3": "3.2.1",
+    "nsx-ambiq-bsp-r3": "3.2.1",
+    "nsx-ambiqsuite-r4": "4.5.1",
+    "nsx-ambiq-hal-r4": "4.5.1",
+    "nsx-ambiq-bsp-r4": "4.5.1",
+    "nsx-ambiq-usb-r4": "4.5.1",
+    "nsx-ambiqsuite-r5": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiq-hal-r5": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiq-bsp-r5": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiq-usb-r5": EXPECTED_NSX_RELEASE_VERSION,
+}
+
+
+def expected_manifest_version(manifest: dict) -> str:
+    name = manifest_name(manifest)
+    if name in EXPECTED_VERSION_BY_MODULE_NAME:
+        return EXPECTED_VERSION_BY_MODULE_NAME[name]
+
+    if manifest["module"]["type"] == "board":
+        board_name = name.removeprefix("nsx-board-")
+        if board_name.startswith("apollo2"):
+            return "2.5.1"
+        if board_name.startswith("apollo330") or board_name.startswith("apollo5"):
+            return EXPECTED_NSX_RELEASE_VERSION
+        if board_name.startswith("apollo3"):
+            return "3.2.1"
+        if board_name.startswith("apollo4"):
+            return "4.5.1"
+
+    return EXPECTED_NSX_RELEASE_VERSION
 
 
 def expected_provider_toolchains(repo_root: Path) -> list[str]:
@@ -92,13 +150,16 @@ def test_manifest_names_are_unique(manifests: dict[Path, dict]) -> None:
 def test_manifest_versions_are_aligned_to_sdk_release(manifests: dict[Path, dict]) -> None:
     offenders = []
     for path, manifest in manifests.items():
-        if manifest["module"]["version"] != EXPECTED_NSX_RELEASE_VERSION:
+        expected_version = expected_manifest_version(manifest)
+        if manifest["module"]["version"] != expected_version:
             offenders.append((path.name, manifest_name(manifest), manifest["module"]["version"]))
     assert offenders == []
 
-    provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-ambiqsuite-r5")
-    assert provider["module"]["sdk_release"] == EXPECTED_SDK_RELEASE
-    assert provider["module"]["upstream_revision"] == EXPECTED_UPSTREAM_REVISION
+    for provider_name, expected in EXPECTED_PROVIDER_METADATA.items():
+        provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == provider_name)
+        assert provider["module"]["version"] == expected["version"]
+        assert provider["module"]["sdk_release"] == expected["sdk_release"]
+        assert provider["module"]["upstream_revision"] == expected["upstream_revision"]
 
 
 def test_manifest_build_targets_are_declared(manifests: dict[Path, dict]) -> None:

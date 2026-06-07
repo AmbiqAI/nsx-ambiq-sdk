@@ -26,8 +26,9 @@ def test_soc_hal_alias_is_descriptor_driven(repo_root: Path) -> None:
 
     assert "NSX_SOC_TARGET_EXPORT_NAME" in cmake
     assert "soc_hal_apollo510 ALIAS" not in cmake
-    assert "apollo3p" not in manifest
-    assert "apollo4p" not in manifest
+    assert "apollo2" in manifest
+    assert "apollo3p" in manifest
+    assert "apollo4p" in manifest
     assert "apollo330P" in manifest
     assert "apollo510L" in manifest
 
@@ -108,13 +109,17 @@ def test_toolchain_helper_defines_required_contract_functions(repo_root: Path) -
     assert "target_compile_options(${target} INTERFACE ${nsx_compile_flags})" in helper
 
 
-def test_r5_cmake_selectors_exclude_legacy_soc_families(repo_root: Path) -> None:
+def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) -> None:
     helper = read(repo_root, "cmake/nsx_toolchain_flags.cmake")
-    legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
-    assert legacy_selector.search(helper) is None
+    assert "set(NSX_SOC_FAMILIES_APOLLO2 apollo2)" in helper
+    assert "set(NSX_SOC_FAMILIES_APOLLO3 apollo3 apollo3p)" in helper
+    assert "set(NSX_SOC_FAMILIES_APOLLO4 apollo4l apollo4p)" in helper
+    assert "set(NSX_SOC_FAMILIES_APOLLO5 apollo5b apollo510 apollo510b apollo510L)" in helper
 
+    legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
     offenders = []
-    for path in sorted((repo_root / "modules").glob("*/CMakeLists.txt")):
+    for module_name in ("nsx-ambiq-hal-r5", "nsx-ambiq-bsp-r5", "nsx-ambiq-usb-r5", "nsx-pmu-armv8m"):
+        path = repo_root / "modules" / module_name / "CMakeLists.txt"
         text = path.read_text(encoding="utf-8")
         if legacy_selector.search(text):
             offenders.append(path.relative_to(repo_root).as_posix())
@@ -148,6 +153,12 @@ def configure_contract_project(
     board: str,
     toolchain_family: str,
     modules: tuple[str, ...] = (),
+    *,
+    provider: str = "ambiqsuite-r5",
+    ambiqsuite_version: str = "R5.2.0",
+    provider_module: str = "nsx-ambiqsuite-r5",
+    hal_module: str = "nsx-ambiq-hal-r5",
+    bsp_module: str = "nsx-ambiq-bsp-r5",
 ) -> subprocess.CompletedProcess[str]:
     source_dir = tmp_path / toolchain_family / board
     build_dir = source_dir / "build"
@@ -160,18 +171,22 @@ def configure_contract_project(
         "\n".join(
             [
                 "cmake_minimum_required(VERSION 3.20)",
+                "if(POLICY CMP0123)",
+                "    cmake_policy(SET CMP0123 NEW)",
+                "endif()",
+                "set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)",
                 "project(nsx_contract C)",
                 "include(GNUInstallDirs)",
                 f'set(NSX_ROOT "{repo_root.as_posix()}")',
                 f'set(NSX_CMAKE_DIR "{(repo_root / "cmake").as_posix()}")',
-                'set(NSX_SDK_PROVIDER "ambiqsuite-r5")',
+                f'set(NSX_SDK_PROVIDER "{provider}")',
                 f'set(NSX_TOOLCHAIN_FAMILY "{toolchain_family}")',
-                'set(NSX_AMBIQSUITE_VERSION "R5.2.0")',
-                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk").as_posix()}")',
+                f'set(NSX_AMBIQSUITE_VERSION "{ambiqsuite_version}")',
+                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / provider_module / "sdk").as_posix()}")',
                 f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal-r5").as_posix()}" nsx-ambiq-hal-r5)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp-r5").as_posix()}" nsx-ambiq-bsp-r5)',
+                f'add_subdirectory("{(repo_root / "modules" / hal_module).as_posix()}" {hal_module})',
+                f'add_subdirectory("{(repo_root / "modules" / bsp_module).as_posix()}" {bsp_module})',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-soc-hal").as_posix()}" nsx-soc-hal)',
                 *module_lines,
                 "",
@@ -259,6 +274,109 @@ def test_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Path) 
             "nsx-ambiq-usb-r5",
             "nsx-usb",
         ),
+    )
+    assert result.returncode == 0, result.stdout
+
+
+def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    modules = (
+        "nsx-core",
+        "nsx-interrupt",
+        "nsx-timer",
+        "nsx-i2c",
+        "nsx-spi",
+        "nsx-uart",
+        "nsx-psram",
+    )
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo4p_evb",
+        "gcc",
+        modules,
+        provider="ambiqsuite-r4",
+        ambiqsuite_version="R4.5.0",
+        provider_module="nsx-ambiqsuite-r4",
+        hal_module="nsx-ambiq-hal-r4",
+        bsp_module="nsx-ambiq-bsp-r4",
+    )
+    assert result.returncode == 0, result.stdout
+
+
+def test_r3_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    modules = (
+        "nsx-core",
+        "nsx-interrupt",
+        "nsx-timer",
+        "nsx-perf",
+        "nsx-audio",
+        "nsx-gpio",
+        "nsx-i2c",
+        "nsx-spi",
+        "nsx-uart",
+        "nsx-psram",
+    )
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo3p_evb",
+        "gcc",
+        modules,
+        provider="ambiqsuite-r3",
+        ambiqsuite_version="R3.2.0",
+        provider_module="nsx-ambiqsuite-r3",
+        hal_module="nsx-ambiq-hal-r3",
+        bsp_module="nsx-ambiq-bsp-r3",
+    )
+    assert result.returncode == 0, result.stdout
+
+
+def test_r4_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo4p_evb",
+        "gcc",
+        ("nsx-ambiq-usb-r4",),
+        provider="ambiqsuite-r4",
+        ambiqsuite_version="R4.5.0",
+        provider_module="nsx-ambiqsuite-r4",
+        hal_module="nsx-ambiq-hal-r4",
+        bsp_module="nsx-ambiq-bsp-r4",
+    )
+    assert result.returncode == 0, result.stdout
+
+
+def test_r4_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo4p_evb",
+        "gcc",
+        (
+            "nsx-core",
+            "nsx-interrupt",
+            "nsx-timer",
+            "nsx-ambiq-usb-r4",
+            "nsx-usb",
+        ),
+        provider="ambiqsuite-r4",
+        ambiqsuite_version="R4.5.0",
+        provider_module="nsx-ambiqsuite-r4",
+        hal_module="nsx-ambiq-hal-r4",
+        bsp_module="nsx-ambiq-bsp-r4",
     )
     assert result.returncode == 0, result.stdout
 

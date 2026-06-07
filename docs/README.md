@@ -1,11 +1,12 @@
 # Maintainer Docs
 
-These docs are for contributors maintaining the NSX AmbiqSuite R5 module bundle. User-facing usage should stay in the root `README.md` and module-level READMEs.
+These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo. User-facing usage should stay in the root `README.md` and module-level READMEs.
 
 ## Current State
 
 - `platform-coverage.md` lists staged, descriptor-only, and planned SoC/board coverage.
 - `r5-sdk-intake-report.md` records the current AmbiqSuite R5.2.0 intake and artifact build status.
+- `split-repo-exit-checklist.md` tracks what must be true before the individual R3/R4/R5 SDK repos can be retired.
 - `toolchain-smoke.md` describes opt-in local/CI link smokes for staged toolchains.
 
 ## Intake And Scope
