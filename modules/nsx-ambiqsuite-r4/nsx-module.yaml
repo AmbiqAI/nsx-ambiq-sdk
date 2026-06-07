@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiqsuite-r4
+  type: sdk_provider
+  category: sdk_provider
+  provider: ambiqsuite-r4
+  version: "4.5.1"
+  sdk_release: "R4.5.0"
+  upstream_revision: "release_sdk_4_5_0-a1ef3b89f9"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: AmbiqSuite r4 SDK provider selection for Apollo4L and Apollo4P based NSX targets.
+
+capabilities:
+  - sdk_provider
+  - ambiqsuite
+  - apollo4_family
+
+use_cases:
+  - choose the SDK baseline for Apollo4 apps
+  - provide upstream SDK content for r4-based platform stacks
+  - foundation for r4 HAL and BSP layers
+
+agent_keywords:
+  - ambiqsuite
+  - r4
+  - sdk
+  - provider
+
+build:
+  cmake:
+    package: nsx_soc_apollo4p
+    targets:
+      - nsx::sdk_ambiqsuite_r4
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo4l
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

@@ -1,0 +1,16 @@
+[project]
+name = "nsx-ambiq-sdk-r5"
+version = "5.2.23"
+description = "Curated AmbiqSuite R5 SDK-core modules for NSX"
+requires-python = ">=3.10"
+
+[dependency-groups]
+ci = [
+    "pytest>=8",
+    "PyYAML>=6",
+    "pre-commit>=3.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

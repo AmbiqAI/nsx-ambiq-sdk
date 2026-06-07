@@ -1,0 +1,56 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-bsp-r3
+  type: backend_specific
+  category: sdk_component
+  version: "3.2.1"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Curated BSP wrapper surface for board-support integration on AmbiqSuite r3 targets.
+
+capabilities:
+  - bsp_wrapper
+  - board_support
+  - sdk_component
+
+use_cases:
+  - board-support integration for r3 targets
+  - stable BSP access without wiring raw SDK board files by hand
+  - dependency for board-oriented application bring-up on r3
+
+agent_keywords:
+  - bsp
+  - board support
+  - r3
+  - wrapper
+
+build:
+  cmake:
+    package: nsx_board_apollo3p_evb
+    targets:
+      - nsx::ambiq_bsp
+
+depends:
+  required:
+    - nsx-ambiqsuite-r3
+    - nsx-ambiq-hal-r3
+  optional: []
+
+compatibility:
+  boards:
+    - apollo3_evb
+    - apollo3_evb_cygnus
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo3p_evb_cygnus
+  socs:
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

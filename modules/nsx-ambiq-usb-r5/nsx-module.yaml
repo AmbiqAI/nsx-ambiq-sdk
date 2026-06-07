@@ -1,0 +1,65 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-usb-r5
+  type: backend_specific
+  category: sdk_component
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: AmbiqSuite R5 USB substrate for TinyUSB on supported Ambiq SoCs.
+
+capabilities:
+  - usb_device
+  - ambiq_usb
+  - tinyusb_substrate
+  - sdk_component
+
+use_cases:
+  - provide the Ambiq TinyUSB device-controller port for r5 targets
+  - expose SDK-vendored TinyUSB sources to higher-level USB modules
+  - support bare-metal or framework-selected USB service loops
+
+agent_keywords:
+  - usb
+  - tinyusb
+  - ambiq
+  - r5
+  - dcd
+
+build:
+  cmake:
+    package: nsx_soc_apollo510
+    targets:
+      - nsx::ambiq_usb_r5
+
+requires_app_contract:
+  - USB descriptors and enabled TinyUSB classes are application or wrapper policy.
+  - CDC buffer hook symbols are provided by the consuming wrapper or application.
+  - The service model is selected by the wrapper or application; bare-metal polling is not forced here.
+
+depends:
+  required:
+    - nsx-ambiqsuite-r5
+    - nsx-ambiq-hal-r5
+    - nsx-ambiq-bsp-r5
+  optional: []
+
+compatibility:
+  boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

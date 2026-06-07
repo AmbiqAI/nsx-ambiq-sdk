@@ -1,0 +1,56 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-hal-r2
+  type: backend_specific
+  category: sdk_component
+  version: "3.2.1"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Curated Ambiq HAL wrapper surface for AmbiqSuite r2 targets.
+
+capabilities:
+  - hal_wrapper
+  - ambiq_hal
+  - sdk_component
+
+use_cases:
+  - access supported Ambiq HAL services on r2 targets
+  - wrap raw SDK HAL content behind a stable NSX-facing surface
+  - dependency for platform and BSP integration on r2
+
+agent_keywords:
+  - hal
+  - ambiq
+  - r2
+  - wrapper
+
+build:
+  cmake:
+    package: nsx_soc_apollo2
+    targets:
+      - nsx::ambiq_hal
+
+depends:
+  required:
+    - nsx-cmsis-core
+    - nsx-ambiqsuite-r2
+  optional: []
+
+compatibility:
+  boards:
+    - apollo2_evb
+    - apollo2_evb_cygnus
+    - apollo2_evb
+    - apollo2_evb_cygnus
+    - apollo2_evb_cygnus
+  socs:
+    - apollo2
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

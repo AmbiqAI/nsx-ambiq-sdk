@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiqsuite-r5
+  type: sdk_provider
+  category: sdk_provider
+  provider: ambiqsuite-r5
+  version: "5.2.23"
+  sdk_release: "R5.2.0"
+  upstream_revision: release_sdk5p2p0-bee737faa
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: AmbiqSuite r5 SDK provider selection for staged Apollo510, Apollo510L, and Apollo330P NSX targets.
+
+capabilities:
+  - sdk_provider
+  - ambiqsuite
+  - apollo5_family
+
+use_cases:
+  - choose the SDK baseline for Apollo5-generation apps
+  - provide upstream SDK content for r5-based platform stacks
+  - foundation for r5 HAL and BSP layers
+
+agent_keywords:
+  - ambiqsuite
+  - r5
+  - sdk
+  - provider
+
+build:
+  cmake:
+    package: nsx_soc_apollo510
+    targets:
+      - nsx::sdk_ambiqsuite_r5
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-perf
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Generic performance measurement helpers for timing and lightweight profiling.
+
+capabilities:
+  - profiling
+  - timing
+  - performance_measurement
+
+use_cases:
+  - generic performance instrumentation
+  - timing-critical code measurement
+  - lightweight profiling bring-up
+
+agent_keywords:
+  - perf
+  - profiling
+  - timing
+  - benchmark
+
+build:
+  cmake:
+    package: nsx_perf
+    targets:
+      - nsx::perf
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-hal-r5
+  type: backend_specific
+  category: sdk_component
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Curated Ambiq HAL wrapper surface for AmbiqSuite r5 targets.
+
+capabilities:
+  - hal_wrapper
+  - ambiq_hal
+  - sdk_component
+
+use_cases:
+  - access supported Ambiq HAL services on r5 targets
+  - wrap raw SDK HAL content behind a stable NSX-facing surface
+  - dependency for platform and BSP integration on r5
+
+agent_keywords:
+  - hal
+  - ambiq
+  - r5
+  - wrapper
+
+build:
+  cmake:
+    package: nsx_soc_apollo510
+    targets:
+      - nsx::ambiq_hal
+
+depends:
+  required:
+    - nsx-cmsis-core
+    - nsx-ambiqsuite-r5
+  optional: []
+
+compatibility:
+  boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

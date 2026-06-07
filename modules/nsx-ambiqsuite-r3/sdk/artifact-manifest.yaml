@@ -1,0 +1,113 @@
+sdk:
+  provider: ambiqsuite-r3
+  version: R3.2.0
+  upstream_revision: release_sdk_3_2_0-dd5f40c14b
+  source_kind: git_ref
+  source_ref: R3.2.0_Final
+  raw_source_committed: false
+
+build:
+  generated_at: 2026-06-01
+  source: curated AmbiqSuite R3.2.0 payload with repeatable SDK rebuild support
+  toolchains:
+    gcc:
+      status: built
+      archive_suffix: .a
+      debug_symbols: false
+      release_cflags: '-g0'
+    atfe:
+      status: built
+      archive_suffix: -atfe.a
+      debug_symbols: false
+      release_cflags: '-g0'
+    armclang:
+      status: built
+      archive_suffix: .lib
+      debug_symbols: false
+      release_cflags: '-g0'
+
+parts:
+  - logical_skew: apollo3
+    mcu_dir: mcu/apollo3
+    hal_source_dir: mcu/apollo3/hal
+    hal_artifacts:
+      gcc:
+        path: lib/apollo3/libam_hal.a
+        sha256: e10abcad393610513fb51121072b51a7af698bb71149e77ff8caf2f43b7325e6
+      atfe:
+        path: lib/apollo3/libam_hal-atfe.a
+        sha256: 461145ae34e841b025ba2eb53d329fac3d5d795e74993e4a5ebe33c5abcee51a
+      armclang:
+        path: lib/apollo3/libam_hal.lib
+        sha256: e92b16e1339cf18fa4577af6b0bae07724469cff3007b0206204d8e1c20575fa
+  - logical_skew: apollo3p
+    mcu_dir: mcu/apollo3p
+    hal_source_dir: mcu/apollo3p/hal
+    hal_artifacts:
+      gcc:
+        path: lib/apollo3p/libam_hal.a
+        sha256: c6dd64f7553f05335c3cabb40861d815c34653fcf2eeb4a2e54f687d8b7d387d
+      atfe:
+        path: lib/apollo3p/libam_hal-atfe.a
+        sha256: 34dbfe67ad16c9e652d18b6fc20906d0d88455a9d7d43233bf0feb74c007fdc0
+      armclang:
+        path: lib/apollo3p/libam_hal.lib
+        sha256: daa2b84c1d35d029766d60af37bd6920a4ec7351bacb597317b83cd40a800a49
+
+boards:
+  - nsx_board: apollo3_evb
+    ambiq_board_name: apollo3_evb
+    logical_skew: apollo3
+    bsp_source_dir: boards/apollo3_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: lib/apollo3/apollo3_evb/libam_bsp.a
+        sha256: bbba955cffb01f22a1b4a4ce4ebc3a1d062340ba652f5c74668f31cb6be3d1a0
+      atfe:
+        path: lib/apollo3/apollo3_evb/libam_bsp-atfe.a
+        sha256: 2fbcd41518479c461eea3453d6ff2fe6c6e8daaa811a02633cad4ce198c9521d
+      armclang:
+        path: lib/apollo3/apollo3_evb/libam_bsp.lib
+        sha256: 26c1a9614a073d81aec43b1c9ba7355fb6b0799bbc8ffe391e79a10ca851a427
+  - nsx_board: apollo3_evb_cygnus
+    ambiq_board_name: apollo3_evb_cygnus
+    logical_skew: apollo3
+    bsp_source_dir: boards/apollo3_evb_cygnus/bsp
+    bsp_artifacts:
+      gcc:
+        path: lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
+        sha256: cd4ced2794351c590d59c71c141d3cc3142e77702ceed887b2a2f34397e69675
+      atfe:
+        path: lib/apollo3/apollo3_evb_cygnus/libam_bsp-atfe.a
+        sha256: d1c9612009fde2bb8955b2d02c7634d750f48d45c702f6b01dbc5a37d3c42957
+      armclang:
+        path: lib/apollo3/apollo3_evb_cygnus/libam_bsp.lib
+        sha256: 9cd6f69d097c7ba6e99895615dd010e4a8b27c79c8787b3d8238a2b430e9677c
+  - nsx_board: apollo3p_evb
+    ambiq_board_name: apollo3p_evb
+    logical_skew: apollo3p
+    bsp_source_dir: boards/apollo3p_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: lib/apollo3p/apollo3p_evb/libam_bsp.a
+        sha256: ed82fe212ae35cfbad37425f7439b2b923ff850916def3a13216078126d92387
+      atfe:
+        path: lib/apollo3p/apollo3p_evb/libam_bsp-atfe.a
+        sha256: 6a1b1cf4f86d2faf4b9e25db2e475611451dea5a72f509846a7b894f4ef23db1
+      armclang:
+        path: lib/apollo3p/apollo3p_evb/libam_bsp.lib
+        sha256: 4032d578c44796e264e70972a069928153aa40550ec8bbeadba627060f8387d4
+  - nsx_board: apollo3p_evb_cygnus
+    ambiq_board_name: apollo3p_evb_cygnus
+    logical_skew: apollo3p
+    bsp_source_dir: boards/apollo3p_evb_cygnus/bsp
+    bsp_artifacts:
+      gcc:
+        path: lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
+        sha256: c96de48b9714bb57fbe1485eab783e2e44478593ddf3c849cb6c4ebc0c4c7acc
+      atfe:
+        path: lib/apollo3p/apollo3p_evb_cygnus/libam_bsp-atfe.a
+        sha256: e5324713dff5a539dc5e98ee496e0eb56689b3859468b47eecee861c463d168c
+      armclang:
+        path: lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.lib
+        sha256: 38f3f1d2dac2c3d4077fd1b1302abd0d02d9c3beded8552b509a1b25cfefc373

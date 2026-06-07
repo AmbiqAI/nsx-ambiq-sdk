@@ -1,0 +1,19 @@
+{
+  "name": "nsx-ambiq-sdk-r5",
+  "build": {
+    "dockerfile": "../docker/dev-ci.Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "remoteUser": "root",
+  "remoteEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/opt/venvs/nsx-r5",
+    "ARMLM_ACTIVATION_CODE": "${localEnv:ARMLM_ACTIVATION_CODE}",
+    "PATH": "/opt/toolchains/gcc/bin:/opt/toolchains/acfe/bin:/opt/toolchains/atfe/bin:${containerEnv:PATH}",
+    "GCC_ROOT": "/opt/toolchains/gcc",
+    "ACFE_ROOT": "/opt/toolchains/acfe",
+    "ATFE_ROOT": "/opt/toolchains/atfe"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}

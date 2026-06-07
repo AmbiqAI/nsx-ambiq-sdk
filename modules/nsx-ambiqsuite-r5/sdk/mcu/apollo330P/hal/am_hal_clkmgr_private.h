@@ -1,0 +1,109 @@
+//*****************************************************************************
+//
+//! @file am_hal_clkmgr_private.h
+//!
+//! @brief Clock manager functions that manage system clocks and minimize
+//!        power consumption by powering down clocks when possible.
+//!
+//! @addtogroup clkmgr_ap510L CLKMGR - Clock Manager
+//! @ingroup apollo330P_hal
+//! @{
+//
+//*****************************************************************************
+
+//*****************************************************************************
+//
+// ${copyright}
+//
+// This is part of revision ${version} of the AmbiqSuite Development Package.
+//
+//*****************************************************************************
+//! @cond CLKMGR_PRIVATE_FUNC
+#ifndef AM_HAL_CLKMGR_PRIVATE_H
+#define AM_HAL_CLKMGR_PRIVATE_H
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "am_hal_clkmgr.h"
+
+//*****************************************************************************
+//
+//! @brief Handle Call to Legacy CLKGEN AM_HAL_CLKGEN_CONTROL_HFADJ_ENABLE
+//!        This function will convert and call HFRC clock configuration.
+//!
+//! @note This API is inteded for use by HAL only. Do not call this API from
+//!       Application/BSP.
+//!
+//! @param pArgs - Argument passed to the AM_HAL_CLKGEN_CONTROL_HFADJ_ENABLE
+//!                for custom HFADJ configuration
+//!
+//! @return status - Status for the operation, as defined in am_hal_status_e
+//
+//*****************************************************************************
+extern uint32_t am_hal_clkmgr_private_clkgen_hfadj_apply(void* pArgs);
+
+//*****************************************************************************
+//
+//! @brief Handle Call to Legacy CLKGEN AM_HAL_CLKGEN_CONTROL_HFADJ_DISABLE
+//!        This function will convert and call HFRC clock configuration.
+//!
+//! @note This API is inteded for use by HAL only. Do not call this API from
+//!       Application/BSP.
+//!
+//! @return status - Status for the operation, as defined in am_hal_status_e
+//
+//*****************************************************************************
+extern uint32_t am_hal_clkmgr_private_clkgen_hfadj_disable();
+
+//*****************************************************************************
+//
+//! @brief Clock manager handling before CPU enters deepsleep
+//!
+//! @note This API is inteded for use by HAL only. Do not call this API from
+//!       Application/BSP.
+//! @note This API is to be called from the critical section of the deep sleep
+//!       handling
+//
+//*****************************************************************************
+extern void am_hal_clkmgr_private_deepsleep_enter();
+
+//*****************************************************************************
+//
+//! @brief Clock manager handling after CPU exits from deepsleep
+//!
+//! @note This API is inteded for use by HAL only. Do not call this API from
+//!       Application/BSP.
+//! @note This API is to be called from the critical section of the deep sleep
+//!       handling
+//
+//*****************************************************************************
+extern void am_hal_clkmgr_private_deepsleep_exit();
+
+//*****************************************************************************
+//
+//! @brief Send the RFXTAL configuration to radio subsystem via mailbox
+//!
+//! @note This API is inteded for use by HAL only. Do not call this API from
+//!       Application/BSP.
+//!
+//! @return status - Status for the operation, as defined in am_hal_status_e
+//
+//*****************************************************************************
+extern uint32_t am_hal_clkmgr_private_rfxtal_config_send();
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //AM_HAL_CLKMGR_PRIVATE_H
+//! @endcond CLKMGR_PRIVATE_FUNC
+
+//*****************************************************************************
+//
+// End Doxygen group.
+//! @}
+//
+//*****************************************************************************

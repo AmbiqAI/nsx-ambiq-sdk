@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-timer
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Caller-directed timer, ticker, and periodic callback helpers for AmbiqSuite-backed NSX targets.
+
+capabilities:
+  - timer
+  - ticker
+  - periodic_callback
+
+use_cases:
+  - reusable microsecond ticker reads
+  - periodic interrupt callbacks
+  - low-level timer service for SDK transport modules
+
+agent_keywords:
+  - timer
+  - ticker
+  - interrupt
+  - callback
+
+build:
+  cmake:
+    package: nsx_timer
+    targets:
+      - nsx::timer
+
+depends:
+  required:
+    - nsx-core
+    - nsx-interrupt
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

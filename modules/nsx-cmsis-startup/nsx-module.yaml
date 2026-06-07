@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-cmsis-startup
+  type: backend_specific
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: CMSIS and startup integration for vector tables, startup code, and early boot wiring.
+
+capabilities:
+  - cmsis
+  - startup
+  - boot_integration
+
+use_cases:
+  - startup code wiring
+  - vector table integration
+  - common boot and reset initialization
+
+agent_keywords:
+  - cmsis
+  - startup
+  - vector table
+  - boot
+
+build:
+  cmake:
+    package: nsx_soc_${target.soc}
+    targets:
+      - nsx::startup
+
+depends:
+  required:
+    - nsx-cmsis-core
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

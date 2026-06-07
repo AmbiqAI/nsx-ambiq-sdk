@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-interrupt
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Per-SDK interrupt-dispatch layer that owns startup vector symbols and routes NVIC IRQ lines to registered handlers.
+
+capabilities:
+  - interrupt
+  - irq_dispatch
+  - nvic
+
+use_cases:
+  - centralized IRQ-line handler registration
+  - GPIO bank vector ownership for nsx-gpio
+  - dedicated peripheral IRQ routing for transport modules
+
+agent_keywords:
+  - interrupt
+  - irq
+  - nvic
+  - vector
+  - isr
+
+build:
+  cmake:
+    package: nsx_interrupt
+    targets:
+      - nsx::interrupt
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

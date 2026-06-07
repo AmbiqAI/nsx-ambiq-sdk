@@ -1,0 +1,61 @@
+schema_version: 1
+module:
+  name: nsx-core
+  type: runtime
+  version: "5.2.23"
+support:
+  ambiqsuite: true
+  zephyr: false
+summary: Core runtime initialization, universal helpers, and byte ring-buffer support.
+capabilities:
+  - runtime
+  - startup
+  - application_lifecycle
+  - debug_output
+  - delay
+  - interrupt_control
+  - ring_buffer
+use_cases:
+  - baseline app bring-up
+  - reusable runtime foundation
+  - printf, low-power debug output, delay, and interrupt helpers
+  - byte ring-buffer support
+  - most NSX applications
+agent_keywords:
+  - core
+  - runtime
+  - app foundation
+  - ring buffer
+build:
+  cmake:
+    package: nsx_core
+    targets:
+      - nsx::core
+      - nsx::runtime_core
+      - nsx::compiler
+      - nsx::util
+      - nsx::mem
+      - nsx::core_lifecycle
+      - nsx::runtime
+      - nsx::system
+depends:
+  required:
+    - nsx-soc-hal
+  optional: []
+compatibility:
+  boards:
+    - '*'
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

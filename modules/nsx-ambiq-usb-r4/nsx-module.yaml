@@ -1,0 +1,56 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-usb-r4
+  type: backend_specific
+  category: sdk_component
+  version: "4.5.1"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: AmbiqSuite R4 USB substrate for TinyUSB on Apollo4P-family SoCs.
+
+capabilities:
+  - usb
+  - tinyusb
+  - sdk_component
+  - apollo4p
+
+use_cases:
+  - USB CDC or vendor-class device support on Apollo4P targets
+  - expose the Ambiq TinyUSB device-controller port through NSX
+  - dependency substrate for higher-level USB convenience modules
+
+agent_keywords:
+  - usb
+  - tinyusb
+  - ambiq
+  - r4
+  - apollo4p
+
+build:
+  cmake:
+    package: nsx_soc_apollo4p
+    targets:
+      - nsx::ambiq_usb_r4
+
+depends:
+  required:
+    - nsx-ambiqsuite-r4
+    - nsx-ambiq-hal-r4
+    - nsx-ambiq-bsp-r4
+  optional: []
+
+compatibility:
+  boards:
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

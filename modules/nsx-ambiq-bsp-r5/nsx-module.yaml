@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-bsp-r5
+  type: backend_specific
+  category: sdk_component
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Curated BSP wrapper surface for board-support integration on AmbiqSuite r5 targets.
+
+capabilities:
+  - bsp_wrapper
+  - board_support
+  - sdk_component
+
+use_cases:
+  - board-support integration for r5 targets
+  - stable BSP access without wiring raw SDK board files by hand
+  - dependency for board-oriented application bring-up on r5
+
+agent_keywords:
+  - bsp
+  - board support
+  - r5
+  - wrapper
+
+build:
+  cmake:
+    package: nsx_board_apollo510_evb
+    targets:
+      - nsx::ambiq_bsp
+
+depends:
+  required:
+    - nsx-ambiqsuite-r5
+    - nsx-ambiq-hal-r5
+  optional: []
+
+compatibility:
+  boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

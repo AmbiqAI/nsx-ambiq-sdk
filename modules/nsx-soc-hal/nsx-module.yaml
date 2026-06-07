@@ -1,0 +1,56 @@
+schema_version: 1
+
+module:
+  name: nsx-soc-hal
+  type: soc
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Shared SoC-level HAL integration layer for NSX targets.
+
+capabilities:
+  - soc_hal
+  - low_level_platform
+  - target_integration
+
+use_cases:
+  - foundational SoC integration
+  - common low-level platform access
+  - base dependency for most NSX runtime modules
+
+agent_keywords:
+  - soc
+  - hal
+  - low level
+  - platform
+
+build:
+  cmake:
+    package: nsx_soc_${target.soc}
+    targets:
+      - nsx::soc_hal
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

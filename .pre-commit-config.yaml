@@ -1,0 +1,40 @@
+repos:
+  # Keep hygiene hooks on NSX-owned text/config surfaces. The repo also carries
+  # curated vendor/CMSIS and startup payloads whose byte-level formatting should
+  # not be rewritten by pre-commit.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+        exclude: ^modules/nsx-ambiqsuite-r5/sdk/lib/|^artifacts/
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-json
+      - id: check-yaml
+        exclude: ^docs/sdk-drop-manifest\.example\.yaml$
+      - id: end-of-file-fixer
+        files: ^(\.github/|\.pre-commit-config\.yaml|\.gitignore|README\.md|CONTRIBUTING\.md|pyproject\.toml|uv\.lock|docs/.*\.(md|yaml)|tests/.*\.py|cmake/.*\.cmake|boards/.*/(README\.md|board\.cmake|nsx-module\.yaml)|modules/.*/(README\.md|CMakeLists\.txt|nsx-module\.yaml)|sdk-intake/.*\.(py|md))$
+        exclude: ^sdk-intake/local/
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        files: ^(\.github/|\.pre-commit-config\.yaml|\.gitignore|README\.md|CONTRIBUTING\.md|pyproject\.toml|uv\.lock|docs/.*\.(md|yaml)|tests/.*\.py|cmake/.*\.cmake|boards/.*/(README\.md|board\.cmake|nsx-module\.yaml)|modules/.*/(README\.md|CMakeLists\.txt|nsx-module\.yaml)|sdk-intake/.*\.(py|md))$
+        exclude: ^sdk-intake/local/
+      - id: trailing-whitespace
+        files: ^(\.github/|\.pre-commit-config\.yaml|\.gitignore|README\.md|CONTRIBUTING\.md|pyproject\.toml|uv\.lock|docs/.*\.(md|yaml)|tests/.*\.py|cmake/.*\.cmake|boards/.*/(README\.md|board\.cmake|nsx-module\.yaml)|modules/.*/(README\.md|CMakeLists\.txt|nsx-module\.yaml)|sdk-intake/.*\.(py|md))$
+        exclude: ^sdk-intake/local/
+
+  - repo: local
+    hooks:
+      - id: py-compile-sdk-intake
+        name: py_compile sdk intake and smoke helpers
+        entry: python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_r5_link_smoke.py tools/nsx_r5_toolchain_file.py
+        language: system
+        pass_filenames: false
+        files: ^(sdk-intake/build_ambiqsuite\.py|tools/nsx_r5_link_smoke\.py|tools/nsx_r5_toolchain_file\.py)$
+      - id: pytest-contracts
+        name: pytest contract tests
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        files: ^(tests/|modules/.*/(CMakeLists\.txt|nsx-module\.yaml|README\.md)|boards/.*/(board\.cmake|nsx-module\.yaml|README\.md)|cmake/|sdk-intake/build_ambiqsuite\.py|tools/nsx_r5_link_smoke\.py|tools/nsx_r5_toolchain_file\.py|pyproject\.toml|README\.md)

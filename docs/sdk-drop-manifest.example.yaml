@@ -1,0 +1,115 @@
+sdk:
+  provider: ambiqsuite-r5
+  version: R5.4.0
+  raw_drop_path: sdk-intake/local/drops/AmbiqSuite_R5.4.0.zip
+  raw_drop_checksum: sha256:<fill-me>
+
+artifacts:
+  output_root: artifacts/ambiqsuite/R5.4.0
+  release_approved: false
+  generated_by: <tool-or-person>
+  generated_at: <timestamp>
+
+scope:
+  core_artifacts:
+    - lib/*/libam_hal.*
+    - lib/*/*/libam_bsp.*
+    - approved headers needed by NSX HAL/BSP consumers
+  optional_module_candidates:
+    - third_party/FreeRTOS*
+    - third_party/tinyusb
+    - third_party/cordio
+    - src/usb
+    - CMSIS/NN
+    - CMSIS/DSP
+  ignored_upstream_content:
+    - examples
+    - sample applications
+    - raw HAL/BSP source unless explicitly cleared
+    - vendor debug/tool packages not needed by core descriptors
+
+parts:
+  - logical_skew: apollo510
+    ambiq_part_name: apollo510
+    mcu_dir: mcu/apollo510
+    system_source: src/apollo510/system_apollo510.c
+    hal_lib_part_name: apollo510
+    capabilities:
+      core: cortex-m55
+      dsp: true
+      mve: true
+      fpu: true
+      pmu: armv8m
+
+  - logical_skew: apollo510b
+    ambiq_part_name: apollo510b
+    mcu_dir: mcu/apollo510
+    system_source: src/apollo510/system_apollo510.c
+    hal_lib_part_name: apollo510
+    capabilities:
+      core: cortex-m55
+      dsp: true
+      mve: true
+      fpu: true
+      pmu: armv8m
+
+  - logical_skew: apollo510L
+    status: artifact-built
+    ambiq_part_name: apollo510L
+    mcu_dir: mcu/apollo510L
+    system_source: <fill-from-sdk-drop>
+    hal_lib_part_name: apollo510L
+    capabilities:
+      core: cortex-m55
+      dsp: true
+      mve: true
+      fpu: true
+      pmu: armv8m
+
+  - logical_skew: apollo330P
+    status: artifact-built
+    ambiq_part_name: apollo330P
+    mcu_dir: mcu/apollo330P
+    system_source: src/apollo330P/system_apollo330P.c
+    hal_lib_part_name: apollo330P
+    capabilities:
+      core: cortex-m55
+      dsp: true
+      mve: true
+      fpu: true
+      pmu: armv8m
+
+boards:
+  - nsx_board: apollo510_evb
+    ambiq_board_name: apollo510_evb
+    logical_skew: apollo510
+    bsp_lib_part_name: apollo510
+    bsp_lib_subdir: evb
+
+  - nsx_board: apollo510b_evb
+    ambiq_board_name: apollo510b_evb
+    logical_skew: apollo510b
+    bsp_lib_part_name: apollo510
+    bsp_lib_subdir: apollo510b_evb
+
+  - nsx_board: apollo510dL_evb
+    status: artifact-built
+    ambiq_board_name: apollo510dL_evb
+    logical_skew: apollo510L
+    bsp_lib_part_name: apollo510L
+    bsp_lib_subdir: apollo510dL_evb
+
+  - nsx_board: apollo330mP_evb
+    status: artifact-built
+    ambiq_board_name: apollo330mP_evb
+    logical_skew: apollo330P
+    bsp_lib_part_name: apollo330P
+    bsp_lib_subdir: apollo330mP_evb
+
+validation:
+  scope_classification: pending
+  descriptor_configure: pending
+  artifact_paths: pending
+  module_configure: pending
+  minimal_link: pending
+  hardware_smoke: optional

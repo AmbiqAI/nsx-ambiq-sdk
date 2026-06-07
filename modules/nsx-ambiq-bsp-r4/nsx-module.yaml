@@ -1,0 +1,56 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiq-bsp-r4
+  type: backend_specific
+  category: sdk_component
+  version: "4.5.1"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Curated BSP wrapper surface for board-support integration on AmbiqSuite r4 targets.
+
+capabilities:
+  - bsp_wrapper
+  - board_support
+  - sdk_component
+
+use_cases:
+  - board-support integration for r4 targets
+  - stable BSP access without wiring raw SDK board files by hand
+  - dependency for board-oriented application bring-up on r4
+
+agent_keywords:
+  - bsp
+  - board support
+  - r4
+  - wrapper
+
+build:
+  cmake:
+    package: nsx_board_apollo4p_evb
+    targets:
+      - nsx::ambiq_bsp
+
+depends:
+  required:
+    - nsx-ambiqsuite-r4
+    - nsx-ambiq-hal-r4
+  optional: []
+
+compatibility:
+  boards:
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo4l
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

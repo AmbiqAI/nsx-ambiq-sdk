@@ -1,0 +1,57 @@
+schema_version: 1
+
+module:
+  name: nsx-spi
+  type: backend_specific
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: SPI wrapper helpers for talking to SPI-attached devices and peripherals.
+
+capabilities:
+  - spi
+  - peripheral_bus
+  - device_transfer
+
+use_cases:
+  - SPI peripheral bring-up
+  - board validation with SPI devices
+  - reusable SPI communication support
+
+agent_keywords:
+  - spi
+  - bus
+  - transfer
+  - peripheral
+
+build:
+  cmake:
+    package: nsx_spi
+    targets:
+      - nsx::spi
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

@@ -1,0 +1,45 @@
+schema_version: 1
+module:
+  name: nsx-power
+  type: backend_specific
+  version: "5.2.23"
+support:
+  ambiqsuite: true
+  zephyr: false
+summary: >-
+  Power-management helpers for sleep policy, shutdown control, and low-power
+  workflows.
+capabilities:
+  - power
+  - low_power
+  - sleep_control
+use_cases:
+  - low-power application behavior
+  - sleep and wake control
+  - power-policy experimentation and validation
+agent_keywords:
+  - power
+  - sleep
+  - low power
+  - wake
+build:
+  cmake:
+    package: nsx_power
+    targets:
+      - nsx::power
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+  optional: []
+compatibility:
+  boards:
+    - '*'
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe

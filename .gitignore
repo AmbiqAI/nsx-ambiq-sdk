@@ -1,0 +1,22 @@
+# CMake
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Python/tooling caches
+.cache/
+.pytest_cache/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local editor/OS files
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/

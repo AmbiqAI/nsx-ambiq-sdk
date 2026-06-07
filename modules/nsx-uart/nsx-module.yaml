@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-uart
+  type: backend_specific
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: UART wrapper helpers for serial communication, console I/O, and simple host-device links.
+
+capabilities:
+  - uart
+  - serial
+  - console_io
+
+use_cases:
+  - serial bring-up
+  - host-device communication
+  - UART console or bridge workflows
+
+agent_keywords:
+  - uart
+  - serial
+  - console
+  - tty
+
+build:
+  cmake:
+    package: nsx_uart
+    targets:
+      - nsx::uart
+
+depends:
+  required:
+    - nsx-core
+    - nsx-interrupt
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

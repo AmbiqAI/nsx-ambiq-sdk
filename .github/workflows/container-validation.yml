@@ -1,0 +1,147 @@
+name: Container Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: "Run opt-in toolchain link smokes"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      toolchain_family:
+        description: "NSX toolchain family to smoke"
+        required: true
+        default: "gcc"
+        type: choice
+        options:
+          - gcc
+          - atfe
+          - armclang
+      run_sdk_build:
+        description: "Run opt-in HAL/BSP artifact build from an AmbiqSuite Git checkout"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      sdk_toolchain:
+        description: "AmbiqSuite SDK artifact toolchain to build"
+        required: true
+        default: "gcc"
+        type: choice
+        options:
+          - gcc
+          - atfe
+          - acfe
+          - all
+      ambiqsuite_repo_path:
+        description: "Runner path to AmbiqSuite Git checkout when run_sdk_build is true"
+        required: false
+        default: "/ambiqsuite/ambiqsuite"
+        type: string
+      ambiqsuite_source_ref:
+        description: "AmbiqSuite Git tag, branch, or commit to build"
+        required: false
+        default: "release_sdk5p2p0_rc4"
+        type: string
+
+jobs:
+  container-validation:
+    if: ${{ inputs.run_smoke == 'true' || inputs.run_sdk_build == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build dev/CI container
+        run: docker build -f docker/dev-ci.Dockerfile -t nsx-r5-dev-ci:local .
+
+      - name: Show toolchain versions
+        run: |
+          docker run --rm nsx-r5-dev-ci:local sh -lc '$GCC_ROOT/bin/arm-none-eabi-gcc --version | head -n 1'
+          docker run --rm nsx-r5-dev-ci:local sh -lc '$ATFE_ROOT/bin/clang --version | head -n 1'
+          docker run --rm nsx-r5-dev-ci:local sh -lc 'test -x "$ACFE_ROOT/bin/armclang" && test -x "$ACFE_ROOT/bin/armlm" && echo "ACfE installed at $ACFE_ROOT"'
+
+      - name: Run container validation scaffold
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            nsx-r5-dev-ci:local \
+            sh -lc 'UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv sync --group ci && UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_r5_link_smoke.py tools/nsx_r5_toolchain_file.py'
+
+      - name: Run selected link smoke
+        if: ${{ inputs.run_smoke == 'true' }}
+        run: |
+          docker run --rm \
+            -e ARMLM_ACTIVATION_CODE="${ARMLM_ACTIVATION_CODE:-}" \
+            -e TOOLCHAIN_FAMILY="${TOOLCHAIN_FAMILY}" \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            nsx-r5-dev-ci:local \
+            sh -lc '
+              set -e
+              if [ "${TOOLCHAIN_FAMILY}" = armclang ]; then
+                if [ -z "${ARMLM_ACTIVATION_CODE:-}" ]; then
+                  echo "ARMLM_ACTIVATION_CODE must be configured as a repository secret for ACfE link smokes." >&2
+                  exit 1
+                fi
+                "$ACFE_ROOT/bin/armlm" activate -code "$ARMLM_ACTIVATION_CODE"
+              fi
+              UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv run --group ci python tools/nsx_r5_link_smoke.py \
+                --toolchain-family "${TOOLCHAIN_FAMILY}" \
+                --build-root "build/link-smoke-${TOOLCHAIN_FAMILY}" \
+                --verbose
+            '
+        env:
+          TOOLCHAIN_FAMILY: ${{ inputs.toolchain_family }}
+          ARMLM_ACTIVATION_CODE: ${{ secrets.ARMLM_ACTIVATION_CODE }}
+
+      - name: Run HAL/BSP artifact build
+        if: ${{ inputs.run_sdk_build == 'true' }}
+        run: |
+          set -e
+          if [ ! -d "${AMBIQSUITE_REPO_PATH}/.git" ]; then
+            echo "AmbiqSuite Git checkout not found: ${AMBIQSUITE_REPO_PATH}" >&2
+            exit 1
+          fi
+          if [ "${SDK_TOOLCHAIN}" = acfe ] || [ "${SDK_TOOLCHAIN}" = all ]; then
+            if [ -z "${ARMLM_ACTIVATION_CODE:-}" ]; then
+              echo "ARMLM_ACTIVATION_CODE must be configured as a repository secret for ACfE SDK artifact builds." >&2
+              exit 1
+            fi
+          fi
+          docker run --rm \
+            -e HOME=/root \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -e ARMLM_ACTIVATION_CODE="${ARMLM_ACTIVATION_CODE:-}" \
+            -e SDK_TOOLCHAIN="${SDK_TOOLCHAIN}" \
+            -e AMBIQSUITE_SOURCE_REF="${AMBIQSUITE_SOURCE_REF}" \
+            -v "$PWD:/workspace" \
+            -v "${AMBIQSUITE_REPO_PATH}:/ambiqsuite-repo" \
+            -w /workspace \
+            nsx-r5-dev-ci:local \
+            sh -lc '
+              set -e
+              if [ "${SDK_TOOLCHAIN}" = acfe ] || [ "${SDK_TOOLCHAIN}" = all ]; then
+                "$ACFE_ROOT/bin/armlm" activate -code "$ARMLM_ACTIVATION_CODE"
+              fi
+              uv run --no-project python sdk-intake/build_ambiqsuite.py \
+                --ambiqsuite-repo /ambiqsuite-repo \
+                --source-ref "${AMBIQSUITE_SOURCE_REF}" \
+                --force-source-ref \
+                --toolchain "${SDK_TOOLCHAIN}" \
+                --promote
+              for path in artifacts modules/nsx-ambiqsuite-r5/sdk; do [ ! -e "$path" ] || chown -R "$HOST_UID:$HOST_GID" "$path"; done
+            '
+        env:
+          SDK_TOOLCHAIN: ${{ inputs.sdk_toolchain }}
+          AMBIQSUITE_REPO_PATH: ${{ inputs.ambiqsuite_repo_path }}
+          AMBIQSUITE_SOURCE_REF: ${{ inputs.ambiqsuite_source_ref }}
+          ARMLM_ACTIVATION_CODE: ${{ secrets.ARMLM_ACTIVATION_CODE }}

@@ -1,0 +1,52 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiqsuite-r2
+  type: sdk_provider
+  category: sdk_provider
+  provider: ambiqsuite-r2
+  version: "2.5.1"
+  sdk_release: "R2.5.1"
+  upstream_revision: "stable-AT110e"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: AmbiqSuite r2 SDK provider selection for Apollo2 based NSX targets.
+
+capabilities:
+  - sdk_provider
+  - ambiqsuite
+  - apollo2_family
+
+use_cases:
+  - choose the SDK baseline for Apollo2 apps
+  - provide upstream SDK content for r2-based platform stacks
+  - foundation for r2 HAL and BSP layers
+
+agent_keywords:
+  - ambiqsuite
+  - r2
+  - sdk
+  - provider
+
+build:
+  cmake:
+    package: nsx_soc_apollo2
+    targets:
+      - nsx::sdk_ambiqsuite_r2
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - apollo2_evb
+  socs:
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

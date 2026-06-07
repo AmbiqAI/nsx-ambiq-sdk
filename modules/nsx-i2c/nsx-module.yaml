@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-i2c
+  type: backend_specific
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: I2C bus API contract and register-access helpers for AmbiqSuite-backed NSX targets.
+
+capabilities:
+  - i2c
+  - i2c_bus_contract
+  - peripheral_bus
+
+use_cases:
+  - SDK-backed I2C bus access
+  - shared register read/write helpers for I2C devices
+  - simple peripheral communication
+  - base dependency for optional I2C device-driver modules
+
+agent_keywords:
+  - i2c
+  - sensor
+  - bus
+  - wire
+
+build:
+  cmake:
+    package: nsx_i2c
+    targets:
+      - nsx::i2c
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

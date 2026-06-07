@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-cmsis-core
+  type: backend_specific
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Standalone CMSIS-Core(M) header package (ARM CMSIS_6 v6.2.0), decoupled from AmbiqSuite SDK vendoring.
+
+capabilities:
+  - cmsis
+  - cmsis_core
+
+use_cases:
+  - core peripheral access (NVIC, SCB, SysTick, MPU, PMU, cache)
+  - compiler intrinsics dispatch (gcc / armclang / iccarm / clang)
+  - m-profile architecture extensions (Armv7-M, Armv8-M, Armv8.1-M)
+
+agent_keywords:
+  - cmsis
+  - cmsis-core
+  - cortex-m
+  - core_cm55
+  - core_cm4
+  - pmu_armv8
+  - mpu_armv8
+
+build:
+  cmake:
+    package: nsx_cmsis_core
+    targets:
+      - nsx::cmsis_core
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+    - apollo2
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang

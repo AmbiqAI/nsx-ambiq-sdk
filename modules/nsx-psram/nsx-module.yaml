@@ -1,0 +1,59 @@
+schema_version: 1
+
+module:
+  name: nsx-psram
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: BSP-aware external PSRAM initialization shim for supported R5 EVBs.
+
+capabilities:
+  - psram
+  - external-memory
+  - xip
+
+use_cases:
+  - place model weights in PSRAM
+  - place tensor arena in PSRAM
+  - enable external volatile memory through a stable NSX API
+
+agent_keywords:
+  - psram
+  - external memory
+  - arena
+  - weights
+  - xip
+
+build:
+  cmake:
+    package: nsx_psram
+    targets:
+      - nsx::psram
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+    - nsx-interrupt
+  optional: []
+
+compatibility:
+  boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - armclang
+    - atfe

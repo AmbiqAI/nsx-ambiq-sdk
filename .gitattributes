@@ -1,0 +1,2 @@
+# Imported upstream SDK license files should retain upstream whitespace.
+modules/nsx-ambiqsuite-r5/sdk/docs/licenses/** -whitespace

@@ -1,0 +1,59 @@
+schema_version: 1
+
+module:
+  name: nsx-gpio
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: GPIO configuration, level I/O, and edge-triggered pin interrupts layered on nsx-interrupt.
+
+capabilities:
+  - gpio
+  - digital_io
+  - pin_interrupt
+
+use_cases:
+  - drive and read board pins
+  - toggle indicator or trigger pins for profiling
+  - register edge-triggered callbacks for input pins
+
+agent_keywords:
+  - gpio
+  - pin
+  - digital
+  - interrupt
+  - edge
+
+build:
+  cmake:
+    package: nsx_gpio
+    targets:
+      - nsx::gpio
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+    - nsx-interrupt
+  optional: []
+
+compatibility:
+  boards:
+    - "*"
+  socs:
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    - apollo4l
+    - apollo4p
+    - apollo3
+    - apollo3p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang
