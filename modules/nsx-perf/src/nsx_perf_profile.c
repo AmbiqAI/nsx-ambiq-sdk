@@ -10,8 +10,8 @@
  */
 #include "nsx_perf_profile.h"
 #include "nsx_core.h"
-#include "nsx_core.h"
 
+#include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
 
@@ -53,6 +53,26 @@ void nsx_capture_cache_stats(nsx_cache_dump_t *dump) {
         return;
     }
     memset(dump, 0, sizeof(*dump));
+
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+    dump->daccess = CACHECTRL->DMON0;
+    dump->dtaglookup = CACHECTRL->DMON1;
+    dump->dhitslookup = CACHECTRL->DMON2;
+    dump->dhitsline = CACHECTRL->DMON3;
+    dump->iaccess = CACHECTRL->IMON0;
+    dump->itaglookup = CACHECTRL->IMON1;
+    dump->ihitslookup = CACHECTRL->IMON2;
+    dump->ihitsline = CACHECTRL->IMON3;
+#elif defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+    dump->daccess = CPU->DMON0;
+    dump->dtaglookup = CPU->DMON1;
+    dump->dhitslookup = CPU->DMON2;
+    dump->dhitsline = CPU->DMON3;
+    dump->iaccess = CPU->IMON0;
+    dump->itaglookup = CPU->IMON1;
+    dump->ihitslookup = CPU->IMON2;
+    dump->ihitsline = CPU->IMON3;
+#endif
 }
 
 void nsx_delta_cache(nsx_cache_dump_t *s, nsx_cache_dump_t *e, nsx_cache_dump_t *d) {
@@ -199,7 +219,13 @@ void nsx_print_perf_profile(nsx_perf_counters_t *c) {
 bool nsx_perf_has_core_counters(void) { return true; }
 
 bool nsx_perf_has_cache_counters(void) {
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) ||                     \
+    defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) ||                   \
+    defined(AM_PART_APOLLO4L)
+    return true;
+#else
     return false;
+#endif
 }
 
 bool nsx_perf_has_pcsamp(void) {

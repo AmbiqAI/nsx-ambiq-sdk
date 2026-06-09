@@ -17,7 +17,10 @@ nsx_select_soc_arch_dir(NSX_POWER_ARCH_DIR
 
 set(NSX_POWER_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_monitor.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_profile.c
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power_profile.c
 )
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo4")

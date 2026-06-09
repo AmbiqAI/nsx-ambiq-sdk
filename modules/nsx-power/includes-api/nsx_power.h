@@ -105,6 +105,20 @@ extern const nsx_power_config_t nsx_power_all_on;   ///< Everything enabled — 
 extern const nsx_power_config_t nsx_power_minimal;   ///< Minimal peripherals — good starting point
 extern const nsx_power_config_t nsx_power_audio;     ///< Audio ADC on, most else off
 
+/// Two-bit GPIO state exported for external current/energy tools.
+typedef enum {
+    NSX_POWER_MONITOR_STATE_IDLE = 0,
+    NSX_POWER_MONITOR_STATE_DATA_COLLECTION = 1,
+    NSX_POWER_MONITOR_STATE_FEATURE_EXTRACTION = 2,
+    NSX_POWER_MONITOR_STATE_INFERENCE = 3,
+} nsx_power_monitor_state_t;
+
+/// Output format for staged power-profile dumps.
+typedef enum {
+    NSX_POWER_PROFILE_FORMAT_JSON = 0,
+    NSX_POWER_PROFILE_FORMAT_CSV = 1,
+} nsx_power_profile_format_t;
+
 /**
  * @brief Apply an NSX power configuration.
  *
@@ -117,6 +131,42 @@ extern const nsx_power_config_t nsx_power_audio;     ///< Audio ADC on, most els
  * @return uint32_t success/failure.
  */
 extern uint32_t nsx_power_configure(const nsx_power_config_t *);
+
+/**
+ * @brief Initialize the external power-monitor GPIO state output.
+ *
+ * Configures the two monitor GPIOs for the current SoC family and sets the
+ * exported state to idle. This helper is intended for external tools such as
+ * Joulescope that decode application phases from GPIO transitions.
+ *
+ * @return `NSX_STATUS_SUCCESS` on success, otherwise an NSX status code.
+ */
+extern uint32_t nsx_power_monitor_init(void);
+
+/**
+ * @brief Update the external power-monitor GPIO state.
+ *
+ * Has no effect until `nsx_power_monitor_init()` succeeds.
+ *
+ * @param state New two-bit state to present on the monitor GPIOs.
+ */
+extern void nsx_power_monitor_set_state(nsx_power_monitor_state_t state);
+
+/**
+ * @brief Emit a staged power-profile dump for the current SoC.
+ *
+ * Apollo4 and Apollo5 families provide a register snapshot dump that is meant
+ * for low-power analysis and debug capture. The exact register set is kept
+ * intentionally focused on the NSX-owned power and clock domains rather than
+ * mirroring the full legacy `nsx-utils` bundle verbatim.
+ *
+ * @param snapshot_index User-provided snapshot tag included in the output.
+ * @param format Output format.
+ * @return `NSX_STATUS_SUCCESS` on success, otherwise an NSX status code.
+ */
+extern uint32_t nsx_power_profile_dump(
+    uint32_t snapshot_index,
+    nsx_power_profile_format_t format);
 
 /**
  * @brief Enter deep sleep using the staged NSX system sequence.
