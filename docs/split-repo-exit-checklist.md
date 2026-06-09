@@ -18,7 +18,7 @@ of the unified `nsx-ambiq-sdk` repo.
 - Provider parity confirmed for `nsx-ambiqsuite-r3`, `nsx-ambiq-hal-r3`, and `nsx-ambiq-bsp-r3`.
 - Useful runtime slice configures on `apollo3p_evb`: `nsx-core`, `nsx-interrupt`, `nsx-timer`, `nsx-perf`, `nsx-audio`, `nsx-gpio`, `nsx-i2c`, `nsx-spi`, `nsx-uart`, `nsx-psram`.
 - Executable guardrail is present in `tests/test_cmake_contract.py` via the dedicated R3 contract test.
-- Intentional exclusion: the split R3 repo has no `nsx-usb`, `nsx-power`, or `nsx-pmu-armv8m` module, so there is no missing R3 intake for those surfaces.
+- Intentional exclusion: the split R3 repo has no `nsx-usb` or `nsx-power` module, so there is no missing R3 intake for those surfaces.
 
 ### R4
 
@@ -32,9 +32,8 @@ of the unified `nsx-ambiq-sdk` repo.
 
 - Provider parity confirmed for `nsx-ambiqsuite-r5`, `nsx-ambiq-hal-r5`, and `nsx-ambiq-bsp-r5`.
 - Optional middleware parity confirmed for `nsx-ambiq-usb-r5` and the higher-level `nsx-usb` wrapper.
-- Useful runtime slice configures through the existing R5 contract tests, including `nsx-pmu-armv8m`, `nsx-power`, `nsx-audio`, `nsx-perf`, and the shared foundation modules.
+- Useful runtime slice configures through the existing R5 contract tests, including `nsx-power`, `nsx-audio`, `nsx-perf`, and the shared foundation modules.
 - Non-module surfaces are supersets rather than gaps: unified `boards/` and `cmake/` intentionally include Apollo3/Apollo4 descriptors in addition to the R5 content.
-- Refactor cleanup already landed in unified repo: `nsx-pmu-armv8m` now uses namespaced `nsx::core` wiring instead of the stale standalone-style `nsx_core` target.
 
 ## Intentional Unified Supersets
 

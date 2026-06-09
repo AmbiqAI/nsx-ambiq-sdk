@@ -118,7 +118,7 @@ def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) 
 
     legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
     offenders = []
-    for module_name in ("nsx-ambiq-hal-r5", "nsx-ambiq-bsp-r5", "nsx-ambiq-usb-r5", "nsx-pmu-armv8m"):
+    for module_name in ("nsx-ambiq-hal-r5", "nsx-ambiq-bsp-r5", "nsx-ambiq-usb-r5"):
         path = repo_root / "modules" / module_name / "CMakeLists.txt"
         text = path.read_text(encoding="utf-8")
         if legacy_selector.search(text):
@@ -236,7 +236,6 @@ def test_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp
         "nsx-interrupt",
         "nsx-timer",
         "nsx-perf",
-        "nsx-pmu-armv8m",
         "nsx-audio",
         "nsx-i2c",
         "nsx-spi",
@@ -270,7 +269,6 @@ def test_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Path) 
             "nsx-interrupt",
             "nsx-timer",
             "nsx-perf",
-            "nsx-pmu-armv8m",
             "nsx-ambiq-usb-r5",
             "nsx-usb",
         ),
@@ -386,7 +384,6 @@ def test_runtime_modules_do_not_link_board_flags_directly(repo_root: Path) -> No
         "nsx-core",
         "nsx-timer",
         "nsx-perf",
-        "nsx-pmu-armv8m",
         "nsx-i2c",
         "nsx-spi",
         "nsx-power",
@@ -413,7 +410,6 @@ def test_generic_public_headers_do_not_include_bsp(repo_root: Path) -> None:
     generic_modules = (
         "nsx-i2c",
         "nsx-perf",
-        "nsx-pmu-armv8m",
         "nsx-power",
         "nsx-spi",
         "nsx-uart",

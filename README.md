@@ -41,7 +41,6 @@ Select a board descriptor, add the staged modules your app needs, and consume th
 | `nsx::timer` | Timer, ticker, and periodic callback helpers |
 | `nsx::power` | Power and sleep helpers |
 | `nsx::perf` | Timing and performance helpers |
-| `nsx::pmu_armv8m` | Armv8-M PMU capture helpers |
 | `nsx::i2c`, `nsx::spi`, `nsx::uart` | Basic bus shims |
 
 NSX is the recommended application-facing API surface for common tasks. Apps may still use AmbiqSuite APIs directly when they need lower-level control or a feature that NSX does not wrap yet. Prefer NSX modules first, keep wrapping common flows over time, and avoid baking board or app policy into generic modules.
