@@ -26,6 +26,11 @@ target_compile_definitions(${NSX_BOARD_FLAGS_TARGET} INTERFACE
     apollo510_evb
     AM_PACKAGE_BGA
     STACK_SIZE=4096
+    # Board button facts: pins owned by the BSP; edge/IRQ mechanism lives in nsx-gpio.
+    NSX_BOARD_HAS_BUTTONS=1
+    NSX_BOARD_BUTTON_COUNT=2
+    NSX_BOARD_BUTTON0_PIN=AM_BSP_GPIO_BUTTON0
+    NSX_BOARD_BUTTON1_PIN=AM_BSP_GPIO_BUTTON1
 )
 
 target_link_libraries(${NSX_BOARD_FLAGS_TARGET} INTERFACE ${NSX_SOC_FLAGS_TARGET})

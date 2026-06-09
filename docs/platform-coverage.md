@@ -37,6 +37,34 @@ its AmbiqSuite artifacts are both present.
 | `apollo5b_evb` | descriptor-only | `apollo5b` | not staged | Existing descriptor should not be advertised as configure-ready until artifacts arrive. |
 | `apollo330mP_evb` | staged | `apollo330P` | `modules/nsx-ambiqsuite-r5/sdk/lib/{gcc,atfe,acfe}/apollo330P/apollo330mP_evb/libam_bsp.a` | R5.2.0 BSP artifacts promoted into the provider payload. |
 
+## Board Button Facts
+
+Buttons are board-specific: the GPIO pin behind each button is a BSP fact, not a
+SoC fact. The generic mechanism for reading a button (input mode, edge trigger,
+per-pin IRQ callback) already lives in the `nsx-gpio` module, so boards only need
+to publish *which pins* are buttons. There is no separate button module and no
+board policy baked into a generic driver.
+
+Each board descriptor whose BSP defines buttons exposes the following normalized
+facts on its `nsx::board_flags` interface target. The pin macros resolve to the
+board BSP values (`AM_BSP_GPIO_BUTTON*`), keeping a single source of truth:
+
+| Macro | Meaning |
+| --- | --- |
+| `NSX_BOARD_HAS_BUTTONS` | Defined to `1` on boards that expose buttons. |
+| `NSX_BOARD_BUTTON_COUNT` | Number of buttons the board publishes. |
+| `NSX_BOARD_BUTTON0_PIN` ... | GPIO number per button, resolved from the BSP. |
+
+Application code reads a button by feeding `NSX_BOARD_BUTTONn_PIN` into
+`nsx_gpio_init()` (e.g. `NSX_GPIO_MODE_INPUT` + `NSX_GPIO_TRIGGER_FALLING` with an
+IRQ callback). Because the pin macros expand to `AM_BSP_GPIO_BUTTON*`, the board
+BSP header must be on the include path where they are used.
+
+Coverage: published on the Apollo3 family (3 buttons), Apollo4 family, and the
+staged R5 boards (`apollo510_evb`, `apollo510b_evb`, `apollo510dL_evb`,
+`apollo330mP_evb`). Not published on `apollo5b_evb`, which is descriptor-only and
+has no staged BSP button definitions.
+
 ## Intake Rule
 
 When a new SWS AmbiqSuite R5 drop arrives, update this file from the drop
