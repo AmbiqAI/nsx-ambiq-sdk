@@ -72,19 +72,27 @@ uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
         if (st != 0) return st;
     }
 
-    /* 4. Performance mode */
-    st = nsx_set_perf_mode(cfg->perf_mode);
-    if (st != 0) return st;
-
-    /* 5. SpotManager profile */
-    if (cfg->spot_mgr_profile) {
-        nsx_platform_spot_mgr_profile();
-    }
-
-    /* 6. Debug output */
+    /* 4. Debug output.
+     *
+     * MUST run before the performance-mode switch.  Enabling SWO/ITM
+     * requires temporarily powering up Crypto (to unlock the DCU), and the
+     * Crypto power-up handshake requests HFRC from the clock manager.  On
+     * Apollo5 secure parts this hangs if the CPU has already been switched
+     * to a SYSPLL-sourced high-performance clock — so unlock the DCU while
+     * still running on HFRC, then raise the performance mode.  As a bonus,
+     * printf is available during perf-mode / SpotManager bring-up. */
     if (cfg->debug.transport != NSX_DEBUG_NONE) {
         st = nsx_debug_init(&cfg->debug);
         if (st != 0) return st;
+    }
+
+    /* 5. Performance mode */
+    st = nsx_set_perf_mode(cfg->perf_mode);
+    if (st != 0) return st;
+
+    /* 6. SpotManager profile */
+    if (cfg->spot_mgr_profile) {
+        nsx_platform_spot_mgr_profile();
     }
 
     return 0;
