@@ -23,33 +23,57 @@
  * This sequence is identical across all Apollo5 variants.
  * =================================================================== */
 
-static uint32_t nsx_platform_dcu_unlock_swo(void) {
-    am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
-    am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+#define NSX_DCU_SWO_MASK (                                            \
+    AM_HAL_DCU_CPUTRC_DWT_SWO | AM_HAL_DCU_CPUDBG_NON_INVASIVE |       \
+    AM_HAL_DCU_CPUDBG_S_NON_INVASIVE | AM_HAL_DCU_CPUTRC_PERFCNT |     \
+    AM_HAL_DCU_SWD | AM_HAL_DCU_TRACE)
 
-    // Wait for crypto to become idle with a bounded timeout (~10 ms at 96 MHz).
-    volatile uint32_t timeout = 960000;
-    while (!CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE) {
-        if (--timeout == 0) {
-            // Crypto did not become idle — clean up and report failure.
-            am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, 0);
-            am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-            return 1;  // non-zero = failure
-        }
+static uint32_t nsx_platform_dcu_unlock_swo(void) {
+    uint32_t ui32dcuVal;
+    int32_t  i32RetValue = 0;
+    bool     bOffCryptoOnExit = false;
+    bool     bOffOtpOnExit = false;
+
+    // The crypto/OTP power-up handshake (and the HAL's internal HFRC clock
+    // request for crypto) must run uninterrupted.  An ISR that touches the
+    // clock manager or a power domain mid-sequence can wedge the crypto core,
+    // which on this secure part shows up as a hang inside
+    // am_hal_pwrctrl_periph_enable(CRYPTO).  Match the proven neuralSPOT
+    // sequence: do the whole thing in a critical section, only power up
+    // domains that are currently off, and let the HAL do the idle-wait.
+    AM_CRITICAL_BEGIN;
+
+    if (PWRCTRL->DEVPWRSTATUS_b.PWRSTOTP == 0) {
+        bOffOtpOnExit = true;
+        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
     }
 
-    uint32_t dcu_mask =
-        AM_HAL_DCU_CPUTRC_DWT_SWO |
-        AM_HAL_DCU_CPUDBG_NON_INVASIVE |
-        AM_HAL_DCU_CPUDBG_S_NON_INVASIVE |
-        AM_HAL_DCU_SWD |
-        AM_HAL_DCU_TRACE |
-        AM_HAL_DCU_CPUTRC_PERFCNT;
-    uint32_t st = am_hal_dcu_update(true, dcu_mask);
+    if (PWRCTRL->DEVPWRSTATUS_b.PWRSTCRYPTO == 0) {
+        bOffCryptoOnExit = true;
+        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+    }
 
-    am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, 0);
-    am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-    return st;
+    if ((PWRCTRL->DEVPWRSTATUS_b.PWRSTCRYPTO == 1) &&
+        (CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE == 1)) {
+        am_hal_dcu_get(&ui32dcuVal);
+        if (((ui32dcuVal & NSX_DCU_SWO_MASK) != NSX_DCU_SWO_MASK) &&
+            (am_hal_dcu_update(true, NSX_DCU_SWO_MASK) != AM_HAL_STATUS_SUCCESS)) {
+            i32RetValue = -1;
+        }
+    } else {
+        i32RetValue = -1;
+    }
+
+    if (bOffCryptoOnExit) {
+        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+    }
+    if (bOffOtpOnExit) {
+        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+    }
+
+    AM_CRITICAL_END;
+
+    return (uint32_t)(i32RetValue == 0 ? 0 : 1);
 }
 
 /* ===================================================================
