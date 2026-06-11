@@ -1,14 +1,15 @@
 # Core SDK Scope
 
-This repo publishes a curated NSX core SDK surface for AmbiqSuite R5-family
-silicon. It does not republish the full AmbiqSuite zip.
+The unified `nsx-ambiq-sdk` package publishes a curated NSX core SDK surface
+for Ambiq silicon across AmbiqSuite release trains. The current stable provider
+line is `nsx-ambiqsuite-r5`. It does not republish the full AmbiqSuite zip.
 
 AmbiqSuite drops are broad distribution archives: they include HAL, BSP,
 headers, startup/system code, prebuilt libraries, examples, middleware,
 third-party packages, debug assets, and board-specific application material.
-This repo should extract only the substrate needed by NSX platform modules.
+The package should extract only the substrate needed by NSX platform modules.
 
-## In Scope For This Repo
+## In Scope For The Package
 
 The core SDK bundle may include or describe:
 
@@ -24,7 +25,7 @@ The core SDK bundle may include or describe:
   APIs, and basic UART/I2C/SPI shims;
 - tests that validate NSX descriptors, artifacts, wrappers, and minimal linking.
 
-## Out Of Scope For This Repo
+## Out Of Scope For The Package
 
 These should not be pulled into the core SDK bundle by default:
 
