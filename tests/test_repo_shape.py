@@ -27,6 +27,7 @@ OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
     ("modules", "nsx-ambiq-usb-r4"),
     ("modules", "nsx-ambiq-usb-r5"),
     ("modules", "nsx-usb"),
+    ("modules", "nsx-freertos"),
 }
 
 PROVIDER_MODULE_PREFIXES = {
@@ -68,6 +69,7 @@ PROVIDER_SDK_MODULE_PREFIXES = {
     ("modules", "nsx-ambiqsuite-r5", "sdk"),
     ("modules", "nsx-ambiq-usb-r4", "sdk"),
     ("modules", "nsx-ambiq-usb-r5", "sdk"),
+    ("modules", "nsx-freertos", "sdk"),
 }
 
 LEGACY_NEURALSPOT_COMPAT_TERMS = (

@@ -41,6 +41,7 @@ OPTIONAL_MIDDLEWARE_MODULES = {
     "nsx-ambiq-usb-r5",
     "nsx-audio",
     "nsx-usb",
+    "nsx-freertos",
 }
 
 STAGED_PROVIDER_BOARDS = {"apollo330mP_evb", "apollo510_evb", "apollo510b_evb", "apollo510dL_evb"}
