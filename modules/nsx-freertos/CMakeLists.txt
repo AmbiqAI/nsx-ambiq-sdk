@@ -1,21 +1,19 @@
 # nsx-freertos: optional FreeRTOS kernel middleware (Phase 1 MVP).
 #
 # Vendors a pinned upstream FreeRTOS-Kernel (V11.1.0) and builds the generic
-# CMSIS port selected by the SoC descriptor (NSX_SOC_RTOS_PORT_GENERIC, a
-# Phase 0 fact). The core SDK owns no kernel and no tick source: kernel/heap
-# policy and FreeRTOSConfig.h are application-owned and supplied through the
-# nsx::freertos_config interface target.
+# CMSIS port for the active SoC. The core SDK owns no kernel and no tick
+# source: kernel/heap policy and FreeRTOSConfig.h are application-owned and
+# supplied through the nsx::freertos_config interface target.
+#
+# Port selection prefers the Phase 0 SoC fact NSX_SOC_RTOS_PORT_GENERIC (set by
+# cmake/socs/<soc>.cmake) when the active descriptor publishes it, and otherwise
+# derives the port from the CPU so the module also works behind board
+# descriptors that do not surface RTOS facts (e.g. generated app boards).
 
-if(NOT DEFINED NSX_SOC_CORE)
-    message(FATAL_ERROR "nsx-freertos requires a SoC descriptor (NSX_SOC_CORE) to be selected first.")
-endif()
-if(NOT DEFINED NSX_SOC_RTOS_PORT_GENERIC)
+if(NOT TARGET nsx::soc_hal)
     message(FATAL_ERROR
-        "nsx-freertos requires NSX_SOC_RTOS_PORT_GENERIC from the SoC descriptor. "
-        "Update cmake/socs/<soc>.cmake to publish the RTOS port facts.")
-endif()
-if(NOT TARGET nsx::soc_flags)
-    message(FATAL_ERROR "nsx-freertos requires nsx::soc_flags to be defined first.")
+        "nsx-freertos requires nsx::soc_hal (the SoC HAL flags/defines carrier) "
+        "to be added before it. Add nsx-soc-hal first.")
 endif()
 if(NOT TARGET nsx::freertos_config)
     message(FATAL_ERROR
@@ -24,16 +22,39 @@ if(NOT TARGET nsx::freertos_config)
         "See modules/nsx-freertos/templates/FreeRTOSConfig.h.template.")
 endif()
 
+# Resolve the generic CMSIS port. Prefer the SoC descriptor fact when present;
+# otherwise derive it from the CPU (NSX_SOC_CORE, else NSX_CPU).
+if(DEFINED NSX_SOC_RTOS_PORT_GENERIC AND NOT NSX_SOC_RTOS_PORT_GENERIC STREQUAL "")
+    set(_nsx_freertos_port "${NSX_SOC_RTOS_PORT_GENERIC}")
+else()
+    set(_nsx_freertos_cpu "${NSX_SOC_CORE}")
+    if(NOT _nsx_freertos_cpu)
+        set(_nsx_freertos_cpu "${NSX_CPU}")
+    endif()
+    if(_nsx_freertos_cpu STREQUAL "cortex-m55")
+        set(_nsx_freertos_port "ARM_CM55_NTZ")
+    else()
+        set(_nsx_freertos_port "")
+    endif()
+endif()
+
+if(NOT _nsx_freertos_port)
+    message(FATAL_ERROR
+        "nsx-freertos could not resolve a FreeRTOS port: the active SoC/board "
+        "descriptor provided neither NSX_SOC_RTOS_PORT_GENERIC nor a recognised "
+        "CPU (NSX_SOC_CORE/NSX_CPU).")
+endif()
+
 # Phase 1 MVP support gate: generic Cortex-M55 GCC port only.
-if(NOT NSX_SOC_RTOS_PORT_GENERIC STREQUAL "ARM_CM55_NTZ")
+if(NOT _nsx_freertos_port STREQUAL "ARM_CM55_NTZ")
     message(FATAL_ERROR
         "nsx-freertos Phase 1 supports the ARM_CM55_NTZ generic port only; "
-        "SoC '${NSX_SOC_SKEW}' requests generic port '${NSX_SOC_RTOS_PORT_GENERIC}'.")
+        "resolved generic port '${_nsx_freertos_port}'.")
 endif()
 
 set(NSX_FREERTOS_ROOT "${CMAKE_CURRENT_LIST_DIR}/sdk/third_party/FreeRTOS-Kernel")
 set(NSX_FREERTOS_INCLUDE_DIR "${NSX_FREERTOS_ROOT}/include")
-set(NSX_FREERTOS_PORT_DIR "${NSX_FREERTOS_ROOT}/portable/GCC/${NSX_SOC_RTOS_PORT_GENERIC}/non_secure")
+set(NSX_FREERTOS_PORT_DIR "${NSX_FREERTOS_ROOT}/portable/GCC/${_nsx_freertos_port}/non_secure")
 
 nsx_assert_directory_exists("${NSX_FREERTOS_INCLUDE_DIR}")
 nsx_assert_directory_exists("${NSX_FREERTOS_PORT_DIR}")
@@ -67,10 +88,11 @@ target_include_directories(nsx_freertos PUBLIC
 )
 
 # nsx::freertos_config carries the application FreeRTOSConfig.h include dir and
-# is required: FreeRTOS.h cannot compile without it. nsx::soc_flags carries the
-# CPU/FPU/MVE defines and toolchain flags the kernel and port are built with.
+# is required: FreeRTOS.h cannot compile without it. nsx::soc_hal carries the
+# CPU/FPU/MVE defines and toolchain flags (via the board/SoC flags it links)
+# the kernel and port are built with.
 target_link_libraries(nsx_freertos PUBLIC
-    nsx::soc_flags
+    nsx::soc_hal
     nsx::freertos_config
 )
 
