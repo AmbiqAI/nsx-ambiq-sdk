@@ -335,6 +335,7 @@ def test_curated_modules_do_not_reference_legacy_neuralspot_compat_state(repo_ro
 
 
 def test_nsx_modules_do_not_ship_freertos_allocator_residue(repo_root: Path) -> None:
+    allocator_symbols = ("pvTasklessPortMalloc", "vTasklessPortFree")
     offenders = []
     for path in (repo_root / "modules").rglob("*"):
         if not path.is_file() or "nsx-ambiqsuite-r5/sdk" in path.as_posix():
@@ -345,7 +346,16 @@ def test_nsx_modules_do_not_ship_freertos_allocator_residue(repo_root: Path) -> 
         if any(relative_parts[:len(prefix)] == prefix for prefix in OPTIONAL_MIDDLEWARE_MODULE_PREFIXES):
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
-        if "FreeRTOS" in text or "pvTasklessPortMalloc" in text or "vTasklessPortFree" in text:
+        if any(symbol in text for symbol in allocator_symbols):
+            offenders.append(path.relative_to(repo_root).as_posix())
+            continue
+        # Documentation may legitimately reference FreeRTOS by name (e.g. a
+        # CHANGELOG noting a module deliberately excludes the legacy allocator).
+        # Vendored kernel residue would leak in as source/build files, so the
+        # bare brand string is only treated as residue outside markdown docs.
+        if path.suffix.lower() == ".md":
+            continue
+        if "FreeRTOS" in text:
             offenders.append(path.relative_to(repo_root).as_posix())
     assert offenders == []
 
