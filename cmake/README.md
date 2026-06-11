@@ -117,6 +117,50 @@ target_compile_definitions(nsx_soc_apollo510b_flags INTERFACE
 )
 ```
 
+## RTOS Port Selection
+
+FreeRTOS (and any future RTOS kernel) is intentionally *not* part of the core
+SDK. The kernel, heap implementation, and `FreeRTOSConfig.h` live in a separate
+optional module (`nsx-freertos`) and the application. The core SDK only owns the
+silicon-facing facts a port needs, so port selection stays data-driven instead of
+hard-coded per application.
+
+Each SoC descriptor publishes two RTOS facts:
+
+| Variable | Meaning |
+| --- | --- |
+| `NSX_SOC_RTOS_PORT_FAMILY` | AmbiqSuite FreeRTOS port directory family for this silicon line: `AMapollo2`, `AMapollo`, `AMapollo4`, or `AMapollo5` |
+| `NSX_SOC_RTOS_PORT_GENERIC` | Upstream CMSIS fallback port when an Ambiq/toolchain-specific port is unavailable: `ARM_CM4F` or `ARM_CM55_NTZ` |
+
+Current mapping:
+
+| SoC skew | Core | `NSX_SOC_RTOS_PORT_FAMILY` | `NSX_SOC_RTOS_PORT_GENERIC` |
+| --- | --- | --- | --- |
+| apollo2 | cortex-m4 | `AMapollo2` | `ARM_CM4F` |
+| apollo3 | cortex-m4 | `AMapollo` | `ARM_CM4F` |
+| apollo3p | cortex-m4 | `AMapollo` | `ARM_CM4F` |
+| apollo4l | cortex-m4 | `AMapollo4` | `ARM_CM4F` |
+| apollo4p | cortex-m4 | `AMapollo4` | `ARM_CM4F` |
+| apollo5b | cortex-m55 | `AMapollo5` | `ARM_CM55_NTZ` |
+| apollo510 | cortex-m55 | `AMapollo5` | `ARM_CM55_NTZ` |
+| apollo510b | cortex-m55 | `AMapollo5` | `ARM_CM55_NTZ` |
+| apollo510L | cortex-m55 | `AMapollo5` | `ARM_CM55_NTZ` |
+| apollo330P | cortex-m55 | `AMapollo5` | `ARM_CM55_NTZ` |
+
+Resolution rules the consuming RTOS module is expected to follow:
+
+- The Ambiq port family is the preferred source when a port exists for the
+  selected toolchain. AmbiqSuite ships these ports for `gcc`, `armclang`
+  (Keil6), `iar`, and `segger`.
+- `gcc` has no `AMapollo` (Apollo3) port; apollo3/apollo3p builds must fall back
+  to `NSX_SOC_RTOS_PORT_GENERIC` (`ARM_CM4F`).
+- `atfe` has no AmbiqSuite port tree at all; ATfE builds must consume the
+  generic ports and validate that the GCC port assembly compiles under ATfE.
+- These are facts only. The SoC descriptor does not add RTOS compile
+  definitions, link any kernel, or claim a default tick source. Tick source,
+  heap policy, and `FreeRTOSConfig.h` values are owned by the RTOS module and
+  the application.
+
 ## Migration Rule
 
 `NSX_BOARD_FLAGS_TARGET` currently contains both SoC and board facts. During the
