@@ -1,7 +1,7 @@
 [project]
-name = "nsx-ambiq-sdk-r5"
+name = "nsx-ambiq-sdk"
 version = "5.2.23"
-description = "Curated AmbiqSuite R5 SDK-core modules for NSX"
+description = "Unified Ambiq SDK package for NSX"
 requires-python = ">=3.10"
 
 [dependency-groups]
