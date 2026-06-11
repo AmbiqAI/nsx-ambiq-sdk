@@ -557,6 +557,8 @@ def test_freertos_vendored_kernel_is_pinned(repo_root: Path) -> None:
         "timers.c",
         "include/FreeRTOS.h",
         "portable/MemMang/heap_4.c",
+        "portable/GCC/ARM_CM4F/port.c",
+        "portable/GCC/ARM_CM4F/portmacro.h",
         "portable/GCC/ARM_CM55_NTZ/non_secure/port.c",
         "portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c",
     ):
@@ -623,6 +625,62 @@ def test_freertos_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: P
         stderr=subprocess.STDOUT,
     )
     assert result.returncode == 0, result.stdout
+
+
+def test_freertos_module_configures_for_cm4f_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    board = "apollo4p_evb"
+    source_dir = tmp_path / "freertos_cm4f" / board
+    config_dir = source_dir / "config"
+    build_dir = source_dir / "build"
+    config_dir.mkdir(parents=True)
+
+    template = repo_root / "modules" / "nsx-freertos" / "templates" / "FreeRTOSConfig.h.template"
+    (config_dir / "FreeRTOSConfig.h").write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+
+    (source_dir / "CMakeLists.txt").write_text(
+        "\n".join(
+            [
+                "cmake_minimum_required(VERSION 3.20)",
+                "if(POLICY CMP0123)",
+                "    cmake_policy(SET CMP0123 NEW)",
+                "endif()",
+                "set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)",
+                "project(nsx_freertos_cm4f_contract C)",
+                "include(GNUInstallDirs)",
+                f'set(NSX_ROOT "{repo_root.as_posix()}")',
+                f'set(NSX_CMAKE_DIR "{(repo_root / "cmake").as_posix()}")',
+                'set(NSX_SDK_PROVIDER "ambiqsuite-r4")',
+                'set(NSX_TOOLCHAIN_FAMILY "gcc")',
+                'set(NSX_AMBIQSUITE_VERSION "R4.5.0")',
+                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite-r4" / "sdk").as_posix()}")',
+                f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal-r4").as_posix()}" nsx-ambiq-hal-r4)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp-r4").as_posix()}" nsx-ambiq-bsp-r4)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-soc-hal").as_posix()}" nsx-soc-hal)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-core").as_posix()}" nsx-core)',
+                "add_library(app_freertos_config INTERFACE)",
+                f'target_include_directories(app_freertos_config INTERFACE "{config_dir.as_posix()}")',
+                "add_library(nsx::freertos_config ALIAS app_freertos_config)",
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-freertos").as_posix()}" nsx-freertos)',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        ["cmake", "-S", str(source_dir), "-B", str(build_dir)],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    assert result.returncode == 0, result.stdout
+
 
 
 def test_freertos_module_requires_config_provider(repo_root: Path, tmp_path: Path) -> None:

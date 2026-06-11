@@ -9,14 +9,14 @@ SDK links no kernel and claims no tick source; this module is opt-in.
 
 Phase 1 MVP:
 
-- Port: generic upstream `ARM_CM55_NTZ` (non-TrustZone)
-- SoC: Apollo510 (Cortex-M55)
+- Ports: generic upstream `ARM_CM55_NTZ` (non-TrustZone) and `ARM_CM4F`
+- SoC tracks: staged Cortex-M55 and Cortex-M4F boards that publish RTOS facts
 - Toolchain: `arm-none-eabi-gcc`
 - Heap: `heap_4`
 - Tick: plain SysTick (tickless idle disabled)
 
-Later phases add the Cortex-M4F track (Apollo2/3/4), armclang and ATfE
-toolchains, the Ambiq STIMER tickless ports, and low-power sleep hooks.
+Later phases add armclang and ATfE toolchains, the Ambiq STIMER tickless ports,
+and low-power sleep hooks.
 
 ## What this module owns vs. the application
 
@@ -51,10 +51,13 @@ into your application as `FreeRTOSConfig.h` and tune it.
 
 ### Interrupt handler binding
 
-The ARMv8-M port provides strong `SVC_Handler`, `PendSV_Handler`, and
-`SysTick_Handler` symbols. NSX per-SoC startup declares those vectors `weak`, so
-the port overrides them at link time automatically. Do not redefine them in the
-application and do not remap them in `FreeRTOSConfig.h`.
+The selected FreeRTOS port owns the RTOS handlers. For `ARM_CM55_NTZ`, the
+vendored port provides strong `SVC_Handler`, `PendSV_Handler`, and
+`SysTick_Handler` symbols that override the weak NSX startup vectors directly.
+For `ARM_CM4F`, `nsx-freertos` provides strong shim handlers that route those
+weak vectors to FreeRTOS' `vPortSVCHandler`, `xPortPendSVHandler`, and
+`xPortSysTickHandler`. Do not redefine any of those handlers in the application
+and do not remap them in `FreeRTOSConfig.h`.
 
 ## Vendored kernel
 

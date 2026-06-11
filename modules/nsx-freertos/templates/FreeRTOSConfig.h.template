@@ -8,14 +8,16 @@
  * core SDK own heap size, task topology, stack sizes, priorities, or tick rate.
  *
  * Target profile for this template:
- *   - SoC:        Apollo5 / Cortex-M55 (ARMv8.1-M)
- *   - Port:       generic upstream ARM_CM55_NTZ (non-TrustZone)
+ *   - SoC:        staged Cortex-M55 or Cortex-M4F boards
+ *   - Port:       generic upstream ARM_CM55_NTZ (non-TrustZone) or ARM_CM4F
  *   - Tick:       plain SysTick (tickless idle disabled)
  *   - Heap:       heap_4 (configTOTAL_HEAP_SIZE below)
  *
- * Handler binding: the ARMv8-M port provides strong SVC_Handler / PendSV_Handler
- * / SysTick_Handler symbols that override the weak vectors declared by NSX
- * startup. Do NOT remap them here and do NOT redefine them in the application.
+ * Handler binding: ARM_CM55_NTZ provides strong SVC_Handler / PendSV_Handler /
+ * SysTick_Handler symbols directly. ARM_CM4F uses strong nsx-freertos shim
+ * handlers that route those vectors to FreeRTOS' vPortSVCHandler /
+ * xPortPendSVHandler / xPortSysTickHandler symbols. Do NOT remap or redefine
+ * those handlers in the application.
  *
  * See https://www.FreeRTOS.org/a00110.html for the full option reference.
  */
@@ -26,7 +28,8 @@
 
 extern uint32_t SystemCoreClock;
 
-/* Cortex-M55 generic (non-TrustZone) port configuration. */
+/* Shared generic Cortex-M port configuration. ARMv8-M-only knobs below are
+ * harmless when the selected port is ARM_CM4F and keep one shared template. */
 #define configENABLE_TRUSTZONE                          0
 #define configRUN_FREERTOS_SECURE_ONLY                  1
 #define configENABLE_MPU                                0
