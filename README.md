@@ -1,18 +1,18 @@
-# nsx-ambiq-sdk-r5
+# nsx-ambiq-sdk
 
-Curated AmbiqSuite R5 SDK-core modules for NSX.
+The unified Ambiq SDK package for NSX: curated AmbiqSuite SDK-core modules.
 
-This repository packages the AmbiqSuite R5 platform substrate used by NSX apps: SDK provider metadata, staged HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services.
+The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate used by NSX apps across release trains: SDK provider metadata, curated HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services. Release-train providers (`nsx-ambiqsuite-r2/r3/r4/r5`) are packaged here and selected per board/SoC; the current stable provider line is `nsx-ambiqsuite-r5`.
 
 It is not a full AmbiqSuite mirror. Optional middleware and examples such as FreeRTOS, TinyUSB, Cordio, USB stacks, CMSIS-NN, CMSIS-DSP, and AmbiqSuite sample applications belong in separate optional modules or applications.
 
-## What Is Staged
+## Current Coverage
 
-The current provider payload is AmbiqSuite R5.2.0 with GCC and ATfE artifacts for:
+The current stable provider payload is `nsx-ambiqsuite-r5` (package version `5.2.23`), with GCC and ATfE artifacts for:
 
 The NSX package and module manifests use version `5.2.23`: `5.2` tracks the
-AmbiqSuite R5.2 SDK drop, while `.23` is the NSX-local curated revision for
-module metadata, integration fixes, and packaging updates on top of that drop.
+upstream AmbiqSuite R5.2 line, while `.23` is the NSX-local curated revision
+for module metadata, integration fixes, and packaging updates.
 
 | Board | SoC/skew | Status |
 | --- | --- | --- |
@@ -31,10 +31,10 @@ Select a board descriptor, add the staged modules your app needs, and consume th
 
 | Target | Purpose |
 | --- | --- |
-| `nsx::sdk_ambiqsuite_r5` | SDK provider/version anchor |
+| `nsx::sdk_ambiqsuite_r5` | SDK provider/version anchor (provider-specific; the staged provider is R5) |
 | `nsx::cmsis_core` | CMSIS 6 Core(M) headers |
-| `nsx::ambiq_hal` | AmbiqSuite R5 HAL wrapper |
-| `nsx::ambiq_bsp` | AmbiqSuite R5 BSP wrapper |
+| `nsx::ambiq_hal` | AmbiqSuite HAL wrapper |
+| `nsx::ambiq_bsp` | AmbiqSuite BSP wrapper |
 | `nsx::cmsis_startup` | Startup, vector table, system source, linker script |
 | `nsx::soc_hal` | Shared SoC HAL integration layer |
 | `nsx::core` | NSX runtime initialization |
@@ -67,7 +67,8 @@ CI runs these checks on pull requests and pushes to `main`.
 | `boards/` | Board descriptors and board-level facts |
 | `cmake/` | Shared CMake helpers and SoC descriptors |
 | `modules/` | Logical NSX modules packaged in this release unit |
-| `modules/nsx-ambiqsuite-r5/sdk/` | Curated provider payload consumed by CMake |
+| `modules/nsx-ambiqsuite-r{2,3,4,5}/` | Per-release-train SDK providers (the R5 provider carries the staged `sdk/` payload) |
+| `modules/nsx-ambiqsuite-r5/sdk/` | Curated provider payload currently consumed by CMake |
 | `sdk-intake/` | Tooling for staging and promoting AmbiqSuite drops |
 | `tools/` | Opt-in local/CI helper scripts such as link smokes |
 | `tests/` | Static and CMake contract tests |
