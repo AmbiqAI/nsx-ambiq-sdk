@@ -1,0 +1,65 @@
+schema_version: 1
+
+module:
+  name: nsx-freertos
+  type: backend_specific
+  category: rtos
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Optional FreeRTOS kernel middleware. Vendors a pinned upstream FreeRTOS-Kernel and builds the SoC-selected CMSIS port. Kernel/heap policy and FreeRTOSConfig.h are owned by the application.
+
+vendored:
+  freertos_kernel:
+    upstream: https://github.com/FreeRTOS/FreeRTOS-Kernel
+    tag: V11.1.0
+    path: sdk/third_party/FreeRTOS-Kernel
+    license: MIT
+
+capabilities:
+  - rtos
+  - freertos
+  - scheduler
+  - sdk_component
+
+use_cases:
+  - run application tasks under a preemptive FreeRTOS scheduler
+  - provide kernel objects (tasks, queues, semaphores, timers) to higher-level modules
+  - opt-in RTOS scheduling without baking kernel or heap policy into the core SDK
+
+agent_keywords:
+  - freertos
+  - rtos
+  - scheduler
+  - task
+  - kernel
+
+build:
+  cmake:
+    package: nsx_soc_apollo510
+    targets:
+      - nsx::freertos
+
+requires_app_contract:
+  - The application provides FreeRTOSConfig.h and exposes its directory via an nsx::freertos_config interface target.
+  - configTOTAL_HEAP_SIZE, task topology, stack sizes, priorities, and tick rate are application policy.
+  - Tickless idle and low-power sleep hooks are not enabled in this phase; the generic port uses a plain SysTick tick.
+  - The ARMv8-M port claims the weak SVC_Handler / PendSV_Handler / SysTick_Handler vectors provided by NSX startup; the application must not redefine them.
+
+depends:
+  required:
+    - nsx-core
+  optional: []
+
+compatibility:
+  boards:
+    - apollo510_evb
+  socs:
+    - apollo510
+  toolchains:
+    - arm-none-eabi-gcc
+
+phase: "Phase 1 MVP: generic ARM_CM55_NTZ port, GCC, heap_4, SysTick tick, no tickless. Additional families/toolchains and Ambiq tickless ports arrive in later phases."

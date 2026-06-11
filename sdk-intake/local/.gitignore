@@ -1,0 +1,5 @@
+# Ignore every raw SDK drop and extracted build tree in this local intake
+# workspace. Only the workspace's own README (and this ignore file) are tracked.
+*
+!.gitignore
+!README.md

@@ -9,6 +9,8 @@ set(NSX_SOC_HAS_MVE TRUE)
 set(NSX_SOC_HAS_FPU TRUE)
 set(NSX_SOC_PMU_TIER "armv8m")
 set(NSX_SOC_CAPABILITIES core:m55 isa:armv8.1-m dsp mve fpu pmu:armv8m)
+set(NSX_SOC_RTOS_PORT_FAMILY "AMapollo5")
+set(NSX_SOC_RTOS_PORT_GENERIC "ARM_CM55_NTZ")
 
 set(NSX_CPU "cortex-m55")
 set(NSX_FLOAT_ABI "hard")

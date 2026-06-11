@@ -9,6 +9,8 @@ set(NSX_SOC_HAS_MVE FALSE)
 set(NSX_SOC_HAS_FPU TRUE)
 set(NSX_SOC_PMU_TIER "none")
 set(NSX_SOC_CAPABILITIES core:m4 isa:armv7e-m dsp fpu)
+set(NSX_SOC_RTOS_PORT_FAMILY "AMapollo4")
+set(NSX_SOC_RTOS_PORT_GENERIC "ARM_CM4F")
 
 set(NSX_CPU "cortex-m4")
 set(NSX_FLOAT_ABI "hard")
