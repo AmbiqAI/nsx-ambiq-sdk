@@ -81,8 +81,8 @@ while still carrying its own part define and linker script.
 ### Single Source Of Truth For SoC Facts
 
 The side-effect-free SoC facts for a skew (the `NSX_SOC_*` facts plus the
-`NSX_CPU` / `NSX_FLOAT_ABI` / `NSX_ABI_FLAGS` toolchain selectors) live in a
-dedicated data-only file:
+`NSX_CPU` / `NSX_FPU` / `NSX_FLOAT_ABI` / `NSX_ABI_FLAGS` toolchain selectors)
+live in a dedicated data-only file:
 
 ```
 cmake/socs/_facts/<skew>.cmake
@@ -94,14 +94,14 @@ file, and downstream `board.cmake` files load the same facts via the helper
 shipped in `cmake/nsx_soc_facts.cmake`:
 
 ```cmake
-nsx_load_soc_facts("apollo510")   # publishes NSX_SOC_* + NSX_CPU/FLOAT_ABI/ABI_FLAGS
+nsx_load_soc_facts("apollo510")   # publishes NSX_SOC_* + NSX_CPU/FPU/FLOAT_ABI/ABI_FLAGS
 ```
 
 This keeps the facts in exactly one place so they cannot drift between the SDK's
-own descriptors and consuming boards. A board never re-declares CPU/ABI or RTOS
-port facts by hand. `nsx_load_soc_facts()` is auto-included by the app bootstrap
-(it is a top-level `cmake/*.cmake` file) and raises `FATAL_ERROR` on an unknown
-skew.
+own descriptors and consuming boards. A board never re-declares CPU/FPU/ABI or
+RTOS port facts by hand. `nsx_load_soc_facts()` is auto-included by the app
+bootstrap (it is a top-level `cmake/*.cmake` file) and raises `FATAL_ERROR` on
+an unknown skew.
 
 ## Capabilities
 

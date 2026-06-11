@@ -21,4 +21,9 @@ set(NSX_SOC_RTOS_PORT_GENERIC "ARM_CM55_NTZ")
 
 set(NSX_CPU "cortex-m55")
 set(NSX_FLOAT_ABI "hard")
+# Armv8.1-M (Cortex-M55) selects its FPU/MVE unit from -mcpu, so no separate
+# -mfpu flag is emitted. NSX_FPU is declared (empty) at the SoC layer so the
+# core's FPU spelling is a SoC fact rather than a per-board decision; Armv7E-M
+# cores (e.g. Cortex-M4) set a concrete value such as "fpv4-sp-d16".
+set(NSX_FPU "")
 set(NSX_ABI_FLAGS "thumbv8.1m-fpv5-hard")
