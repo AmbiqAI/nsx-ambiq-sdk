@@ -1,5 +1,5 @@
 {
-  "name": "nsx-ambiq-sdk-r5",
+  "name": "nsx-ambiq-sdk",
   "build": {
     "dockerfile": "../docker/dev-ci.Dockerfile",
     "context": ".."

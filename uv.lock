@@ -78,7 +78,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nsx-ambiq-sdk-r5"
+name = "nsx-ambiq-sdk"
 version = "5.2.23"
 source = { virtual = "." }
 

@@ -74,7 +74,7 @@ def run(command: list[str], *, cwd: Path | None = None) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build minimal NSX R5 link smokes for staged boards.")
-    parser.add_argument("--repo-root", type=Path, default=repo_root(), help="Path to nsx-ambiq-sdk-r5 checkout.")
+    parser.add_argument("--repo-root", type=Path, default=repo_root(), help="Path to nsx-ambiq-sdk checkout.")
     parser.add_argument("--build-root", type=Path, default=Path("build/link-smoke"), help="Build/output root.")
     parser.add_argument("--toolchain-family", choices=TOOLCHAIN_FAMILIES, default="armclang")
     parser.add_argument(
