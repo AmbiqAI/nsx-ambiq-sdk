@@ -1,5 +1,5 @@
-# SoC facts (NSX_SOC_* + NSX_CPU/NSX_FLOAT_ABI/NSX_ABI_FLAGS) are the single
-# source of truth shared with downstream board.cmake files; see _facts/.
+# SoC facts (NSX_SOC_* + NSX_CPU/NSX_FPU/NSX_FLOAT_ABI/NSX_ABI_FLAGS) are the
+# single source of truth shared with downstream board.cmake files; see _facts/.
 include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo510.cmake")
 
 if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r5")

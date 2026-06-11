@@ -1,7 +1,8 @@
 # Single source of truth for apollo510 SoC facts.
 #
 # Side-effect free: only set() of NSX_SOC_* facts and the NSX toolchain
-# selectors (NSX_CPU / NSX_FLOAT_ABI / NSX_ABI_FLAGS). No targets, no includes.
+# selectors (NSX_CPU / NSX_FPU / NSX_FLOAT_ABI / NSX_ABI_FLAGS). No targets,
+# no includes.
 # Consumed by:
 #   - cmake/socs/apollo510.cmake (the SDK's own board/SoC descriptor), and
 #   - downstream board.cmake files via nsx_load_soc_facts("apollo510").
