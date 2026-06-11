@@ -58,6 +58,8 @@ compatibility:
   boards:
     - apollo3p_evb
     - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
     - apollo510_evb
   socs:
     - apollo3p
