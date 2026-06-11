@@ -1,20 +1,6 @@
-set(NSX_SOC_FAMILY "apollo3p")
-set(NSX_SOC_SERIES "apollo3")
-set(NSX_SOC_SKEW "apollo3p")
-set(NSX_SOC_CORE "cortex-m4")
-set(NSX_SOC_ARCH_CLASS "armv7e_m")
-set(NSX_SOC_SDK_PROVIDER "ambiqsuite-r3")
-set(NSX_SOC_HAS_DSP TRUE)
-set(NSX_SOC_HAS_MVE FALSE)
-set(NSX_SOC_HAS_FPU TRUE)
-set(NSX_SOC_PMU_TIER "none")
-set(NSX_SOC_CAPABILITIES core:m4 isa:armv7e-m dsp fpu)
-set(NSX_SOC_RTOS_PORT_FAMILY "AMapollo")
-set(NSX_SOC_RTOS_PORT_GENERIC "ARM_CM4F")
-
-set(NSX_CPU "cortex-m4")
-set(NSX_FLOAT_ABI "hard")
-set(NSX_ABI_FLAGS "thumbv7em-fpv4-hard")
+# SoC facts (NSX_SOC_* + NSX_CPU/NSX_FPU/NSX_FLOAT_ABI/NSX_ABI_FLAGS) are the
+# single source of truth shared with downstream board.cmake files; see _facts/.
+include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo3p.cmake")
 
 if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r3")
     message(FATAL_ERROR

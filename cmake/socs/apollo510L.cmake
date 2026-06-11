@@ -1,20 +1,6 @@
-set(NSX_SOC_FAMILY "apollo510L")
-set(NSX_SOC_SERIES "apollo5")
-set(NSX_SOC_SKEW "apollo510L")
-set(NSX_SOC_CORE "cortex-m55")
-set(NSX_SOC_ARCH_CLASS "armv8_1m")
-set(NSX_SOC_SDK_PROVIDER "ambiqsuite-r5")
-set(NSX_SOC_HAS_DSP TRUE)
-set(NSX_SOC_HAS_MVE TRUE)
-set(NSX_SOC_HAS_FPU TRUE)
-set(NSX_SOC_PMU_TIER "armv8m")
-set(NSX_SOC_CAPABILITIES core:m55 isa:armv8.1-m dsp mve fpu pmu:armv8m)
-set(NSX_SOC_RTOS_PORT_FAMILY "AMapollo5")
-set(NSX_SOC_RTOS_PORT_GENERIC "ARM_CM55_NTZ")
-
-set(NSX_CPU "cortex-m55")
-set(NSX_FLOAT_ABI "hard")
-set(NSX_ABI_FLAGS "thumbv8.1m-fpv5-hard")
+# SoC facts (NSX_SOC_* + NSX_CPU/NSX_FPU/NSX_FLOAT_ABI/NSX_ABI_FLAGS) are the
+# single source of truth shared with downstream board.cmake files; see _facts/.
+include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo510L.cmake")
 
 if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r5")
     message(FATAL_ERROR
