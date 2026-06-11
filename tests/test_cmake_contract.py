@@ -10,6 +10,21 @@ def read(repo_root: Path, relative_path: str) -> str:
     return (repo_root / relative_path).read_text(encoding="utf-8")
 
 
+def soc_facts_text(repo_root: Path, skew: str) -> str:
+    """Return the text that declares a SoC's facts.
+
+    SoC facts are the single source of truth shared between the SDK's own
+    cmake/socs/<skew>.cmake descriptor and downstream board.cmake files. They
+    may be extracted into a side-effect-free cmake/socs/_facts/<skew>.cmake or
+    still inlined in cmake/socs/<skew>.cmake. Prefer the extracted file when it
+    exists so the contract holds during a mixed (partially-extracted) state.
+    """
+    facts = repo_root / "cmake" / "socs" / "_facts" / f"{skew}.cmake"
+    if facts.exists():
+        return facts.read_text(encoding="utf-8")
+    return read(repo_root, f"cmake/socs/{skew}.cmake")
+
+
 def test_hal_and_bsp_use_provider_local_toolchain_artifacts(repo_root: Path) -> None:
     hal = read(repo_root, "modules/nsx-ambiq-hal-r5/CMakeLists.txt")
     bsp = read(repo_root, "modules/nsx-ambiq-bsp-r5/CMakeLists.txt")
@@ -503,7 +518,7 @@ def test_soc_descriptors_publish_rtos_port_facts(repo_root: Path) -> None:
     )
 
     for skew, (family, generic) in EXPECTED_RTOS_PORT_FACTS.items():
-        text = read(repo_root, f"cmake/socs/{skew}.cmake")
+        text = soc_facts_text(repo_root, skew)
         assert f'set(NSX_SOC_RTOS_PORT_FAMILY "{family}")' in text, skew
         assert f'set(NSX_SOC_RTOS_PORT_GENERIC "{generic}")' in text, skew
 
@@ -514,7 +529,7 @@ def test_soc_rtos_generic_port_matches_core_class(repo_root: Path) -> None:
         "cortex-m55": "ARM_CM55_NTZ",
     }
     for skew in EXPECTED_RTOS_PORT_FACTS:
-        text = read(repo_root, f"cmake/socs/{skew}.cmake")
+        text = soc_facts_text(repo_root, skew)
         core_match = re.search(r'set\(NSX_SOC_CORE "([^"]+)"\)', text)
         generic_match = re.search(r'set\(NSX_SOC_RTOS_PORT_GENERIC "([^"]+)"\)', text)
         assert core_match is not None, skew
@@ -526,7 +541,7 @@ def test_core_sdk_does_not_link_or_define_freertos(repo_root: Path) -> None:
     # The RTOS port facts must remain facts only: no kernel link, no RTOS
     # compile definitions injected by the SoC descriptors themselves.
     for skew in EXPECTED_RTOS_PORT_FACTS:
-        text = read(repo_root, f"cmake/socs/{skew}.cmake")
+        text = read(repo_root, f"cmake/socs/{skew}.cmake") + soc_facts_text(repo_root, skew)
         assert "FreeRTOS" not in text, skew
         assert "vTaskStartScheduler" not in text, skew
 

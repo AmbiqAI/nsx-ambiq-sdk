@@ -78,6 +78,31 @@ set(NSX_SOC_LINKER_SCRIPT_GCC "${NSX_ROOT}/modules/nsx-core/src/apollo510b/gcc/l
 This matters because an Apollo510B skew can share Apollo510 HAL/system sources
 while still carrying its own part define and linker script.
 
+### Single Source Of Truth For SoC Facts
+
+The side-effect-free SoC facts for a skew (the `NSX_SOC_*` facts plus the
+`NSX_CPU` / `NSX_FPU` / `NSX_FLOAT_ABI` / `NSX_ABI_FLAGS` toolchain selectors)
+live in a dedicated data-only file:
+
+```
+cmake/socs/_facts/<skew>.cmake
+```
+
+These files contain only `set()` calls — no targets, includes, or other side
+effects. The SoC descriptor (`cmake/socs/<skew>.cmake`) includes its own facts
+file, and downstream `board.cmake` files load the same facts via the helper
+shipped in `cmake/nsx_soc_facts.cmake`:
+
+```cmake
+nsx_load_soc_facts("apollo510")   # publishes NSX_SOC_* + NSX_CPU/FPU/FLOAT_ABI/ABI_FLAGS
+```
+
+This keeps the facts in exactly one place so they cannot drift between the SDK's
+own descriptors and consuming boards. A board never re-declares CPU/FPU/ABI or
+RTOS port facts by hand. `nsx_load_soc_facts()` is auto-included by the app
+bootstrap (it is a top-level `cmake/*.cmake` file) and raises `FATAL_ERROR` on
+an unknown skew.
+
 ## Capabilities
 
 Capabilities should be explicit CMake facts, not inferred from board names.
