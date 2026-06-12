@@ -174,6 +174,8 @@ def configure_contract_project(
     provider_module: str = "nsx-ambiqsuite-r5",
     hal_module: str = "nsx-ambiq-hal-r5",
     bsp_module: str = "nsx-ambiq-bsp-r5",
+    prelude: tuple[str, ...] = (),
+    post_board_include: tuple[str, ...] = (),
 ) -> subprocess.CompletedProcess[str]:
     source_dir = tmp_path / toolchain_family / board
     build_dir = source_dir / "build"
@@ -192,6 +194,7 @@ def configure_contract_project(
                 "set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)",
                 "project(nsx_contract C)",
                 "include(GNUInstallDirs)",
+                *prelude,
                 f'set(NSX_ROOT "{repo_root.as_posix()}")',
                 f'set(NSX_CMAKE_DIR "{(repo_root / "cmake").as_posix()}")',
                 f'set(NSX_SDK_PROVIDER "{provider}")',
@@ -199,6 +202,7 @@ def configure_contract_project(
                 f'set(NSX_AMBIQSUITE_VERSION "{ambiqsuite_version}")',
                 f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / provider_module / "sdk").as_posix()}")',
                 f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
+                *post_board_include,
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
                 f'add_subdirectory("{(repo_root / "modules" / hal_module).as_posix()}" {hal_module})',
                 f'add_subdirectory("{(repo_root / "modules" / bsp_module).as_posix()}" {bsp_module})',
@@ -240,6 +244,100 @@ def test_armclang_configure_reflects_acfe_artifact_availability(repo_root: Path,
     else:
         assert result.returncode != 0
         assert "sdk/lib/acfe/apollo510/libam_hal.a" in result.stdout
+
+
+def test_apollo510_itcm_linker_override_selects_itcm_script(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo510_evb",
+        "gcc",
+        prelude=("set(NSX_LINKER_PROFILE itcm)",),
+        post_board_include=("message(STATUS \"NSX_LINKER_SCRIPT=${NSX_LINKER_SCRIPT}\")",),
+    )
+
+    assert result.returncode == 0, result.stdout
+    assert "src/apollo510/gcc/linker_script_itcm_sbl.ld" in result.stdout
+
+
+# board -> nsx-core SoC source directory for the M55 family that supports the
+# ITCM linker profile.
+M55_ITCM_BOARDS = {
+    "apollo330mP_evb": "apollo330P",
+    "apollo510_evb": "apollo510",
+    "apollo510b_evb": "apollo510b",
+    "apollo510dL_evb": "apollo510L",
+}
+
+
+def test_m55_default_linker_profile_selects_default_script(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    for board, soc in M55_ITCM_BOARDS.items():
+        result = configure_contract_project(
+            repo_root,
+            tmp_path,
+            board,
+            "gcc",
+            post_board_include=("message(STATUS \"NSX_LINKER_SCRIPT=${NSX_LINKER_SCRIPT}\")",),
+        )
+
+        assert result.returncode == 0, result.stdout
+        assert f"src/{soc}/gcc/linker_script_sbl.ld" in result.stdout
+        assert "linker_script_itcm_sbl.ld" not in result.stdout
+
+
+def test_m55_itcm_linker_profile_selects_itcm_script(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    for board, soc in M55_ITCM_BOARDS.items():
+        result = configure_contract_project(
+            repo_root,
+            tmp_path,
+            board,
+            "gcc",
+            prelude=("set(NSX_LINKER_PROFILE itcm)",),
+            post_board_include=("message(STATUS \"NSX_LINKER_SCRIPT=${NSX_LINKER_SCRIPT}\")",),
+        )
+
+        assert result.returncode == 0, result.stdout
+        assert f"src/{soc}/gcc/linker_script_itcm_sbl.ld" in result.stdout
+
+
+def test_invalid_linker_profile_is_rejected(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo510_evb",
+        "gcc",
+        prelude=("set(NSX_LINKER_PROFILE bogus)",),
+    )
+
+    assert result.returncode != 0
+    assert "Unsupported NSX_LINKER_PROFILE" in result.stdout
+
+
+def test_m55_itcm_linker_scripts_match_generated_object_names(repo_root: Path) -> None:
+    for soc in M55_ITCM_BOARDS.values():
+        gcc_itcm = read(repo_root, f"modules/nsx-core/src/{soc}/gcc/linker_script_itcm_sbl.ld")
+        armclang_itcm = read(
+            repo_root,
+            f"modules/nsx-core/src/{soc}/armclang/linker_script_itcm_sbl.sct",
+        )
+
+        assert "KEEP(*arm_*.obj" in gcc_itcm, soc
+        assert "KEEP(*strided*.obj" in gcc_itcm, soc
+        assert "*arm_*.o (+RO-CODE)" in armclang_itcm, soc
+        assert "*call_once*.o (+RO-CODE)" in armclang_itcm, soc
+
 
 
 def test_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:

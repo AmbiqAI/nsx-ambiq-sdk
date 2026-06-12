@@ -20,11 +20,20 @@ nsx_toolchain_is_armclang(NSX_TOOLCHAIN_IS_ARMCLANG)
 if(NSX_TOOLCHAIN_IS_ARMCLANG)
     set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo510b/armclang/startup_keil6.c")
     set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_apollo510.c")
-    set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct")
+    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct")
+    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct")
 else()
     set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo510b/gcc/startup_gcc.c")
     set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_apollo510.c")
-    set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld")
+    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld")
+    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld")
+endif()
+
+if(NOT DEFINED NSX_LINKER_SCRIPT)
+    nsx_select_linker_script(
+        DEFAULT "${_nsx_linker_script_default}"
+        ITCM "${_nsx_linker_script_itcm}"
+    )
 endif()
 
 include("${NSX_CMAKE_DIR}/segger/socs/apollo5.cmake")
