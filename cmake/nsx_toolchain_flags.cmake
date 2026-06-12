@@ -131,12 +131,40 @@ function(nsx_validate_prebuilt_abi)
     endif()
 endfunction()
 
+# Single source of truth for the "ATFE links the GCC prebuilt vendor archives"
+# policy, consumed consistently by the R3/R4/R5 prebuilt HAL+BSP modules.
+#
+# TEMPORARY WORKAROUND (USB CDC regression): the ATFE-rebuilt AmbiqSuite HAL
+# archive breaks USB CDC EP0 enumeration on Apollo510 (device enumerates but
+# descriptor reads fail with -110). The GCC prebuilt HAL/BSP archives are
+# AAPCS-compatible, link cleanly into ATFE (clang/lld) firmware, and enumerate
+# correctly. Remove this policy (and the call sites) once the ATFE prebuilt is
+# fixed at the AmbiqSuite source level. See nsx-ap510-runtime-validation note.
+function(nsx_atfe_prefers_gcc_prebuilt out_var)
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+
+    if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
 function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)
     nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
 
     set(nsx_artifact_toolchain "${NSX_TOOLCHAIN_FAMILY}")
     if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang")
         set(nsx_artifact_toolchain "acfe")
+    endif()
+
+    # Apply the shared ATFE->GCC prebuilt policy (see nsx_atfe_prefers_gcc_prebuilt).
+    # Blast radius: this resolver is consumed only by nsx-ambiq-hal-r5 and
+    # nsx-ambiq-bsp-r5; for atfe it maps the artifact directory (lib/<toolchain>/)
+    # to the gcc variant. Any future caller inherits the same policy by design.
+    nsx_atfe_prefers_gcc_prebuilt(nsx_atfe_use_gcc)
+    if(nsx_atfe_use_gcc)
+        set(nsx_artifact_toolchain "gcc")
     endif()
 
     set(${out_var} "${nsx_artifact_toolchain}" PARENT_SCOPE)

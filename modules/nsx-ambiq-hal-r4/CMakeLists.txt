@@ -34,13 +34,12 @@ nsx_assert_path_component(NSX_AMBIQ_HAL_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_MCU_INSTALL_NAME)
 
 set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal${NSX_AMBIQSUITE_ARCHIVE_SUFFIX}")
-if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
-    set(NSX_HAL_LIB_ATFE "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal-atfe.a")
-    if(EXISTS "${NSX_HAL_LIB_ATFE}")
-        set(NSX_HAL_LIB_DEFAULT "${NSX_HAL_LIB_ATFE}")
-    else()
-        message(STATUS "ns-ambiq-hal-r4: ATFE prebuilt not staged, using GCC variant (AAPCS-compatible)")
-    endif()
+nsx_atfe_prefers_gcc_prebuilt(NSX_ATFE_USE_GCC_PREBUILT)
+if(NSX_ATFE_USE_GCC_PREBUILT)
+    # Explicitly select the GCC prebuilt HAL archive (libam_hal.a) rather than any
+    # staged libam_hal-atfe.a. See nsx_atfe_prefers_gcc_prebuilt for rationale.
+    set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal.a")
+    message(STATUS "nsx-ambiq-hal-r4: atfe build linking GCC HAL archive (USB CDC workaround)")
 endif()
 set(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite HAL static library")
 
