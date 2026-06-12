@@ -47,7 +47,7 @@ requires_app_contract:
   - The application provides FreeRTOSConfig.h and exposes its directory via an nsx::freertos_config interface target.
   - configTOTAL_HEAP_SIZE, task topology, stack sizes, priorities, and tick rate are application policy.
   - Tickless idle and low-power sleep hooks are not enabled in this phase; the generic port uses a plain SysTick tick.
-  - The ARMv8-M port claims the weak SVC_Handler / PendSV_Handler / SysTick_Handler vectors provided by NSX startup; the application must not redefine them.
+  - The selected port owns the RTOS handlers exposed by NSX startup. ARM_CM55_NTZ claims SVC_Handler / PendSV_Handler / SysTick_Handler directly; ARM_CM4F uses strong shim handlers provided by nsx-freertos that route to vPortSVCHandler / xPortPendSVHandler / xPortSysTickHandler. The application must not redefine them.
 
 depends:
   required:
@@ -56,10 +56,16 @@ depends:
 
 compatibility:
   boards:
+    - apollo3p_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
     - apollo510_evb
   socs:
+    - apollo3p
+    - apollo4p
     - apollo510
   toolchains:
     - arm-none-eabi-gcc
 
-phase: "Phase 1 MVP: generic ARM_CM55_NTZ port, GCC, heap_4, SysTick tick, no tickless. Additional families/toolchains and Ambiq tickless ports arrive in later phases."
+phase: "Phase 1 MVP: generic ARM_CM55_NTZ and ARM_CM4F ports, GCC, heap_4, SysTick tick, no tickless. Additional toolchains and Ambiq tickless ports arrive in later phases."

@@ -33,6 +33,8 @@ else()
     endif()
     if(_nsx_freertos_cpu STREQUAL "cortex-m55")
         set(_nsx_freertos_port "ARM_CM55_NTZ")
+    elseif(_nsx_freertos_cpu STREQUAL "cortex-m4")
+        set(_nsx_freertos_port "ARM_CM4F")
     else()
         set(_nsx_freertos_port "")
     endif()
@@ -45,22 +47,39 @@ if(NOT _nsx_freertos_port)
         "CPU (NSX_SOC_CORE/NSX_CPU).")
 endif()
 
-# Phase 1 MVP support gate: generic Cortex-M55 GCC port only.
-if(NOT _nsx_freertos_port STREQUAL "ARM_CM55_NTZ")
+# Phase 1 support gate: generic GCC ports for Cortex-M55 NTZ and Cortex-M4F.
+set(_nsx_freertos_supported_ports ARM_CM55_NTZ ARM_CM4F)
+list(FIND _nsx_freertos_supported_ports "${_nsx_freertos_port}" _nsx_freertos_port_index)
+if(_nsx_freertos_port_index EQUAL -1)
     message(FATAL_ERROR
-        "nsx-freertos Phase 1 supports the ARM_CM55_NTZ generic port only; "
+        "nsx-freertos supports only the generic GCC ARM_CM55_NTZ and ARM_CM4F ports; "
         "resolved generic port '${_nsx_freertos_port}'.")
 endif()
 
 set(NSX_FREERTOS_ROOT "${CMAKE_CURRENT_LIST_DIR}/sdk/third_party/FreeRTOS-Kernel")
 set(NSX_FREERTOS_INCLUDE_DIR "${NSX_FREERTOS_ROOT}/include")
-set(NSX_FREERTOS_PORT_DIR "${NSX_FREERTOS_ROOT}/portable/GCC/${_nsx_freertos_port}/non_secure")
+set(_nsx_freertos_port_base_dir "${NSX_FREERTOS_ROOT}/portable/GCC/${_nsx_freertos_port}")
+set(NSX_FREERTOS_PORT_DIR "${_nsx_freertos_port_base_dir}")
+if(EXISTS "${_nsx_freertos_port_base_dir}/non_secure/port.c")
+    set(NSX_FREERTOS_PORT_DIR "${_nsx_freertos_port_base_dir}/non_secure")
+endif()
 
 nsx_assert_directory_exists("${NSX_FREERTOS_INCLUDE_DIR}")
 nsx_assert_directory_exists("${NSX_FREERTOS_PORT_DIR}")
 nsx_assert_file_exists("${NSX_FREERTOS_PORT_DIR}/port.c")
-nsx_assert_file_exists("${NSX_FREERTOS_PORT_DIR}/portasm.c")
 nsx_assert_file_exists("${NSX_FREERTOS_ROOT}/portable/MemMang/heap_4.c")
+
+set(_nsx_freertos_port_sources
+    ${NSX_FREERTOS_PORT_DIR}/port.c
+)
+if(EXISTS "${NSX_FREERTOS_PORT_DIR}/portasm.c")
+    list(APPEND _nsx_freertos_port_sources ${NSX_FREERTOS_PORT_DIR}/portasm.c)
+endif()
+if(_nsx_freertos_port STREQUAL "ARM_CM4F")
+    list(APPEND _nsx_freertos_port_sources
+        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_freertos_handlers_cm4f.c
+    )
+endif()
 
 add_library(nsx_freertos STATIC
     ${NSX_FREERTOS_ROOT}/croutine.c
@@ -70,8 +89,7 @@ add_library(nsx_freertos STATIC
     ${NSX_FREERTOS_ROOT}/stream_buffer.c
     ${NSX_FREERTOS_ROOT}/tasks.c
     ${NSX_FREERTOS_ROOT}/timers.c
-    ${NSX_FREERTOS_PORT_DIR}/port.c
-    ${NSX_FREERTOS_PORT_DIR}/portasm.c
+    ${_nsx_freertos_port_sources}
     ${NSX_FREERTOS_ROOT}/portable/MemMang/heap_4.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_freertos.c
 )
