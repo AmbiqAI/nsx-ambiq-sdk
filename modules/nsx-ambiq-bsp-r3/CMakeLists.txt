@@ -32,13 +32,12 @@ nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_SUBDIR)
 
 set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp${NSX_AMBIQSUITE_ARCHIVE_SUFFIX}")
-if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
-    # TEMPORARY WORKAROUND (USB CDC regression): force the GCC prebuilt BSP archive
-    # for atfe builds. The ATFE-rebuilt AmbiqSuite BSP/HAL break USB CDC EP0 enumeration
-    # (descriptor reads fail with -110); the GCC archive is AAPCS-compatible and links
-    # cleanly into ATFE (clang/lld) firmware. Remove once the ATFE prebuilt is fixed at
-    # the AmbiqSuite source level. See nsx-ap510-runtime-validation follow-up note.
-    message(STATUS "nsx-ambiq-bsp-r3: atfe build forced to GCC BSP archive (USB CDC workaround)")
+nsx_atfe_prefers_gcc_prebuilt(NSX_ATFE_USE_GCC_PREBUILT)
+if(NSX_ATFE_USE_GCC_PREBUILT)
+    # Explicitly select the GCC prebuilt BSP archive (libam_bsp.a) rather than any
+    # staged libam_bsp-atfe.a. See nsx_atfe_prefers_gcc_prebuilt for rationale.
+    set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a")
+    message(STATUS "nsx-ambiq-bsp-r3: atfe build linking GCC BSP archive (USB CDC workaround)")
 endif()
 set(NSX_BSP_LIB "${NSX_BSP_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite BSP static library")
 
