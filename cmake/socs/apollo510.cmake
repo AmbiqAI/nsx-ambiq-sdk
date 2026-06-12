@@ -41,11 +41,10 @@ else()
 endif()
 
 if(NOT DEFINED NSX_LINKER_SCRIPT)
-    if(NSX_USE_ITCM_LINKER_SCRIPT)
-        set(NSX_LINKER_SCRIPT "${_nsx_linker_script_itcm}")
-    else()
-        set(NSX_LINKER_SCRIPT "${_nsx_linker_script_default}")
-    endif()
+    nsx_select_linker_script(
+        DEFAULT "${_nsx_linker_script_default}"
+        ITCM "${_nsx_linker_script_itcm}"
+    )
 endif()
 
 include("${NSX_CMAKE_DIR}/segger/socs/apollo5.cmake")

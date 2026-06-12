@@ -35,8 +35,45 @@ function(nsx_require_enum_value var_name)
     endif()
 endfunction()
 
+# Select the active linker script from the named NSX_LINKER_PROFILE. Precedence:
+#   1. An explicit NSX_LINKER_SCRIPT set by the caller always wins.
+#   2. NSX_LINKER_PROFILE picks one of the built-in profiles (default, itcm).
+#   3. When unset, the "default" profile is used.
+# This indirection lets callers opt into curated layouts (e.g. itcm) by name and
+# leaves room for future profiles without changing the SoC files.
+function(nsx_select_linker_script)
+    cmake_parse_arguments(NSX_LS "" "DEFAULT;ITCM" "" ${ARGN})
+    if(NOT DEFINED NSX_LS_DEFAULT)
+        message(FATAL_ERROR "nsx_select_linker_script requires a DEFAULT script path.")
+    endif()
+
+    if(DEFINED NSX_LINKER_SCRIPT)
+        return()
+    endif()
+
+    if(NOT DEFINED NSX_LINKER_PROFILE OR NSX_LINKER_PROFILE STREQUAL "")
+        set(NSX_LINKER_PROFILE "default")
+    endif()
+    nsx_require_enum_value(NSX_LINKER_PROFILE ${NSX_LINKER_PROFILES})
+
+    if(NSX_LINKER_PROFILE STREQUAL "itcm")
+        if(NOT DEFINED NSX_LS_ITCM)
+            message(FATAL_ERROR "NSX_LINKER_PROFILE='itcm' is not supported for this SoC/toolchain.")
+        endif()
+        set(NSX_LINKER_SCRIPT "${NSX_LS_ITCM}" PARENT_SCOPE)
+    else()
+        set(NSX_LINKER_SCRIPT "${NSX_LS_DEFAULT}" PARENT_SCOPE)
+    endif()
+endfunction()
+
 set(NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES gcc atfe armclang)
 set(NSX_NEWLIB_TOOLCHAIN_FAMILIES gcc atfe)
+
+# Supported linker-script profiles. "default" keeps the standard SBL layout;
+# "itcm" promotes the hot inference kernels into ITCM. The list is the single
+# source of truth so new profiles can be added without breaking existing
+# callers. Selection is driven by the NSX_LINKER_PROFILE cache/cmd-line value.
+set(NSX_LINKER_PROFILES default itcm)
 set(NSX_SOC_FAMILIES_APOLLO5 apollo5b apollo510 apollo510b apollo510L)
 set(NSX_SOC_FAMILIES_APOLLO330 apollo330P)
 set(NSX_SOC_FAMILIES_APOLLO4 apollo4l apollo4p)
