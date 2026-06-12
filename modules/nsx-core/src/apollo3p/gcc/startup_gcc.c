@@ -57,10 +57,10 @@ extern void HardFault_Handler(void)   __attribute ((weak));
 extern void MemManage_Handler(void)   __attribute ((weak, alias ("HardFault_Handler")));
 extern void BusFault_Handler(void)    __attribute ((weak, alias ("HardFault_Handler")));
 extern void UsageFault_Handler(void)  __attribute ((weak, alias ("HardFault_Handler")));
-extern void SVC_Handler(void)         __attribute ((weak, alias ("am_default_isr")));
+extern void SVC_Handler(void)         __attribute ((weak));
 extern void DebugMon_Handler(void)    __attribute ((weak, alias ("am_default_isr")));
-extern void PendSV_Handler(void)      __attribute ((weak, alias ("am_default_isr")));
-extern void SysTick_Handler(void)     __attribute ((weak, alias ("am_default_isr")));
+extern void PendSV_Handler(void)      __attribute ((weak));
+extern void SysTick_Handler(void)     __attribute ((weak));
 
 extern void am_brownout_isr(void)     __attribute ((weak, alias ("am_default_isr")));
 extern void am_watchdog_isr(void)     __attribute ((weak, alias ("am_default_isr")));
@@ -98,6 +98,21 @@ extern void am_mspi1_isr(void)        __attribute ((weak, alias ("am_default_isr
 extern void am_mspi2_isr(void)        __attribute ((weak, alias ("am_default_isr")));
 
 extern void am_default_isr(void)      __attribute ((weak));
+
+void SVC_Handler(void)
+{
+    am_default_isr();
+}
+
+void PendSV_Handler(void)
+{
+    am_default_isr();
+}
+
+void SysTick_Handler(void)
+{
+    am_default_isr();
+}
 
 //*****************************************************************************
 //
