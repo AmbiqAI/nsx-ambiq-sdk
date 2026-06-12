@@ -34,12 +34,12 @@ nsx_assert_path_component(NSX_AMBIQ_MCU_INSTALL_NAME)
 
 set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal${NSX_AMBIQSUITE_ARCHIVE_SUFFIX}")
 if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
-    set(NSX_HAL_LIB_ATFE "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal-atfe.a")
-    if(EXISTS "${NSX_HAL_LIB_ATFE}")
-        set(NSX_HAL_LIB_DEFAULT "${NSX_HAL_LIB_ATFE}")
-    else()
-        message(STATUS "ns-ambiq-hal-r3: ATFE prebuilt not staged, using GCC variant (AAPCS-compatible)")
-    endif()
+    # TEMPORARY WORKAROUND (USB CDC regression): force the GCC prebuilt HAL archive
+    # for atfe builds. The ATFE-rebuilt AmbiqSuite HAL breaks USB CDC EP0 enumeration
+    # (descriptor reads fail with -110); the GCC archive is AAPCS-compatible and links
+    # cleanly into ATFE (clang/lld) firmware. Remove once the ATFE prebuilt is fixed at
+    # the AmbiqSuite source level. See nsx-ap510-runtime-validation follow-up note.
+    message(STATUS "nsx-ambiq-hal-r3: atfe build forced to GCC HAL archive (USB CDC workaround)")
 endif()
 set(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite HAL static library")
 

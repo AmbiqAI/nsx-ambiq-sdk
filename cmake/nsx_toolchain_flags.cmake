@@ -139,6 +139,17 @@ function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)
         set(nsx_artifact_toolchain "acfe")
     endif()
 
+    # TEMPORARY WORKAROUND (USB CDC regression): the ATFE-rebuilt AmbiqSuite HAL
+    # archive (lib/atfe/apollo510/libam_hal.a) breaks USB CDC EP0 enumeration on
+    # Apollo510 (device enumerates but descriptor reads fail with -110). The GCC
+    # prebuilt HAL/BSP archives link cleanly into ATFE (clang/lld) firmware and
+    # enumerate correctly, so force the GCC artifact variant for atfe builds
+    # until the ATFE HAL is fixed at the AmbiqSuite source level.
+    # See nsx-ap510-runtime-validation follow-up note. Remove once ATFE HAL is fixed.
+    if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
+        set(nsx_artifact_toolchain "gcc")
+    endif()
+
     set(${out_var} "${nsx_artifact_toolchain}" PARENT_SCOPE)
 endfunction()
 
