@@ -318,7 +318,7 @@ def test_m55_itcm_linker_scripts_match_generated_object_names(repo_root: Path) -
             f"modules/nsx-core/src/{soc}/armclang/linker_script_itcm_sbl.sct",
         )
 
-        assert "KEEP(*arm*.obj" in gcc_itcm, soc
+        assert "KEEP(*arm_*.obj" in gcc_itcm, soc
         assert "KEEP(*strided*.obj" in gcc_itcm, soc
         assert "*arm_*.o (+RO-CODE)" in armclang_itcm, soc
         assert "*call_once*.o (+RO-CODE)" in armclang_itcm, soc

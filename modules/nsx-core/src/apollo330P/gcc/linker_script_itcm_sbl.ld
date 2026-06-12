@@ -34,8 +34,8 @@ SECTIONS
         *(.itcm_text)
         *(.itcm_text*)
         /* KEEP(add*.o       (.text .text.* .rodata .rodata.*)) */
-        KEEP(*arm*.obj    (.text .text.* .rodata .rodata.*))
-        KEEP(arm*.o       (.text .text.* .rodata .rodata.*))
+        KEEP(*arm_*.obj   (.text .text.* .rodata .rodata.*))
+        KEEP(arm_*.o      (.text .text.* .rodata .rodata.*))
         KEEP(*fft*.obj    (.text .text.* .rodata .rodata.*))
         KEEP(fft*.o       (.text .text.* .rodata .rodata.*))
         KEEP(*conv*.obj   (.text .text.* .rodata .rodata.*))
