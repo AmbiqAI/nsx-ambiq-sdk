@@ -85,13 +85,22 @@ extern uint32_t SystemCoreClock;
 /* Assert. */
 #define configASSERT( x )  if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS(); for( ;; ); }
 
+/* Indirect handler routing. The ARM_CM4F port exposes vPortSVCHandler /
+ * xPortPendSVHandler / xPortSysTickHandler rather than the SVC_Handler /
+ * PendSV_Handler / SysTick_Handler vector names owned by NSX startup, so
+ * nsx-freertos installs strong shim handlers that branch to the port entry
+ * points. Disable the direct-installation check accordingly. */
+#define configCHECK_HANDLER_INSTALLATION                0
+
 /* Interrupt priority configuration. */
 #ifdef __NVIC_PRIO_BITS
     #define configPRIO_BITS                             __NVIC_PRIO_BITS
+#elif defined(ARMCM4)
+    #define configPRIO_BITS                             3
 #else
     #define configPRIO_BITS                             4
 #endif
-#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY         0x0F
+#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY         ( ( 1U << configPRIO_BITS ) - 1U )
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    3
 #define configKERNEL_INTERRUPT_PRIORITY \
     ( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << ( 8 - configPRIO_BITS ) )
