@@ -87,6 +87,8 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
     monkeypatch.setattr(helper, "resolve_source_root", lambda args: (sdk_root, "git_ref", "stable", "deadbeef"))
     monkeypatch.setattr(helper, "selected_toolchains", lambda train, values: ["gcc"])
     monkeypatch.setattr(helper, "optional_toolchain_profile", lambda args, name: None)
+    # Empty artifact root (no manifest.yaml) so promote-only takes the write path.
+    monkeypatch.setattr(helper, "artifact_root", lambda train, version: tmp_path / "artifacts")
     # The full train's artifact set is treated as already complete on disk so the
     # promotion guard passes without depending on locally-built (gitignored) trees.
     monkeypatch.setattr(helper, "missing_artifact_libraries", lambda train, version: [])
@@ -113,6 +115,47 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
     expected_boards = [board.name for board in full_train.boards]
     assert calls["manifest"] == [(expected_parts, expected_boards)]
     assert calls["promote"] == [(expected_parts, expected_boards)]
+
+
+def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    # A manifest from the original full build already exists on disk.
+    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite-r5\n", encoding="utf-8")
+    wrote: list[str] = []
+    promoted: list[str] = []
+
+    monkeypatch.setattr(
+        helper,
+        "parse_args",
+        lambda: argparse.Namespace(
+            train="r5",
+            only_part=[],
+            version="stable-2026.06.17",
+            toolchain=[],
+            promote=False,
+            promote_only=True,
+            fpu=None,
+            debug_symbols=False,
+            verbose=False,
+        ),
+    )
+    monkeypatch.setattr(helper, "resolve_source_root", lambda args: (sdk_root, "git_ref", "stable", "deadbeef"))
+    monkeypatch.setattr(helper, "selected_toolchains", lambda train, values: ["gcc"])
+    monkeypatch.setattr(helper, "optional_toolchain_profile", lambda args, name: None)
+    monkeypatch.setattr(helper, "artifact_root", lambda train, version: artifacts)
+    monkeypatch.setattr(helper, "missing_artifact_libraries", lambda train, version: [])
+    monkeypatch.setattr(helper, "built_artifact_toolchains", lambda train, version: ["gcc"])
+    monkeypatch.setattr(helper, "write_manifest", lambda *a, **k: wrote.append("called"))
+    monkeypatch.setattr(helper, "promote_provider_payload", lambda train, version, sdk_root: promoted.append(version))
+
+    assert helper.main() == 0
+    # The existing manifest is reused, never regenerated with empty profiles.
+    assert wrote == []
+    assert promoted == ["stable-2026.06.17"]
 
 
 def _make_artifact(root: Path, toolchain: str, *parts: str) -> None:

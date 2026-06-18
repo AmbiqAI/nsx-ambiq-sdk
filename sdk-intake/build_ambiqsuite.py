@@ -1242,13 +1242,22 @@ def main() -> int:
             detail = ", ".join(incomplete) if incomplete else "no built toolchains"
             print(
                 f"error: refusing to promote {full_train.train_id} {version}: incomplete artifact set "
-                f"({detail}); build the full train before promoting (do not combine --only-part with promotion).",
+                f"({detail}); a partial --only-part build cannot be promoted unless the rest of the "
+                f"train's artifacts already exist on disk for this version.",
                 file=sys.stderr,
             )
             return 2
         if args.promote_only:
-            write_manifest(full_train, version, sdk_root, profiles, source_kind=source_kind, source_ref=source_ref, source_commit=source_commit, debug_symbols=args.debug_symbols)
-            print(f"==> Wrote {artifact_root(full_train, version) / 'manifest.yaml'}", flush=True)
+            # Reuse the manifest written by the original full build when present: a
+            # promote-only run may not have ATFE/ACFE roots configured, so its
+            # resolved profiles can be empty and regenerating would drop per-
+            # toolchain compiler/archive metadata from the published manifest.
+            manifest_path = artifact_root(full_train, version) / "manifest.yaml"
+            if manifest_path.is_file():
+                print(f"==> Reusing {manifest_path}", flush=True)
+            else:
+                write_manifest(full_train, version, sdk_root, profiles, source_kind=source_kind, source_ref=source_ref, source_commit=source_commit, debug_symbols=args.debug_symbols)
+                print(f"==> Wrote {manifest_path}", flush=True)
         promote_provider_payload(full_train, version, sdk_root)
         print(f"==> Promoted curated payload to {provider_sdk_root(full_train)}", flush=True)
     return 0
