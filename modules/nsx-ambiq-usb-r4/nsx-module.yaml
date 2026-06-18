@@ -4,13 +4,13 @@ module:
   name: nsx-ambiq-usb-r4
   type: backend_specific
   category: sdk_component
-  version: "4.5.1"
+  version: "4.6.0"
 
 support:
   ambiqsuite: true
   zephyr: false
 
-summary: AmbiqSuite R4 USB substrate for TinyUSB on Apollo4P-family SoCs.
+summary: AmbiqSuite R4 USB substrate (TinyUSB 0.18) for Apollo4P-family SoCs.
 
 capabilities:
   - usb
