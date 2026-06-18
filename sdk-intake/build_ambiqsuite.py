@@ -273,8 +273,11 @@ def default_zip_path(version: str) -> Path:
     return intake_local_root() / "drops" / f"AmbiqSuite_{version}.zip"
 
 
-def default_extract_dir(version: str) -> Path:
-    return intake_local_root() / "work" / f"AmbiqSuite_{version}"
+def default_extract_dir(zip_path: Path) -> Path:
+    # Derive the extraction directory from the drop's filename so it is stable and
+    # unique per zip. The resolved build version is not known at this point (trains
+    # default to a snapshot tag derived later), so it cannot name this directory.
+    return intake_local_root() / "work" / zip_path.stem
 
 
 def default_git_worktree_dir(source_ref: str) -> Path:
@@ -368,7 +371,7 @@ def resolve_source_root(args: argparse.Namespace) -> tuple[Path, str, str | None
     if args.zip_path is not None:
         zip_path = args.zip_path.expanduser().resolve()
         require_file(zip_path)
-        extract_dir = (args.extract_dir or default_extract_dir(args.version)).expanduser().resolve()
+        extract_dir = (args.extract_dir or default_extract_dir(zip_path)).expanduser().resolve()
         return extract_sdk(zip_path, extract_dir, force=args.force_extract), "zip", str(zip_path), None
     # Default source: materialize a git ref (rolling stable branch by default).
     source_ref = args.source_ref or DEFAULT_SOURCE_REF
@@ -856,24 +859,61 @@ def promote_license_docs(train: TrainSpec, sdk_root: Path) -> None:
         filelist.write_text("\n".join(line for line in lines if line != "LICENSE.pdf") + "\n", encoding="utf-8")
 
 
+def artifact_library_specs(train: TrainSpec) -> list[tuple[Path, Path]]:
+    """(source-relative, dest-relative) paths below a toolchain dir for every
+    HAL/BSP archive a fully-built train publishes. Source paths keep the upstream
+    `lib/` segment; dest paths drop it to match the promoted payload layout."""
+    specs: list[tuple[Path, Path]] = []
+    for part in train.parts:
+        specs.append((Path("lib") / part.name / "libam_hal.a", Path(part.name) / "libam_hal.a"))
+    for board in train.boards:
+        specs.append((
+            Path("lib") / board.part / board.name / "libam_bsp.a",
+            Path(board.part) / board.name / "libam_bsp.a",
+        ))
+    return specs
+
+
+def built_artifact_toolchains(train: TrainSpec, version: str) -> list[str]:
+    """Toolchains with a materialized artifact tree for this version. A toolchain
+    with no <root>/<toolchain>/lib directory was simply not built and is skipped
+    rather than treated as an incomplete build."""
+    root = artifact_root(train, version)
+    return [name for name in train.toolchains if (root / name / "lib").is_dir()]
+
+
+def missing_artifact_libraries(train: TrainSpec, version: str) -> list[str]:
+    """Expected HAL/BSP archives absent from the artifact tree, considering only
+    toolchains that were built. Empty means the on-disk set is complete enough to
+    publish the full train for every built toolchain."""
+    root = artifact_root(train, version)
+    specs = artifact_library_specs(train)
+    missing: list[str] = []
+    for name in built_artifact_toolchains(train, version):
+        for source_rel, _ in specs:
+            if not (root / name / source_rel).is_file():
+                missing.append((Path(name) / source_rel).as_posix())
+    return missing
+
+
 def promote_artifact_libraries(train: TrainSpec, version: str) -> None:
     source_root = artifact_root(train, version)
     destination_root = provider_sdk_root(train) / "lib"
-    shutil.rmtree(destination_root, ignore_errors=True)
-    promoted = 0
-    for toolchain in train.toolchains:
-        for part in train.parts:
-            source = source_root / toolchain / "lib" / part.name / "libam_hal.a"
-            if source.is_file():
-                copy_file(source, destination_root / toolchain / part.name / "libam_hal.a")
-                promoted += 1
-        for board in train.boards:
-            source = source_root / toolchain / "lib" / board.part / board.name / "libam_bsp.a"
-            if source.is_file():
-                copy_file(source, destination_root / toolchain / board.part / board.name / "libam_bsp.a")
-                promoted += 1
-    if promoted == 0:
+    toolchains = built_artifact_toolchains(train, version)
+    if not toolchains:
         raise FileNotFoundError(f"no built artifacts found under {source_root}")
+    # Publishing a partial set would silently ship an incomplete provider payload,
+    # so refuse unless every part/board archive exists for each built toolchain.
+    missing = missing_artifact_libraries(train, version)
+    if missing:
+        raise FileNotFoundError(
+            f"incomplete artifact set under {display_path(source_root)}; missing: " + ", ".join(missing)
+        )
+    shutil.rmtree(destination_root, ignore_errors=True)
+    specs = artifact_library_specs(train)
+    for name in toolchains:
+        for source_rel, dest_rel in specs:
+            copy_file(source_root / name / source_rel, destination_root / name / dest_rel)
 
 
 def promote_provider_payload(train: TrainSpec, version: str, sdk_root: Path) -> None:
@@ -1193,6 +1233,19 @@ def main() -> int:
         print(f"==> Wrote {artifact_root(full_train, version) / 'manifest.yaml'}", flush=True)
 
     if args.promote or args.promote_only:
+        # Promotion always publishes the full train. Verify the on-disk artifact
+        # set is complete BEFORE promote_provider_payload wipes the existing
+        # payload, so a partial build (e.g. --only-part) cannot leave the provider
+        # module empty or incomplete.
+        incomplete = missing_artifact_libraries(full_train, version)
+        if incomplete or not built_artifact_toolchains(full_train, version):
+            detail = ", ".join(incomplete) if incomplete else "no built toolchains"
+            print(
+                f"error: refusing to promote {full_train.train_id} {version}: incomplete artifact set "
+                f"({detail}); build the full train before promoting (do not combine --only-part with promotion).",
+                file=sys.stderr,
+            )
+            return 2
         if args.promote_only:
             write_manifest(full_train, version, sdk_root, profiles, source_kind=source_kind, source_ref=source_ref, source_commit=source_commit, debug_symbols=args.debug_symbols)
             print(f"==> Wrote {artifact_root(full_train, version) / 'manifest.yaml'}", flush=True)
