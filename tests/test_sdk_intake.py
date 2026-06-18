@@ -158,6 +158,43 @@ def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, 
     assert promoted == ["stable-2026.06.17"]
 
 
+def test_build_promote_rejects_unprofiled_built_toolchain(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    promoted: list[str] = []
+
+    monkeypatch.setattr(
+        helper,
+        "parse_args",
+        lambda: argparse.Namespace(
+            train="r5",
+            only_part=[],
+            version="stable-2026.06.17",
+            toolchain=[],
+            promote=True,
+            promote_only=False,
+            fpu=None,
+            debug_symbols=False,
+            verbose=False,
+        ),
+    )
+    monkeypatch.setattr(helper, "resolve_source_root", lambda args: (sdk_root, "git_ref", "stable", "deadbeef"))
+    # Build nothing this run; atfe artifacts exist on disk from a prior build but
+    # ATFE_ROOT is not configured, so its profile resolves to None.
+    monkeypatch.setattr(helper, "selected_toolchains", lambda train, values: [])
+    monkeypatch.setattr(helper, "optional_toolchain_profile", lambda args, name: None)
+    monkeypatch.setattr(helper, "write_manifest", lambda *a, **k: None)
+    monkeypatch.setattr(helper, "missing_artifact_libraries", lambda train, version: [])
+    monkeypatch.setattr(helper, "built_artifact_toolchains", lambda train, version: ["atfe"])
+    monkeypatch.setattr(helper, "promote_provider_payload", lambda train, version, sdk_root: promoted.append(version))
+
+    # The build+promote run refuses rather than publish a manifest that marks atfe
+    # built but omits its compiler/archive metadata.
+    assert helper.main() == 2
+    assert promoted == []
+
+
 def _make_artifact(root: Path, toolchain: str, *parts: str) -> None:
     for relative in parts:
         path = root / toolchain / "lib" / relative

@@ -1247,6 +1247,25 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
+        if not args.promote_only:
+            # The build branch just regenerated the manifest from `profiles`. A
+            # toolchain whose artifacts exist on disk but whose root was not
+            # configured this run has a None profile, so its manifest row would be
+            # marked built yet stripped of compiler/archive metadata. Refuse rather
+            # than publish a degraded manifest; rerun with that toolchain's root set
+            # (or use --promote-only to reuse the original manifest).
+            unprofiled = [
+                name for name in built_artifact_toolchains(full_train, version) if profiles.get(name) is None
+            ]
+            if unprofiled:
+                print(
+                    f"error: refusing to promote {full_train.train_id} {version}: built toolchain(s) "
+                    f"{', '.join(unprofiled)} have on-disk artifacts but no resolved profile this run, so the "
+                    f"manifest would drop their compiler/archive metadata; set their toolchain root "
+                    f"(ATFE_ROOT/ACFE_ROOT) and rebuild, or use --promote-only to reuse the existing manifest.",
+                    file=sys.stderr,
+                )
+                return 2
         if args.promote_only:
             # Reuse the manifest written by the original full build when present: a
             # promote-only run may not have ATFE/ACFE roots configured, so its
