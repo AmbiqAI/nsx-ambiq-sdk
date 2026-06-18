@@ -1,10 +1,10 @@
 //*****************************************************************************
 //
-//! @file am_devices_mspi_rm67162.c
+//! @file am_devices_mspi_rm67162.h
 //!
-//! @brief Generic Raydium TFT display driver.
+//! @brief Multi-bit SPI Display driver for the RM67162 display panel.
 //!
-//! @addtogroup mspi_rm67162 RM67162 MSPI Display Driver
+//! @addtogroup devices_mspi_rm67162 RM67162 MSPI Display Driver
 //! @ingroup devices
 //! @{
 //
@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -168,32 +139,38 @@ typedef struct
 //*****************************************************************************
 //*****************************************************************************
 //
-//! @brief Reads the current status of the external display
+//! @brief Reset the RM67162 display device.
 //!
-//! @param pHandle
+//! Issues the display reset sequence to bring the panel into a known state.
 //!
-//! This function reads the device ID register of the external display, and returns
-//! the result as an 32-bit unsigned integer value.
+//! @param pHandle - Pointer to driver handle.
 //!
-//! @return 32-bit status
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_reset(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief
-//! @param pHandle
-//! @return
+//! @brief Turn the display off (enter sleep or display-off state).
+//!
+//! @param pHandle - Pointer to driver handle.
+//!
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_display_off(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief
-//! @param pHandle
-//! @return
+//! @brief Turn the display on (exit sleep / enable display output).
+//!
+//! @param pHandle - Pointer to driver handle.
+//!
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_display_on(void *pHandle);
@@ -221,17 +198,17 @@ extern uint32_t am_devices_rm67162_blocking_write(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief Reads the contents of the fram into a buffer.
+//! @brief Blocking read from the display memory.
 //!
-//! @param pHandle -
-//! @param pui8RxBuffer - Address of desired data in external flash
-//! @param ui32NumBytes - Number of bytes to read from external flash
+//! Reads `ui32NumBytes` of display memory into `pui8RxBuffer`. This call
+//! blocks until the transfer completes.
 //!
-//! This function reads the external flash at the provided address and stores
-//! the received data into the provided buffer location. This function will
-//! only store ui32NumBytes worth of data.
+//! @param pHandle       - Pointer to driver handle.
+//! @param pui8RxBuffer  - Buffer to receive the data.
+//! @param ui32NumBytes  - Number of bytes to read.
 //!
-//! @return 32-bit status
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_blocking_read(void *pHandle,
@@ -240,20 +217,18 @@ extern uint32_t am_devices_rm67162_blocking_read(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief Programs the given range of display addresses.
+//! @brief Non-blocking write to the display memory.
 //!
-//! @param pHandle - MSPI Instance
-//! @param pui8TxBuffer - Buffer to write the data from
-//! @param ui32NumBytes - Number of bytes to write to the display memory
-//! @param bWaitForCompletion - Waits for CQ/DMA to complete before return.
+//! Queues a transfer of `ui32NumBytes` from `pui8TxBuffer` to the display.
+//! If `bWaitForCompletion` is true the function will wait for completion.
 //!
-//! This function uses the data in the provided pui8TxBuffer and copies it to
-//! the external flash at the address given by ui32WriteAddress. It will copy
-//! exactly ui32NumBytes of data from the original pui8TxBuffer pointer. The
-//! user is responsible for ensuring that they do not overflow the target flash
-//! memory or underflow the pui8TxBuffer array
+//! @param pHandle             - Pointer to driver handle.
+//! @param pui8TxBuffer        - Buffer containing data to write.
+//! @param ui32NumBytes        - Number of bytes to write.
+//! @param bWaitForCompletion  - When true, block until transfer completes.
 //!
-//! @return 32-bit status
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_nonblocking_write(void *pHandle,
@@ -292,18 +267,18 @@ extern uint32_t am_devices_rm67162_nonblocking_write_adv(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief Reads the contents of the display into a buffer.
+//! @brief Non-blocking read from the display memory.
 //!
-//! @param pHandle - MSPI Instance
-//! @param pui8RxBuffer - Buffer to store the received data from the flash
-//! @param ui32NumBytes - Number of bytes to read from external flash
-//! @param bWaitForCompletion - Waits for CQ/DMA to complete before return.
+//! Initiates a read of `ui32NumBytes` into `pui8RxBuffer`. If
+//! `bWaitForCompletion` is true this call blocks until the transfer completes.
 //!
-//! This function reads the external display at the provided address and stores
-//! the received data into the provided buffer location. This function will
-//! only store ui32NumBytes worth of data.
+//! @param pHandle             - Pointer to driver handle.
+//! @param pui8RxBuffer        - Buffer to receive data.
+//! @param ui32NumBytes        - Number of bytes to read.
+//! @param bWaitForCompletion  - When true, block until transfer completes.
 //!
-//! @return 32-bit status
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_nonblocking_read(void *pHandle,
@@ -313,10 +288,15 @@ extern uint32_t am_devices_rm67162_nonblocking_read(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief
-//! @param pHandle
-//! @param pdata
-//! @return
+//! @brief Read the panel/device ID.
+//!
+//! Reads the display ID and stores it into the provided `pdata` pointer.
+//!
+//! @param pHandle - Pointer to driver handle.
+//! @param pdata   - Pointer to a uint32_t where the ID will be stored.
+//!
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_read_id(void *pHandle,
@@ -324,18 +304,18 @@ extern uint32_t am_devices_rm67162_read_id(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief Initialize the rm67162 driver.
+//! @brief Initialize the RM67162 MSPI display driver.
 //!
-//! @param ui32Module      - MSPI module ID.
-//! @param psMSPISettings  - MSPI device structure describing the target spiflash.
-//! @param ppHandle
-//! @param ppMspiHandle    - MSPI handler.
+//! Configures MSPI and prepares the display device for operation. Call before
+//! using other RM67162 APIs.
 //!
-//! This function should be called before any other am_devices_rm67162
-//! functions. It is used to set tell the other functions how to communicate
-//! with the TFT display hardware.
+//! @param ui32Module       - MSPI module ID.
+//! @param psMSPISettings   - Pointer to `am_devices_mspi_rm67162_config_t`.
+//! @param ppHandle         - Pointer to location to receive device handle.
+//! @param ppMspiHandle     - Pointer to location to receive MSPI handle.
 //!
-//! @return Status.
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_mspi_rm67162_init(uint32_t ui32Module,
@@ -345,27 +325,27 @@ extern uint32_t am_devices_mspi_rm67162_init(uint32_t ui32Module,
 
 //*****************************************************************************
 //
-//! @brief De-Initialize the rm67162 driver.
+//! @brief De-initialize the RM67162 driver and release resources.
 //!
-//! @param pHandle     -
+//! @param pHandle - Pointer to device handle previously returned by init.
 //!
-//! This function reverses the initialization
-//!
-//! @return Status.
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_term(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief Generic Command Write function.
+//! @brief Send a generic command with optional data to the display.
 //!
-//! @param pHandle
-//! @param ui32Instr
-//! @param pData
-//! @param ui32NumBytes
+//! @param pHandle     - Pointer to driver handle.
+//! @param ui32Instr   - Instruction/command opcode to send.
+//! @param pData       - Pointer to data bytes to send after the command.
+//! @param ui32NumBytes- Number of data bytes to send.
 //!
-//! @return
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_rm67162_command_write(void *pHandle,
@@ -375,13 +355,18 @@ extern uint32_t am_devices_rm67162_command_write(void *pHandle,
 
 //*****************************************************************************
 //
-//! @brief
-//! @param pHandle
-//! @param startRow
-//! @param startCol
-//! @param endRow
-//! @param endCol
-//! @return
+//! @brief Set the rectangle window for subsequent transfers.
+//!
+//! Defines the start/end rows and columns for block transfers to the panel.
+//!
+//! @param pHandle   - Pointer to driver handle.
+//! @param startRow  - Starting row index (inclusive).
+//! @param startCol  - Starting column index (inclusive).
+//! @param endRow    - Ending row index (inclusive).
+//! @param endCol    - Ending column index (inclusive).
+//!
+//! @return 32-bit status: `AM_DEVICES_RM67162_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_RM67162_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_mspi_rm67162_set_transfer_window(void *pHandle,

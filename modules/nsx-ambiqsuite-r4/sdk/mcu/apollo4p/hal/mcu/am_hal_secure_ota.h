@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -56,6 +27,13 @@
 //! @{
 //
 #define AM_IMAGE_MAGIC_SBL                0xA3
+// #### INTERNAL BEGIN ####
+#define AM_IMAGE_MAGIC_ICV_CHAIN          0xAC
+//#define AM_IMAGE_MAGIC_AM3P               0x3A
+#define AM_IMAGE_MAGIC_PATCH              0xAF
+#define AM_IMAGE_MAGIC_AMB_RT_KEYBANK     0xAE
+//#define AM_IMAGE_MAGIC_INFO1_UPDATE       0xA0
+// #### INTERNAL END ####
 #define AM_IMAGE_MAGIC_SECURE             0xC0
 #define AM_IMAGE_MAGIC_OEM_CHAIN          0xCC
 #define AM_IMAGE_MAGIC_NONSECURE          0xCB
@@ -165,6 +143,15 @@ typedef union
         uint32_t    options     : 6;
         uint32_t    rsvd        : 16;
     } wired;
+// #### INTERNAL BEGIN ####
+    struct
+    {
+        uint32_t    magicNum    : 8;
+        uint32_t    wordOffset  : 8;
+        uint32_t    sizeWords   : 8;
+        uint32_t    rsvd        : 8;
+    } rtKeyBank;
+// #### INTERNAL END ####
 } am_image_opt0_t;
 
 //
@@ -184,6 +171,18 @@ typedef union
         uint32_t    size        : 12;
         uint32_t    rsvd        : 8;
     } info0;
+// #### INTERNAL BEGIN ####
+    struct
+    {
+        uint32_t    offset      : 16;
+        uint32_t    rsvd        : 16;
+    } patch;
+    struct
+    {
+        uint32_t   size : 16;
+        uint32_t   rsvd : 16;
+    } sbl;
+// #### INTERNAL END ####
     struct
     {
         uint32_t    rsvd        : 2;
@@ -198,6 +197,16 @@ typedef union
 {
     uint32_t   ui32;
     uint32_t   ui32Key;
+// #### INTERNAL BEGIN ####
+    struct
+    {
+        uint32_t    authKeyIdx   : 8;
+        uint32_t    encKeyIdx    : 8;
+        uint32_t    authAlgo     : 4;
+        uint32_t    encAlgo      : 4;
+        uint32_t    resvd        : 8;
+    } sbl;
+// #### INTERNAL END ####
 } am_image_opt2_t;
 
 //
@@ -219,6 +228,8 @@ typedef struct
    am_image_opt3_t  opt3;
 } am_image_opt_info_t;
 
+// #### INTERNAL BEGIN ####
+// #### INTERNAL END ####
 
 //
 //! Maximum number of OTAs
@@ -239,6 +250,14 @@ typedef struct
                                   ((x) == AM_IMAGE_MAGIC_KEYREVOKE)     ||  \
                                   ((x) == AM_IMAGE_MAGIC_OEM_CHAIN)     ||  \
                                   ((x) == AM_IMAGE_MAGIC_CONTAINER))
+// #### INTERNAL BEGIN ####
+#define AM_IMAGE_MAGIC_AMBQ(x)   (((x) == AM_IMAGE_MAGIC_SBL)           ||  \
+                                  ((x) == AM_IMAGE_MAGIC_PATCH)         ||  \
+                                  ((x) == AM_IMAGE_MAGIC_AMB_RT_KEYBANK) ||  \
+                                  ((x) == AM_IMAGE_MAGIC_ICV_CHAIN))
+
+#define AM_IMAGE_MAGIC_KNOWN(x)  (AM_IMAGE_MAGIC_CUST((x)) || AM_IMAGE_MAGIC_AMBQ((x)))
+// #### INTERNAL END ####
 
 //
 //! OTA Upgrade related definitions
@@ -302,6 +321,9 @@ typedef enum
     AM_HAL_OTA_STATUS_FAILURE               =          0x00000002,
     AM_HAL_OTA_STATUS_PENDING               =          0x00000003,
     // Remaining values are used as numbers - only bits 27, 29, 30, 31 can be used - Along with setting the FAILURE indication as value 2 in bits 0,1
+// #### INTERNAL BEGIN ####
+    // Not using bit 28 - just to allow for images to be in SRAM in future
+// #### INTERNAL END ####
     AM_HAL_OTA_STATUS_INVALID_OWNER         = (int32_t)0x80000002,
     AM_HAL_OTA_STATUS_AUTH_POLICY           =          0x40000002,
     AM_HAL_OTA_STATUS_ENC_POLICY            = (int32_t)0xC0000002,

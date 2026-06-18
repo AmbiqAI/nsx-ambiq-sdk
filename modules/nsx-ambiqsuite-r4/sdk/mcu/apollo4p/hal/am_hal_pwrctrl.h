@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -103,6 +74,10 @@ extern "C"
 //!      0 = Do not assist VDDC.
 //!      1 = Activate LDOs in parallel when disabling SIMOBUCK.
 //!  Default: 1
+// #### INTERNAL BEGIN ####
+// A2SD-2248 AM_HAL_PWRCTRL_LDOS_FOR_VDDC. This option is dependent on
+// AM_HAL_PWRCTL_SET_CORELDO_MEMLDO_IN_PARALLEL.
+// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_LDOS_FOR_VDDC                    1
@@ -117,6 +92,11 @@ extern "C"
 //!      0 = Leave inactive.
 //!      1 = Set trims to short.
 //!  Default: 1
+// #### INTERNAL BEGIN ####
+// There was originally a comment (prior to 8/20/21):
+//      1 = Set trims to short.  Uses extra power in Deepsleep.
+// Jamie says the comment is only true if the short is not removed before DS.
+// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTL_SHORT_VDDF_TO_VDDS                1
@@ -133,6 +113,9 @@ extern "C"
 //! Option to connect MCU core to VDDC_LV for increased power efficiency. Ambiq
 //! recommends this option be enabled for all new applications
 //
+// #### INTERNAL BEGIN ####
+// See FB-350 for discussion and detail concerning this option.
+// #### INTERNAL END ####
 //
 //! Default: 1 for RevC
 //*****************************************************************************
@@ -164,6 +147,10 @@ extern "C"
 //!          AM_HAL_PWRCTL_HPLP_WA
 //!          AM_HAL_PWRCTL_SHORT_VDDC_TO_VDDCLV
 //!  Default: 0
+// #### INTERNAL BEGIN ####
+// This is only needed if the Apollo4 Plus is used up to 70C
+// TODO: Will need to revisit naming of this macro
+// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_70C_WA    0
@@ -359,6 +346,64 @@ typedef enum
 #endif // AM_HAL_TEMPCO_LP
 } am_hal_pwrctrl_control_e;
 
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! DSP memory control settings.
+//
+//*****************************************************************************
+#if 0
+  // Check that all the reg defs are consistent with enums below.
+#if ((0 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_NONE)     &&  \
+     (0 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_NONE)   &&  \
+     (1 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_GROUP0)   &&  \
+     (1 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_GROUP0) &&  \
+     (3 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_ALL)      &&  \
+     (3 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_ALL)    &&  \
+     (0 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1IRAM_NONE)     &&  \
+     (0 == PWRCTRL_DSP1MEMRETCFG_IRAMPWDDSP1OFF_NONE)   &&  \
+     (1 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1IRAM_GROUP0)   &&  \
+     (1 == PWRCTRL_DSP1MEMRETCFG_IRAMPWDDSP1OFF_GROUP0))
+#error DSP IRAM Register Definitions do not support enum defintion!
+#endif
+
+//
+//! DSP IRAM Select
+//
+typedef enum
+{
+    AM_HAL_PWRCTRL_DSP_IRAM_NONE        = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_NONE,
+    AM_HAL_PWRCTRL_DSP_IRAM_BANK0_ONLY  = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_GROUP0,
+    AM_HAL_PWRCTRL_DSP_IRAM_ALL_BANKS   = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_ALL
+}
+am_hal_pwrctrl_dsp_iram_select_e;
+
+// Check that all the reg defs are consistent with enums below.
+#if ((0 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_NONE)     &&  \
+     (0 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_NONE)   &&  \
+     (1 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_GROUP0)   &&  \
+     (1 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_GROUP0) &&  \
+     (3 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_ALL)      &&  \
+     (3 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_ALL)    &&  \
+     (0 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1DRAM_NONE)     &&  \
+     (0 == PWRCTRL_DSP1MEMRETCFG_DRAMPWDDSP1OFF_NONE)   &&  \
+     (1 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1DRAM_GROUP0)   &&  \
+     (1 == PWRCTRL_DSP1MEMRETCFG_DRAMPWDDSP1OFF_GROUP0))
+)
+#error DSP IRAM Register Definitions do not support enum defintion!
+#endif
+
+//
+//! DPS DRAM Select
+//
+typedef enum
+{
+    AM_HAL_PWRCTRL_DSP_DRAM_NONE        = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_NONE,
+    AM_HAL_PWRCTRL_DSP_DRAM_BANK0_ONLY  = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_GROUP0,
+    AM_HAL_PWRCTRL_DSP_DRAM_ALL_BANKS   = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_ALL
+} am_hal_pwrctrl_dsp_dram_select_e;
+#endif
+// #### INTERNAL END ####
 
 //
 //! DSP memory config settings.

@@ -14,9 +14,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_UTIL_H
@@ -75,6 +76,10 @@
 #include "am_util_pmu.h"
 #endif
 
+#if defined(AM_PART_ATOMIQ11X_API)
+#include "am_util_dme.h"
+#endif
+
 #endif  // AM_UTIL_H
 
 //*****************************************************************************
@@ -83,4 +88,3 @@
 //! @}
 //
 //*****************************************************************************
-

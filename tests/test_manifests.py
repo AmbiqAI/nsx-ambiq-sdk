@@ -48,23 +48,23 @@ STAGED_PROVIDER_BOARDS = {"apollo330mP_evb", "apollo510_evb", "apollo510b_evb", 
 STAGED_PROVIDER_SOCS = {"apollo330P", "apollo510", "apollo510b", "apollo510L"}
 STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"
-EXPECTED_SDK_RELEASE = "R5.2.0"
-EXPECTED_UPSTREAM_REVISION = "release_sdk5p2p0-bee737faa"
+EXPECTED_SDK_RELEASE = "stable-2026.06.17"
+EXPECTED_UPSTREAM_REVISION = "stable-6cdd4ccf96"
 EXPECTED_PROVIDER_METADATA = {
     "nsx-ambiqsuite-r2": {
         "version": "2.5.1",
-        "sdk_release": "R2.5.1",
-        "upstream_revision": "stable-AT110e",
+        "sdk_release": EXPECTED_SDK_RELEASE,
+        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
     },
     "nsx-ambiqsuite-r3": {
         "version": "3.2.1",
-        "sdk_release": "R3.2.0",
-        "upstream_revision": "release_sdk_3_2_0-dd5f40c14b",
+        "sdk_release": EXPECTED_SDK_RELEASE,
+        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
     },
     "nsx-ambiqsuite-r4": {
         "version": "4.5.1",
-        "sdk_release": "R4.5.0",
-        "upstream_revision": "release_sdk_4_5_0-a1ef3b89f9",
+        "sdk_release": EXPECTED_SDK_RELEASE,
+        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
     },
     "nsx-ambiqsuite-r5": {
         "version": EXPECTED_NSX_RELEASE_VERSION,

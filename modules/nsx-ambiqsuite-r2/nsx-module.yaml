@@ -6,8 +6,8 @@ module:
   category: sdk_provider
   provider: ambiqsuite-r2
   version: "2.5.1"
-  sdk_release: "R2.5.1"
-  upstream_revision: "stable-AT110e"
+  sdk_release: "stable-2026.06.17"
+  upstream_revision: "stable-6cdd4ccf96"
 
 support:
   ambiqsuite: true
@@ -49,4 +49,3 @@ compatibility:
   toolchains:
     - arm-none-eabi-gcc
     - atfe
-    - armclang

@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_3_2_0-dd5f40c14b of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKGEN_H
@@ -71,7 +42,15 @@ extern "C"
 //! @{
 //
 //*****************************************************************************
+// #### INTERNAL BEGIN ####
+#if APOLLO3_FPGA
+#define AM_HAL_CLKGEN_FREQ_MAX_HZ       24000000
+#else
+// #### INTERNAL END ####
 #define AM_HAL_CLKGEN_FREQ_MAX_HZ       48000000
+// #### INTERNAL BEGIN ####
+#endif
+// #### INTERNAL END ####
 #define AM_HAL_CLKGEN_FREQ_MAX_KHZ      (AM_HAL_CLKGEN_FREQ_MAX_HZ / 1000)
 #define AM_HAL_CLKGEN_FREQ_MAX_MHZ      (AM_HAL_CLKGEN_FREQ_MAX_HZ / 1000000)
 #define AM_HAL_CLKGEN_CORESEL_MAXDIV    1
@@ -92,6 +71,9 @@ typedef enum
     AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC,
     AM_HAL_CLKGEN_CONTROL_HFADJ_ENABLE,
     AM_HAL_CLKGEN_CONTROL_HFADJ_DISABLE,
+// #### INTERNAL BEGIN ####
+    AM_HAL_CLKGEN_CONTROL_SYSCLK_MIN = 0x1001,
+// #### INTERNAL END ####
 } am_hal_clkgen_control_e;
 
 //
@@ -118,6 +100,18 @@ typedef enum
     AM_HAL_CLKGEN_CLKOUT_XTAL_0_015 = 0x16,     // XTAL / 2097152 = 0.015625 Hz
     AM_HAL_CLKGEN_CLKOUT_XTAL_32768,            // XTAL
     AM_HAL_CLKGEN_CLKOUT_CG_100,                // ClkGen 100Hz
+// #### INTERNAL BEGIN ####
+    // A2SD-613 and AS-228: HFRC CLKOUT is defeatured for Apollo3x due to poor signal integrity.
+    AM_HAL_CLKGEN_CLKOUT_HFRC_48M,              // HFRC         = 48000000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_12M,              // HFRC / 4     = 12000000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_6M,               // HFRC / 8     =  6000000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_3M,               // HFRC / 16    =  3000000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_750K,             // HFRC / 64    =   750000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_375K,             // HFRC / 128   =   375000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_187K,             // HFRC / 256   =   187500 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_93750,            // HFRC / 512   =   375000 Hz
+    AM_HAL_CLKGEN_CLKOUT_FLASHCLK   = 0x22,     // Flash Clock
+// #### INTERNAL END ####
     AM_HAL_CLKGEN_CLKOUT_LFRC_512 = 0x23,       // LFRC / 2     = 512 Hz
     AM_HAL_CLKGEN_CLKOUT_LFRC_32,               // LFRC / 32    =  32 Hz
     AM_HAL_CLKGEN_CLKOUT_LFRC_2,                // LFRC / 512   =   2 Hz
@@ -132,8 +126,16 @@ typedef enum
     AM_HAL_CLKGEN_CLKOUT_ULFRC_0_25,            // ULFRC / 4096 = 0.25 Hz (uncal LFRC)
     AM_HAL_CLKGEN_CLKOUT_ULFRC_0_0009,          // ULFRC / 1M   = 0.000976 Hz (uncal LFRC)
     //
+// #### INTERNAL BEGIN ####
+    AM_HAL_CLKGEN_CLKOUT_HFRC_732,              // HFRC / 65536 = 732.421 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRC_2,                // HFRC / 16M   = 2.861 Hz
+// #### INTERNAL END ####
     AM_HAL_CLKGEN_CLKOUT_LFRC_0_0004 = 0x31,    // LFRC / 2M    = 0.00048828125 Hz
     // Following are Not Autoenabled ("NE")
+// #### INTERNAL BEGIN ####
+    AM_HAL_CLKGEN_CLKOUT_HFRCNE_48M,            // HFRCNE / 1   = 48000000 Hz
+    AM_HAL_CLKGEN_CLKOUT_HFRCNE_6M,             // HFRCNE / 8   =  6000000 Hz
+// #### INTERNAL END ####
     AM_HAL_CLKGEN_CLKOUT_XTALNE_32768 = 0x35,   // XTALNE / 1   = 32768 Hz
     AM_HAL_CLKGEN_CLKOUT_XTALNE_2048,           // XTALNE / 16  =  2048 Hz
     AM_HAL_CLKGEN_CLKOUT_LFRCNE_32,             // LFRCNE / 32  =    32 Hz
@@ -175,6 +177,19 @@ typedef struct
 } am_hal_clkgen_status_t;
 
 
+// #### INTERNAL BEGIN ####
+#if 0
+//
+// Clkgen status and returns.
+//
+typedef enum
+{
+    AM_HAL_CLKGEN_STATUS_SYSCLK,
+    AM_HAL_CLKGEN_STATUS_OSC_RTC,
+    AM_HAL_CLKGEN_STATUS_XTAL_FAILURE
+} am_hal_clkgen_status_e;
+#endif
+// #### INTERNAL END ####
 // ****************************************************************************
 //
 //! @brief Apply various specific commands/controls on the CLKGEN module.
@@ -240,6 +255,17 @@ extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
 //!      - AM_HAL_CLKGEN_CLKOUT_XTAL_0_015
 //!      - AM_HAL_CLKGEN_CLKOUT_XTAL_32768
 //!      - AM_HAL_CLKGEN_CLKOUT_CG_100
+// #### INTERNAL BEGIN ####
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_48M
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_12M
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_6M
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_3M
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_750K
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_375K
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_187K
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_93750
+//!      - AM_HAL_CLKGEN_CLKOUT_FLASHCLK
+// #### INTERNAL END ####
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_512
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_32
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_2
@@ -253,8 +279,16 @@ extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_1
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_0_25
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_0_0009
+// #### INTERNAL BEGIN ####
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_732
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_2
+// #### INTERNAL END ####
 //!      -AM_HAL_CLKGEN_CLKOUT_LFRC_0_0004
 //!      - ** The Following are Not Autoenabled ("NE")
+// #### INTERNAL BEGIN ####
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRCNE_48M
+//!      - AM_HAL_CLKGEN_CLKOUT_HFRCNE_6M
+// #### INTERNAL END ####
 //!      - AM_HAL_CLKGEN_CLKOUT_XTALNE_32768
 //!      - AM_HAL_CLKGEN_CLKOUT_XTALNE_2048
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRCNE_32

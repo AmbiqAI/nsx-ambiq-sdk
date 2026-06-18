@@ -16,12 +16,12 @@ include("${NSX_CMAKE_DIR}/nsx_toolchain_flags.cmake")
 
 nsx_toolchain_is_armclang(NSX_TOOLCHAIN_IS_ARMCLANG)
 if(NSX_TOOLCHAIN_IS_ARMCLANG)
-    set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo2/armclang/startup_keil6.s")
-    set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo2/armclang/linker_script.sct")
-else()
-    set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo2/gcc/startup_gcc.c")
-    set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo2/gcc/linker_script.ld")
+    message(FATAL_ERROR
+        "apollo2 does not support NSX_TOOLCHAIN_FAMILY=armclang; AmbiqSuite r2 never shipped armclang startup/linker support."
+    )
 endif()
+set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo2/gcc/startup_gcc.c")
+set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo2/gcc/linker_script.ld")
 set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_apollo2.c")
 
 include("${NSX_CMAKE_DIR}/segger/socs/apollo2.cmake")

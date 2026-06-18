@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_3_2_0-dd5f40c14b of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -54,6 +25,12 @@
 #include "am_hal_status.h"
 #include "am_hal_sysctrl.h"
 
+// #### INTERNAL BEGIN ####
+#if APOLLO3_FPGA
+#undef AM_REG_IOM_NUM_MODULES
+#define AM_REG_IOM_NUM_MODULES  2
+#endif // APOLLO3_FPGA
+// #### INTERNAL END ####
 
 //*****************************************************************************
 //
@@ -429,6 +406,10 @@ typedef enum
     //! Raw CQ transaction\n
     //! Pass am_hal_iom_cq_raw_t * as pArgs
     AM_HAL_IOM_REQ_CQ_RAW,
+// #### INTERNAL BEGIN ####
+    // Pass uint32_t as pArgs
+    AM_HAL_IOM_REQ_LINK_GPIO,
+// #### INTERNAL END ####
     AM_HAL_IOM_REQ_MAX
 } am_hal_iom_request_e;
 
@@ -842,6 +823,54 @@ uint32_t am_hal_iom_highprio_transfer(void *pHandle,
                                       am_hal_iom_callback_t pfnCallback,
                                       void *pCallbackCtxt);
 
+// #### INTERNAL BEGIN ####
+// For Debugging till the Apollo3 Registers are exported to IDEs
+// IOM Registers
+typedef struct
+{
+    volatile uint32_t *pRegFIFO;
+    volatile uint32_t *pRegFIFOPTR;
+    volatile uint32_t *pRegFIFOTHR;
+    volatile uint32_t *pRegFIFOPOP;
+    volatile uint32_t *pRegFIFOPUSH;
+    volatile uint32_t *pRegFIFOCTRL;
+    volatile uint32_t *pRegFIFOLOC;
+    volatile uint32_t *pRegCLKCFG;
+    volatile uint32_t *pRegSUBMODCTRL;
+    volatile uint32_t *pRegCMD;
+    // CMDRPT register has been repurposed for DCX
+    volatile uint32_t *pRegDCX;
+    volatile uint32_t *pRegOFFSETHI;
+    volatile uint32_t *pRegCMDSTAT;
+    volatile uint32_t *pRegDMATRIGEN;
+    volatile uint32_t *pRegDMATRIGSTAT;
+    volatile uint32_t *pRegDMACFG;
+    volatile uint32_t *pRegDMABCOUNT;
+    volatile uint32_t *pRegDMATOTCOUNT;
+    volatile uint32_t *pRegDMATARGADDR;
+    volatile uint32_t *pRegDMASTAT;
+    volatile uint32_t *pRegCQCFG;
+    volatile uint32_t *pRegCQADDR;
+    volatile uint32_t *pRegCQSTAT;
+    volatile uint32_t *pRegCQFLAGS;
+    volatile uint32_t *pRegCQSETCLEAR;
+    volatile uint32_t *pRegCQPAUSEEN;
+    volatile uint32_t *pRegCQCURIDX;
+    volatile uint32_t *pRegCQENDIDX;
+    volatile uint32_t *pRegSTATUS;
+    volatile uint32_t *pRegMSPICFG;
+    volatile uint32_t *pRegMI2CCFG;
+    volatile uint32_t *pRegDEVCFG;
+    volatile uint32_t *pRegDBG0;
+    volatile uint32_t *pRegDBG1;
+    volatile uint32_t *pRegIOMDBG;
+    volatile uint32_t *pRegINTEN;
+    volatile uint32_t *pRegINTSTAT;
+    volatile uint32_t *pRegINTCLR;
+    volatile uint32_t *pRegINTSET;
+} am_hal_iom_regs_t;
+extern const am_hal_iom_regs_t g_IomRegs[];
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

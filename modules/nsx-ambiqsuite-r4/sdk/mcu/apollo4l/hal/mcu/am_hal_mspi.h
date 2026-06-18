@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MSPI_H
@@ -158,6 +129,10 @@ extern "C"
 //*****************************************************************************
 typedef enum
 {
+// #### INTERNAL BEGIN ####
+    // Error in DMA Transition due to known issue in Apollo4 Rev B (TODO - Add Errata reference here).
+    // Edit: For revC and T-Bird, ERR063 is no longer an issue. This error should be removed.
+// #### INTERNAL END ####
   AM_HAL_MSPI_FIFO_FULL_CONDITION = AM_HAL_STATUS_MODULE_SPECIFIC_START
 } am_hal_mspi_err_e;
 
@@ -292,8 +267,10 @@ typedef enum
     AM_HAL_MSPI_AP_SIZE8M,
     AM_HAL_MSPI_AP_SIZE16M,
     AM_HAL_MSPI_AP_SIZE32M,
-    AM_HAL_MSPI_AP_SIZE64M
-} am_hal_mspi_ap_size_e;
+    AM_HAL_MSPI_AP_SIZE64M,
+    AM_HAL_MSPI_AP_SIZE_MAX = AM_HAL_MSPI_AP_SIZE64M
+}
+am_hal_mspi_ap_size_e;
 
 //
 //! Transfer callback function prototype
@@ -438,9 +415,9 @@ typedef enum
     AM_HAL_MSPI_REQ_DQS,
     // Pass am_hal_mspi_rxcfg_t * as pConfig
     AM_HAL_MSPI_REQ_RXCFG,
-    // Pass am_hal_mspi_timimg_scan_t * as pConfig
-    AM_HAL_MSPI_REQ_TIMING_SCAN,
-    // Pass am_hal_mspi_timimg_scan_t * as pConfig
+    // Pass am_hal_mspi_timing_scan_t * as pConfig
+    AM_HAL_MSPI_REQ_TIMING_SCAN_SET,
+    // Pass am_hal_mspi_timing_scan_t * as pConfig
     AM_HAL_MSPI_REQ_TIMING_SCAN_GET,
     // pConfig am_hal_mspi_xip_config_t *
     AM_HAL_MSPI_REQ_XIP_CONFIG,
@@ -488,15 +465,22 @@ typedef enum
     AM_HAL_MSPI_HALF_WORD_REVERSE_EN,
     // Disbale data transfers in reverse bytes in half-word format
     AM_HAL_MSPI_HALF_WORD_REVERSE_DIS,
-    // Set writlatncy when write date to nand flash
+    //! Alter the Scrambling Address Start and End
+    AM_HAL_MSPI_REQ_SCRAMBLE_CONFIG,
+    // Set write latency when write date to nand flash
     AM_HAL_MSPI_REQ_NAND_FLASH_SET_WLAT,
+    // Set write latency when requested
+    AM_HAL_MSPI_REQ_SET_WLAT,
     // Disable send flash row address
     AM_HAL_MSPI_REQ_NAND_FLASH_SENDADDR_DIS,
     // Enable send flash row address
     AM_HAL_MSPI_REQ_NAND_FLASH_SENDADDR_EN,
 
     AM_HAL_MSPI_REQ_MAX
-} am_hal_mspi_request_e;
+}
+am_hal_mspi_request_e;
+
+#define AM_HAL_MSPI_REQ_TIMING_SCAN AM_HAL_MSPI_REQ_TIMING_SCAN_SET
 
 //
 //! MSPI Boundary Size
@@ -554,6 +538,9 @@ typedef enum
 //
 typedef struct
 {
+// #### INTERNAL BEGIN ####
+    // FIXME: No descripttion.
+// #### INTERNAL END ####
     //
     uint32_t                    ui32CEBreak;
 
@@ -569,6 +556,9 @@ typedef struct
     //! Byte enable always on for all lanes
     bool                        bBEOn;
 
+// #### INTERNAL BEGIN ####
+    // FIXME: No descripttion.
+// #### INTERNAL END ####
     //
     //bool                        bAFIFOLVL;
 
@@ -691,6 +681,9 @@ typedef struct
     //! Enable Write Latency Counter
     bool                        bEnWRLatency;
 
+// #### INTERNAL BEGIN ####
+// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
+// #### INTERNAL END ####
     //! Continuation (The MSPI CONT feature is deprecated for Apollo4.)
     bool                        bContinue;
 
@@ -887,6 +880,27 @@ extern uint32_t am_hal_mspi_control(void *pHandle,
 extern uint32_t am_hal_mspi_blocking_transfer(void *pHandle,
                                             am_hal_mspi_pio_transfer_t *pTransaction,
                                             uint32_t ui32Timeout);
+
+//*****************************************************************************
+//
+//! @brief MSPI blocking transfer continuous function
+//!
+//! @param pHandle      - handle for the interface.
+//! @param pTransaction - pointer to the transaction control structure.
+//! @param ui32Timeout  - timeout in usecs.
+//!
+//! This function optimizes blocking transfers by minimizing the delay between FIFO
+//! reads. For smaller data transfers, between 8 and 512bytes, this function will
+//! offer improved performance over the standard blocking and non-blocking functions.
+//!
+//!
+//! @return status      - generic or interface specific status.
+//
+//*****************************************************************************
+extern uint32_t am_hal_mspi_blocking_transfer_continuous(void *pHandle,
+                                            am_hal_mspi_pio_transfer_t *pTransaction,
+                                            uint32_t ui32Timeout);
+
 //*****************************************************************************
 //
 //! @brief MSPI Non-Blocking transfer function

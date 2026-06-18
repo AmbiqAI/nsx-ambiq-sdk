@@ -21,24 +21,21 @@ if(NOT DEFINED NSX_AMBIQ_BSP_LIB_PART_NAME)
     set(NSX_AMBIQ_BSP_LIB_PART_NAME "${NSX_AMBIQ_PART_NAME}")
 endif()
 
-if(NOT DEFINED NSX_AMBIQSUITE_ARCHIVE_SUFFIX)
-    nsx_resolve_ambiqsuite_archive_suffix(NSX_AMBIQSUITE_ARCHIVE_SUFFIX)
+if(NOT DEFINED NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+    nsx_resolve_ambiqsuite_artifact_toolchain(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
 endif()
 
 nsx_assert_directory_exists("${NSX_AMBIQSUITE_ROOT}")
 nsx_assert_directory_exists("${NSX_AMBIQ_BSP_DIR}")
 nsx_assert_path_component(NSX_AMBIQ_BOARD_NAME)
+nsx_assert_path_component(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
 nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_SUBDIR)
 
-set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp${NSX_AMBIQSUITE_ARCHIVE_SUFFIX}")
-nsx_atfe_prefers_gcc_prebuilt(NSX_ATFE_USE_GCC_PREBUILT)
-if(NSX_ATFE_USE_GCC_PREBUILT)
-    # Explicitly select the GCC prebuilt BSP archive (libam_bsp.a) rather than any
-    # staged libam_bsp-atfe.a. See nsx_atfe_prefers_gcc_prebuilt for rationale.
-    set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a")
-    message(STATUS "nsx-ambiq-bsp-r4: atfe build linking GCC BSP archive (USB CDC workaround)")
-endif()
+# Prebuilt libraries are laid out per-toolchain: lib/<toolchain>/<part>/<board>/libam_bsp.a.
+# The atfe->gcc USB CDC workaround is applied centrally by
+# nsx_resolve_ambiqsuite_artifact_toolchain.
+set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a")
 set(NSX_BSP_LIB "${NSX_BSP_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite BSP static library")
 
 add_library(nsx_ambiq_bsp INTERFACE)

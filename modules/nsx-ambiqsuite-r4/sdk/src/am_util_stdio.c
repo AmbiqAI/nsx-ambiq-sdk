@@ -2,58 +2,63 @@
 //
 //! @file am_util_stdio.c
 //!
-//! @brief A few printf-style functions for use with Ambiq products
+//! @brief Standard Input/Output Utility Functions
 //!
-//! Functions for performing printf-style operations without dynamic memory
-//! allocation.
+//! @addtogroup stdio_utils STDIO Utility Functions
+//! @ingroup utils
+//! @{
 //!
-//! For further information about this module concerning its history, uses,
-//! and limitations, please see the Ambiq Micro KB article "Q&A: What does
-//! the AmbiqSuite SDK am_util_stdio_printf() function do?" at:
+//! Purpose: This module provides standard input/output utilities for
+//!          Ambiq Micro devices. It enables printf-style output, character
+//!          handling, and string formatting for embedded applications
+//!          requiring console or debug output capabilities. The utilities
+//!          support multiple output channels and formatting options.
 //!
 //! https://support.ambiqmicro.com/hc/en-us/articles/360040441631
 //!
-//! @addtogroup stdio STDIO - Ambiq's Implementation
-//! @ingroup utils
-//! @{
-//
+//! @section stdio_features Key Features
+//!
+//! 1. @b Printf @b Functions: Complete printf-style formatting capabilities.
+//! 2. @b String @b Conversion: Number-to-string conversion for various formats.
+//! 3. @b 64-bit @b Support: Full 64-bit integer handling and formatting.
+//! 4. @b Floating @b Point: Float-to-string conversion with precision control.
+//! 5. @b Buffer @b Management: Static buffer allocation for memory efficiency.
+//! 6. @b Text @b Translation: Newline translation and text mode support.
+//!
+//! @section stdio_functionality Functionality
+//!
+//! - Provide printf, sprintf, snprintf formatting functions
+//! - Support 32-bit and 64-bit integer formatting
+//! - Handle floating-point number conversion
+//! - Perform hexadecimal and decimal string conversion
+//! - Manage text mode translation (CR/LF handling)
+//! - Support variable argument list processing
+//! - Enable character output redirection
+//! - Provide buffer overflow protection
+//!
+//! @section stdio_usage Usage
+//!
+//! 1. Initialize stdio with am_util_stdio_printf_init()
+//! 2. Set text translation mode if needed
+//! 3. Use printf functions for formatted output
+//! 4. Configure character output redirection
+//! 5. Handle buffer management for large strings
+//!
+//! @section stdio_configuration Configuration
+//!
+//! - @b Printf @b Buffer: Configurable buffer size for formatted output
+//! - @b Text @b Mode: Optional CR/LF translation for terminal output
+//! - @b Character @b Output: Function pointer for output redirection
+//! - @b Memory @b Alignment: 4KB alignment for Apollo5 devices
+//! - @b Format @b Support: Decimal, hexadecimal, and floating-point formats
 //*****************************************************************************
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -70,10 +75,11 @@
 
 // function pointer for printf
 am_util_stdio_print_char_t g_pfnCharPrint;
+am_util_stdio_get_char_t g_pfnCharGet;
 
 // buffer for printf
 #ifdef AM_PART_APOLLO5_API
-static char g_prfbuf[AM_PRINTF_BUFSIZE] __attribute__((aligned(4096)));
+static char g_prfbuf[AM_PRINTF_BUFSIZE * 2] __attribute__((aligned(4096)));
 #else
 static char g_prfbuf[AM_PRINTF_BUFSIZE];
 #endif
@@ -90,6 +96,12 @@ void
 am_util_stdio_printf_init(am_util_stdio_print_char_t pfnCharPrint)
 {
     g_pfnCharPrint = pfnCharPrint;
+}
+
+void
+am_util_stdio_scanf_init(am_util_stdio_get_char_t pfnCharGet)
+{
+    g_pfnCharGet = pfnCharGet;
 }
 
 //*****************************************************************************
@@ -907,6 +919,9 @@ am_util_stdio_vsprintf(char *pcBuf, const char *pcFmt, va_list pArgs)
 
             case 'x':
                 bLower = true;
+                // Intentional fall through. Avoid gcc -Wimplicit-fallthrough
+                //  warning with the following comment.
+                // Fall through.
             case 'X':
                 ui64Val = bLongLong ? va_arg(pArgs, uint64_t) :
                                       va_arg(pArgs, uint32_t);
@@ -1251,10 +1266,214 @@ am_util_stdio_vprintf(const char *pcFmt, va_list pArgs)
 void
 am_util_stdio_terminal_clear(void)
 {
+// #### INTERNAL BEGIN ####
+// The AMFlash utility application is no longer supported by Ambiq.
+// Therefore the following comment is no longer applicable.
+    //
+    // Escape codes to clear a terminal screen and put the cursor in the top
+    // left corner.
+    // We'll first print a number of spaces, which helps get the ITM in sync
+    // with AMFlash, especially after a reset event or a system clock
+    // frequency change.
+    //
+// #### INTERNAL END ####
     //
     // Simulate a clear terminal by printing a series of linefeeds.
     //
     am_util_stdio_printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+}
+
+static uint64_t hexstr_to_uint64(const char *str, uint32_t *count)
+{
+    uint64_t val = 0;
+    uint32_t c = 0;
+    while ((*str >= '0' && *str <= '9') || (*str >= 'a' && *str <= 'f') || (*str >= 'A' && *str <= 'F'))
+    {
+        val <<= 4;
+        if ( *str >= '0' && *str <= '9' )
+        {
+            val += *str - '0';
+        }
+        else if ( *str >= 'a' && *str <= 'f' )
+        {
+            val += (*str - 'a') + 10;
+        }
+        else
+        {
+            val += (*str - 'A') + 10;
+        }
+        str++;
+        c++;
+    }
+    if (count)
+    {
+        *count = c;
+    }
+    return val;
+}
+
+static float str_to_float(const char *str, uint32_t *count)
+{
+    float result = 0.0f;
+    float sign = 1.0f;
+    float frac = 0.1f;
+    uint32_t c = 0;
+
+    if (*str == '-')
+    {
+        sign = -1.0f;
+        str++;
+        c++;
+    }
+    while (*str >= '0' && *str <= '9')
+    {
+        result = result * 10.0f + (*str - '0');
+        str++;
+        c++;
+    }
+    if (*str == '.')
+    {
+        str++;
+        c++;
+        while (*str >= '0' && *str <= '9')
+        {
+            result += (*str - '0') * frac;
+            frac *= 0.1f;
+            str++;
+            c++;
+        }
+    }
+    if (count)
+    {
+        *count = c;
+    }
+    return result * sign;
+}
+
+uint32_t am_util_stdio_vsscanf(const char *input, const char *fmt, va_list args)
+{
+    uint32_t num_assigned = 0;
+
+    while (*fmt && *input)
+    {
+        if (*fmt == '%')
+        {
+            ++fmt;
+            bool longlong = false;
+            if (*fmt == 'l')
+            {
+                ++fmt;
+                if (*fmt == 'l')
+                {
+                    longlong = true;
+                    ++fmt;
+                }
+            }
+
+            uint32_t count = 0;
+            switch (*fmt)
+            {
+                case 'd': case 'i':
+                    if (longlong)
+                    {
+                        int64_t *p = va_arg(args, int64_t*);
+                        *p = (int64_t)decstr_to_int(input, &count);
+                    }
+                    else
+                    {
+                        int *p = va_arg(args, int*);
+                        *p = (int)decstr_to_int(input, &count);
+                    }
+                    input += count;
+                    num_assigned++;
+                    break;
+                case 'u':
+                    if (longlong)
+                    {
+                        uint64_t *p = va_arg(args, uint64_t*);
+                        *p = (uint64_t)decstr_to_int(input, &count);
+                    }
+                    else
+                    {
+                        unsigned *p = va_arg(args, unsigned*);
+                        *p = (unsigned)decstr_to_int(input, &count);
+                    }
+                    input += count;
+                    num_assigned++;
+                    break;
+                case 'x': case 'X':
+                    if (longlong)
+                    {
+                        uint64_t *p = va_arg(args, uint64_t*);
+                        *p = hexstr_to_uint64(input, &count);
+                    }
+                    else
+                    {
+                        unsigned *p = va_arg(args, unsigned*);
+                        *p = (unsigned)hexstr_to_uint64(input, &count);
+                    }
+                    input += count;
+                    num_assigned++;
+                    break;
+                case 'f':
+                {
+                    float *p = va_arg(args, float*);
+                    *p = str_to_float(input, &count);
+                    input += count;
+                    num_assigned++;
+                    break;
+                }
+                case 's':
+                {
+                    char *p = va_arg(args, char*);
+                    while (*input && *input != ' ' && *input != '\n')
+                    {
+                        *p++ = *input++;
+                        count++;
+                    }
+                    *p = '\0';
+                    num_assigned++;
+                    break;
+                }
+                case 'c':
+                {
+                    char *p = va_arg(args, char*);
+                    *p = *input++;
+                    num_assigned++;
+                    break;
+                }
+                default:
+                    return num_assigned;
+            }
+            ++fmt;
+        }
+        else if (*fmt == *input)
+        {
+            ++fmt;
+            ++input;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return num_assigned;
+}
+
+uint32_t am_util_stdio_scanf(const char *fmt, ...)
+{
+    if (!g_pfnCharGet)
+    {
+        return 0;
+    }
+
+    g_pfnCharGet(g_prfbuf + AM_PRINTF_BUFSIZE);
+
+    va_list args;
+    va_start(args, fmt);
+    uint32_t ret = am_util_stdio_vsscanf((const char *)(g_prfbuf + AM_PRINTF_BUFSIZE), fmt, args);
+    va_end(args);
+    return ret;
 }
 
 //*****************************************************************************
@@ -1263,4 +1482,3 @@ am_util_stdio_terminal_clear(void)
 //! @}
 //
 //*****************************************************************************
-

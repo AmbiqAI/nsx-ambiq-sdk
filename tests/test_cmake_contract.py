@@ -77,10 +77,14 @@ def test_native_artifact_names_are_explicit(repo_root: Path) -> None:
     assert 'set(NSX_AMBIQ_BSP_LIB_SUBDIR "apollo510dL_evb")' in apollo510dl
 
 
-def test_promoted_provider_payload_keeps_header_only_buckets_source_free(repo_root: Path) -> None:
+def test_promoted_provider_payload_keeps_precompiled_buckets_source_free(repo_root: Path) -> None:
+    # HAL (mcu/) and BSP (boards/) ship precompiled, so those buckets stay
+    # header-only. Device drivers (devices/) and curated utilities (utils/) are
+    # exempt: they ship source so consumers can compile the peripheral support
+    # they need (see PROMOTED_DEVICE_SUFFIXES / PROMOTED_UTILITY_SOURCES).
     payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
     forbidden_sources = []
-    for root in [payload / "mcu", payload / "boards", payload / "devices", payload / "utils"]:
+    for root in [payload / "mcu", payload / "boards"]:
         for path in root.rglob("*.c"):
             forbidden_sources.append(path.relative_to(repo_root).as_posix())
     for path in payload.rglob("*.mk"):
@@ -93,6 +97,27 @@ def test_promoted_provider_payload_keeps_header_only_buckets_source_free(repo_ro
         for path in (payload / "boards").rglob(name):
             forbidden_sources.append(path.relative_to(repo_root).as_posix())
     assert forbidden_sources == []
+
+
+def test_promoted_provider_payload_ships_device_driver_sources(repo_root: Path) -> None:
+    # Device drivers ship both headers and source so consumers can compile the
+    # peripheral support they need; HAL/BSP remain precompiled.
+    devices = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk" / "devices"
+    assert any(devices.rglob("*.c")), "expected promoted device driver sources under devices/"
+
+
+def test_promoted_provider_payload_resolves_banner_placeholders(repo_root: Path) -> None:
+    placeholder_pattern = re.compile(r"\$\{(?:copyright|version)\}")
+    offenders = []
+    for train_id in ("r2", "r3", "r4", "r5"):
+        payload = repo_root / "modules" / f"nsx-ambiqsuite-{train_id}" / "sdk"
+        for path in payload.rglob("*"):
+            if path.suffix not in {".h", ".hpp", ".inc", ".c"} or not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if placeholder_pattern.search(text):
+                offenders.append(path.relative_to(repo_root).as_posix())
+    assert offenders == []
 
 
 def test_cmake_descriptor_includes_resolve_inside_repo(repo_root: Path) -> None:
@@ -232,6 +257,39 @@ def test_staged_boards_configure_with_promoted_gcc_and_atfe_artifacts(repo_root:
         for board in boards:
             result = configure_contract_project(repo_root, tmp_path, board, toolchain_family)
             assert result.returncode == 0, result.stdout
+
+
+def test_apollo2_configure_supports_gcc_and_atfe_only(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    for toolchain_family in ("gcc", "atfe"):
+        result = configure_contract_project(
+            repo_root,
+            tmp_path,
+            "apollo2_evb",
+            toolchain_family,
+            provider="ambiqsuite-r2",
+            ambiqsuite_version="2.5.1",
+            provider_module="nsx-ambiqsuite-r2",
+            hal_module="nsx-ambiq-hal-r2",
+            bsp_module="nsx-ambiq-bsp-r2",
+        )
+        assert result.returncode == 0, result.stdout
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo2_evb",
+        "armclang",
+        provider="ambiqsuite-r2",
+        ambiqsuite_version="2.5.1",
+        provider_module="nsx-ambiqsuite-r2",
+        hal_module="nsx-ambiq-hal-r2",
+        bsp_module="nsx-ambiq-bsp-r2",
+    )
+    assert result.returncode != 0
+    assert "apollo2 does not support NSX_TOOLCHAIN_FAMILY=armclang" in result.stdout
 
 
 def test_armclang_configure_reflects_acfe_artifact_availability(repo_root: Path, tmp_path: Path) -> None:

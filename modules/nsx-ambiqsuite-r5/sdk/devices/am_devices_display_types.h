@@ -9,9 +9,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_DEVICES_DISPLAY_TYPES_H
@@ -251,8 +252,10 @@ typedef struct
     //
     //! DC as display controller IP
     //
+#ifndef AM_PART_ATOMIQ11X_API
     am_hal_dsi_freq_trim_e  eDsiFreq;          // DSI IF frequency
     am_hal_dsi_dbi_width_e  eDbiWidth;         // DSI IP source (DBI) width
+#endif
     uint8_t ui8NumLanes;                       // DSI IF lane number
 #endif
 
