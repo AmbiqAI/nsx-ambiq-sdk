@@ -14,39 +14,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_TPIU_H
@@ -76,6 +47,164 @@ extern "C"
 #define AM_HAL_TPIU_BAUD_DEFAULT    (AM_HAL_TPIU_BAUD_1M)
 //! @}
 
+// ##### INTERNAL BEGIN #####
+#if 0
+//*****************************************************************************
+//
+//! @name TPIU register defines.
+//! @{
+//
+//*****************************************************************************
+#define AM_HAL_TPIU_SSPSR       0xE0040000  //! Supported Parallel Port Sizes
+#define AM_HAL_TPIU_CSPSR       0xE0040004  //! Current Parallel Port Size
+#define AM_HAL_TPIU_ACPR        0xE0040010  //! Asynchronous Clock Prescaler
+#define AM_HAL_TPIU_SPPR        0xE00400F0  //! Selected Pin Protocol
+#define AM_HAL_TPIU_TYPE        0xE0040FC8  //! TPIU Type
+//! @}
+
+//*****************************************************************************
+//
+// TPIU ACPR defines.
+//
+//*****************************************************************************
+#define AM_HAL_TPIU_ACPR_SWOSCALER_M    0x0000FFFF  //! SWO baud rate prescalar
+
+//*****************************************************************************
+//
+//! TPIU_SPPR TXMODE defines.
+//
+//*****************************************************************************
+typedef enum
+{
+    AM_HAL_TPIU_PIN_PROTOCOL_PARALLEL     = 0,
+    AM_HAL_TPIU_PIN_PROTOCOL_MANCHESTER   = 1,
+    AM_HAL_TPIU_PIN_PROTOCOL_NRZ          = 2
+} am_hal_tpiu_pin_protocol_e;
+
+//*****************************************************************************
+//
+//! @name TPIU Type defines
+//! @{
+//
+//*****************************************************************************
+#define AM_HAL_TPIU_TYPE_NRZVALID       0x00000800
+#define AM_HAL_TPIU_TYPE_MANCVALID      0x00000400
+#define AM_HAL_TPIU_TYPE_PTINVALID      0x00000200
+#define AM_HAL_TPIU_TYPE_FIFOSZ_M       0x000001C0
+//! @}
+
+//*****************************************************************************
+//
+//! @brief Structure used for configuring the TPIU
+//
+//*****************************************************************************
+typedef enum
+{
+    AM_HAL_TPIU_TRACECLKIN_6MHZ         = MCUCTRL_DBGCTRL_DBGCLKSEL_HFRCDIV2,
+    AM_HAL_TPIU_TRACECLKIN_3MHZ         = MCUCTRL_DBGCTRL_DBGCLKSEL_HFRCDIV2,
+    AM_HAL_TPIU_TRACECLKIN_750KHZ       = MCUCTRL_DBGCTRL_DBGCLKSEL_HFRCDIV8,
+    AM_HAL_TPIU_TRACECLKIN_MAX          = AM_HAL_TPIU_TRACECLKIN_750KHZ
+} am_hal_tpiu_traceclkin_e;
+
+//*****************************************************************************
+//
+//! @brief Structure used for configuring the TPIU
+//
+//*****************************************************************************
+typedef struct
+{
+    //
+    //! If ui32SetItmBaud is non-zero, the ITM frequency is set to the given
+    //!  frequency, and is based on a divide-by-8 HFRC TPIU clock.
+    //! If zero, other structure members are used to set the TPIU configuration.
+    //
+    uint32_t ui32SetItmBaud;
+
+    //
+    //! Protocol to use for the TPIU
+    //!
+    //! Valid values for ui32PinProtocol are:
+    //!
+    //!     AM_HAL_TPIU_SPPR_PARALLEL
+    //!     AM_HAL_TPIU_SPPR_MANCHESTER
+    //!     AM_HAL_TPIU_SPPR_NRZ
+    //
+    am_hal_tpiu_pin_protocol_e ePinProtocol;
+} am_hal_tpiu_config_t;
+
+//*****************************************************************************
+//
+// External function definitions
+//
+//*****************************************************************************
+//*****************************************************************************
+//
+//! @brief Enable the clock to the TPIU module.
+//!
+//! This function enables the clock to the TPIU module.
+//
+//*****************************************************************************
+extern void am_hal_tpiu_clock_enable(void);
+
+//*****************************************************************************
+//
+//! @brief Disable the clock to the TPIU module.
+//!
+//! This function disables the clock to the TPIU module.
+//
+//*****************************************************************************
+extern void am_hal_tpiu_clock_disable(void);
+
+//*****************************************************************************
+//
+//! @brief Set the output port width of the TPIU
+//!
+//! @param ui32PortWidth - The desired port width (in bits)
+//!
+//! This function uses the TPIU_CSPSR register to set the desired output port
+//! width of the TPIU.
+//
+//*****************************************************************************
+extern void am_hal_tpiu_port_width_set(uint32_t ui32PortWidth);
+
+//*****************************************************************************
+//
+//! @brief Read the supported_output port width of the TPIU
+//!
+//! This function uses the \e TPIU_SSPSR register to set the supported output
+//! port widths of the TPIU.
+//!
+//! @return Current width of the TPIU output port
+//
+//*****************************************************************************
+extern uint32_t am_hal_tpiu_supported_port_width_get(void);
+
+//*****************************************************************************
+//
+//! @brief Read the output port width of the TPIU
+//!
+//! This function uses the \e TPIU_CSPSR register to set the desired output
+//! port width of the TPIU.
+//!
+//! @return Current width of the TPIU output port
+//
+//*****************************************************************************
+extern uint32_t am_hal_tpiu_port_width_get(void);
+
+//*****************************************************************************
+//
+//! @brief Configure the TPIU based on the values in the configuration struct.
+//!
+//! @param psConfig - pointer to an am_hal_tpiu_config_t structure containing
+//! the desired configuration information.
+//!
+//! This function reads the provided configuration structure, and sets the
+//! relevant TPIU registers to achieve the desired configuration.
+//
+//*****************************************************************************
+extern void am_hal_tpiu_configure(am_hal_tpiu_config_t *psConfig);
+#endif
+// ##### INTERNAL END #####
 
 //*****************************************************************************
 //

@@ -2,53 +2,43 @@
 //
 //! @file am_hal_pin.h
 //!
-//! @brief Function select information for Apollo4 GPIOs.
+//! @brief Function select information for APOLLO4P GPIOs.
 //!
-//! Date: 01/08/2021
+//! Date: 12/18/2025
 //!
-//! @addtogroup pin_4p Pin Functionality
+//! @addtogroup pin_func Pin Functionality
 //! @ingroup apollo4p_hal
 //! @{
+//
+// This is a generated file, do not modify!
 //
 //*****************************************************************************
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+// IMPORTANT: This is a generated file!!
+//
+// To update pin definitions:
+//     Modify the pathnames appropriately in the following script,
+//     ambiqsuite/scripts/apollo4/generate_funcsel.py
+// then run the script:
+//   CD mcu/apollo4
+//   ../../scripts/apollo4/generate_funcsel.py
+//
+// Note: The generate_funcsel.py script contains hard-coded relative paths
+//       that must be modified for the system it's being run on.
+//
+//*****************************************************************************
+// #### INTERNAL END ####
 
 #ifndef AM_HAL_PIN_H
 #define AM_HAL_PIN_H
@@ -60,7 +50,7 @@ extern "C"
 
 //*****************************************************************************
 //
-// Define the number of actual and virtual GPIOs
+//! Define the number of actual and virtual GPIOs
 //
 //*****************************************************************************
 #define AM_HAL_PIN_TOTAL_GPIOS                  (128)
@@ -69,14 +59,14 @@ extern "C"
 
 //*****************************************************************************
 //
-// Define the number of functions per GPIO.
+//! Define the number of functions per GPIO.
 //
 //*****************************************************************************
 #define AM_HAL_PIN_NUMFUNCS                     16
 
 //*****************************************************************************
 //
-// Function select macros by pin.
+//! Function select macros by pin.
 //
 //*****************************************************************************
 // PIN 0 functions
@@ -2933,4 +2923,3 @@ extern const uint16_t am_hal_pin_fn_list[AM_HAL_PIN_TOTAL_GPIOS][AM_HAL_PIN_NUMF
 //! @}
 //
 //*****************************************************************************
-

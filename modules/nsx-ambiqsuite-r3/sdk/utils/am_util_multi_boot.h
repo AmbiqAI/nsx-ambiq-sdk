@@ -2,50 +2,20 @@
 //
 //! @file am_util_multi_boot.h
 //!
-//! @brief Prototype for Multi Protocol Bootloader implementation
+//! @brief Multiple Boot Support Utility Functions
 //!
-//! This is a bootloader program that supports flash programming over UART,
-//! SPI, and I2C. The correct protocol is selected automatically at boot time.
-//!
-//! SWO is configured in 1M baud, 8-n-1 mode.
+//! @addtogroup multi_boot_utils Multi-Boot Utility Functions
+//! @ingroup utils
+//! @{
 //
 //*****************************************************************************
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_3_2_0-dd5f40c14b of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -138,3 +108,11 @@ extern bool am_util_multiboot_check_boot_from_flash(bool *pbOverride, am_util_bo
 extern bool am_util_multiboot_get_main_image_info(uint32_t *pui32LinkAddr, uint32_t *pui32Length);
 
 #endif // AM_MULTI_BOOT_H
+
+//*****************************************************************************
+//
+// End Doxygen group.
+//! @}
+//
+//*****************************************************************************
+

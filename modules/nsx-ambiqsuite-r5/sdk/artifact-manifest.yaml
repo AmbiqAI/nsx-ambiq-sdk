@@ -1,13 +1,14 @@
 sdk:
   provider: ambiqsuite-r5
-  version: 5.2.0
+  version: stable-2026.06.17
   source_kind: git_ref
-  source_ref: release_sdk5p2p0_rc4
-  source_root: sdk-intake/local/work/ambiqsuite-release_sdk5p2p0_rc4
+  source_ref: stable
+  source_commit: 6cdd4ccf96e53339ac6714e97eb12771065e438e
+  source_root: sdk-intake/local/work/ambiqsuite-stable
   raw_source_committed: false
 
 build:
-  generated_at: 2026-06-01
+  generated_at: 2026-06-17
   source: native AmbiqSuite Makefiles
   toolchains:
     gcc:
@@ -19,15 +20,15 @@ build:
       release_cflags: '-g0'
     atfe:
       status: built
-      compiler: '/home/adamp/.local/ATfE/ATfE-22.1.0/bin/clang'
-      archive_tool: '/home/adamp/.local/ATfE/ATfE-22.1.0/bin/llvm-ar'
+      compiler: clang
+      archive_tool: 'llvm-ar'
       output_config: bin-atfe
       debug_symbols: false
       release_cflags: '-g0'
     acfe:
       status: built
-      compiler: /home/adamp/ACfE/bin/armclang
-      archive_tool: /home/adamp/ACfE/bin/armar
+      compiler: armclang
+      archive_tool: armar
       output_config: bin-acfe
       debug_symbols: false
       release_cflags: '-g0'
@@ -39,39 +40,39 @@ parts:
     hal_artifacts:
       gcc:
         path: gcc/lib/apollo330P/libam_hal.a
-        sha256: 4b4c186450bc3b20864ea736bca9ea779ac6243c859063949c6e497931b06a5f
+        sha256: 93f188ba2d70bdd3c0307a174d4bd37e357673a367873866f47364a6de5bb284
       atfe:
         path: atfe/lib/apollo330P/libam_hal.a
-        sha256: b9e37a1082c5b682053724b44d1c278c7f069a72d8871cba1f2af9744e61c496
+        sha256: cc591109ae8959453d2c410f18bf8c80727b95c7578f7960bef7807ff09b9e32
       acfe:
         path: acfe/lib/apollo330P/libam_hal.a
-        sha256: 5ac15aedfb5964c727d0b1304b02f1f0404d556bd53613624d53a5fa25a13d5d
+        sha256: a25513e2ae400bfc552952e24f8eeb044873c044408993399eed1f0563f0568a
   - logical_skew: apollo510
     mcu_dir: mcu/apollo510
     hal_source_dir: mcu/apollo510/hal
     hal_artifacts:
       gcc:
         path: gcc/lib/apollo510/libam_hal.a
-        sha256: a252998b9f8790974d2f70fc849749f777132a99ebb5526077dd3f1991965064
+        sha256: 7cd87500999ebda0c5fcf362248c9e78f0befe8811dc27470f2614b41dd4932c
       atfe:
         path: atfe/lib/apollo510/libam_hal.a
-        sha256: 7b4b8cf402e9f0358c740d57a4f55238ee818e95e58df2e71e4a9c3deb10b85c
+        sha256: b5ed4341e69eff357330ec1e352a27d45d55bbbaec11f90abae5dd64571e7a63
       acfe:
         path: acfe/lib/apollo510/libam_hal.a
-        sha256: 10f2874f1be5ced89a42155011b9041663c7860a80ec5afe3bc107f93a460855
+        sha256: 3c048b9ad7a0d18c6ab82dd90038e6f72f4baf19242d755c408e26612e05b83d
   - logical_skew: apollo510L
     mcu_dir: mcu/apollo510L
     hal_source_dir: mcu/apollo510L/hal
     hal_artifacts:
       gcc:
         path: gcc/lib/apollo510L/libam_hal.a
-        sha256: 017922df281644016c7a136fa53eb9116a1e4c72d3f497ca01ffa4ab2957af99
+        sha256: fc108d085cb9983ea648ed7203e046e8cb70c39a17850de6ab7ef4291f315d70
       atfe:
         path: atfe/lib/apollo510L/libam_hal.a
-        sha256: c91b41c44bac77304d9b859647b838bd8f0c6efd383f35c58c053f10086a663c
+        sha256: 9dcece3a00ec4adc4d3b66c107943dbcae2d90b9205d2b67a8c878cbe46090a9
       acfe:
         path: acfe/lib/apollo510L/libam_hal.a
-        sha256: 76c98ff23170c63dc72d5bba4ab1d6c7aebaaf1419dc7b24e1d6861c77aa2c95
+        sha256: 3efd0b29c5afebb5005e22e8be74ebce5d6b6595aa3bb768d93f5ca4d8f20c3d
 
 boards:
   - nsx_board: apollo330mP_evb
@@ -81,13 +82,13 @@ boards:
     bsp_artifacts:
       gcc:
         path: gcc/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-        sha256: 95035e0c37aec7716204d9ce90039154e832ef62923b856bc4e43158a268d66b
+        sha256: 9946f5fc26c5f4089e5174aa216f790c0be4f9127ea52aee67332232fa9e80de
       atfe:
         path: atfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-        sha256: 1333556365ffa94a91862e1a020422aada233ae912670618fa10b62b90430b0d
+        sha256: d8fda0cdce536bbb2d533f5255a58c9519b5d7b843e4737e95c41a56bae16f5b
       acfe:
         path: acfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-        sha256: 35fd5d7e59e066b40d0bb690217faa4cb3795c51066d47baf745bb12e61735cc
+        sha256: bbdae11a6c38931668bbef3e0816baba24a4f266a290cacdbf1d67d39deb772d
   - nsx_board: apollo510_evb
     ambiq_board_name: apollo510_evb
     logical_skew: apollo510
@@ -95,13 +96,13 @@ boards:
     bsp_artifacts:
       gcc:
         path: gcc/lib/apollo510/apollo510_evb/libam_bsp.a
-        sha256: 0b25fc9bc4bd9a3ff13e671a05e910c1c71444dd6d583ffa67a2d97397d00f10
+        sha256: d1a8a3064a0e9c5021c10aca635225a1d6d93bfe961347f8704c9e04de87780f
       atfe:
         path: atfe/lib/apollo510/apollo510_evb/libam_bsp.a
-        sha256: f040419c3fb7edd15049d2f71fd347fcf9102a3cacc73fb87df83b2a13f87776
+        sha256: f99860fd5035ba9c0c20d0e2ef12aa57582fab7d78c6db37545371a7ff7ff43e
       acfe:
         path: acfe/lib/apollo510/apollo510_evb/libam_bsp.a
-        sha256: c6f0eef78a28a5257f31be9a1441acccd7a01489b46d56effdb012228b34c530
+        sha256: f7241fb0641095bf0072d4680455298effeb82246eb57cf4185e146081adb1be
   - nsx_board: apollo510b_evb
     ambiq_board_name: apollo510b_evb
     logical_skew: apollo510
@@ -109,13 +110,13 @@ boards:
     bsp_artifacts:
       gcc:
         path: gcc/lib/apollo510/apollo510b_evb/libam_bsp.a
-        sha256: c5919fd822eb0d05cd23b3bdf446e1e04c62a44e07694abfc1ff9064773d9224
+        sha256: 4fb76244f7063b9f5da486ff20878426059be3b0a0596d8952810a1d5410c321
       atfe:
         path: atfe/lib/apollo510/apollo510b_evb/libam_bsp.a
-        sha256: 9a47fadb49208ea4b3daadbe3b8fd5071a82c6faad1c5f1d068deea4a6fd93fd
+        sha256: 7adb25e973d8b15793192b6711eb9a91045948ccf7d8e4b3378bb721af86a2fd
       acfe:
         path: acfe/lib/apollo510/apollo510b_evb/libam_bsp.a
-        sha256: c0f6c5860eb9c47e84e6a6c0e3fc5f20a0746c2d371cbf2f619097c9191fdc46
+        sha256: cad61c06d0bfbfa13a197efa7554020d7ec23a81672b7335fc03376f0879a2cc
   - nsx_board: apollo510dL_evb
     ambiq_board_name: apollo510dL_evb
     logical_skew: apollo510L
@@ -123,10 +124,10 @@ boards:
     bsp_artifacts:
       gcc:
         path: gcc/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-        sha256: bdf5f25c4d8405c757fda18b307cff3f0c844d5a4fee1de7a957921acc3892f0
+        sha256: 5785647d108163e1e6f5b3dd825686780ec245efba17e7f24c0a3e60a6bb0595
       atfe:
         path: atfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-        sha256: 9efb1629a5521158671417dd10729f2c387469bfff910c1cb652634c32ae0671
+        sha256: f03925f61bcfd2495c624be22f05c10749afa4ae436203caf967dec5f79f26fc
       acfe:
         path: acfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-        sha256: ecdeb0955d49d4e55c7ae5ccecb4f5e760ac1b445ccc1df3173bd9616056a540
+        sha256: b79b5ff10ebd913b371b952a5871c500e2b3b675bfdd7e97458735834d7b6120

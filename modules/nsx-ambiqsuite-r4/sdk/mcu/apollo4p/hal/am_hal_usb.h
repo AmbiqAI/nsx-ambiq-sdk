@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -836,6 +807,27 @@ extern void am_hal_usb_interrupt_service(void *pHandle,
                                          uint32_t ui32IntrInStatus,
                                          uint32_t ui32IntrOutStatus);
 
+//****************************************************************************
+//
+//! @brief Macro to read and handle USB interrupts
+//!
+//! Application / USB stack can either call this macro, or implement its custom
+//! handling when usb isr is received
+//
+//****************************************************************************
+#define am_hal_usb_handle_isr(pHandle)                  \
+    {                                                   \
+        uint32_t int_status[3];                         \
+        am_hal_usb_intr_status_get(pHandle,             \
+                                    &int_status[0],     \
+                                    &int_status[1],     \
+                                    &int_status[2]);    \
+        am_hal_usb_interrupt_service(pHandle,           \
+                                     int_status[0],     \
+                                     int_status[1],     \
+                                     int_status[2]);    \
+    }
+
 //*****************************************************************************
 //
 //! @brief Apply various specific commands / controls to the USB module
@@ -861,6 +853,18 @@ extern uint32_t am_hal_usb_control(am_hal_usb_control_e eControl, void *pArgs);
 //*****************************************************************************
 extern uint32_t am_hal_usb_setHFRC2(am_hal_usb_hs_clock_type tUsbHsClockType);
 
+//*****************************************************************************
+//
+//! @brief Reset EP State
+//!
+//! @param pHandle   - handle for the module instance.
+//! @param ui8EpAddr - USB endpoint address for state reset
+//!
+//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_ep_state_reset(void *pHandle, uint8_t ui8EpAddr);
+
 #ifdef __cplusplus
 }
 #endif
@@ -873,4 +877,3 @@ extern uint32_t am_hal_usb_setHFRC2(am_hal_usb_hs_clock_type tUsbHsClockType);
 //! @}
 //
 //*****************************************************************************
-

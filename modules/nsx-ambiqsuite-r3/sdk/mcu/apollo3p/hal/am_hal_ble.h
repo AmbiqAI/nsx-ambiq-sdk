@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_3_2_0-dd5f40c14b of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -489,6 +460,10 @@ extern uint32_t am_hal_ble_deinitialize(void *pHandle);
 //*****************************************************************************
 extern uint32_t am_hal_ble_config(void *pHandle, const am_hal_ble_config_t *psConfig);
 
+// #### INTERNAL BEGIN ####
+//TODO: Add power save/restore?
+//TODO: Add a control API with a RESET option to toggle Nationz HW reset.
+// #### INTERNAL END ####
 //*****************************************************************************
 //
 //! @brief Enable the BLE module.
@@ -958,6 +933,30 @@ extern uint32_t am_hal_ble_int_clear(void *pHandle, uint32_t ui32InterruptMask);
 //*****************************************************************************
 extern uint32_t am_hal_ble_check_32k_clock(void *pHandle);
 
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @note This does not seem to exist?
+//!
+// set ui8TxCtrl as 1 to manually enale transmitter, 0 back to default
+//
+//*****************************************************************************
+extern uint32_t am_hal_ble_transmitter_control(void *pHandle, uint8_t ui8TxCtrl);
+
+//*****************************************************************************
+//
+//! @brief Manually enable/disable transmitter to output carrier signal
+//! @note set ui8TxChannel as 0 to 0x27 for each transmit channel, 0xFF back to normal modulate mode
+//! @par
+//! @note This does not seem to exist?
+//!
+//! @param pHandle      //!
+//! @param ui8TxChannel
+//! @return
+//
+//*****************************************************************************
+extern uint32_t am_hal_ble_transmitter_control_ex(void *pHandle, uint8_t ui8TxChannel);
+// #### INTERNAL END ####
 
 //*****************************************************************************
 //

@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -154,7 +125,7 @@ am_hal_pdm_gain_stepsize_e;
 //*****************************************************************************
 typedef enum
 {
-  AM_HAL_PDM_HIGH_PASS_ENABLE = 0,
+  AM_HAL_PDM_HIGH_PASS_ENABLE  = 0,
   AM_HAL_PDM_HIGH_PASS_DISABLE = 1
 }
 am_hal_pdm_highpass_filter_onoff_e;
@@ -252,6 +223,24 @@ am_hal_pdm_clkout_delay_e;
 
 //*****************************************************************************
 //
+//! used to return error status from dma isr service
+//
+//*****************************************************************************
+typedef enum
+{
+    AM_HAL_PDM_ERR_NO_ERR           = 0,
+    AM_HAL_PDM_ERR_FIFO_OVF         = 0x0001,       //!< fifo overflow
+    AM_HAL_PDM_ERR_FIFO_OVF_STUCK   = 0x0002,       //!< fifo was not easily cleared
+    AM_HAL_PDM_ERR_FIFO_OVF_INT_DIS = 0x0004,       //!< fifo was not cleared with some effort
+    AM_HAL_PDM_ERR_DMA_ERR          = 0x0008,       //!< DMA error encountered
+    AM_HAL_PDM_ERR_FIFO_UNDFLW      = 0x0010,       //! fifo underflow
+    AM_HAL_PDM_DIS                  = 0x0020,       //! pdm module disabled (not an error)
+    AM_HAL_PDM_ERR_FIFO_X32         = 0x80000000,
+}
+am_hal_pdm_errors_e;
+
+//*****************************************************************************
+//
 //! PCM Channel Select.
 //
 //*****************************************************************************
@@ -314,12 +303,19 @@ typedef struct
     // Clock
     //
     //! ide down ratio for generating internal master MCLKQ.
+    //! This is DIV_MCLKQ in data sheet
+    //
     am_hal_pdm_mclkdiv_e eClkDivider;
 
+    //
     //! PDMA_CKO frequency divisor.Fpdma_cko = Fmclk_l/(MCLKDIV+1)
-    am_hal_pdm_pdma_clkodiv_e ePDMAClkOutDivder ;
+    //! This is MCLKDIV in data sheet
+    //
+    am_hal_pdm_pdma_clkodiv_e ePDMAClkOutDivder;
 
+    //
     //! Gain
+    //
     am_hal_pdm_gain_e eLeftGain;
     am_hal_pdm_gain_e eRightGain;
 
@@ -327,32 +323,52 @@ typedef struct
     //! transition0: 0.13dB1: 0.26dB
     am_hal_pdm_gain_stepsize_e eStepSize;
 
+    //
     //! Decimation Rate
+    //! SINCRATE
+    //
     uint32_t ui32DecimationRate;
 
+    //
     //! Filters
+    //
     bool bHighPassEnable;
+
+    //
     //! HPGAIN: Adjust High Pass Coefficients
+    //
     uint32_t ui32HighPassCutoff;
 
+    //
     //! PDM Clock select.
+    //
     am_hal_pdm_clkspd_e ePDMClkSpeed;
 
+    //
     //! PCMPACK
+    //
     bool bDataPacking;
 
+    //
     //! CHSET
+    //
     am_hal_pdm_chset_e ePCMChannels;
 
+    //
     //! CKODLY
+    //
     am_hal_pdm_clkout_phsdly_e bPDMSampleDelay;
 
+    //
     //! SCYCLES
+    //
     am_hal_pdm_clkout_delay_e ui32GainChangeDelay;
 
     bool bSoftMute;
 
     bool bLRSwap;
+
+    bool bDoNotStartPdm;
 }
 am_hal_pdm_config_t;
 
@@ -364,11 +380,68 @@ am_hal_pdm_config_t;
 typedef struct
 {
     uint32_t ui32TargetAddr;
+    //
+    //! second buffer when double buffering
+    //
     uint32_t ui32TargetAddrReverse;
 
+    //
+    //! when double buffering, if this is non zero, it is the addres
+    //! of the buffer with data
+    //! it should be zeroed once the data is read from the buffer
+    //
+    volatile uint32_t ui32BufferWithDataAddr;
+
+    //
+    //! number of byes for each DMA transfer
+    //
     uint32_t ui32TotalCount;
+
+    //
+    //! start DMA transfer in ISR to keep data flowing
+    //
+    volatile bool     bRestartDMA;
+
+    //
+    //! this stuct needs to be inited before use, This flag is set once
+    //! the struct data is inited
+    //
+    bool     bPDMTransferInited;
+
+    uint8_t  align[2];  //!< longword align struct
 }
 am_hal_pdm_transfer_t;
+
+//*****************************************************************************
+//
+//! this is used to get status data from various function calls (dma isr fcn)
+//
+//*****************************************************************************
+typedef struct
+{
+    //
+    //! ISR staus
+    //
+    uint32_t ui32IsrStat;
+    //
+    //! DMA staus
+    //
+    uint32_t ui32DmaStat;
+    //
+    //! Error status
+    //
+    am_hal_pdm_errors_e eIsrErrors;
+// #### INTERNAL BEGIN ####
+#define PDM_DMA_DEBUG 0
+#if PDM_DMA_DEBUG == 1
+    //uint32_t dmaTrigStat;
+    uint32_t dmaAddr;
+    uint32_t isrStatPost;
+    uint32_t dmaStatPost;
+#endif
+// #### INTERNAL END ####
+}
+am_hal_interupt_service_msg_t;
 
 //*****************************************************************************
 //
@@ -388,8 +461,7 @@ am_hal_pdm_register_state_t;
 //*****************************************************************************
 typedef struct
 {
-    am_hal_handle_prefix_t prefix;
-    am_hal_pdm_register_state_t sRegState;
+    am_hal_handle_prefix_t prefix;      // THis has to be the first element in struct
     uint32_t ui32Module;
 
     //
@@ -398,6 +470,12 @@ typedef struct
     uint32_t            ui32BufferPing;
     uint32_t            ui32BufferPong;
     uint32_t            ui32BufferPtr;
+
+    uint32_t            ui32XfrCount;
+
+    uint32_t            ui32Threshold;
+
+    am_hal_pdm_register_state_t sRegState;
 }
 am_hal_pdm_state_t;
 
@@ -440,7 +518,9 @@ extern uint32_t am_hal_pdm_deinitialize(void *pHandle);
 //! @return status      - generic or interface specific status.
 //
 //*****************************************************************************
-extern uint32_t am_hal_pdm_power_control(void *pHandle, am_hal_sysctrl_power_state_e ePowerState, bool bRetainState);
+extern uint32_t am_hal_pdm_power_control(void *pHandle,
+                                         am_hal_sysctrl_power_state_e ePowerState,
+                                         bool bRetainState);
 
 //*****************************************************************************
 //
@@ -454,7 +534,8 @@ extern uint32_t am_hal_pdm_power_control(void *pHandle, am_hal_sysctrl_power_sta
 //! @return status  - generic or interface specific status.
 //
 //*****************************************************************************
-extern uint32_t am_hal_pdm_configure(void *pHandle, am_hal_pdm_config_t *psConfig);
+extern uint32_t am_hal_pdm_configure(void *pHandle,
+                                     const am_hal_pdm_config_t *psConfig);
 
 //*****************************************************************************
 //
@@ -497,6 +578,32 @@ extern uint32_t am_hal_pdm_reset(void *pHandle);
 
 //*****************************************************************************
 //
+//! @brief  setup dma parameters,
+//! this will not start a DMA transfer
+//!
+//! @param pHandle
+//! @param pTransferCfg  - pointer to transfer parameters
+
+//!
+//! @return
+//
+//*****************************************************************************
+extern uint32_t am_hal_dma_param_setup(void *pHandle,
+                                       const am_hal_pdm_transfer_t *pTransferCfg);
+
+//*****************************************************************************
+//
+//! @brief  start dma with perviously setup parameters
+//!
+//! @param pHandle
+//!
+//! @return
+//
+//*****************************************************************************
+extern uint32_t am_hal_dma_restart(void *pHandle);
+
+//*****************************************************************************
+//
 //! @brief PDM DMA NonBlocking Transfer Start
 //!
 //! @param pHandle - handle for the interface.
@@ -505,7 +612,8 @@ extern uint32_t am_hal_pdm_reset(void *pHandle);
 //! @return status - generic or interface specific status.
 //
 //*****************************************************************************
-extern uint32_t am_hal_pdm_dma_start(void *pHandle, am_hal_pdm_transfer_t *pDmaCfg);
+extern uint32_t am_hal_pdm_dma_start(void *pHandle,
+                                     const am_hal_pdm_transfer_t *pDmaCfg);
 
 //*****************************************************************************
 //
@@ -677,20 +785,44 @@ extern uint32_t am_hal_pdm_interrupt_clear(void *pHandle, uint32_t ui32IntMask);
 //! @return status      - generic or interface specific status.
 //
 //*****************************************************************************
-extern uint32_t am_hal_pdm_interrupt_status_get(void *pHandle, uint32_t *pui32Status, bool bEnabledOnly);
+extern uint32_t am_hal_pdm_interrupt_status_get(void *pHandle,
+                                                uint32_t *pui32Status,
+                                                bool bEnabledOnly);
 
 //*****************************************************************************
 //
 //! @brief PDM Interrupt Service Routine
 //!
 //! @param pHandle     - handle for the module instance.
-//! @param ui32IntMask - uint32_t for interrupts to clear
+//! @param ui32IntMask - PDM interrupt status
 //! @param psConfig    - Pointer to the PDM Config
 //!
 //! @return AM_HAL_STATUS_SUCCESS
 //
 //*****************************************************************************
-extern uint32_t am_hal_pdm_interrupt_service(void *pHandle, uint32_t ui32IntMask, am_hal_pdm_transfer_t* psConfig);
+extern uint32_t am_hal_pdm_interrupt_service(void *pHandle,
+                                             uint32_t ui32IntMask,
+                                             am_hal_pdm_transfer_t* psConfig);
+
+
+//*****************************************************************************
+//
+//! @brief PDM DMA double buffer ISR
+//!
+//! @details This is called from an ISR, this will manage
+//! double buffered PDM dma transfers
+//!
+//! @param pHandle     - handle for the module instance.
+//! @param ptIsrData   - returns module status
+//! @param pTransferCfg    - Pointer to the PDM Config
+//!
+//! @return AM_HAL_STATUS_SUCCESS
+//
+//*****************************************************************************
+extern uint32_t am_hal_pdm_dma_isr_service(void *pHandle,
+                                    am_hal_interupt_service_msg_t *ptIsrData,
+                                    am_hal_pdm_transfer_t *pTransferCfg);
+
 
 //*****************************************************************************
 //
@@ -703,6 +835,12 @@ extern uint32_t am_hal_pdm_interrupt_service(void *pHandle, uint32_t ui32IntMask
 //*****************************************************************************
 extern uint32_t am_hal_pdm_dma_disable(void *pHandle);
 
+// #### INTERNAL BEGIN ####
+//
+// Test use only!
+//
+extern uint32_t am_hal_pdm_find_dma_threshold(uint32_t ui32TotalCount);
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

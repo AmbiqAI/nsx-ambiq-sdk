@@ -8,39 +8,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -48,6 +19,10 @@
 
 #include "stdint.h"
 
+// #### INTERNAL BEGIN ####
+// Information about the memory map comes from TBIRD-80.
+//
+// #### INTERNAL END ####
 // ****************************************************************************
 // RAM Memory Map:
 //  TCM:                             384KB      0x10000000 - 0x1005FFFF
@@ -72,6 +47,26 @@
 #define EXTRAM_MAX_SIZE                         (0)
 #define SSRAM1_MAX_SIZE                         (0)
 
+// #### INTERNAL BEGIN ####
+#if 0 // These are valid for Apollo4P. Apollo4L removes extended and SSRAM1.
+//
+// Extended RAM address space.
+// DSP0 layout is exactly as Apollo4b. DSP1RAMs were replaced in Apollo4p with SSRAM1.
+//
+#define EXTRAM_BASEADDR                         (SSRAM0_BASEADDR + SSRAM0_MAX_SIZE)
+#define DSP0IRAM_BASEADDR                       EXTRAM_BASEADDR
+#define DSP0IRAM_MAX_SIZE                       (128UL * 1024UL)
+#define DSP0DRAM_BASEADDR                       (DSP0IRAM_BASEADDR + DSP0IRAM_MAX_SIZE)
+#define DSP0DRAM_MAX_SIZE                       (256UL * 1024UL)
+#define EXTRAM_MAX_SIZE                         (DSP0IRAM_MAX_SIZE + DSP0DRAM_MAX_SIZE)
+
+//
+// SSRAM1 address space
+//
+#define SSRAM1_BASEADDR                         (EXTRAM_BASEADDR + EXTRAM_MAX_SIZE)
+#define SSRAM1_MAX_SIZE                         (1024UL * 1024UL)
+#endif // 0
+// #### INTERNAL END ####
 //
 // RAM sizes.
 // NONTCM_MAX_SIZE is the total of contiguous RAM after TCM (mix of SSRAM and Extended)

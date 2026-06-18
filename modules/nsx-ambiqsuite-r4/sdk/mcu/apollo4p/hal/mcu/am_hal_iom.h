@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -302,6 +273,9 @@ typedef struct
     //!     AM_HAL_IOM_STATUS_XFER_COMPLETE
     //!     AM_HAL_IOM_STATUS_DMAERR
     //
+// #### INTERNAL BEGIN ####
+    // TODO - Does this make sense to keep if we are just using CQ for all DMA?
+// #### INTERNAL END ####
     uint32_t ui32DmaStat;
 
     uint32_t ui32MaxTransactions;
@@ -532,6 +506,10 @@ typedef enum
     //! Raw CQ transaction
     //! Pass am_hal_iom_cq_raw_t * as pArgs
     AM_HAL_IOM_REQ_CQ_RAW,
+// #### INTERNAL BEGIN ####
+    //! Pass uint32_t as pArgs
+    AM_HAL_IOM_REQ_LINK_GPIO,     // TODO - Not yet implemented
+// #### INTERNAL END ####
     AM_HAL_IOM_REQ_MAX
 }
 am_hal_iom_request_e;
@@ -889,9 +867,8 @@ extern uint32_t am_hal_iom_blocking_transfer(void *pHandle,
 //! @param pCallbackCtxt- context registered which is passed on to the callback
 //!                       function
 //!
-//! This function performs a transaction on the interface.  It handles both full
-//! and half duplex transactions.  The callback is executed when the transaction
-//! is complete.
+//! This function performs a transaction on the interface. It handles half duplex
+//! transactions.  The callback is executed when the transaction is complete.
 //!
 //! @return status      - generic or interface specific status.
 //

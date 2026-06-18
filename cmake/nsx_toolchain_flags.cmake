@@ -159,29 +159,15 @@ function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)
     endif()
 
     # Apply the shared ATFE->GCC prebuilt policy (see nsx_atfe_prefers_gcc_prebuilt).
-    # Blast radius: this resolver is consumed only by nsx-ambiq-hal-r5 and
-    # nsx-ambiq-bsp-r5; for atfe it maps the artifact directory (lib/<toolchain>/)
-    # to the gcc variant. Any future caller inherits the same policy by design.
+    # Consumed by every nsx-ambiq-hal-r* / nsx-ambiq-bsp-r* module; for atfe it maps
+    # the artifact directory (lib/<toolchain>/) to the gcc variant. Any future
+    # caller inherits the same policy by design.
     nsx_atfe_prefers_gcc_prebuilt(nsx_atfe_use_gcc)
     if(nsx_atfe_use_gcc)
         set(nsx_artifact_toolchain "gcc")
     endif()
 
     set(${out_var} "${nsx_artifact_toolchain}" PARENT_SCOPE)
-endfunction()
-
-# Resolve the static-library suffix for a prebuilt AmbiqSuite archive. The R4
-# per-family modules link prebuilt archives by name and need the toolchain's
-# native suffix (.a for newlib toolchains, .lib for armclang).
-function(nsx_resolve_ambiqsuite_archive_suffix out_var)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
-
-    set(nsx_archive_suffix ".a")
-    if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang")
-        set(nsx_archive_suffix ".lib")
-    endif()
-
-    set(${out_var} "${nsx_archive_suffix}" PARENT_SCOPE)
 endfunction()
 
 function(nsx_apply_toolchain_flags target)

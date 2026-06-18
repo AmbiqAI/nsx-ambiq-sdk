@@ -12,9 +12,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_H
@@ -347,6 +348,46 @@
 #define AM_REG_USBPHY_NUM_MODULES                    1
 #define AM_REG_USBPHYn(n)   \
         (USBPHY_BASE + 0x00000004 * n)
+
+//*****************************************************************************
+//
+//! @brief SECURERTC
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_SECURERTC_NUM_MODULES                 1
+#define AM_REG_SECURERTCn(n)   \
+        (SECURERTC_BASE + 0x00000000 * n)
+
+//*****************************************************************************
+//
+//! @brief SECURESTIMER
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_SECURESTIMER_NUM_MODULES              1
+#define AM_REG_SECURESTIMERn(n)   \
+        (SECURESTIMER_BASE + 0x00000000 * n)
+
+//*****************************************************************************
+//
+//! @brief SECURETIMER
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_SECURETIMER_NUM_MODULES               1
+#define AM_REG_SECURETIMERn(n)   \
+        (SECURETIMER_BASE + 0x00000020 * n)
+
+//*****************************************************************************
+//
+//! @brief SECUREWDT
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_SECUREWDT_NUM_MODULES                 1
+#define AM_REG_SECUREWDTn(n)   \
+        (SECUREWDT_BASE + 0x00000000 * n)
 
 #endif // AM_REG_H
 

@@ -12,9 +12,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -154,6 +155,16 @@ typedef enum
   AM_HAL_IOM_RX,
   AM_HAL_IOM_FULLDUPLEX,
 } am_hal_iom_dir_e;
+
+//
+//! Hybrid non-blocking full-duplex DMA mode.
+//! Only one DMA direction can be active at a time.
+//
+typedef enum
+{
+  AM_HAL_IOM_FDNB_RX_DMA_TX_IRQ = 0,
+  AM_HAL_IOM_FDNB_TX_DMA_RX_IRQ,
+} am_hal_iom_fdnb_mode_e;
 
 //
 //! Enumerate the SPI modes.  Note that these are arranged per the ordering of
@@ -354,6 +365,10 @@ typedef struct
     //! DMA: Priority 0 = Low (best effort); 1 = High (service immediately)
     //
     uint8_t  ui8Priority;
+
+    //! Hybrid non-blocking full-duplex DMA direction.
+    //! Default 0 selects RX DMA / TX IRQ behavior.
+    am_hal_iom_fdnb_mode_e eFdnbMode;
 
     //! Command Queue Advanced control on gating conditions for transaction to start
     //
@@ -886,6 +901,22 @@ extern uint32_t am_hal_iom_spi_blocking_fullduplex(void *pHandle,
                                                    am_hal_iom_transfer_t *psTransaction);
 //*****************************************************************************
 //
+//! @brief Perform a non-blocking Full Duplex SPI transaction using TX DMA and RX FIFO+IRQ.
+//!
+//! @param pHandle       - handle for the interface.
+//! @param psTransaction - pointer to the uniform transaction control structure.
+//! @param pfnCallback   - callback function invoked when transfer is complete.
+//! @param pCallbackCtxt - callback context passed to pfnCallback.
+//!
+//! @return HAL status of the operation.
+//
+//*****************************************************************************
+extern uint32_t am_hal_iom_spi_nonblocking_fullduplex(void *pHandle,
+                                                       am_hal_iom_transfer_t *psTransaction,
+                                                       am_hal_iom_callback_t pfnCallback,
+                                                       void *pCallbackCtxt);
+//*****************************************************************************
+//
 //! @brief IOM High Priority transfer function
 //!
 //! @param pHandle       - the handle for the IOM instance
@@ -920,4 +951,3 @@ uint32_t am_hal_iom_highprio_transfer(void *pHandle,
 //! @}
 //
 //*****************************************************************************
-

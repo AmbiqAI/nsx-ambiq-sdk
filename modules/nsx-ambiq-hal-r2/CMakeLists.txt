@@ -22,25 +22,19 @@ if(NOT DEFINED NSX_AMBIQ_MCU_INSTALL_NAME)
     get_filename_component(NSX_AMBIQ_MCU_INSTALL_NAME "${NSX_AMBIQ_MCU_DIR}" NAME)
 endif()
 
-if(NOT DEFINED NSX_AMBIQSUITE_ARCHIVE_SUFFIX)
-    nsx_resolve_ambiqsuite_archive_suffix(NSX_AMBIQSUITE_ARCHIVE_SUFFIX)
+if(NOT DEFINED NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+    nsx_resolve_ambiqsuite_artifact_toolchain(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
 endif()
 
 nsx_assert_directory_exists("${NSX_AMBIQSUITE_ROOT}")
 nsx_assert_directory_exists("${NSX_AMBIQ_MCU_DIR}")
 nsx_assert_directory_exists("${NSX_AMBIQ_HAL_DIR}")
+nsx_assert_path_component(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
 nsx_assert_path_component(NSX_AMBIQ_HAL_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_MCU_INSTALL_NAME)
 
-set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal${NSX_AMBIQSUITE_ARCHIVE_SUFFIX}")
-if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
-    set(NSX_HAL_LIB_ATFE "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal-atfe.a")
-    if(EXISTS "${NSX_HAL_LIB_ATFE}")
-        set(NSX_HAL_LIB_DEFAULT "${NSX_HAL_LIB_ATFE}")
-    else()
-        message(STATUS "ns-ambiq-hal-r2: ATFE prebuilt not staged, using GCC variant (AAPCS-compatible)")
-    endif()
-endif()
+# Prebuilt libraries are laid out per-toolchain: lib/<toolchain>/<part>/libam_hal.a.
+set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal.a")
 set(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite HAL static library")
 
 set(NSX_AMBIQ_HAL_BUILD_INCLUDES

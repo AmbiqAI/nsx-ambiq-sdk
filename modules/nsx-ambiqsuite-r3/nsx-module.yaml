@@ -6,8 +6,8 @@ module:
   category: sdk_provider
   provider: ambiqsuite-r3
   version: "3.2.1"
-  sdk_release: "R3.2.0"
-  upstream_revision: "release_sdk_3_2_0-dd5f40c14b"
+  sdk_release: "stable-2026.06.17"
+  upstream_revision: "stable-6cdd4ccf96"
 
 support:
   ambiqsuite: true

@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MCUCTRL_H
@@ -200,6 +171,11 @@ extern const am_hal_mcuctrl_control_arg_t g_amHalMcuctrlArgBLEDefault;
 // Define the size of fields derived from the PARTNUM register
 #define AM_HAL_MCUCTRL_CHIPPN_NV_SIZE_N     (_FLD2VAL(MCUCTRL_CHIPPN_MRAMSIZE, 0xFFFFFFFF) + 1)
 #define AM_HAL_MCUCTRL_CHIPPN_SRAM_SIZE_N   (_FLD2VAL(MCUCTRL_CHIPPN_SRAMSIZE, 0xFFFFFFFF) + 1)
+// #### INTERNAL BEGIN ####
+#if 0
+#define AM_HAL_MCUCTRL_CHIPPN_TCM_SIZE_N    AM_HAL_MCUCTRL_CHIPPN_SRAM_SIZE_N
+#endif
+// #### INTERNAL END ####
 
 // Define the size of fields derived from the SKU register
 #define AM_HAL_MCUCTRL_SKU_SSRAM_SIZE_N     (_FLD2VAL(MCUCTRL_SKU_SKUSRAMSIZE, 0xFFFFFFFF) + 1)
@@ -249,6 +225,9 @@ typedef enum
 } am_hal_mcuctrl_dtcm_e;
 
 //
+// #### INTERNAL BEGIN ####
+// Per TBIRD-3, only 2 SRAM SKUs are valid for revC and TBird:
+// #### INTERNAL END ####
 //! SKU SSRAM size: 0=1MB,   1=2MB, 2=1MB,   3=2MB
 //! SKU MRAM  size: 0=0.5MB, 1=1MB, 2=1.5MB, 3=2MB,
 //
@@ -347,6 +326,17 @@ typedef struct
     //
     uint32_t ui32SSRAMSize;
 
+// #### INTERNAL BEGIN ####
+#if 0
+// Note: We considered adding a total RAM for Apollo4p, but decided against it
+//       since it would be incompatible with the Apollo4b SDK in the R4.0.0
+//       release. Plus the total can be computed from the TCM + SSRAM values.
+    //
+    //! Total RAM Size (TCM + SRAM + Extended)
+    //
+    uint32_t ui32TotalRAMSize;
+#endif
+// #### INTERNAL END ####
     //
     //! MRAM Size.
     //

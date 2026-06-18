@@ -12,39 +12,10 @@
 
 // ****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_3_2_0-dd5f40c14b of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 // ****************************************************************************
 #ifndef AM_HAL_CACHECTRL_H
@@ -60,6 +31,9 @@ extern "C"
 //
 #define AM_APOLLO3_CACHECTRL    1
 
+// #### INTERNAL BEGIN ####
+#define CACHECTRL_INTERNAL_TEST     0
+// #### INTERNAL END ####
 //
 //! Cachectrl status.
 //
@@ -133,6 +107,9 @@ typedef enum
     AM_HAL_CACHECTRL_CONTROL_LPMMODE_SET,
     AM_HAL_CACHECTRL_CONTROL_SEDELAY_SET,
     AM_HAL_CACHECTRL_CONTROL_RDWAIT_SET,
+// #### INTERNAL BEGIN ####
+    AM_HAL_CACHECTRL_CONTROL_FLASHCFG_SET,
+// #### INTERNAL END ####
     // Configure up to two non-cacheable regions
     AM_HAL_CACHECTRL_CONTROL_NC_CFG,
 } am_hal_cachectrl_control_e;
@@ -159,6 +136,20 @@ typedef enum
     AM_HAL_CACHECTRL_FLASHCFG_LPMMODE_ALWAYS  = CACHECTRL_FLASHCFG_LPMMODE_ALWAYS
 } am_hal_cachectrl_flashcfg_lppmode_e;
 
+// #### INTERNAL BEGIN ####
+#if CACHECTRL_INTERNAL_TEST
+typedef struct
+{
+    // LPMMODE = AM_HAL_CACHECTRL_FLASHCFG_LPMMODE_NEVER
+    //           AM_HAL_CACHECTRL_FLASHCFG_LPMMODE_STANDBY
+    //           AM_HAL_CACHECTRL_FLASHCFG_LPMMODE_ALWAYS
+    uint32_t LPMMODE;
+    uint32_t LPM2ReadWaitstates;
+    uint32_t SEDelay;
+    uint32_t ReadWaitstates;
+} am_hal_cachectrl_flashcfg_t;
+#endif // CACHECTRL_INTERNAL_TEST
+// #### INTERNAL END ####
 
 //! @}  cache config
 // ****************************************************************************
@@ -194,9 +185,38 @@ typedef struct
     //
     bool bLRU;
 
+// #### INTERNAL BEGIN ####
+#if 0
+    //
+    //! Set to true to enable cache monitor statistics.
+    //
+    bool bEnableCacheMonitoring;
+
+    //
+    //! Set to true to enable clock gating of cache RAMs.
+    //
+    bool bEnableCacheClockGating;
+
+    //
+    //! Set to true to enable light sleep of cache RAMs.
+    //
+    bool bEnableLightSleep;
+
+    //
+    //! Set to true to enable clock gating of the entire data array.
+    //
+    bool bEnableDataClockGating;
+#endif
+// #### INTERNAL END ####
 } am_hal_cachectrl_config_t;
 
 extern const am_hal_cachectrl_config_t am_hal_cachectrl_defaults;
+// #### INTERNAL BEGIN ####
+#if CACHECTRL_INTERNAL_TEST
+extern const am_hal_cachectrl_config_t am_hal_cachectrl_coremark;
+extern const am_hal_cachectrl_flashcfg_t am_hal_cachectrl_flashcfg_coremark;
+#endif // CACHECTRL_INTERNAL_TEST
+// #### INTERNAL END ####
 
 // ****************************************************************************
 //

@@ -2,58 +2,22 @@
 //
 //! @file am_util_stdio.h
 //!
-//! @brief A few printf-style functions for use with Ambiq products
+//! @brief Standard Input/Output Utility Functions
 //!
-//! Functions for performing printf-style operations without dynamic memory
-//! allocation.
-//!
-//! For further information about this module concerning its history, uses,
-//! and limitations, please see the Ambiq Micro KB article "Q&A: What does
-//! the AmbiqSuite SDK am_util_stdio_printf() function do?" at:
-//!
-//! https://support.ambiqmicro.com/hc/en-us/articles/360040441631
-//!
-//! @addtogroup stdio STDIO - Ambiq's Implementation
+//! @addtogroup stdio_utils STDIO Utility Functions
 //! @ingroup utils
 //! @{
+//!
+//! https://support.ambiqmicro.com/hc/en-us/articles/360040441631
 //
 //*****************************************************************************
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_UTIL_STDIO_H
@@ -79,6 +43,7 @@ extern "C"
 #endif
 
 typedef void (*am_util_stdio_print_char_t)(char *pcStr);
+typedef void (*am_util_stdio_get_char_t)(char *pcStr);
 
 //*****************************************************************************
 //
@@ -97,6 +62,19 @@ typedef void (*am_util_stdio_print_char_t)(char *pcStr);
 //
 //*****************************************************************************
 extern void am_util_stdio_printf_init(am_util_stdio_print_char_t pfnCharPrint);
+
+//*****************************************************************************
+//
+//! @brief Sets the interface for scanf calls.
+//!
+//! @param pfnCharGet - Function pointer to be used to get from interface
+//!
+//! This function initializes the global scanf function which is used for
+//! scanf. This allows users to define their own scanf interface and pass it
+//! in as a am_util_stdio_get_char_t type.
+//
+//*****************************************************************************
+extern void am_util_stdio_scanf_init(am_util_stdio_get_char_t pfnCharGet);
 
 //*****************************************************************************
 //
@@ -192,6 +170,17 @@ extern uint32_t am_util_stdio_sprintf(char *pcBuf, const char *pcFmt, ...);
 //
 // *****************************************************************************
 extern uint32_t am_util_stdio_printf(const char *pcFmt, ...);
+
+//*****************************************************************************
+//
+//! @brief A lite version of scanf()
+//!
+//! @param *fmt - Pointer to formatter string
+//!
+//! @return uint32_t representing the number of characters scanned.
+//
+// *****************************************************************************
+extern uint32_t am_util_stdio_scanf(const char *fmt, ...);
 
 //******************************************************************************
 //
@@ -289,4 +278,3 @@ extern void am_util_stdio_terminal_clear(void);
 //! @}
 //
 //*****************************************************************************
-

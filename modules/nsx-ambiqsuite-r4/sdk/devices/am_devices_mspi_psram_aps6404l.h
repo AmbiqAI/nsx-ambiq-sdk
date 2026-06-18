@@ -2,9 +2,9 @@
 //
 //! @file am_devices_mspi_psram_aps6404l.h
 //!
-//! @brief Micron Serial SPI PSRAM driver.
+//! @brief Micron APS6404L Serial SPI PSRAM driver.
 //!
-//! @addtogroup mspi_psram_aps6404l APS6404L MSPI PSRAM Driver
+//! @addtogroup devices_mspi_psram_aps6404l APS6404L MSPI PSRAM Driver
 //! @ingroup devices
 //! @{
 //
@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -89,15 +60,15 @@ extern "C"
 #define AM_DEVICES_MSPI_PSRAM_KGD_PASS          0x5D0D
 #define AM_DEVICES_MSPI_PSRAM_KGD_FAIL          0x550D
 //! @}
-
-//! @name Page size - limits the bust write/read
+//!
+//! @name Page size - limits the burst write/read
 //! @{
 
 #define AM_DEVICES_MSPI_PSRAM_PAGE_SIZE         1024
 //#define AM_DEVICES_MSPI_PSRAM_TEST_BLOCK_SIZE   64*1024
 #define AM_DEVICES_MSPI_PSRAM_TEST_BLOCK_SIZE   8*1024
 //! @}
-
+//!
 //! @{
 //! According to APS6404L tCEM restriction, we define maximum bytes for each speed empirically
 #define AM_DEVICES_MSPI_PSRAM_48MHZ_MAX_BYTES   128
@@ -117,7 +88,7 @@ extern "C"
 
 //*****************************************************************************
 //
-// Global type definitions.
+//! Global type definitions.
 //
 //*****************************************************************************
 typedef enum
@@ -196,11 +167,15 @@ extern uint32_t am_devices_mspi_psram_id(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief Reset the external psram
+//! @brief Reset the external PSRAM device.
 //!
-//! @param pHandle - Pointer to driver handle
+//! Issues the device reset sequence to bring the external PSRAM into a
+//! known default state.
 //!
-//! @return
+//! @param pHandle - Pointer to driver handle.
+//!
+//! @return 32-bit status: `AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_MSPI_PSRAM_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_mspi_psram_reset(void *pHandle);
@@ -285,6 +260,19 @@ extern uint32_t am_devices_mspi_psram_write(void *pHandle,
                                             uint32_t ui32WriteAddress,
                                             uint32_t ui32NumBytes,
                                             bool bWaitForCompletion);
+
+// #### INTERNAL BEGIN ####
+extern uint32_t
+am_devices_mspi_psram_aps6404l_blocking_write(void *pHandle,
+                                              uint8_t *pui8TxBuffer,
+                                              uint32_t ui32WriteAddress,
+                                              uint32_t ui32NumBytes);
+extern uint32_t
+am_devices_mspi_psram_aps6404l_blocking_read(void *pHandle,
+                                             uint8_t *pui8RxBuffer,
+                                             uint32_t ui32ReadAddress,
+                                             uint32_t ui32NumBytes);
+// #### INTERNAL END ####
 
 //*****************************************************************************
 //
@@ -394,16 +382,20 @@ extern uint32_t am_devices_mspi_psram_read_hiprio(void *pHandle, uint8_t *pui8Rx
                            void *pCallbackCtxt);
 //*****************************************************************************
 //
-//! @brief
+//! @brief Non-blocking read from PSRAM using the MSPI command queue.
 //!
-//! @param pHandle
-//! @param pui8RxBuffer
-//! @param ui32ReadAddress
-//! @param ui32NumBytes
-//! @param pfnCallback
-//! @param pCallbackCtxt
+//! Queues a read transaction and returns immediately; completion is
+//! signaled via the provided callback.
 //!
-//! @return
+//! @param pHandle        - Pointer to driver handle.
+//! @param pui8RxBuffer   - Buffer to store received data from PSRAM.
+//! @param ui32ReadAddress- Address in PSRAM to read from.
+//! @param ui32NumBytes   - Number of bytes to read.
+//! @param pfnCallback    - Completion callback invoked when the transfer finishes.
+//! @param pCallbackCtxt  - Context pointer passed to `pfnCallback`.
+//!
+//! @return 32-bit status: `AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS` on successful
+//!         queueing, `AM_DEVICES_MSPI_PSRAM_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_mspi_psram_nonblocking_read(void *pHandle, uint8_t *pui8RxBuffer,

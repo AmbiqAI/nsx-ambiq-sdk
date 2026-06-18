@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_ADC_H
@@ -110,6 +81,30 @@
 //
 //! @brief Default slope (in degK / V) of the Apollo4 temperature sensor.
 //
+// #### INTERNAL BEGIN ####
+// The temperature sensor's voltage vs temperature graph is approximately
+// linear between -273.15C (0K) and 85C (358.15K), even across PVT.
+// For computing temperature we therefore use a constant slope.
+//
+// Validation has determined that the slope for the Apollo4 temperature sensor
+// generally exhibits only very slight deviations when characterized over PVT.
+// Given that fact, temperature computations can be simplified to the
+// following equation:
+//      T = m * V + (T1 - (m * V1)) where
+// m = The constant slope value specified in degK / V.
+// V = Vmeas - Voff
+//  Vmeas = The measured voltage (as based on the ADC code)
+//  Voff  = Calibration offset (stored in volts)
+// V1 = Calibration voltage (stored in volts)
+// T1 = Calibration temperature
+//
+// This equation can be rearranged as:
+//      T = m * Vmeas + T1 - m(V1 + Voff)
+// Note that the 2nd and 3rd terms can be computed one time and saved such that
+// for each subsequent sample only 2 computations are needed:
+// 1) m * Vmeas, and 2) add the saved term.
+// See also FALCSW-298.
+// #### INTERNAL END ####
 // ****************************************************************************
 #define AM_HAL_ADC_TEMPSENSOR_SLOPE     290.0F
 
@@ -397,6 +392,10 @@ typedef struct
     //! Select the ADC trigger source.
     am_hal_adc_trigsel_e          eTrigger;
 
+// #### INTERNAL BEGIN ####
+    //! Select the ADC reference voltage.
+//    am_hal_adc_refsel_e           eReference;
+// #### INTERNAL END ####
     //! Whether to disable clocks between samples.
     am_hal_adc_clkmode_e          eClockMode;
 
@@ -539,7 +538,7 @@ typedef void (*am_hal_adc_callback_t)(void *pCallbackCtxt, uint32_t status);
 //! @ingroup adc4
 //! @name ADC Interrupts
 //! @{
-//! Interrupt Status Bits for enable/disble use
+//! Interrupt Status Bits for enable/disable use
 //!
 //! These macros may be used to enable an individual ADC interrupt cause.
 //
@@ -831,6 +830,17 @@ extern uint32_t am_hal_adc_interrupt_status(void *pHandle,
 //
 //*****************************************************************************
 extern uint32_t am_hal_adc_interrupt_clear(void *pHandle, uint32_t ui32IntMask);
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @brief Get number of entries currently in the FIFO.
+//
+//*****************************************************************************
+#if 0
+#define am_hal_adc_fifo_count_get()
+    AM_HAL_ADC_FIFO_COUNT(ADC->FIFO)
+#endif
+// #### INTERNAL END ####
 
 //*****************************************************************************
 //

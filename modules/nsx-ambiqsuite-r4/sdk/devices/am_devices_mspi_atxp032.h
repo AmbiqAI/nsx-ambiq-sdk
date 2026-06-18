@@ -2,9 +2,9 @@
 //
 //! @file am_devices_mspi_atxp032.h
 //!
-//! @brief ATXP032 Multibit SPI Flash driver.
+//! @brief Multi-bit SPI Flash driver for the ATXP032 device.
 //!
-//! @addtogroup atxp032 ATXP032 MSPI Driver
+//! @addtogroup devices_mspi_atxp032 ATXP032 MSPI Flash Driver
 //! @ingroup devices
 //! @{
 //
@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -159,7 +130,7 @@ extern "C"
 
 //*****************************************************************************
 //
-// Global type definitions.
+//! Global type definitions.
 //
 //*****************************************************************************
 typedef enum
@@ -406,17 +377,22 @@ extern uint32_t am_devices_mspi_atxp032_disable_scrambling(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief
+//! @brief Advanced non-blocking read using the MSPI command queue.
 //!
-//! @param pHandle
-//! @param pui8RxBuffer
-//! @param ui32ReadAddress
-//! @param ui32NumBytes
-//! @param ui32PauseCondition
-//! @param ui32StatusSetClr
-//! @param pfnCallback
-//! @param pCallbackCtxt
-//! @return
+//! Issues a read transaction via the MSPI command queue with optional
+//! pre/post CQ conditions and a completion callback.
+//!
+//! @param pHandle            - Pointer to driver handle.
+//! @param pui8RxBuffer       - Buffer to store received data from the flash.
+//! @param ui32ReadAddress    - Address in external flash to read from.
+//! @param ui32NumBytes       - Number of bytes to read.
+//! @param ui32PauseCondition - Command-queue pause condition before transaction.
+//! @param ui32StatusSetClr   - Command-queue status set/clear condition after transaction.
+//! @param pfnCallback        - Optional completion callback (may be NULL).
+//! @param pCallbackCtxt      - Callback context passed to `pfnCallback`.
+//!
+//! @return 32-bit status: `AM_DEVICES_MSPI_ATXP032_STATUS_SUCCESS` on success,
+//!         `AM_DEVICES_MSPI_ATXP032_STATUS_ERROR` on failure.
 //
 //*****************************************************************************
 extern uint32_t am_devices_mspi_atxp032_read_adv(void *pHandle,
@@ -512,6 +488,48 @@ extern uint32_t am_devices_mspi_atxp032_apply_sdr_timing(void *pHandle,
                        am_devices_mspi_atxp032_sdr_timing_config_t *pDevSdrCfg);
 #endif
 
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @brief read callback
+//!
+//! @param pHandle
+//! @param pui8RxBuffer
+//! @param ui32ReadAddress
+//! @param ui32NumBytes
+//! @return
+//
+//*****************************************************************************
+extern uint32_t am_devices_mspi_atxp032_read_callback(void *pHandle,
+                        uint8_t *pui8RxBuffer,
+                        uint32_t ui32ReadAddress,
+                        uint32_t ui32NumBytes);
+
+//*****************************************************************************
+//
+//! @brief Reads the contents of the external flash into a buffer.
+//!
+//! @param pHandle - Pointer to driver handle
+//! @param pui8RxBuffer - Buffer to store the received data from the flash
+//! @param ui32ReadAddress - Address of desired data in external flash
+//! @param ui32NumBytes - Number of bytes to read from external flash
+//! @param pfnCallback - Customized callback function
+//! @param pCallbackCtxt - Parameters passed to the callback function
+//!
+//! This function reads the external flash at the provided address and stores
+//! the received data into the provided buffer location. This function will
+//! only store ui32NumBytes worth of data.
+//!
+//! @return 32-bit status
+//
+//*****************************************************************************
+extern uint32_t am_devices_mspi_atxp032_read_cb(void *pHandle,
+                             uint8_t *pui8RxBuffer,
+                             uint32_t ui32ReadAddress,
+                             uint32_t ui32NumBytes,
+                             am_hal_mspi_callback_t pfnCallback,
+                             void *pCallbackCtxt);
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

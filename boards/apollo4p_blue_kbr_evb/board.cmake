@@ -1,7 +1,7 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/socs/apollo4p.cmake")
 
 set(NSX_AMBIQ_BOARD_NAME "apollo4p_blue_kbr_evb")
-set(NSX_AMBIQ_BSP_LIB_SUBDIR "blue_kbr_evb")
+set(NSX_AMBIQ_BSP_LIB_SUBDIR "apollo4p_blue_kbr_evb")
 set(NSX_AMBIQ_BSP_DIR "${NSX_AMBIQSUITE_ROOT}/boards/${NSX_AMBIQ_BOARD_NAME}/bsp")
 
 set(NSX_BOARD_TARGET nsx_board_apollo4p_blue_kbr_evb)

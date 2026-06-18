@@ -12,39 +12,10 @@
 
 //*****************************************************************************
 //
-// Copyright (c) 2024, Ambiq Micro, Inc.
+// Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-// contributors may be used to endorse or promote products derived from this
-// software without specific prior written permission.
-//
-// Third party software included in this distribution is subject to the
-// additional license terms as defined in the /docs/licenses directory.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// This is part of revision release_sdk_4_5_0-a1ef3b89f9 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -70,6 +41,13 @@ extern "C"
 #define AM_HAL_DCU_ETB                  0x00002000UL
 #define AM_HAL_DCU_TRACE                0x00004000UL
 
+// #### INTERNAL BEGIN ####
+#define AM_HAL_DCU_AMBIQ_DBG_OBSERVE    0x00010000UL
+#define AM_HAL_DCU_AMBIQ_TESTMODE       0x00020000UL
+#define AM_HAL_DCU_AMBIQ_ANATEST        0x00040000UL
+#define AM_HAL_DCU_AMBIQ_INFO1_SIGN     0x00080000UL
+#define AM_HAL_DCU_AMBIQ_INFO1_PROG     0x00100000UL
+// #### INTERNAL END ####
 
 // Following macros define Raw DCU Values as in HOSTDCU registers
 // These are provided only for reference
@@ -92,8 +70,30 @@ extern "C"
 #define AM_HAL_DCURAW_ETB                  0x0000007000000000ULL
 #define AM_HAL_DCURAW_TRACE                0x0000038000000000ULL
 
+// #### INTERNAL BEGIN ####
+#define AM_HAL_DCURAW_AMBIQ_CPUDBG_INVASIVE      0x0000000000000038ULL
+#define AM_HAL_DCURAW_AMBIQ_CPUDBG_NON_INVASIVE  0x00000000000001C0ULL
+#define AM_HAL_DCURAW_AMBIQ_CPUTRC_ETM           0x0000000000000E00ULL
+#define AM_HAL_DCURAW_AMBIQ_CPUTRC_ITM           0x00000000000001C0ULL // Same as NON_INVASIVE
+#define AM_HAL_DCURAW_AMBIQ_CPUTRC_TPIU_SWO      0x0000000000007000ULL
+#define AM_HAL_DCURAW_AMBIQ_CPUTRC_PERFCNT       0x0000000000038000ULL
+#define AM_HAL_DCURAW_AMBIQ_CACHEDBG             0x00000000001C0000ULL
+#define AM_HAL_DCURAW_AMBIQ_SWD                  0x0000000E00000000ULL
+#define AM_HAL_DCURAW_AMBIQ_ETB                  0x0000038000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_TRACE                0x00001C0000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_DBG_OBSERVE          0x0007000000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_TESTMODE             0x0038000000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_ANATEST              0x01C0000000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_INFO1_SIGN           0x0E00000000000000ULL
+#define AM_HAL_DCURAW_AMBIQ_INFO1_PROG           0x7000000000000000ULL
+// #### INTERNAL END ####
 
 // All possible controls
+// #### INTERNAL BEGIN ####
+#define AM_HAL_DCURAW_MASK_AMBIQ       0x7FFF1F8E001FFFF8ULL
+#define AM_HAL_DCURAW_ENABLE_AMBIQ     0x5B6D168A0016DB68ULL
+#define AM_HAL_DCURAW_DISABLE_AMBIQ    0x2492090400092490ULL
+// #### INTERNAL END ####
 #define AM_HAL_DCURAW_MASK             0x000003F1C003FFFFULL
 #define AM_HAL_DCURAW_ENABLE           0x000002D14002DB6DULL
 #define AM_HAL_DCURAW_DISABLE          0x0000012080012492ULL
@@ -171,6 +171,20 @@ extern uint32_t am_hal_dcu_update(bool bEnable, uint32_t ui32Mask);
 //*****************************************************************************
 extern uint32_t am_hal_dcu_mcuctrl_override(uint32_t ui32Mask);
 
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @brief  Update DCU Scope
+//!
+//! @param  bAmbiq - Whether to operate on OEM or Ambiq set
+//!
+//! This will update the DCU scope for further operations
+//!
+//! @return Returns AM_HAL_STATUS_SUCCESS on success
+//
+//*****************************************************************************
+extern uint32_t am_hal_dcu_set_scope(bool bAmbiq);
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

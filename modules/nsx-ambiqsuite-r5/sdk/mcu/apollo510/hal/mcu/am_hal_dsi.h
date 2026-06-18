@@ -12,9 +12,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -31,21 +32,6 @@ extern "C"
 // DSI error codes.
 //
 //*****************************************************************************
-/*typedef enum
-{
-    AM_HAL_DSI_INT_STATUS_RX_START_TRANS_ERROR = AM_HAL_STATUS_MODULE_SPECIFIC_START,
-    AM_HAL_DSI_INT_STATUS_RX_START_TRANS_SYNC_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_END_TRANS_SYNC_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_ESCAPE_ENTRY_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_LP_TX_SYNC_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_PERIPH_TIMEOUT_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_FALSE_CONTROL_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_ECC_SINGLE_BIT_ERROR,
-    AM_HAL_DSI_INT_STATUS_RX_ECC_MULTI_BIT_ERROR,
-    AM_HAL_DSI_INT_STATUS_START_TRANS_SYNC_ERROR,
-
-}
-am_hal_dsi_interrupt_status_t;*/
 
 //*****************************************************************************
 //

@@ -12,9 +12,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -37,7 +38,6 @@
 #include "am_util_bootloader.h"
 
 #ifdef MULTIBOOT_SECURE
-#include "am_util_multi_boot_secure.h"
 #endif
 
 //*****************************************************************************

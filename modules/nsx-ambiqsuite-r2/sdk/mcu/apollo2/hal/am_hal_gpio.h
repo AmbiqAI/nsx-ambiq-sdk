@@ -13,23 +13,15 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
 #ifndef AM_HAL_GPIO_H
 #define AM_HAL_GPIO_H
-
-/* NSX apollo2 compatibility: modern shared device headers (am_devices_button.h)
- * reference am_hal_gpio_pincfg_t, which the Apollo2-generation GPIO HAL predates.
- * Provide a benign alias so those headers compile; Apollo2 uses the
- * am_hal_gpio_pin_config() integer-config API at runtime. */
-#ifndef NSX_APOLLO2_GPIO_PINCFG_COMPAT
-#define NSX_APOLLO2_GPIO_PINCFG_COMPAT
-typedef uint32_t am_hal_gpio_pincfg_t;
-#endif
 
 // DEVICE ADDRESS IS 8-bits
 #define AM_HAL_GPIO_DEV_ADDR_8      (0)

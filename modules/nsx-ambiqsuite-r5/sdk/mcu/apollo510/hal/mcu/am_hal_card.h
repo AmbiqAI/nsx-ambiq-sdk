@@ -12,9 +12,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CARD_H
@@ -500,7 +501,7 @@ static inline uint32_t am_hal_unstuff_bits(uint32_t *resp, uint32_t start, uint3
 
 static inline uint32_t am_hal_unstuff_bytes(uint32_t *ext_csd, uint32_t start, uint32_t size)
 {
-    int i;
+    uint32_t i;
     const uint32_t __size = size;
     uint32_t __res = 0x0;
     const uint8_t *__p = (const uint8_t *)ext_csd;

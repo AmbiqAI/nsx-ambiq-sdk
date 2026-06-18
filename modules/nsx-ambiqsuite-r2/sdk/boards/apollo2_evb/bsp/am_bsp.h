@@ -13,9 +13,10 @@
 
 //*****************************************************************************
 //
-// ${copyright}
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
 //
-// This is part of revision ${version} of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -25,6 +26,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "am_mcu_apollo.h"
+/* sdk-intake: alias the Apollo3+ GPIO pin-config type for legacy parts whose
+   HAL predates it but whose shared device headers reference it. */
+typedef uint32_t am_hal_gpio_pincfg_t;
 #include "am_devices.h"
 #include "am_bsp_gpio.h"
 
@@ -127,12 +131,6 @@ extern void am_bsp_iom_power_on_restore(uint32_t ui32Module);
 extern void am_bsp_iom_power_off_save(uint32_t ui32Module);
 extern void am_bsp_debug_printf_enable(void);
 extern void am_bsp_debug_printf_disable(void);
-
-/* NSX compatibility: the Apollo2 BSP exposes only the unified debug printf
- * helpers. Map the ITM/UART-specific disable names used by shared nsx-core
- * sources to the debug variant so the same code builds for Apollo2. */
-#define am_bsp_itm_printf_disable   am_bsp_debug_printf_disable
-#define am_bsp_uart_printf_disable  am_bsp_debug_printf_disable
 extern void am_bsp_itm_string_print(char *pcString);
 extern void am_bsp_uart_string_print(char *pcString);
 
