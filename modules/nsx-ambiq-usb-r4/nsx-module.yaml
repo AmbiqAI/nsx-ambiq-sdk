@@ -10,7 +10,7 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: AmbiqSuite R4 USB substrate for TinyUSB on Apollo4P-family SoCs.
+summary: AmbiqSuite R4 USB substrate (TinyUSB 0.18) for Apollo4P-family SoCs.
 
 capabilities:
   - usb

@@ -412,13 +412,14 @@ dcd_usb_setHFRC2(bool bEnableClock)
 //
 // @param rhport
 //*****************************************************************************
-void
-dcd_init(uint8_t rhport)
+bool
+dcd_init(uint8_t rhport, const tusb_rhport_init_t* rh_init)
 {
     (void) rhport;
+    (void) rh_init;
 
 #if TUSB_ADDED_FUNCTIONS
-    if (!dcd_usb_states.vddPresent ) return;
+    if (!dcd_usb_states.vddPresent ) return false;
 #endif
 
     //
@@ -431,7 +432,7 @@ dcd_init(uint8_t rhport)
     // this function call doesn't set any USB registers, it configures the driver
     //
     uint32_t initStat = am_hal_usb_initialize(0, (void *) &pUSBHandle);
-    if (initStat != AM_HAL_STATUS_SUCCESS) return;
+    if (initStat != AM_HAL_STATUS_SUCCESS) return false;
 
     dcd_usb_states.isInited = true;
     dcd_usb_states.isPoweredUp = true;
@@ -538,6 +539,7 @@ dcd_init(uint8_t rhport)
     dcd_connect(rhport);
 #endif // elif defined(AM_PART_APOLLO4)  // defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P)
 
+    return true;
 }
 
 //*****************************************************************************
@@ -657,7 +659,7 @@ bool
 dcd_edpt_xfer(uint8_t rhport,
               uint8_t ep_addr,
               uint8_t *buffer,
-              uint16_t total_bytes)
+              uint32_t total_bytes)
 {
     (void) rhport;
 
@@ -851,7 +853,7 @@ dcd_powerup(uint8_t rhport, bool force)
     else
     {
         am_util_stdio_printf("in usb pwr up do init\n");
-        dcd_init(rhport);
+        dcd_init(rhport, NULL);
     }
 }
 
@@ -947,5 +949,3 @@ dcd_disconnect(uint8_t rhport)
 }
 
 #endif // TUSB_OPT_DEVICE_ENABLED && CFG_TUSB_MCU == OPT_MCU_APOLLO4
-
-
