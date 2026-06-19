@@ -4,14 +4,11 @@ This folder is for maintainers updating the curated AmbiqSuite provider payloads
 It is not part of the normal end-user workflow.
 
 The helper in this directory rebuilds and promotes approved AmbiqSuite HAL/BSP
-artifacts into the source-controlled provider modules:
+artifacts into the source-controlled provider module:
 
 ```text
 artifacts/ambiqsuite/<train>/<version>/...
-modules/nsx-ambiqsuite-r2/sdk/
-modules/nsx-ambiqsuite-r3/sdk/
-modules/nsx-ambiqsuite-r4/sdk/
-modules/nsx-ambiqsuite-r5/sdk/
+modules/nsx-ambiqsuite/sdk/
 ```
 
 Local raw inputs stay under the ignored intake workspace:
@@ -27,9 +24,9 @@ sdk-intake/local/work/
   - `--source-root`
   - `--zip`
   - `--ambiqsuite-repo` plus `--source-ref` (default ref: `stable`)
-- builds HAL/BSP archives for the selected train and toolchain(s)
-- writes a per-train artifact manifest under `artifacts/ambiqsuite/<train>/<version>/manifest.yaml`
-- promotes approved headers, system sources, utility sources, and prebuilt HAL/BSP archives into `modules/nsx-ambiqsuite-r*/sdk/`
+- builds HAL/BSP archives for every released part/board and the selected toolchain(s)
+- writes an artifact manifest under `artifacts/ambiqsuite/<train>/<version>/manifest.yaml`
+- promotes approved headers, system sources, utility sources, and prebuilt HAL/BSP archives into `modules/nsx-ambiqsuite/sdk/`
 
 It does not bundle examples, FreeRTOS, TinyUSB, Cordio, CMSIS-NN, or CMSIS-DSP.
 
@@ -45,47 +42,49 @@ paths.
 If an input is missing, the helper exits with an explicit error instead of
 guessing a local filesystem path.
 
-## Current Multi-Train Flow
+## Unified Provider Flow
 
-The current intake path rebuilds provider trains from a single rolling
-AmbiqSuite ref, typically `stable`.
+The intake path rebuilds the single `nsx-ambiqsuite` provider from one rolling
+AmbiqSuite ref, typically `stable`, mirroring upstream. One build covers every
+released Apollo-class part and board:
 
-- `r2`: Apollo2, toolchains `gcc` and `atfe`
-- `r3`: Apollo3/Apollo3P, toolchains `gcc`, `atfe`, `acfe`
-- `r4`: Apollo4L/Apollo4P, toolchains `gcc`, `atfe`, `acfe`
-- `r5`: Apollo330P/Apollo510/Apollo510L, toolchains `gcc`, `atfe`, `acfe`
+- Apollo2 (toolchains `gcc`, `atfe`)
+- Apollo3 / Apollo3P (toolchains `gcc`, `atfe`, `acfe`)
+- Apollo4L / Apollo4P (toolchains `gcc`, `atfe`, `acfe`)
+- Apollo330P / Apollo510 / Apollo510L (toolchains `gcc`, `atfe`, `acfe`)
+
+Apollo2 predates ACfE, so it is built for `gcc` and `atfe` only; the build skips
+the unsupported `(apollo2, acfe)` pair automatically. The provider train id is
+`stable`.
 
 Snapshot versions are derived automatically from the source ref and commit date,
 for example `stable-2026.06.17`.
 
 ## Simple Examples
 
-Build one toolchain for one train from a local AmbiqSuite git checkout:
+Build one toolchain from a local AmbiqSuite git checkout:
 
 ```bash
 python sdk-intake/build_ambiqsuite.py \
-  --train r4 \
   --toolchain gcc \
   --ambiqsuite-repo /path/to/ambiqSuite \
   --source-ref stable
 ```
 
-Build ATfE for a legacy train:
+Build ATfE:
 
 ```bash
 python sdk-intake/build_ambiqsuite.py \
-  --train r2 \
   --toolchain atfe \
   --ambiqsuite-repo /path/to/ambiqSuite \
   --source-ref stable \
   --atfe-root /path/to/ATfE
 ```
 
-Build all supported toolchains for a train:
+Build all supported toolchains:
 
 ```bash
 python sdk-intake/build_ambiqsuite.py \
-  --train r5 \
   --toolchain all \
   --ambiqsuite-repo /path/to/ambiqSuite \
   --source-ref stable \
@@ -93,11 +92,13 @@ python sdk-intake/build_ambiqsuite.py \
   --acfe-root /path/to/ACfE
 ```
 
-Promote an already-built train payload without rebuilding:
+Restrict a build to specific part(s) with `--only-part` (repeatable); promotion
+still requires the full payload to exist on disk for the version.
+
+Promote an already-built payload without rebuilding:
 
 ```bash
 python sdk-intake/build_ambiqsuite.py \
-  --train r3 \
   --promote-only \
   --ambiqsuite-repo /path/to/ambiqSuite \
   --source-ref stable
@@ -105,8 +106,8 @@ python sdk-intake/build_ambiqsuite.py \
 
 ## Update Steps Before A PR
 
-1. Rebuild or re-promote the affected train(s).
-1. Confirm provider payload diffs are intentional under `modules/nsx-ambiqsuite-r*/sdk/`.
+1. Rebuild or re-promote the provider payload.
+1. Confirm provider payload diffs are intentional under `modules/nsx-ambiqsuite/sdk/`.
 1. Refresh provider metadata if the source snapshot changed.
 1. Run the contract tests:
 
@@ -114,7 +115,7 @@ python sdk-intake/build_ambiqsuite.py \
 python -m pytest tests/test_cmake_contract.py -q
 ```
 
-1. Review any train-specific policy changes, such as supported toolchains or board exposure.
+1. Review any policy changes, such as supported toolchains or board exposure.
 
 ## Notes
 
@@ -123,5 +124,6 @@ python -m pytest tests/test_cmake_contract.py -q
   diagnostic builds.
 - Single-toolchain reruns rebuild only that toolchain's native output and update
   only that toolchain's staged artifacts.
-- `r2` intentionally does not support `acfe` / `armclang` because AmbiqSuite r2
-  never shipped armclang startup/linker support.
+- Apollo2 intentionally does not support `acfe` / `armclang` because AmbiqSuite
+  never shipped armclang startup/linker support for it; the build skips that
+  part/toolchain pair automatically.

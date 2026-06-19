@@ -3,7 +3,7 @@ schema_version: 1
 module:
   name: nsx-board-apollo5b-evb
   type: board
-  version: "5.2.23"
+  version: "0.1.0"
 
 support:
   ambiqsuite: true
@@ -17,15 +17,15 @@ build:
 
 depends:
   required:
-    - nsx-ambiq-hal-r5
-    - nsx-ambiq-bsp-r5
+    - nsx-ambiq-hal
+    - nsx-ambiq-bsp
     - nsx-soc-hal
     - nsx-cmsis-startup
-    - nsx-ambiqsuite-r5
+    - nsx-ambiqsuite
   optional: []
 
 constraints:
-  required_sdk_provider: nsx-ambiqsuite-r5
+  required_sdk_provider: nsx-ambiqsuite
 
 compatibility:
   boards: []

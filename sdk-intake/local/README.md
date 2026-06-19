@@ -10,6 +10,6 @@ sdk-intake/local/work/    # extracted / building SDK source
 
 Place SDK zips under `drops/` and run `sdk-intake/build_ambiqsuite.py`; the
 helper extracts into `work/` and copies approved, source-controlled artifacts
-into `artifacts/ambiqsuite/<train>/<version>/...` and the corresponding
-`modules/nsx-ambiqsuite-r*/sdk/` provider payload. See `../README.md` for the
+into `artifacts/ambiqsuite/<train>/<version>/...` and the
+`modules/nsx-ambiqsuite/sdk/` provider payload. See `../README.md` for the
 maintainer workflow and required inputs.

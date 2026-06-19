@@ -135,6 +135,6 @@ their own ifdef ladders.
 
 - `nsx-cmsis-core` — CMSIS-6 core headers used by `nsx_system.c` and the
   per-SoC platform backends.
-- The `nsx-ambiqsuite-r5` SDK provider for `am_hal_*` and the system init source.
+- The `nsx-ambiqsuite` SDK provider for `am_hal_*` and the system init source.
 
 This repo is CMake-first. CMake descriptors define the module contract.

@@ -2,20 +2,20 @@ if(NOT DEFINED NSX_SDK_PROVIDER)
     message(FATAL_ERROR "NSX_SDK_PROVIDER must be defined before nsx-usb is added.")
 endif()
 
-if(NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r4")
-    if(NOT TARGET nsx_ambiq_usb_r4)
-        message(FATAL_ERROR "nsx-usb requires nsx-ambiq-usb-r4 to be added first when NSX_SDK_PROVIDER=ambiqsuite-r4.")
-    endif()
-    set(NSX_USB_SUBSTRATE_TARGET nsx_ambiq_usb_r4)
-    set(NSX_USB_SUBSTRATE_PUBLIC_TARGET nsx::ambiq_usb_r4)
-elseif(NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r5")
-    if(NOT TARGET nsx_ambiq_usb_r5)
-        message(FATAL_ERROR "nsx-usb requires nsx-ambiq-usb-r5 to be added first when NSX_SDK_PROVIDER=ambiqsuite-r5.")
-    endif()
-    set(NSX_USB_SUBSTRATE_TARGET nsx_ambiq_usb_r5)
-    set(NSX_USB_SUBSTRATE_PUBLIC_TARGET nsx::ambiq_usb_r5)
-else()
+if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR "nsx-usb does not support NSX_SDK_PROVIDER='${NSX_SDK_PROVIDER}'.")
+endif()
+
+# The USB substrate (TinyUSB DCD) is provided by the unified nsx-ambiq-usb
+# module, which selects the SoC-family-specific device-controller port
+# internally. It must be added to the app module graph before nsx-usb.
+if(TARGET nsx_ambiq_usb)
+    set(NSX_USB_SUBSTRATE_TARGET nsx_ambiq_usb)
+    set(NSX_USB_SUBSTRATE_PUBLIC_TARGET nsx::ambiq_usb)
+else()
+    message(FATAL_ERROR
+        "nsx-usb requires the AmbiqSuite USB substrate (nsx-ambiq-usb) to be "
+        "added before nsx-usb.")
 endif()
 
 if(DEFINED NSX_MODULE_DIR_nsx_core)

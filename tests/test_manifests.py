@@ -37,56 +37,58 @@ FORBIDDEN_CORE_CAPABILITIES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULES = {
-    "nsx-ambiq-usb-r4",
-    "nsx-ambiq-usb-r5",
+    "nsx-ambiq-usb",
     "nsx-audio",
     "nsx-usb",
     "nsx-freertos",
 }
 
-STAGED_PROVIDER_BOARDS = {"apollo330mP_evb", "apollo510_evb", "apollo510b_evb", "apollo510dL_evb"}
-STAGED_PROVIDER_SOCS = {"apollo330P", "apollo510", "apollo510b", "apollo510L"}
+STAGED_PROVIDER_BOARDS = {
+    "apollo2_evb",
+    "apollo3_evb",
+    "apollo3_evb_cygnus",
+    "apollo3p_evb",
+    "apollo3p_evb_cygnus",
+    "apollo4l_evb",
+    "apollo4l_blue_evb",
+    "apollo4p_evb",
+    "apollo4p_blue_kbr_evb",
+    "apollo4p_blue_kxr_evb",
+    "apollo330mP_evb",
+    "apollo510_evb",
+    "apollo510b_evb",
+    "apollo510dL_evb",
+}
+STAGED_PROVIDER_SOCS = {
+    "apollo2",
+    "apollo3",
+    "apollo3p",
+    "apollo4l",
+    "apollo4p",
+    "apollo330P",
+    "apollo510",
+    "apollo510b",
+    "apollo510L",
+}
 STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"
 EXPECTED_SDK_RELEASE = "stable-2026.06.17"
 EXPECTED_UPSTREAM_REVISION = "stable-6cdd4ccf96"
+# The unified AmbiqSuite provider (and its HAL/BSP/USB wrappers) carry a fresh
+# module identity at 0.1.0.
+EXPECTED_UNIFIED_MODULE_VERSION = "0.1.0"
 EXPECTED_PROVIDER_METADATA = {
-    "nsx-ambiqsuite-r2": {
-        "version": "2.5.1",
-        "sdk_release": EXPECTED_SDK_RELEASE,
-        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
-    },
-    "nsx-ambiqsuite-r3": {
-        "version": "3.2.1",
-        "sdk_release": EXPECTED_SDK_RELEASE,
-        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
-    },
-    "nsx-ambiqsuite-r4": {
-        "version": "4.5.1",
-        "sdk_release": EXPECTED_SDK_RELEASE,
-        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
-    },
-    "nsx-ambiqsuite-r5": {
-        "version": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiqsuite": {
+        "version": EXPECTED_UNIFIED_MODULE_VERSION,
         "sdk_release": EXPECTED_SDK_RELEASE,
         "upstream_revision": EXPECTED_UPSTREAM_REVISION,
     },
 }
 EXPECTED_VERSION_BY_MODULE_NAME = {
-    "nsx-ambiqsuite-r2": "2.5.1",
-    "nsx-ambiq-hal-r2": "2.5.1",
-    "nsx-ambiq-bsp-r2": "2.5.1",
-    "nsx-ambiqsuite-r3": "3.2.1",
-    "nsx-ambiq-hal-r3": "3.2.1",
-    "nsx-ambiq-bsp-r3": "3.2.1",
-    "nsx-ambiqsuite-r4": "4.5.1",
-    "nsx-ambiq-hal-r4": "4.5.1",
-    "nsx-ambiq-bsp-r4": "4.5.1",
-    "nsx-ambiq-usb-r4": "4.5.1",
-    "nsx-ambiqsuite-r5": EXPECTED_NSX_RELEASE_VERSION,
-    "nsx-ambiq-hal-r5": EXPECTED_NSX_RELEASE_VERSION,
-    "nsx-ambiq-bsp-r5": EXPECTED_NSX_RELEASE_VERSION,
-    "nsx-ambiq-usb-r5": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiqsuite": EXPECTED_UNIFIED_MODULE_VERSION,
+    "nsx-ambiq-hal": EXPECTED_UNIFIED_MODULE_VERSION,
+    "nsx-ambiq-bsp": EXPECTED_UNIFIED_MODULE_VERSION,
+    "nsx-ambiq-usb": EXPECTED_UNIFIED_MODULE_VERSION,
 }
 
 
@@ -95,23 +97,17 @@ def expected_manifest_version(manifest: dict) -> str:
     if name in EXPECTED_VERSION_BY_MODULE_NAME:
         return EXPECTED_VERSION_BY_MODULE_NAME[name]
 
+    # Board manifests adopt the unified module identity alongside the
+    # consolidated provider/HAL/BSP they now depend on.
     if manifest["module"]["type"] == "board":
-        board_name = name.removeprefix("nsx-board-")
-        if board_name.startswith("apollo2"):
-            return "2.5.1"
-        if board_name.startswith("apollo330") or board_name.startswith("apollo5"):
-            return EXPECTED_NSX_RELEASE_VERSION
-        if board_name.startswith("apollo3"):
-            return "3.2.1"
-        if board_name.startswith("apollo4"):
-            return "4.5.1"
+        return EXPECTED_UNIFIED_MODULE_VERSION
 
     return EXPECTED_NSX_RELEASE_VERSION
 
 
 def expected_provider_toolchains(repo_root: Path) -> list[str]:
     toolchains = ["arm-none-eabi-gcc", "atfe"]
-    if (repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk" / "lib" / "acfe").is_dir():
+    if (repo_root / "modules" / "nsx-ambiqsuite" / "sdk" / "lib" / "acfe").is_dir():
         toolchains.append("armclang")
     return toolchains
 
@@ -212,29 +208,31 @@ def test_core_manifests_do_not_advertise_out_of_scope_capabilities(manifests: di
 
 
 def test_sdk_provider_advertises_only_staged_payload(repo_root: Path, manifests: dict[Path, dict]) -> None:
-    provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-ambiqsuite-r5")
+    provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-ambiqsuite")
     compatibility = provider["compatibility"]
-    assert compatibility["socs"] == ["apollo330P", "apollo510", "apollo510b", "apollo510L"]
-    assert compatibility["boards"] == ["apollo330mP_evb", "apollo510_evb", "apollo510b_evb", "apollo510dL_evb"]
+    assert set(compatibility["socs"]) == STAGED_PROVIDER_SOCS
+    assert set(compatibility["boards"]) == STAGED_PROVIDER_BOARDS
     assert compatibility["toolchains"] == expected_provider_toolchains(repo_root)
 
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
-    for soc in ("apollo330P", "apollo510", "apollo510L"):
-        assert (payload / "mcu" / soc).is_dir()
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
+    # Precompiled HAL/BSP buckets are part-keyed; verify each staged part has
+    # an mcu tree plus a HAL archive for every native toolchain.
+    lib_parts = sorted(path.name for path in (payload / "lib" / "gcc").iterdir() if path.is_dir())
+    for part in lib_parts:
+        assert (payload / "mcu" / part).is_dir()
     for board in compatibility["boards"]:
         assert (payload / "boards" / board / "bsp").is_dir()
     for toolchain in ("gcc", "atfe"):
-        assert (payload / "lib" / toolchain / "apollo330P" / "libam_hal.a").is_file()
-        assert (payload / "lib" / toolchain / "apollo510" / "libam_hal.a").is_file()
-        assert (payload / "lib" / toolchain / "apollo510L" / "libam_hal.a").is_file()
+        for part in lib_parts:
+            assert (payload / "lib" / toolchain / part / "libam_hal.a").is_file()
 
 
 def test_ambiqsuite_dependent_manifests_advertise_staged_compatibility(manifests: dict[Path, dict]) -> None:
     offenders = []
     for path, manifest in manifests.items():
         dependencies = set(manifest["depends"].get("required", []))
-        is_provider = manifest_name(manifest) == "nsx-ambiqsuite-r5"
-        if not is_provider and "nsx-ambiqsuite-r5" not in dependencies:
+        is_provider = manifest_name(manifest) == "nsx-ambiqsuite"
+        if not is_provider and "nsx-ambiqsuite" not in dependencies:
             continue
 
         compatibility = manifest["compatibility"]
@@ -258,7 +256,7 @@ def test_sdk_drop_manifest_template_parseable(repo_root: Path) -> None:
 
     manifest_path = repo_root / "docs" / "sdk-drop-manifest.example.yaml"
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    assert manifest["sdk"]["provider"] == "ambiqsuite-r5"
+    assert manifest["sdk"]["provider"] == "ambiqsuite"
     assert manifest["artifacts"]["output_root"]
     assert manifest["parts"]
     assert manifest["boards"]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.nsx_r5_toolchain_file import toolchain_text, write_toolchain_file
+from tools.nsx_toolchain_file import toolchain_text, write_toolchain_file
 
 
 def test_gcc_toolchain_file_uses_arm_gnu_paths(tmp_path: Path) -> None:

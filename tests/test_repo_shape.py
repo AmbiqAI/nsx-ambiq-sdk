@@ -24,17 +24,13 @@ OUT_OF_CORE_PATH_SUFFIXES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiq-usb-r4"),
-    ("modules", "nsx-ambiq-usb-r5"),
+    ("modules", "nsx-ambiq-usb"),
     ("modules", "nsx-usb"),
     ("modules", "nsx-freertos"),
 }
 
 PROVIDER_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiqsuite-r2"),
-    ("modules", "nsx-ambiqsuite-r3"),
-    ("modules", "nsx-ambiqsuite-r4"),
-    ("modules", "nsx-ambiqsuite-r5"),
+    ("modules", "nsx-ambiqsuite"),
 }
 
 FORBIDDEN_POLICY_TERMS = (
@@ -63,12 +59,8 @@ MULTI_SOC_CURATED_MODULES = {
 }
 
 PROVIDER_SDK_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiqsuite-r2", "sdk"),
-    ("modules", "nsx-ambiqsuite-r3", "sdk"),
-    ("modules", "nsx-ambiqsuite-r4", "sdk"),
-    ("modules", "nsx-ambiqsuite-r5", "sdk"),
-    ("modules", "nsx-ambiq-usb-r4", "sdk"),
-    ("modules", "nsx-ambiq-usb-r5", "sdk"),
+    ("modules", "nsx-ambiqsuite", "sdk"),
+    ("modules", "nsx-ambiq-usb", "sdk"),
     ("modules", "nsx-freertos", "sdk"),
 }
 
@@ -155,8 +147,8 @@ def test_repo_has_ci_and_pre_commit_entrypoints(repo_root: Path) -> None:
     assert "ATFE_ROOT/bin/clang" in container_workflow_text
     assert "ACFE_ROOT/bin/armclang" in container_workflow_text
     assert "ARMLM_ACTIVATION_CODE" in container_workflow_text
-    assert "tools/nsx_r5_link_smoke.py" in container_workflow_text
-    assert "tools/nsx_r5_toolchain_file.py" in container_workflow_text
+    assert "tools/nsx_link_smoke.py" in container_workflow_text
+    assert "tools/nsx_toolchain_file.py" in container_workflow_text
     assert "sdk-intake/build_ambiqsuite.py" in container_workflow_text
     assert "--toolchain" in container_workflow_text
     assert "--promote" in container_workflow_text
@@ -164,14 +156,14 @@ def test_repo_has_ci_and_pre_commit_entrypoints(repo_root: Path) -> None:
     assert "chown -R" in container_workflow_text
     assert "pytest contract tests" in pre_commit_text
     assert "sdk-intake/build_ambiqsuite.py" in pre_commit_text
-    assert "tools/nsx_r5_link_smoke.py" in pre_commit_text
-    assert "tools/nsx_r5_toolchain_file.py" in pre_commit_text
+    assert "tools/nsx_link_smoke.py" in pre_commit_text
+    assert "tools/nsx_toolchain_file.py" in pre_commit_text
 
 
 def test_toolchain_smoke_scaffold_is_present(repo_root: Path) -> None:
     legacy_license_env = "ARMLMD" + "_LICENSE_FILE"
-    smoke_script = repo_root / "tools" / "nsx_r5_link_smoke.py"
-    toolchain_script = repo_root / "tools" / "nsx_r5_toolchain_file.py"
+    smoke_script = repo_root / "tools" / "nsx_link_smoke.py"
+    toolchain_script = repo_root / "tools" / "nsx_toolchain_file.py"
     smoke_doc = repo_root / "docs" / "toolchain-smoke.md"
     dev_ci_dockerfile = repo_root / "docker" / "dev-ci.Dockerfile"
     devcontainer = repo_root / ".devcontainer" / "devcontainer.json"
@@ -212,7 +204,7 @@ def test_toolchain_smoke_scaffold_is_present(repo_root: Path) -> None:
     assert '"ARMLM_ACTIVATION_CODE": "${localEnv:ARMLM_ACTIVATION_CODE}"' in devcontainer_text
     assert legacy_license_env not in devcontainer_text
     assert "/opt/toolchains/gcc/bin:/opt/toolchains/acfe/bin:/opt/toolchains/atfe/bin" in devcontainer_text
-    assert "/opt/venvs/nsx-r5" in devcontainer_text
+    assert "/opt/venvs/nsx" in devcontainer_text
     assert "bash .devcontainer/post-create.sh" in devcontainer_text
     assert "armlm" in devcontainer_post_create_text
     assert "activate -code" in devcontainer_post_create_text
@@ -338,7 +330,7 @@ def test_nsx_modules_do_not_ship_freertos_allocator_residue(repo_root: Path) -> 
     allocator_symbols = ("pvTasklessPortMalloc", "vTasklessPortFree")
     offenders = []
     for path in (repo_root / "modules").rglob("*"):
-        if not path.is_file() or "nsx-ambiqsuite-r5/sdk" in path.as_posix():
+        if not path.is_file() or "nsx-ambiqsuite/sdk" in path.as_posix():
             continue
         relative_parts = path.relative_to(repo_root).parts
         if any(relative_parts[:len(prefix)] == prefix for prefix in PROVIDER_MODULE_PREFIXES):
@@ -429,7 +421,7 @@ def test_platform_coverage_names_unstaged_r5_variants(repo_root: Path) -> None:
 
 
 def test_staged_platform_coverage_matches_payload(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     assert (payload / "artifact-manifest.yaml").is_file()
     assert (payload.parent / "UPSTREAM-LICENSE-NOTICE.md").is_file()
     assert (payload.parent / "THIRD-PARTY-PAYLOAD.md").is_file()
@@ -492,7 +484,7 @@ def test_staged_platform_coverage_matches_payload(repo_root: Path) -> None:
 
 
 def test_provider_payload_third_party_boundaries(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     files = [path for path in payload.rglob("*") if path.is_file()]
 
     segger_payload = [
@@ -512,7 +504,7 @@ def test_provider_payload_third_party_boundaries(repo_root: Path) -> None:
 
 
 def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     top_level_sources = sorted(path.name for path in (payload / "src").glob("*.c"))
     assert top_level_sources == [
         "am_util_delay.c",
@@ -521,7 +513,12 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
     ]
     cmsis_system_sources = sorted(path.name for path in (payload / "CMSIS" / "AmbiqMicro" / "Source").glob("system_*.c"))
     assert cmsis_system_sources == [
+        "system_apollo2.c",
+        "system_apollo3.c",
         "system_apollo330P.c",
+        "system_apollo3p.c",
+        "system_apollo4l.c",
+        "system_apollo4p.c",
         "system_apollo510.c",
         "system_apollo510L.c",
     ]
@@ -537,34 +534,3 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
         if any(fragment in path.name for fragment in forbidden_fragments)
     ]
     assert offenders == []
-
-
-def test_r5_artifact_manifest_matches_built_libraries(repo_root: Path) -> None:
-    import yaml
-
-    artifact_root = repo_root / "artifacts" / "ambiqsuite" / "R5.2.0"
-    manifest = yaml.safe_load((artifact_root / "manifest.yaml").read_text(encoding="utf-8"))
-    assert manifest["sdk"]["source_kind"] == "git_ref"
-    assert manifest["sdk"]["source_ref"] == "release_sdk5p2p0_rc4"
-    assert manifest["sdk"].get("upstream_revision") != "${version}"
-    assert manifest["build"]["toolchains"]["gcc"]["status"] == "built"
-    assert manifest["build"]["toolchains"]["atfe"]["status"] == "built"
-    assert manifest["build"]["toolchains"]["acfe"]["status"] in {"blocked", "not-built", "built"}
-    assert manifest["build"]["toolchains"]["gcc"]["debug_symbols"] is False
-    assert manifest["build"]["toolchains"]["atfe"]["debug_symbols"] is False
-    assert manifest["build"]["toolchains"]["acfe"]["debug_symbols"] is False
-
-    artifact_paths = []
-    for part in manifest["parts"]:
-        for toolchain in ("gcc", "atfe", "acfe"):
-            if toolchain not in part["hal_artifacts"]:
-                continue
-            artifact_paths.append(part["hal_artifacts"][toolchain]["path"])
-    for board in manifest["boards"]:
-        for toolchain in ("gcc", "atfe", "acfe"):
-            if toolchain not in board["bsp_artifacts"]:
-                continue
-            artifact_paths.append(board["bsp_artifacts"][toolchain]["path"])
-
-    for relative_path in artifact_paths:
-        assert (artifact_root / relative_path).is_file(), relative_path

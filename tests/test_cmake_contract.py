@@ -26,8 +26,8 @@ def soc_facts_text(repo_root: Path, skew: str) -> str:
 
 
 def test_hal_and_bsp_use_provider_local_toolchain_artifacts(repo_root: Path) -> None:
-    hal = read(repo_root, "modules/nsx-ambiq-hal-r5/CMakeLists.txt")
-    bsp = read(repo_root, "modules/nsx-ambiq-bsp-r5/CMakeLists.txt")
+    hal = read(repo_root, "modules/nsx-ambiq-hal/CMakeLists.txt")
+    bsp = read(repo_root, "modules/nsx-ambiq-bsp/CMakeLists.txt")
 
     assert "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal.a" in hal
     assert "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a" in bsp
@@ -82,7 +82,7 @@ def test_promoted_provider_payload_keeps_precompiled_buckets_source_free(repo_ro
     # header-only. Device drivers (devices/) and curated utilities (utils/) are
     # exempt: they ship source so consumers can compile the peripheral support
     # they need (see PROMOTED_DEVICE_SUFFIXES / PROMOTED_UTILITY_SOURCES).
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     forbidden_sources = []
     for root in [payload / "mcu", payload / "boards"]:
         for path in root.rglob("*.c"):
@@ -102,21 +102,20 @@ def test_promoted_provider_payload_keeps_precompiled_buckets_source_free(repo_ro
 def test_promoted_provider_payload_ships_device_driver_sources(repo_root: Path) -> None:
     # Device drivers ship both headers and source so consumers can compile the
     # peripheral support they need; HAL/BSP remain precompiled.
-    devices = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk" / "devices"
+    devices = repo_root / "modules" / "nsx-ambiqsuite" / "sdk" / "devices"
     assert any(devices.rglob("*.c")), "expected promoted device driver sources under devices/"
 
 
 def test_promoted_provider_payload_resolves_banner_placeholders(repo_root: Path) -> None:
     placeholder_pattern = re.compile(r"\$\{(?:copyright|version)\}")
     offenders = []
-    for train_id in ("r2", "r3", "r4", "r5"):
-        payload = repo_root / "modules" / f"nsx-ambiqsuite-{train_id}" / "sdk"
-        for path in payload.rglob("*"):
-            if path.suffix not in {".h", ".hpp", ".inc", ".c"} or not path.is_file():
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            if placeholder_pattern.search(text):
-                offenders.append(path.relative_to(repo_root).as_posix())
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
+    for path in payload.rglob("*"):
+        if path.suffix not in {".h", ".hpp", ".inc", ".c"} or not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if placeholder_pattern.search(text):
+            offenders.append(path.relative_to(repo_root).as_posix())
     assert offenders == []
 
 
@@ -143,7 +142,7 @@ def test_toolchain_helper_defines_required_contract_functions(repo_root: Path) -
     assert "function(nsx_atfe_prefers_gcc_prebuilt out_var)" in helper
     assert "function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)" in helper
     assert "function(nsx_apply_toolchain_flags target)" in helper
-    assert "set(NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES gcc atfe armclang)" in helper
+    assert "set(NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES gcc atfe armclang)" in helper
     assert "thumbv8.1m.main-unknown-none-eabihf" in helper
     assert "arm-arm-none-eabi" in helper
     assert "set(nsx_link_flags --cpu=${NSX_CPU})" in helper
@@ -159,7 +158,7 @@ def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) 
 
     legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
     offenders = []
-    for module_name in ("nsx-ambiq-hal-r5", "nsx-ambiq-bsp-r5", "nsx-ambiq-usb-r5"):
+    for module_name in ("nsx-ambiq-hal", "nsx-ambiq-bsp", "nsx-ambiq-usb"):
         path = repo_root / "modules" / module_name / "CMakeLists.txt"
         text = path.read_text(encoding="utf-8")
         if legacy_selector.search(text):
@@ -169,8 +168,8 @@ def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) 
 
 
 def test_sdk_artifact_paths_validate_components_before_construction(repo_root: Path) -> None:
-    hal = read(repo_root, "modules/nsx-ambiq-hal-r5/CMakeLists.txt")
-    bsp = read(repo_root, "modules/nsx-ambiq-bsp-r5/CMakeLists.txt")
+    hal = read(repo_root, "modules/nsx-ambiq-hal/CMakeLists.txt")
+    bsp = read(repo_root, "modules/nsx-ambiq-bsp/CMakeLists.txt")
 
     for expected in (
         "nsx_assert_path_component(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)",
@@ -195,11 +194,11 @@ def configure_contract_project(
     toolchain_family: str,
     modules: tuple[str, ...] = (),
     *,
-    provider: str = "ambiqsuite-r5",
+    provider: str = "ambiqsuite",
     ambiqsuite_version: str = "R5.2.0",
-    provider_module: str = "nsx-ambiqsuite-r5",
-    hal_module: str = "nsx-ambiq-hal-r5",
-    bsp_module: str = "nsx-ambiq-bsp-r5",
+    provider_module: str = "nsx-ambiqsuite",
+    hal_module: str = "nsx-ambiq-hal",
+    bsp_module: str = "nsx-ambiq-bsp",
     prelude: tuple[str, ...] = (),
     post_board_include: tuple[str, ...] = (),
 ) -> subprocess.CompletedProcess[str]:
@@ -269,11 +268,11 @@ def test_apollo2_configure_supports_gcc_and_atfe_only(repo_root: Path, tmp_path:
             tmp_path,
             "apollo2_evb",
             toolchain_family,
-            provider="ambiqsuite-r2",
+            provider="ambiqsuite",
             ambiqsuite_version="2.5.1",
-            provider_module="nsx-ambiqsuite-r2",
-            hal_module="nsx-ambiq-hal-r2",
-            bsp_module="nsx-ambiq-bsp-r2",
+            provider_module="nsx-ambiqsuite",
+            hal_module="nsx-ambiq-hal",
+            bsp_module="nsx-ambiq-bsp",
         )
         assert result.returncode == 0, result.stdout
 
@@ -282,11 +281,11 @@ def test_apollo2_configure_supports_gcc_and_atfe_only(repo_root: Path, tmp_path:
         tmp_path,
         "apollo2_evb",
         "armclang",
-        provider="ambiqsuite-r2",
+        provider="ambiqsuite",
         ambiqsuite_version="2.5.1",
-        provider_module="nsx-ambiqsuite-r2",
-        hal_module="nsx-ambiq-hal-r2",
-        bsp_module="nsx-ambiq-bsp-r2",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode != 0
     assert "apollo2 does not support NSX_TOOLCHAIN_FAMILY=armclang" in result.stdout
@@ -297,7 +296,7 @@ def test_armclang_configure_reflects_acfe_artifact_availability(repo_root: Path,
         raise AssertionError("cmake is required for NSX CMake contract tests")
 
     result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "armclang")
-    acfe_hal = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk" / "lib" / "acfe" / "apollo510" / "libam_hal.a"
+    acfe_hal = repo_root / "modules" / "nsx-ambiqsuite" / "sdk" / "lib" / "acfe" / "apollo510" / "libam_hal.a"
     if acfe_hal.exists():
         assert result.returncode == 0, result.stdout
     else:
@@ -423,7 +422,7 @@ def test_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp_pa
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")
 
-    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", ("nsx-ambiq-usb-r5",))
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", ("nsx-ambiq-usb",))
     assert result.returncode == 0, result.stdout
 
 
@@ -441,7 +440,7 @@ def test_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Path) 
             "nsx-interrupt",
             "nsx-timer",
             "nsx-perf",
-            "nsx-ambiq-usb-r5",
+            "nsx-ambiq-usb",
             "nsx-usb",
         ),
     )
@@ -467,11 +466,11 @@ def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
         "apollo4p_evb",
         "gcc",
         modules,
-        provider="ambiqsuite-r4",
+        provider="ambiqsuite",
         ambiqsuite_version="R4.5.0",
-        provider_module="nsx-ambiqsuite-r4",
-        hal_module="nsx-ambiq-hal-r4",
-        bsp_module="nsx-ambiq-bsp-r4",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode == 0, result.stdout
 
@@ -498,11 +497,11 @@ def test_r3_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
         "apollo3p_evb",
         "gcc",
         modules,
-        provider="ambiqsuite-r3",
+        provider="ambiqsuite",
         ambiqsuite_version="R3.2.0",
-        provider_module="nsx-ambiqsuite-r3",
-        hal_module="nsx-ambiq-hal-r3",
-        bsp_module="nsx-ambiq-bsp-r3",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode == 0, result.stdout
 
@@ -516,12 +515,12 @@ def test_r4_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp
         tmp_path,
         "apollo4p_evb",
         "gcc",
-        ("nsx-ambiq-usb-r4",),
-        provider="ambiqsuite-r4",
+        ("nsx-ambiq-usb",),
+        provider="ambiqsuite",
         ambiqsuite_version="R4.5.0",
-        provider_module="nsx-ambiqsuite-r4",
-        hal_module="nsx-ambiq-hal-r4",
-        bsp_module="nsx-ambiq-bsp-r4",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode == 0, result.stdout
 
@@ -539,14 +538,14 @@ def test_r4_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Pat
             "nsx-core",
             "nsx-interrupt",
             "nsx-timer",
-            "nsx-ambiq-usb-r4",
+            "nsx-ambiq-usb",
             "nsx-usb",
         ),
-        provider="ambiqsuite-r4",
+        provider="ambiqsuite",
         ambiqsuite_version="R4.5.0",
-        provider_module="nsx-ambiqsuite-r4",
-        hal_module="nsx-ambiq-hal-r4",
-        bsp_module="nsx-ambiq-bsp-r4",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode == 0, result.stdout
 
@@ -602,7 +601,7 @@ def test_generic_public_headers_do_not_include_bsp(repo_root: Path) -> None:
 def test_public_headers_do_not_include_bsp(repo_root: Path) -> None:
     offenders = []
     for module_dir in (repo_root / "modules").glob("*"):
-        if module_dir.name == "nsx-ambiqsuite-r5":
+        if module_dir.name == "nsx-ambiqsuite":
             continue
         for header_dir_name in ("includes-api", "include"):
             header_dir = module_dir / header_dir_name
@@ -753,14 +752,14 @@ def test_freertos_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: P
                 "include(GNUInstallDirs)",
                 f'set(NSX_ROOT "{repo_root.as_posix()}")',
                 f'set(NSX_CMAKE_DIR "{(repo_root / "cmake").as_posix()}")',
-                'set(NSX_SDK_PROVIDER "ambiqsuite-r5")',
+                'set(NSX_SDK_PROVIDER "ambiqsuite")',
                 'set(NSX_TOOLCHAIN_FAMILY "gcc")',
                 'set(NSX_AMBIQSUITE_VERSION "R5.2.0")',
-                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk").as_posix()}")',
+                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite" / "sdk").as_posix()}")',
                 f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal-r5").as_posix()}" nsx-ambiq-hal-r5)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp-r5").as_posix()}" nsx-ambiq-bsp-r5)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal").as_posix()}" nsx-ambiq-hal)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp").as_posix()}" nsx-ambiq-bsp)',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-soc-hal").as_posix()}" nsx-soc-hal)',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-core").as_posix()}" nsx-core)',
                 # Application-owned FreeRTOSConfig.h provider contract.
@@ -791,8 +790,8 @@ def test_freertos_module_configures_for_cm4f_soc_hal_contract(repo_root: Path, t
     template = repo_root / "modules" / "nsx-freertos" / "templates" / "FreeRTOSConfig.h.template"
 
     for board, sdk_provider, sdk_version, sdk_module in [
-        ("apollo4p_evb", "ambiqsuite-r4", "R4.5.0", "nsx-ambiqsuite-r4"),
-        ("apollo3p_evb", "ambiqsuite-r3", "R3.2.0", "nsx-ambiqsuite-r3"),
+        ("apollo4p_evb", "ambiqsuite", "R4.5.0", "nsx-ambiqsuite"),
+        ("apollo3p_evb", "ambiqsuite", "R3.2.0", "nsx-ambiqsuite"),
     ]:
         source_dir = tmp_path / "freertos_cm4f" / board
         config_dir = source_dir / "config"
@@ -819,8 +818,8 @@ def test_freertos_module_configures_for_cm4f_soc_hal_contract(repo_root: Path, t
                     f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / sdk_module / "sdk").as_posix()}")',
                     f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
                     f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
-                    f'add_subdirectory("{(repo_root / "modules" / f"nsx-ambiq-hal-{sdk_provider[-2:]}").as_posix()}" nsx-ambiq-hal)',
-                    f'add_subdirectory("{(repo_root / "modules" / f"nsx-ambiq-bsp-{sdk_provider[-2:]}").as_posix()}" nsx-ambiq-bsp)',
+                    f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal").as_posix()}" nsx-ambiq-hal)',
+                    f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp").as_posix()}" nsx-ambiq-bsp)',
                     f'add_subdirectory("{(repo_root / "modules" / "nsx-soc-hal").as_posix()}" nsx-soc-hal)',
                     f'add_subdirectory("{(repo_root / "modules" / "nsx-core").as_posix()}" nsx-core)',
                     "add_library(app_freertos_config INTERFACE)",
@@ -863,14 +862,14 @@ def test_freertos_module_requires_config_provider(repo_root: Path, tmp_path: Pat
                 "include(GNUInstallDirs)",
                 f'set(NSX_ROOT "{repo_root.as_posix()}")',
                 f'set(NSX_CMAKE_DIR "{(repo_root / "cmake").as_posix()}")',
-                'set(NSX_SDK_PROVIDER "ambiqsuite-r5")',
+                'set(NSX_SDK_PROVIDER "ambiqsuite")',
                 'set(NSX_TOOLCHAIN_FAMILY "gcc")',
                 'set(NSX_AMBIQSUITE_VERSION "R5.2.0")',
-                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk").as_posix()}")',
+                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / "nsx-ambiqsuite" / "sdk").as_posix()}")',
                 f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal-r5").as_posix()}" nsx-ambiq-hal-r5)',
-                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp-r5").as_posix()}" nsx-ambiq-bsp-r5)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-hal").as_posix()}" nsx-ambiq-hal)',
+                f'add_subdirectory("{(repo_root / "modules" / "nsx-ambiq-bsp").as_posix()}" nsx-ambiq-bsp)',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-soc-hal").as_posix()}" nsx-soc-hal)',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-core").as_posix()}" nsx-core)',
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-freertos").as_posix()}" nsx-freertos)',

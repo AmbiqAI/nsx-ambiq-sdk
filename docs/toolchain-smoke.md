@@ -11,7 +11,7 @@ The smoke runner generates the standard CMake toolchain file automatically. To
 inspect or reuse that file manually, write one with the helper:
 
 ```sh
-uv run --group ci python tools/nsx_r5_toolchain_file.py \
+uv run --group ci python tools/nsx_toolchain_file.py \
   --toolchain-family armclang \
   --output /tmp/acfe-toolchain.cmake
 ```
@@ -22,23 +22,23 @@ Run all staged boards:
 export ACFE_ROOT=/Applications/ARMClangToolchain/6.24Rel19
 export PATH="$ACFE_ROOT/bin:$PATH"
 
-uv run --group ci python tools/nsx_r5_link_smoke.py \
+uv run --group ci python tools/nsx_link_smoke.py \
   --toolchain-family armclang \
-  --build-root /tmp/nsx-r5-link-smoke \
+  --build-root /tmp/nsx-link-smoke \
   --verbose
 ```
 
-`tools/nsx_r5_link_smoke.py` generates the standard toolchain file under the
+`tools/nsx_link_smoke.py` generates the standard toolchain file under the
 build root when `--toolchain-file` is omitted. Pass `--toolchain-file` only when
 validating a custom CMake toolchain definition.
 
 Expected outputs:
 
 ```text
-/tmp/nsx-r5-link-smoke/armclang/apollo330mP_evb/smoke.elf
-/tmp/nsx-r5-link-smoke/armclang/apollo510_evb/smoke.elf
-/tmp/nsx-r5-link-smoke/armclang/apollo510b_evb/smoke.elf
-/tmp/nsx-r5-link-smoke/armclang/apollo510dL_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo330mP_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo510_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo510b_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo510dL_evb/smoke.elf
 ```
 
 ## Standard Dev/CI Container

@@ -7,7 +7,7 @@ repos:
     hooks:
       - id: check-added-large-files
         args: [--maxkb=1024]
-        exclude: ^modules/nsx-ambiqsuite-r5/sdk/lib/|^artifacts/
+        exclude: ^modules/nsx-ambiqsuite/sdk/lib/|^artifacts/
       - id: check-merge-conflict
       - id: check-toml
       - id: check-json
@@ -28,13 +28,13 @@ repos:
     hooks:
       - id: py-compile-sdk-intake
         name: py_compile sdk intake and smoke helpers
-        entry: python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_r5_link_smoke.py tools/nsx_r5_toolchain_file.py
+        entry: python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_link_smoke.py tools/nsx_toolchain_file.py
         language: system
         pass_filenames: false
-        files: ^(sdk-intake/build_ambiqsuite\.py|tools/nsx_r5_link_smoke\.py|tools/nsx_r5_toolchain_file\.py)$
+        files: ^(sdk-intake/build_ambiqsuite\.py|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py)$
       - id: pytest-contracts
         name: pytest contract tests
         entry: python -m pytest
         language: system
         pass_filenames: false
-        files: ^(tests/|modules/.*/(CMakeLists\.txt|nsx-module\.yaml|README\.md)|boards/.*/(board\.cmake|nsx-module\.yaml|README\.md)|cmake/|sdk-intake/build_ambiqsuite\.py|tools/nsx_r5_link_smoke\.py|tools/nsx_r5_toolchain_file\.py|pyproject\.toml|README\.md)
+        files: ^(tests/|modules/.*/(CMakeLists\.txt|nsx-module\.yaml|README\.md)|boards/.*/(board\.cmake|nsx-module\.yaml|README\.md)|cmake/|sdk-intake/build_ambiqsuite\.py|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py|pyproject\.toml|README\.md)

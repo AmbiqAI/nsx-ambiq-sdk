@@ -21,7 +21,7 @@ uv run --group ci python -m pytest
 
 ## Development Rules
 
-- Do not edit `modules/nsx-ambiqsuite-r5/sdk/` by hand. Regenerate the provider payload from `sdk-intake/build_ambiqsuite.py`.
+- Do not edit `modules/nsx-ambiqsuite/sdk/` by hand. Regenerate the provider payload from `sdk-intake/build_ambiqsuite.py`.
 - Keep HAL/BSP prebuilt library paths under `sdk/lib/<toolchain>/<part>/...`.
 - Keep module source lists explicit in CMake. Do not use broad source globs.
 - Keep toolchain, SoC, board, and application facts separated.

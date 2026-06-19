@@ -1,5 +1,5 @@
 sdk:
-  provider: ambiqsuite-r5
+  provider: ambiqsuite
   version: R5.4.0
   raw_drop_path: sdk-intake/local/drops/AmbiqSuite_R5.4.0.zip
   raw_drop_checksum: sha256:<fill-me>

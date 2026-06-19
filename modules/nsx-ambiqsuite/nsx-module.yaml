@@ -1,0 +1,71 @@
+schema_version: 1
+
+module:
+  name: nsx-ambiqsuite
+  type: sdk_provider
+  category: sdk_provider
+  provider: ambiqsuite
+  version: "0.1.0"
+  sdk_release: "stable-2026.06.17"
+  upstream_revision: "stable-6cdd4ccf96"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Unified AmbiqSuite SDK provider covering all staged Apollo NSX targets.
+
+capabilities:
+  - sdk_provider
+  - ambiqsuite
+
+use_cases:
+  - choose the AmbiqSuite SDK baseline for any Apollo-generation app
+  - provide upstream SDK content for platform stacks
+  - foundation for the Ambiq HAL and BSP layers
+
+agent_keywords:
+  - ambiqsuite
+  - sdk
+  - provider
+
+build:
+  cmake:
+    package: nsx_sdk_ambiqsuite
+    targets:
+      - nsx::sdk_ambiqsuite
+
+depends:
+  required: []
+  optional: []
+
+compatibility:
+  boards:
+    - apollo2_evb
+    - apollo3_evb
+    - apollo3_evb_cygnus
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo2
+    - apollo3
+    - apollo3p
+    - apollo4l
+    - apollo4p
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang
