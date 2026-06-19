@@ -5,7 +5,6 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 ## Current State
 
 - `platform-coverage.md` lists staged, descriptor-only, and planned SoC/board coverage.
-- `r5-sdk-intake-report.md` records the current AmbiqSuite R5.2.0 intake and artifact build status.
 - `toolchain-smoke.md` describes opt-in local/CI link smokes for staged toolchains.
 
 ## Intake And Scope

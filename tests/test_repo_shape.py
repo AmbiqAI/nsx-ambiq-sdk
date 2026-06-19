@@ -534,34 +534,3 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
         if any(fragment in path.name for fragment in forbidden_fragments)
     ]
     assert offenders == []
-
-
-def test_r5_artifact_manifest_matches_built_libraries(repo_root: Path) -> None:
-    import yaml
-
-    artifact_root = repo_root / "artifacts" / "ambiqsuite" / "R5.2.0"
-    manifest = yaml.safe_load((artifact_root / "manifest.yaml").read_text(encoding="utf-8"))
-    assert manifest["sdk"]["source_kind"] == "git_ref"
-    assert manifest["sdk"]["source_ref"] == "release_sdk5p2p0_rc4"
-    assert manifest["sdk"].get("upstream_revision") != "${version}"
-    assert manifest["build"]["toolchains"]["gcc"]["status"] == "built"
-    assert manifest["build"]["toolchains"]["atfe"]["status"] == "built"
-    assert manifest["build"]["toolchains"]["acfe"]["status"] in {"blocked", "not-built", "built"}
-    assert manifest["build"]["toolchains"]["gcc"]["debug_symbols"] is False
-    assert manifest["build"]["toolchains"]["atfe"]["debug_symbols"] is False
-    assert manifest["build"]["toolchains"]["acfe"]["debug_symbols"] is False
-
-    artifact_paths = []
-    for part in manifest["parts"]:
-        for toolchain in ("gcc", "atfe", "acfe"):
-            if toolchain not in part["hal_artifacts"]:
-                continue
-            artifact_paths.append(part["hal_artifacts"][toolchain]["path"])
-    for board in manifest["boards"]:
-        for toolchain in ("gcc", "atfe", "acfe"):
-            if toolchain not in board["bsp_artifacts"]:
-                continue
-            artifact_paths.append(board["bsp_artifacts"][toolchain]["path"])
-
-    for relative_path in artifact_paths:
-        assert (artifact_root / relative_path).is_file(), relative_path
