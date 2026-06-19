@@ -1,6 +1,6 @@
 # Third-Party Payload Notes
 
-`nsx-ambiqsuite-r5` is a curated AmbiqSuite R5.2.0 provider payload, not a full
+`nsx-ambiqsuite` is a curated AmbiqSuite provider payload, not a full
 SWS SDK mirror. Imported AmbiqSuite files retain their upstream headers and the
 upstream license bundle is preserved under `sdk/docs/licenses/`.
 
@@ -37,6 +37,6 @@ payload.
 
 ## Optional USB Module
 
-TinyUSB is bundled under the optional `nsx-ambiq-usb-r5` module, not the core
-`nsx-ambiqsuite-r5` provider payload. TinyUSB carries its own MIT license at
-`modules/nsx-ambiq-usb-r5/sdk/third_party/tinyusb/source/LICENSE`.
+TinyUSB is bundled under the optional `nsx-ambiq-usb` module, not the core
+`nsx-ambiqsuite` provider payload. TinyUSB carries its own MIT license at
+`modules/nsx-ambiq-usb/sdk/third_party/tinyusb/source/LICENSE`.

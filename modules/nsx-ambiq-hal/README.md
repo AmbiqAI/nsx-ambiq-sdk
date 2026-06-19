@@ -1,9 +1,9 @@
-# nsx-ambiq-hal-r5
+# nsx-ambiq-hal
 
-`nsx-ambiq-hal-r5` exposes the AmbiqSuite R5 HAL surface used by NSX.
+`nsx-ambiq-hal` exposes the AmbiqSuite HAL surface used by NSX.
 
-This wrapper module expects an active `nsx-ambiqsuite-r5` provider and publishes
-the release-specific include paths, utility sources, and prebuilt HAL library
+This wrapper module expects an active `nsx-ambiqsuite` provider and publishes
+the provider include paths, utility sources, and prebuilt HAL library
 needed by generated apps.
 
 ## Toolchains
@@ -15,4 +15,4 @@ needed by generated apps.
 ## Dependencies
 
 - `nsx-cmsis-core` (required) — CMSIS-6 core headers.
-- `nsx-ambiqsuite-r5` (required) — SDK provider.
+- `nsx-ambiqsuite` (required) — SDK provider.

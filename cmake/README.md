@@ -57,7 +57,7 @@ The split should support definitions like:
 set(NSX_SOC_FAMILY "apollo5")
 set(NSX_SOC_CORE "cortex-m55")
 set(NSX_SOC_ARCH_CLASS "armv8_1m")
-set(NSX_SOC_SDK_PROVIDER "ambiqsuite-r5")
+set(NSX_SOC_SDK_PROVIDER "ambiqsuite")
 set(NSX_SOC_CAPABILITIES
     core:m55
     isa:armv8.1-m

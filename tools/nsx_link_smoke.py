@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from nsx_r5_toolchain_file import TOOLCHAIN_FAMILIES, write_toolchain_file
+from nsx_toolchain_file import TOOLCHAIN_FAMILIES, write_toolchain_file
 
 
 DEFAULT_BOARDS = (
@@ -37,23 +37,23 @@ if(POLICY CMP0123)
     cmake_policy(SET CMP0123 NEW)
 endif()
 
-project(nsx_r5_link_smoke C)
+project(nsx_link_smoke C)
 
 include(GNUInstallDirs)
 set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 
 set(NSX_ROOT "{repo.as_posix()}")
 set(NSX_CMAKE_DIR "${{NSX_ROOT}}/cmake")
-set(NSX_SDK_PROVIDER "ambiqsuite-r5")
+set(NSX_SDK_PROVIDER "ambiqsuite")
 set(NSX_TOOLCHAIN_FAMILY "{toolchain_family}")
 set(NSX_AMBIQSUITE_VERSION "R5.2.0")
-set(NSX_AMBIQSUITE_ROOT "${{NSX_ROOT}}/modules/nsx-ambiqsuite-r5/sdk")
+set(NSX_AMBIQSUITE_ROOT "${{NSX_ROOT}}/modules/nsx-ambiqsuite/sdk")
 
 include("${{NSX_ROOT}}/boards/{board}/board.cmake")
 
 add_subdirectory("${{NSX_ROOT}}/modules/nsx-cmsis-core" nsx-cmsis-core)
-add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-hal-r5" nsx-ambiq-hal-r5)
-add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-bsp-r5" nsx-ambiq-bsp-r5)
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-hal" nsx-ambiq-hal)
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-bsp" nsx-ambiq-bsp)
 add_subdirectory("${{NSX_ROOT}}/modules/nsx-soc-hal" nsx-soc-hal)
 
 add_executable(smoke main.c)
@@ -73,7 +73,7 @@ def run(command: list[str], *, cwd: Path | None = None) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build minimal NSX R5 link smokes for staged boards.")
+    parser = argparse.ArgumentParser(description="Build minimal NSX link smokes for staged boards.")
     parser.add_argument("--repo-root", type=Path, default=repo_root(), help="Path to nsx-ambiq-sdk checkout.")
     parser.add_argument("--build-root", type=Path, default=Path("build/link-smoke"), help="Build/output root.")
     parser.add_argument("--toolchain-family", choices=TOOLCHAIN_FAMILIES, default="armclang")
@@ -102,8 +102,8 @@ def main() -> int:
 
     if args.toolchain_file is not None and not toolchain_file.is_file():
         raise FileNotFoundError(toolchain_file)
-    if not (repo / "modules" / "nsx-ambiqsuite-r5" / "sdk").is_dir():
-        raise FileNotFoundError(repo / "modules" / "nsx-ambiqsuite-r5" / "sdk")
+    if not (repo / "modules" / "nsx-ambiqsuite" / "sdk").is_dir():
+        raise FileNotFoundError(repo / "modules" / "nsx-ambiqsuite" / "sdk")
 
     if build_root.exists() and not args.keep:
         shutil.rmtree(build_root)

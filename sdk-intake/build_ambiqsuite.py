@@ -33,6 +33,11 @@ class PartBuild:
     # drops; the body is identical to the donor save for a couple of includes.
     system_synth_from: str | None = None
     system_synth_subs: tuple[tuple[str, str], ...] = ()
+    # Toolchains this part is built for. Defaults to the full promoted set. Narrow
+    # it for parts that a toolchain cannot target (e.g. Apollo2 predates ACfE, so
+    # it ships gcc+atfe only). The provider train's toolchains form the union; this
+    # filters which (part, toolchain) pairs are actually built and published.
+    toolchains: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -127,39 +132,22 @@ OMITTED_PART_HEADERS = (
     "system_atomiq110.h",
 )
 
-# Per-train descriptors. A train maps to one nsx-ambiqsuite-rN provider module and
-# enumerates the parts/boards built for it, plus the headers pruned from its
-# payload. All trains are regenerated from a single latest AmbiqSuite ref, so an
-# older train (e.g. r4) is rebuilt at the latest SDK version, not pinned to its
-# historical release.
+# Single unified provider descriptor. Mirrors upstream `stable`: one
+# `nsx-ambiqsuite` provider module covers every released Apollo-class part/board.
+# Built from a single AmbiqSuite ref, so every part is regenerated at the same SDK
+# version rather than pinned to a historical release. Per-part toolchain narrowing
+# (e.g. Apollo2 ships gcc+atfe only) is expressed on each PartBuild; the train
+# toolchains below are the union across all parts.
 TRAINS: dict[str, TrainSpec] = {
-    "r5": TrainSpec(
-        train_id="r5",
-        provider_id="ambiqsuite-r5",
-        module_dir="nsx-ambiqsuite-r5",
+    "stable": TrainSpec(
+        train_id="stable",
+        provider_id="ambiqsuite",
+        module_dir="nsx-ambiqsuite",
         version=None,  # derived snapshot tag, e.g. stable-2026.06.17
         parts=(
             PartBuild("apollo330P"),
             PartBuild("apollo510"),
             PartBuild("apollo510L"),
-        ),
-        boards=(
-            BoardBuild("apollo330mP_evb", "apollo330P"),
-            BoardBuild("apollo510_evb", "apollo510"),
-            BoardBuild("apollo510b_evb", "apollo510"),
-            BoardBuild("apollo510dL_evb", "apollo510L"),
-        ),
-        toolchains=PROMOTED_TOOLCHAINS,
-        omitted_device_headers=OMITTED_DEVICE_HEADERS,
-        omitted_part_headers=OMITTED_PART_HEADERS,
-        display_bsp_headers=DISPLAY_BSP_HEADERS,
-    ),
-    "r4": TrainSpec(
-        train_id="r4",
-        provider_id="ambiqsuite-r4",
-        module_dir="nsx-ambiqsuite-r4",
-        version=None,  # derived snapshot tag, e.g. stable-2026.06.17
-        parts=(
             PartBuild(
                 "apollo4l",
                 clang_fpu=DEFAULT_M4F_FPU,
@@ -175,54 +163,31 @@ TRAINS: dict[str, TrainSpec] = {
                 ),
             ),
             PartBuild("apollo4p", clang_fpu=DEFAULT_M4F_FPU),
+            PartBuild("apollo3", clang_fpu=DEFAULT_M4F_FPU),
+            PartBuild("apollo3p", clang_fpu=DEFAULT_M4F_FPU),
+            # Apollo2 predates ACfE; build it for gcc+atfe only.
+            PartBuild("apollo2", clang_fpu=DEFAULT_M4F_FPU, toolchains=("gcc", "atfe")),
         ),
         boards=(
+            BoardBuild("apollo330mP_evb", "apollo330P"),
+            BoardBuild("apollo510_evb", "apollo510"),
+            BoardBuild("apollo510b_evb", "apollo510"),
+            BoardBuild("apollo510dL_evb", "apollo510L"),
             BoardBuild("apollo4l_evb", "apollo4l"),
             BoardBuild("apollo4l_blue_evb", "apollo4l", strip_display_include=True),
             BoardBuild("apollo4p_evb", "apollo4p"),
             BoardBuild("apollo4p_blue_kbr_evb", "apollo4p", strip_display_include=True),
             BoardBuild("apollo4p_blue_kxr_evb", "apollo4p", strip_display_include=True),
-        ),
-        toolchains=PROMOTED_TOOLCHAINS,
-        omitted_device_headers=OMITTED_DEVICE_HEADERS,
-        omitted_part_headers=OMITTED_PART_HEADERS,
-        display_bsp_headers=(),
-    ),
-    "r3": TrainSpec(
-        train_id="r3",
-        provider_id="ambiqsuite-r3",
-        module_dir="nsx-ambiqsuite-r3",
-        version=None,  # derived snapshot tag, e.g. stable-2026.06.17
-        parts=(
-            PartBuild("apollo3", clang_fpu=DEFAULT_M4F_FPU),
-            PartBuild("apollo3p", clang_fpu=DEFAULT_M4F_FPU),
-        ),
-        boards=(
             BoardBuild("apollo3_evb", "apollo3"),
             BoardBuild("apollo3_evb_cygnus", "apollo3"),
             BoardBuild("apollo3p_evb", "apollo3p"),
             BoardBuild("apollo3p_evb_cygnus", "apollo3p"),
+            BoardBuild("apollo2_evb", "apollo2", inject_gpio_pincfg_shim=True),
         ),
         toolchains=PROMOTED_TOOLCHAINS,
         omitted_device_headers=OMITTED_DEVICE_HEADERS,
         omitted_part_headers=OMITTED_PART_HEADERS,
-        display_bsp_headers=(),
-    ),
-    "r2": TrainSpec(
-        train_id="r2",
-        provider_id="ambiqsuite-r2",
-        module_dir="nsx-ambiqsuite-r2",
-        version=None,  # derived snapshot tag, e.g. stable-2026.06.17
-        parts=(
-            PartBuild("apollo2", clang_fpu=DEFAULT_M4F_FPU),
-        ),
-        boards=(
-            BoardBuild("apollo2_evb", "apollo2", inject_gpio_pincfg_shim=True),
-        ),
-        toolchains=("gcc", "atfe"),
-        omitted_device_headers=OMITTED_DEVICE_HEADERS,
-        omitted_part_headers=OMITTED_PART_HEADERS,
-        display_bsp_headers=(),
+        display_bsp_headers=DISPLAY_BSP_HEADERS,
     ),
 }
 
@@ -291,6 +256,21 @@ def artifact_root(train: TrainSpec, version: str) -> Path:
 
 def provider_sdk_root(train: TrainSpec) -> Path:
     return repo_root() / "modules" / train.module_dir / "sdk"
+
+
+def part_toolchains(train: TrainSpec, part: PartBuild) -> tuple[str, ...]:
+    """Toolchains a part is built for: its own narrowing if set, else the train
+    union. Lets a single unified train carry parts a toolchain cannot target
+    (e.g. Apollo2 ships gcc+atfe only) without dropping it from the others."""
+    return part.toolchains or train.toolchains
+
+
+def board_toolchains(train: TrainSpec, board: BoardBuild) -> tuple[str, ...]:
+    """Toolchains a board's BSP is built for, inherited from its part."""
+    for part in train.parts:
+        if part.name == board.part:
+            return part_toolchains(train, part)
+    return train.toolchains
 
 
 def display_path(path: Path) -> str:
@@ -859,14 +839,20 @@ def promote_license_docs(train: TrainSpec, sdk_root: Path) -> None:
         filelist.write_text("\n".join(line for line in lines if line != "LICENSE.pdf") + "\n", encoding="utf-8")
 
 
-def artifact_library_specs(train: TrainSpec) -> list[tuple[Path, Path]]:
+def artifact_library_specs(train: TrainSpec, toolchain: str | None = None) -> list[tuple[Path, Path]]:
     """(source-relative, dest-relative) paths below a toolchain dir for every
     HAL/BSP archive a fully-built train publishes. Source paths keep the upstream
-    `lib/` segment; dest paths drop it to match the promoted payload layout."""
+    `lib/` segment; dest paths drop it to match the promoted payload layout. When
+    a toolchain is given, only parts/boards that support it are included, so a
+    part a toolchain cannot target (e.g. Apollo2 under ACfE) is not expected."""
     specs: list[tuple[Path, Path]] = []
     for part in train.parts:
+        if toolchain is not None and toolchain not in part_toolchains(train, part):
+            continue
         specs.append((Path("lib") / part.name / "libam_hal.a", Path(part.name) / "libam_hal.a"))
     for board in train.boards:
+        if toolchain is not None and toolchain not in board_toolchains(train, board):
+            continue
         specs.append((
             Path("lib") / board.part / board.name / "libam_bsp.a",
             Path(board.part) / board.name / "libam_bsp.a",
@@ -887,10 +873,9 @@ def missing_artifact_libraries(train: TrainSpec, version: str) -> list[str]:
     toolchains that were built. Empty means the on-disk set is complete enough to
     publish the full train for every built toolchain."""
     root = artifact_root(train, version)
-    specs = artifact_library_specs(train)
     missing: list[str] = []
     for name in built_artifact_toolchains(train, version):
-        for source_rel, _ in specs:
+        for source_rel, _ in artifact_library_specs(train, name):
             if not (root / name / source_rel).is_file():
                 missing.append((Path(name) / source_rel).as_posix())
     return missing
@@ -910,9 +895,8 @@ def promote_artifact_libraries(train: TrainSpec, version: str) -> None:
             f"incomplete artifact set under {display_path(source_root)}; missing: " + ", ".join(missing)
         )
     shutil.rmtree(destination_root, ignore_errors=True)
-    specs = artifact_library_specs(train)
     for name in toolchains:
-        for source_rel, dest_rel in specs:
+        for source_rel, dest_rel in artifact_library_specs(train, name):
             copy_file(source_root / name / source_rel, destination_root / name / dest_rel)
 
 
@@ -1124,7 +1108,7 @@ def write_manifest(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build AmbiqSuite HAL/BSP artifacts from a local SDK source tree.")
-    parser.add_argument("--train", choices=tuple(TRAINS), default="r5", help="Provider train to build/promote (selects parts, boards, and target module). Default: r5.")
+    parser.add_argument("--train", choices=tuple(TRAINS), default="stable", help="Provider train to build/promote (selects parts, boards, and target module). Default: stable.")
     parser.add_argument("--only-part", action="append", default=[], metavar="PART", help="Restrict the build/promote to the named part(s). May be repeated. Boards are filtered to the selected parts.")
     parser.add_argument("--version", default=None, help="AmbiqSuite version label, for example R5.2.0. Defaults to the train's version.")
     parser.add_argument("--zip", dest="zip_path", type=Path, help="Path to AmbiqSuite zip drop.")
@@ -1222,9 +1206,15 @@ def main() -> int:
                 require_tool(tool)
             print(f"==> Building {version} HAL/BSP artifacts for {build_train.train_id}/{name}", flush=True)
             for part in build_train.parts:
+                if name not in part_toolchains(build_train, part):
+                    print(f"    skip HAL {part.name} (no {name} support)", flush=True)
+                    continue
                 print(f"    HAL {part.name}", flush=True)
                 build_hal(sdk_root, profile, part, build_train, version, verbose=args.verbose, clang_fpu=resolve_fpu(part.clang_fpu))
             for board in build_train.boards:
+                if name not in board_toolchains(build_train, board):
+                    print(f"    skip BSP {board.name} ({board.part}, no {name} support)", flush=True)
+                    continue
                 part = next(p for p in build_train.parts if p.name == board.part)
                 print(f"    BSP {board.name} ({board.part})", flush=True)
                 build_bsp(sdk_root, profile, board, build_train, version, verbose=args.verbose, clang_fpu=resolve_fpu(part.clang_fpu))

@@ -18,6 +18,18 @@ def load_build_ambiqsuite(repo_root: Path):
     return module
 
 
+def _apollo2_train(helper):
+    """The unified `stable` train narrowed to its single legacy part (apollo2 /
+    apollo2_evb, gcc+atfe). Gives these unit tests a small, fully-enumerable
+    provider without standing up all 8 parts / 14 boards."""
+    full = helper.TRAINS["stable"]
+    return helper.replace(
+        full,
+        parts=tuple(p for p in full.parts if p.name == "apollo2"),
+        boards=tuple(b for b in full.boards if b.part == "apollo2"),
+    )
+
+
 def test_write_manifest_uses_portable_tool_names(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
     helper = load_build_ambiqsuite(repo_root)
     manifest_root = tmp_path / "artifacts"
@@ -45,7 +57,7 @@ def test_write_manifest_uses_portable_tool_names(repo_root: Path, tmp_path: Path
     }
 
     helper.write_manifest(
-        helper.TRAINS["r2"],
+        _apollo2_train(helper),
         "stable-2026.06.17",
         sdk_root,
         profiles,
@@ -73,7 +85,7 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
         helper,
         "parse_args",
         lambda: argparse.Namespace(
-            train="r5",
+            train="stable",
             only_part=["apollo510"],
             version="stable-2026.06.17",
             toolchain=[],
@@ -110,7 +122,7 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
 
     assert helper.main() == 0
 
-    full_train = helper.TRAINS["r5"]
+    full_train = helper.TRAINS["stable"]
     expected_parts = [part.name for part in full_train.parts]
     expected_boards = [board.name for board in full_train.boards]
     assert calls["manifest"] == [(expected_parts, expected_boards)]
@@ -124,7 +136,7 @@ def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, 
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
     # A manifest from the original full build already exists on disk.
-    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite-r5\n", encoding="utf-8")
+    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n", encoding="utf-8")
     wrote: list[str] = []
     promoted: list[str] = []
 
@@ -132,7 +144,7 @@ def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, 
         helper,
         "parse_args",
         lambda: argparse.Namespace(
-            train="r5",
+            train="stable",
             only_part=[],
             version="stable-2026.06.17",
             toolchain=[],
@@ -168,7 +180,7 @@ def test_build_promote_rejects_unprofiled_built_toolchain(repo_root: Path, tmp_p
         helper,
         "parse_args",
         lambda: argparse.Namespace(
-            train="r5",
+            train="stable",
             only_part=[],
             version="stable-2026.06.17",
             toolchain=[],
@@ -204,7 +216,7 @@ def _make_artifact(root: Path, toolchain: str, *parts: str) -> None:
 
 def test_promote_artifact_libraries_rejects_incomplete_toolchain(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
     helper = load_build_ambiqsuite(repo_root)
-    train = helper.TRAINS["r2"]  # part apollo2, board apollo2_evb, toolchains gcc + atfe
+    train = _apollo2_train(helper)  # part apollo2, board apollo2_evb, toolchains gcc + atfe
     version = "test"
     artifacts = tmp_path / "artifacts"
     provider = tmp_path / "provider"
@@ -227,7 +239,7 @@ def test_promote_artifact_libraries_rejects_incomplete_toolchain(repo_root: Path
 
 def test_promote_artifact_libraries_promotes_complete_set(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
     helper = load_build_ambiqsuite(repo_root)
-    train = helper.TRAINS["r2"]
+    train = _apollo2_train(helper)
     version = "test"
     artifacts = tmp_path / "artifacts"
     provider = tmp_path / "provider"

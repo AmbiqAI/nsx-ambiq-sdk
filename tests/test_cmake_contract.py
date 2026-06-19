@@ -142,7 +142,7 @@ def test_toolchain_helper_defines_required_contract_functions(repo_root: Path) -
     assert "function(nsx_atfe_prefers_gcc_prebuilt out_var)" in helper
     assert "function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)" in helper
     assert "function(nsx_apply_toolchain_flags target)" in helper
-    assert "set(NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES gcc atfe armclang)" in helper
+    assert "set(NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES gcc atfe armclang)" in helper
     assert "thumbv8.1m.main-unknown-none-eabihf" in helper
     assert "arm-arm-none-eabi" in helper
     assert "set(nsx_link_flags --cpu=${NSX_CPU})" in helper

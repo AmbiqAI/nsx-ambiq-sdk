@@ -4,7 +4,7 @@
 # AmbiqSuite SDK release. Provides the ARM-published Core headers (core_cm*,
 # cmsis_compiler/gcc/armclang/iccarm/clang, mpu/pmu/cache/pac via m-profile/)
 # as a single INTERFACE target that other NSX modules consume in place of the
-# Core headers historically vendored inside nsx-ambiqsuite-r{3,4,5}/sdk/CMSIS/.
+# Core headers historically vendored inside the AmbiqSuite provider's sdk/CMSIS/.
 #
 # Source: ARM-software/CMSIS_6 v6.2.0 (CMSIS-Core(M) v6.1).
 

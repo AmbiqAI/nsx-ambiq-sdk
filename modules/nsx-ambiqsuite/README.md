@@ -1,8 +1,8 @@
-# nsx-ambiqsuite-r5
+# nsx-ambiqsuite
 
-`nsx-ambiqsuite-r5` is the AmbiqSuite R5 SDK provider for NSX modules.
+`nsx-ambiqsuite` is the unified AmbiqSuite SDK provider for NSX modules.
 
-This module exposes the curated AmbiqSuite R5 SDK provider payload under `sdk/`
+This module exposes the curated AmbiqSuite SDK provider payload under `sdk/`
 and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 ## SDK Version
@@ -54,7 +54,7 @@ CMSIS DSP are separate module inputs.
 Provider promotion is destructive and repeatable: `sdk-intake/build_ambiqsuite.py
 --promote-only` recreates `sdk/` from the local AmbiqSuite drop and generated
 artifacts. The V1 source payload is the three utility sources linked by
-`nsx-ambiq-hal-r5`, plus the CMSIS per-family `system_*.c` sources staged under
+`nsx-ambiq-hal`, plus the CMSIS per-family `system_*.c` sources staged under
 `sdk/CMSIS/AmbiqMicro/Source/`.
 
 NSX curation for this provider must not patch imported AmbiqSuite source files

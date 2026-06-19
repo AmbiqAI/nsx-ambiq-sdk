@@ -66,7 +66,7 @@ function(nsx_select_linker_script)
     endif()
 endfunction()
 
-set(NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES gcc atfe armclang)
+set(NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES gcc atfe armclang)
 set(NSX_NEWLIB_TOOLCHAIN_FAMILIES gcc atfe)
 
 # Supported linker-script profiles. "default" keeps the standard SBL layout;
@@ -81,7 +81,7 @@ set(NSX_SOC_FAMILIES_APOLLO3 apollo3 apollo3p)
 set(NSX_SOC_FAMILIES_APOLLO2 apollo2)
 
 function(nsx_toolchain_uses_newlib out_var)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
     set(result FALSE)
     if(NSX_TOOLCHAIN_FAMILY IN_LIST NSX_NEWLIB_TOOLCHAIN_FAMILIES)
         set(result TRUE)
@@ -90,7 +90,7 @@ function(nsx_toolchain_uses_newlib out_var)
 endfunction()
 
 function(nsx_toolchain_is_armclang out_var)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
     set(result FALSE)
     if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang")
         set(result TRUE)
@@ -125,14 +125,14 @@ function(nsx_select_soc_arch_dir out_var)
 endfunction()
 
 function(nsx_validate_prebuilt_abi)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
     if(DEFINED NSX_FLOAT_ABI AND NOT NSX_FLOAT_ABI STREQUAL "hard")
-        message(FATAL_ERROR "AmbiqSuite R5 prebuilt artifacts require hard-float ABI; got NSX_FLOAT_ABI='${NSX_FLOAT_ABI}'.")
+        message(FATAL_ERROR "AmbiqSuite prebuilt artifacts require hard-float ABI; got NSX_FLOAT_ABI='${NSX_FLOAT_ABI}'.")
     endif()
 endfunction()
 
 # Single source of truth for the "ATFE links the GCC prebuilt vendor archives"
-# policy, consumed consistently by the R3/R4/R5 prebuilt HAL+BSP modules.
+# policy, consumed consistently by the prebuilt HAL+BSP modules.
 #
 # TEMPORARY WORKAROUND (USB CDC regression): the ATFE-rebuilt AmbiqSuite HAL
 # archive breaks USB CDC EP0 enumeration on Apollo510 (device enumerates but
@@ -141,7 +141,7 @@ endfunction()
 # correctly. Remove this policy (and the call sites) once the ATFE prebuilt is
 # fixed at the AmbiqSuite source level. See nsx-ap510-runtime-validation note.
 function(nsx_atfe_prefers_gcc_prebuilt out_var)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
 
     if(NSX_TOOLCHAIN_FAMILY STREQUAL "atfe")
         set(${out_var} TRUE PARENT_SCOPE)
@@ -151,7 +151,7 @@ function(nsx_atfe_prefers_gcc_prebuilt out_var)
 endfunction()
 
 function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
 
     set(nsx_artifact_toolchain "${NSX_TOOLCHAIN_FAMILY}")
     if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang")
@@ -159,7 +159,7 @@ function(nsx_resolve_ambiqsuite_artifact_toolchain out_var)
     endif()
 
     # Apply the shared ATFE->GCC prebuilt policy (see nsx_atfe_prefers_gcc_prebuilt).
-    # Consumed by every nsx-ambiq-hal-r* / nsx-ambiq-bsp-r* module; for atfe it maps
+    # Consumed by the nsx-ambiq-hal / nsx-ambiq-bsp modules; for atfe it maps
     # the artifact directory (lib/<toolchain>/) to the gcc variant. Any future
     # caller inherits the same policy by design.
     nsx_atfe_prefers_gcc_prebuilt(nsx_atfe_use_gcc)
@@ -174,7 +174,7 @@ function(nsx_apply_toolchain_flags target)
     if(NOT TARGET ${target})
         message(FATAL_ERROR "Cannot apply NSX toolchain flags to missing target '${target}'.")
     endif()
-    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_R5_TOOLCHAIN_FAMILIES})
+    nsx_require_enum_value(NSX_TOOLCHAIN_FAMILY ${NSX_AMBIQSUITE_TOOLCHAIN_FAMILIES})
     if(NOT DEFINED NSX_CPU)
         message(FATAL_ERROR "NSX_CPU must be set before applying NSX toolchain flags.")
     endif()

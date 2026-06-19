@@ -1,6 +1,6 @@
 # Upstream Licensing Notice
 
-`nsx-ambiqsuite-r5` contains imported AmbiqSuite R5-era SDK content under
+`nsx-ambiqsuite` contains imported AmbiqSuite SDK content under
 `sdk/`.
 
 This repo does not apply a new NSX-authored root license over the imported SDK

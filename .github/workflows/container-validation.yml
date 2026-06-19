@@ -59,21 +59,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build dev/CI container
-        run: docker build -f docker/dev-ci.Dockerfile -t nsx-r5-dev-ci:local .
+        run: docker build -f docker/dev-ci.Dockerfile -t nsx-dev-ci:local .
 
       - name: Show toolchain versions
         run: |
-          docker run --rm nsx-r5-dev-ci:local sh -lc '$GCC_ROOT/bin/arm-none-eabi-gcc --version | head -n 1'
-          docker run --rm nsx-r5-dev-ci:local sh -lc '$ATFE_ROOT/bin/clang --version | head -n 1'
-          docker run --rm nsx-r5-dev-ci:local sh -lc 'test -x "$ACFE_ROOT/bin/armclang" && test -x "$ACFE_ROOT/bin/armlm" && echo "ACfE installed at $ACFE_ROOT"'
+          docker run --rm nsx-dev-ci:local sh -lc '$GCC_ROOT/bin/arm-none-eabi-gcc --version | head -n 1'
+          docker run --rm nsx-dev-ci:local sh -lc '$ATFE_ROOT/bin/clang --version | head -n 1'
+          docker run --rm nsx-dev-ci:local sh -lc 'test -x "$ACFE_ROOT/bin/armclang" && test -x "$ACFE_ROOT/bin/armlm" && echo "ACfE installed at $ACFE_ROOT"'
 
       - name: Run container validation scaffold
         run: |
           docker run --rm \
             -v "$PWD:/workspace" \
             -w /workspace \
-            nsx-r5-dev-ci:local \
-            sh -lc 'UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv sync --group ci && UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_r5_link_smoke.py tools/nsx_r5_toolchain_file.py'
+            nsx-dev-ci:local \
+            sh -lc 'UV_PROJECT_ENVIRONMENT=/tmp/nsx-venv uv sync --group ci && UV_PROJECT_ENVIRONMENT=/tmp/nsx-venv uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py tools/nsx_link_smoke.py tools/nsx_toolchain_file.py'
 
       - name: Run selected link smoke
         if: ${{ inputs.run_smoke == 'true' }}
@@ -83,7 +83,7 @@ jobs:
             -e TOOLCHAIN_FAMILY="${TOOLCHAIN_FAMILY}" \
             -v "$PWD:/workspace" \
             -w /workspace \
-            nsx-r5-dev-ci:local \
+            nsx-dev-ci:local \
             sh -lc '
               set -e
               if [ "${TOOLCHAIN_FAMILY}" = armclang ]; then
@@ -93,7 +93,7 @@ jobs:
                 fi
                 "$ACFE_ROOT/bin/armlm" activate -code "$ARMLM_ACTIVATION_CODE"
               fi
-              UV_PROJECT_ENVIRONMENT=/tmp/nsx-r5-venv uv run --group ci python tools/nsx_r5_link_smoke.py \
+              UV_PROJECT_ENVIRONMENT=/tmp/nsx-venv uv run --group ci python tools/nsx_link_smoke.py \
                 --toolchain-family "${TOOLCHAIN_FAMILY}" \
                 --build-root "build/link-smoke-${TOOLCHAIN_FAMILY}" \
                 --verbose
@@ -126,7 +126,7 @@ jobs:
             -v "$PWD:/workspace" \
             -v "${AMBIQSUITE_REPO_PATH}:/ambiqsuite-repo" \
             -w /workspace \
-            nsx-r5-dev-ci:local \
+            nsx-dev-ci:local \
             sh -lc '
               set -e
               if [ "${SDK_TOOLCHAIN}" = acfe ] || [ "${SDK_TOOLCHAIN}" = all ]; then
@@ -138,7 +138,7 @@ jobs:
                 --force-source-ref \
                 --toolchain "${SDK_TOOLCHAIN}" \
                 --promote
-              for path in artifacts modules/nsx-ambiqsuite-r5/sdk; do [ ! -e "$path" ] || chown -R "$HOST_UID:$HOST_GID" "$path"; done
+              for path in artifacts modules/nsx-ambiqsuite/sdk; do [ ! -e "$path" ] || chown -R "$HOST_UID:$HOST_GID" "$path"; done
             '
         env:
           SDK_TOOLCHAIN: ${{ inputs.sdk_toolchain }}

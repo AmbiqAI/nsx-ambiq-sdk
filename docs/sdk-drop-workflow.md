@@ -59,7 +59,7 @@ artifacts/
         manifest.yaml
 
 cmake/sdks/
-    ambiqsuite-r5.4.0.cmake  # SDK-provider descriptor
+    ambiqsuite.cmake  # SDK-provider descriptor
 
 cmake/socs/
     apollo510.cmake
@@ -143,8 +143,8 @@ Promotion is repeatable and destructive for the provider payload:
 python sdk-intake/build_ambiqsuite.py --version R5.2.0 --promote-only
 ```
 
-The promoted `modules/nsx-ambiqsuite-r5/sdk/` tree contains approved headers,
-system sources, the three utility sources linked by `nsx-ambiq-hal-r5`, and
+The promoted `modules/nsx-ambiqsuite/sdk/` tree contains approved headers,
+system sources, the three utility sources linked by `nsx-ambiq-hal`, and
 prebuilt HAL/BSP libraries under `sdk/lib/<toolchain>/...`. It intentionally does
 not retain raw HAL/BSP source, examples, resource source files, or MSPI device
 driver source files.

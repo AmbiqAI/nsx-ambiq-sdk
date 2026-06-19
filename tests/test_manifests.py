@@ -256,7 +256,7 @@ def test_sdk_drop_manifest_template_parseable(repo_root: Path) -> None:
 
     manifest_path = repo_root / "docs" / "sdk-drop-manifest.example.yaml"
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    assert manifest["sdk"]["provider"] == "ambiqsuite-r5"
+    assert manifest["sdk"]["provider"] == "ambiqsuite"
     assert manifest["artifacts"]["output_root"]
     assert manifest["parts"]
     assert manifest["boards"]

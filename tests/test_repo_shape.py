@@ -147,8 +147,8 @@ def test_repo_has_ci_and_pre_commit_entrypoints(repo_root: Path) -> None:
     assert "ATFE_ROOT/bin/clang" in container_workflow_text
     assert "ACFE_ROOT/bin/armclang" in container_workflow_text
     assert "ARMLM_ACTIVATION_CODE" in container_workflow_text
-    assert "tools/nsx_r5_link_smoke.py" in container_workflow_text
-    assert "tools/nsx_r5_toolchain_file.py" in container_workflow_text
+    assert "tools/nsx_link_smoke.py" in container_workflow_text
+    assert "tools/nsx_toolchain_file.py" in container_workflow_text
     assert "sdk-intake/build_ambiqsuite.py" in container_workflow_text
     assert "--toolchain" in container_workflow_text
     assert "--promote" in container_workflow_text
@@ -156,14 +156,14 @@ def test_repo_has_ci_and_pre_commit_entrypoints(repo_root: Path) -> None:
     assert "chown -R" in container_workflow_text
     assert "pytest contract tests" in pre_commit_text
     assert "sdk-intake/build_ambiqsuite.py" in pre_commit_text
-    assert "tools/nsx_r5_link_smoke.py" in pre_commit_text
-    assert "tools/nsx_r5_toolchain_file.py" in pre_commit_text
+    assert "tools/nsx_link_smoke.py" in pre_commit_text
+    assert "tools/nsx_toolchain_file.py" in pre_commit_text
 
 
 def test_toolchain_smoke_scaffold_is_present(repo_root: Path) -> None:
     legacy_license_env = "ARMLMD" + "_LICENSE_FILE"
-    smoke_script = repo_root / "tools" / "nsx_r5_link_smoke.py"
-    toolchain_script = repo_root / "tools" / "nsx_r5_toolchain_file.py"
+    smoke_script = repo_root / "tools" / "nsx_link_smoke.py"
+    toolchain_script = repo_root / "tools" / "nsx_toolchain_file.py"
     smoke_doc = repo_root / "docs" / "toolchain-smoke.md"
     dev_ci_dockerfile = repo_root / "docker" / "dev-ci.Dockerfile"
     devcontainer = repo_root / ".devcontainer" / "devcontainer.json"
@@ -204,7 +204,7 @@ def test_toolchain_smoke_scaffold_is_present(repo_root: Path) -> None:
     assert '"ARMLM_ACTIVATION_CODE": "${localEnv:ARMLM_ACTIVATION_CODE}"' in devcontainer_text
     assert legacy_license_env not in devcontainer_text
     assert "/opt/toolchains/gcc/bin:/opt/toolchains/acfe/bin:/opt/toolchains/atfe/bin" in devcontainer_text
-    assert "/opt/venvs/nsx-r5" in devcontainer_text
+    assert "/opt/venvs/nsx" in devcontainer_text
     assert "bash .devcontainer/post-create.sh" in devcontainer_text
     assert "armlm" in devcontainer_post_create_text
     assert "activate -code" in devcontainer_post_create_text

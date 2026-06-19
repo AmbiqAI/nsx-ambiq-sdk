@@ -37,7 +37,7 @@ start-up surface.
 - `nsx-cmsis-core` — provides the CMSIS-6 core headers (`core_cm*.h`,
   `cmsis_compiler.h`, `cmsis_gcc.h`, `cmsis_armclang.h`, `cmsis_clang.h`)
   consumed by the startup sources.
-- An active SDK provider (`nsx-ambiqsuite-r3/r4/r5`) — supplies
+- An active SDK provider (`nsx-ambiqsuite`) — supplies
   `system_<part>.c`.
 - The selected board module — supplies `board.cmake`, the linker script path,
   and the part/family defines.

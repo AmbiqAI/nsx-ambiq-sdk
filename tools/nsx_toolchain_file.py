@@ -90,7 +90,7 @@ def write_toolchain_file(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Write an NSX R5 CMake toolchain file.")
+    parser = argparse.ArgumentParser(description="Write an NSX CMake toolchain file.")
     parser.add_argument("--toolchain-family", choices=TOOLCHAIN_FAMILIES, required=True)
     parser.add_argument("--output", type=Path, required=True, help="Path to write the CMake toolchain file.")
     parser.add_argument("--gcc-root", type=Path, default=default_root("GCC_ROOT", "/opt/toolchains/gcc"))
