@@ -243,7 +243,8 @@
  *
  *       - nsx_cache_publish_writes(): make prior CPU writes visible to other
  *         bus masters (device -> host/DMA). AP3 drains write buffers, AP4
- *         flushes DAXI, AP5 cleans the D-cache.
+ *         flushes DAXI, AP5 cleans the D-cache. Operates on data only; it does
+ *         not maintain the instruction cache.
  *       - nsx_cache_invalidate_observed_data(): discard stale CPU copies so
  *         the next read observes external writes (host/DMA -> device). Only
  *         AP5-class parts expose a real data-cache invalidate; on AP2/AP3/AP4
@@ -265,36 +266,41 @@
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
     defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
-  #define NSX_CACHE__FAMILY_AP5 1
+  #define NSX_CACHE_FAMILY_AP5_ 1
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
-  #define NSX_CACHE__FAMILY_AP4 1
+  #define NSX_CACHE_FAMILY_AP4_ 1
 #elif defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
-  #define NSX_CACHE__FAMILY_AP3 1
+  #define NSX_CACHE_FAMILY_AP3_ 1
 #elif defined(AM_PART_APOLLO2)
-  #define NSX_CACHE__FAMILY_AP2 1
+  #define NSX_CACHE_FAMILY_AP2_ 1
 #endif
 
 /* ---- Capability flags (1 = guarantee honored, 0 = reports unsupported) ---- */
-#if defined(NSX_CACHE__FAMILY_AP3) || defined(NSX_CACHE__FAMILY_AP4) || \
-    defined(NSX_CACHE__FAMILY_AP5)
+#if defined(NSX_CACHE_FAMILY_AP3_) || defined(NSX_CACHE_FAMILY_AP4_) || \
+    defined(NSX_CACHE_FAMILY_AP5_)
   #define NSX_CACHE_HAS_PUBLISH_WRITES 1
 #else
   #define NSX_CACHE_HAS_PUBLISH_WRITES 0
 #endif
 
-#if defined(NSX_CACHE__FAMILY_AP5)
+#if defined(NSX_CACHE_FAMILY_AP5_)
   #define NSX_CACHE_HAS_INVALIDATE_OBSERVED 1
 #else
   #define NSX_CACHE_HAS_INVALIDATE_OBSERVED 0
 #endif
 
-#if defined(NSX_CACHE__FAMILY_AP4) || defined(NSX_CACHE__FAMILY_AP5)
+#if defined(NSX_CACHE_FAMILY_AP4_) || defined(NSX_CACHE_FAMILY_AP5_)
   #define NSX_CACHE_HAS_SYNC_SHARED 1
 #else
   #define NSX_CACHE_HAS_SYNC_SHARED 0
 #endif
 
-#if defined(NSX_CACHE__FAMILY_AP5)
+/*
+ * Set on parts with explicit data-cache clean/invalidate semantics. Reserved
+ * for a future address-range maintenance API (nsx_dcache_*_range); the current
+ * helpers operate on the whole cache only.
+ */
+#if defined(NSX_CACHE_FAMILY_AP5_)
   #define NSX_CACHE_HAS_EXPLICIT_DCACHE 1
 #else
   #define NSX_CACHE_HAS_EXPLICIT_DCACHE 0

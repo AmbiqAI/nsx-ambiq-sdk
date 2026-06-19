@@ -96,7 +96,7 @@ Macros degrade gracefully on simpler SoCs (fall back to default sections).
 
 Capability matrix (✓ = honored, — = reports `NSX_CACHE_UNSUPPORTED`):
 
-| Family | enable/ disable | publish_writes | invalidate_observed | sync_shared | Underlying primitive |
+| Family | enable/disable | publish_writes | invalidate_observed | sync_shared | Underlying primitive |
 | --- | :---: | :---: | :---: | :---: | --- |
 | Apollo2 | ✓ | — | — | — | enable/disable only; no public bus-flush |
 | Apollo3 / 3P | ✓ | ✓ | — | — | `am_hal_sysctrl_bus_write_flush()` (SYNC_READ) |
@@ -108,10 +108,15 @@ real CPU data cache over data memory. On Apollo2/3/4 data memory is not CPU
 read-cached (Apollo4 DAXI is a write buffer, not a read cache), so that
 guarantee correctly reports unsupported rather than pretending to act.
 
+These helpers maintain data only; none of them touch the instruction cache.
+
 Callers can branch at compile time on the capability macros
 (`NSX_CACHE_HAS_PUBLISH_WRITES`, `NSX_CACHE_HAS_INVALIDATE_OBSERVED`,
 `NSX_CACHE_HAS_SYNC_SHARED`, `NSX_CACHE_HAS_EXPLICIT_DCACHE`) or at run time on
-the `NSX_CACHE_UNSUPPORTED` return code.
+the `NSX_CACHE_UNSUPPORTED` return code. `NSX_CACHE_HAS_EXPLICIT_DCACHE` marks
+parts with explicit data-cache clean/invalidate semantics and is reserved for a
+future address-range maintenance API; the current helpers operate on the whole
+cache only.
 
 ## Toolchains
 
