@@ -30,7 +30,7 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 | `nsx_ring_buffer.h` | Byte-oriented ring buffer with interrupt-safe push/pop operations |
 | `nsx_system.h` | Modular system init: composable startup building blocks and documentation of boot sequence / gotchas |
 | `nsx_presets.h` | Opinionated, opt-in system presets (`nsx_system_development` / `_inference` / `_minimal`); link `nsx::presets` |
-| `nsx_mem.h` | Portable memory-placement macros (`NSX_MEM_SRAM`, `NSX_MEM_FAST_CODE`, etc.) and `nsx_cache_enable()` |
+| `nsx_mem.h` | Portable memory-placement macros (`NSX_MEM_SRAM`, `NSX_MEM_FAST_CODE`, etc.) and cache helpers (`nsx_cache_enable()`, `nsx_cache_flush()`) |
 
 ## nsx_system Quick Start
 
@@ -78,6 +78,17 @@ NSX_MEM_FAST_CODE void hot_isr(void) { ... }         // ITCM (AP510) / DTCM (AP5
 ```
 
 Macros degrade gracefully on simpler SoCs (fall back to default sections).
+
+`nsx_mem.h` also exposes lightweight cache helpers for common portable flows:
+
+- `nsx_cache_enable()` / `nsx_cache_disable()` for turning cache on or off
+- `nsx_cache_flush()` for making prior CPU writes visible on AP3+ without
+  callers needing to know whether the target uses Apollo3 sync-read flush,
+  Apollo4 DAXI flush, or Apollo5 split-cache maintenance
+
+Apollo2 also uses the shared `nsx_cache_enable()` / `nsx_cache_disable()`
+shim, but `nsx_cache_flush()` currently degrades to a no-op there because the
+public r2 HAL surface in this SDK does not expose a standard bus-flush helper.
 
 ## Toolchains
 
