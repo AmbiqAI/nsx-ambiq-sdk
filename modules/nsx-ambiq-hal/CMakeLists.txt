@@ -11,6 +11,20 @@ if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR "nsx-ambiq-hal requires NSX_SDK_PROVIDER=ambiqsuite.")
 endif()
 
+# The PMU helper surface (includes-api + nsx_ambiq_pmu.c + am_util_pmu.c) ships
+# only for SoCs whose HAL exposes the armv8m PMU. Derive that capability from
+# the published SoC fact (NSX_SOC_PMU_TIER, set by cmake/socs/_facts/<skew>.cmake
+# via nsx_load_soc_facts) so neither the SDK SoC descriptors nor downstream
+# board.cmake files have to set NSX_AMBIQ_HAL_HAS_PMU by hand. An explicit value
+# set before this module is added still wins.
+if(NOT DEFINED NSX_AMBIQ_HAL_HAS_PMU)
+    if(DEFINED NSX_SOC_PMU_TIER AND NSX_SOC_PMU_TIER STREQUAL "armv8m")
+        set(NSX_AMBIQ_HAL_HAS_PMU TRUE)
+    else()
+        set(NSX_AMBIQ_HAL_HAS_PMU FALSE)
+    endif()
+endif()
+
 option(NSX_AMBIQSUITE_USE_PREBUILT "Use prebuilt AmbiqSuite static libraries" ON)
 option(NSX_AMBIQSUITE_USE_SOURCE_FALLBACK "Use local source fallback if prebuilt is disabled" ON)
 

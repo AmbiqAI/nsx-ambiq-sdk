@@ -12,8 +12,6 @@ set(NSX_AMBIQ_PART_NAME "apollo330P")
 set(NSX_AMBIQ_MCU_DIR "${NSX_AMBIQSUITE_ROOT}/mcu/${NSX_AMBIQ_PART_NAME}")
 set(NSX_AMBIQ_HAL_DIR "${NSX_AMBIQ_MCU_DIR}/hal")
 set(NSX_AMBIQ_HAL_MCU_DIR "${NSX_AMBIQ_HAL_DIR}/mcu")
-# This SoC's HAL exposes the armv8m PMU helper surface (nsx-ambiq-hal/includes-api).
-set(NSX_AMBIQ_HAL_HAS_PMU TRUE)
 
 include("${NSX_CMAKE_DIR}/nsx_toolchain_flags.cmake")
 
