@@ -1,8 +1,8 @@
 # Core SDK Scope
 
 The unified `nsx-ambiq-sdk` package publishes a curated NSX core SDK surface
-for Ambiq silicon across AmbiqSuite release trains. The current stable provider
-line is `nsx-ambiqsuite-r5`. It does not republish the full AmbiqSuite zip.
+for Ambiq silicon across AmbiqSuite releases. It is fronted by a single SDK
+provider, `nsx-ambiqsuite`. It does not republish the full AmbiqSuite zip.
 
 AmbiqSuite drops are broad distribution archives: they include HAL, BSP,
 headers, startup/system code, prebuilt libraries, examples, middleware,
@@ -43,9 +43,9 @@ These should not be pulled into the core SDK bundle by default:
 - raw HAL/BSP source when it is not redistributable.
 
 Out-of-scope components can still be supported as separate optional NSX modules
-or application dependencies. When the component is shipped by the AmbiqSuite R5
-drop and tightly coupled to the R5 HAL/BSP, it may live in this repository as a
-separate opt-in module. It must not be bundled into the base `nsx-ambiqsuite-r5`
+or application dependencies. When the component is shipped by the AmbiqSuite
+drop and tightly coupled to the HAL/BSP, it may live in this repository as a
+separate opt-in module. It must not be bundled into the base `nsx-ambiqsuite`
 provider surface.
 
 ## Optional Module Candidates
@@ -53,15 +53,15 @@ provider surface.
 | Component | Preferred home |
 | --- | --- |
 | FreeRTOS | `nsx-freertos` or application-owned RTOS module |
-| TinyUSB | `nsx-ambiq-usb-r5` for the SDK-vendored R5 substrate; wrapper policy in `nsx-usb` |
-| Ambiq USB integration | `nsx-ambiq-usb-r5` substrate plus higher-level `nsx-usb` wrapper |
+| TinyUSB | `nsx-ambiq-usb` for the SDK-vendored substrate; wrapper policy in `nsx-usb` |
+| Ambiq USB integration | `nsx-ambiq-usb` substrate plus higher-level `nsx-usb` wrapper |
 | CMSIS-NN | separate `nsx-cmsis-nn` module/repo |
 | CMSIS-DSP | separate `nsx-cmsis-dsp` module/repo |
 | Cordio/Bluetooth | separate wireless/Bluetooth module family |
 | SEGGER RTT/SystemView/J-Link helpers | tooling/debug module, not core SDK |
 | AmbiqSuite examples | examples repo or app templates, not core SDK |
 | GPIO button/trigger helpers | `nsx-gpio-input` or board/application module |
-| PSRAM setup helpers | `nsx-external-memory` or `nsx-psram-ambiqsuite-r5` |
+| PSRAM setup helpers | `nsx-external-memory` or `nsx-psram-ambiqsuite` |
 | MSPI flash/NVM helpers | `nsx-mspi-flash` plus concrete flash driver module |
 
 ## Intake Rule
