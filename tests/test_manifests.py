@@ -37,8 +37,7 @@ FORBIDDEN_CORE_CAPABILITIES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULES = {
-    "nsx-ambiq-usb-r4",
-    "nsx-ambiq-usb-r5",
+    "nsx-ambiq-usb",
     "nsx-audio",
     "nsx-usb",
     "nsx-freertos",
@@ -75,9 +74,8 @@ STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"
 EXPECTED_SDK_RELEASE = "stable-2026.06.17"
 EXPECTED_UPSTREAM_REVISION = "stable-6cdd4ccf96"
-# The unified AmbiqSuite provider (and its HAL/BSP wrappers) carry a fresh
-# module identity at 0.1.0; only the still-split USB substrates retain their
-# legacy per-part versions.
+# The unified AmbiqSuite provider (and its HAL/BSP/USB wrappers) carry a fresh
+# module identity at 0.1.0.
 EXPECTED_UNIFIED_MODULE_VERSION = "0.1.0"
 EXPECTED_PROVIDER_METADATA = {
     "nsx-ambiqsuite": {
@@ -90,8 +88,7 @@ EXPECTED_VERSION_BY_MODULE_NAME = {
     "nsx-ambiqsuite": EXPECTED_UNIFIED_MODULE_VERSION,
     "nsx-ambiq-hal": EXPECTED_UNIFIED_MODULE_VERSION,
     "nsx-ambiq-bsp": EXPECTED_UNIFIED_MODULE_VERSION,
-    "nsx-ambiq-usb-r4": "4.5.1",
-    "nsx-ambiq-usb-r5": EXPECTED_NSX_RELEASE_VERSION,
+    "nsx-ambiq-usb": EXPECTED_UNIFIED_MODULE_VERSION,
 }
 
 

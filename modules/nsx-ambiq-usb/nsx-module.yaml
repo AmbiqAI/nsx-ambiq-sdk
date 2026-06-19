@@ -1,16 +1,16 @@
 schema_version: 1
 
 module:
-  name: nsx-ambiq-usb-r5
+  name: nsx-ambiq-usb
   type: backend_specific
   category: sdk_component
-  version: "5.2.23"
+  version: "0.1.0"
 
 support:
   ambiqsuite: true
   zephyr: false
 
-summary: AmbiqSuite R5 USB substrate for TinyUSB on supported Ambiq SoCs.
+summary: Unified AmbiqSuite USB substrate (TinyUSB) for Apollo4P and Apollo5 SoCs.
 
 capabilities:
   - usb_device
@@ -19,7 +19,7 @@ capabilities:
   - sdk_component
 
 use_cases:
-  - provide the Ambiq TinyUSB device-controller port for r5 targets
+  - provide the Ambiq TinyUSB device-controller port for supported targets
   - expose SDK-vendored TinyUSB sources to higher-level USB modules
   - support bare-metal or framework-selected USB service loops
 
@@ -27,14 +27,15 @@ agent_keywords:
   - usb
   - tinyusb
   - ambiq
-  - r5
   - dcd
+  - apollo4p
+  - apollo5
 
 build:
   cmake:
-    package: nsx_soc_apollo510
+    package: nsx_ambiq_usb
     targets:
-      - nsx::ambiq_usb_r5
+      - nsx::ambiq_usb
 
 requires_app_contract:
   - USB descriptors and enabled TinyUSB classes are application or wrapper policy.
@@ -50,11 +51,15 @@ depends:
 
 compatibility:
   boards:
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
     - apollo330mP_evb
     - apollo510_evb
     - apollo510b_evb
     - apollo510dL_evb
   socs:
+    - apollo4p
     - apollo330P
     - apollo510
     - apollo510b

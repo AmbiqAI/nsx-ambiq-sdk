@@ -24,8 +24,7 @@ OUT_OF_CORE_PATH_SUFFIXES = {
 }
 
 OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiq-usb-r4"),
-    ("modules", "nsx-ambiq-usb-r5"),
+    ("modules", "nsx-ambiq-usb"),
     ("modules", "nsx-usb"),
     ("modules", "nsx-freertos"),
 }
@@ -61,8 +60,7 @@ MULTI_SOC_CURATED_MODULES = {
 
 PROVIDER_SDK_MODULE_PREFIXES = {
     ("modules", "nsx-ambiqsuite", "sdk"),
-    ("modules", "nsx-ambiq-usb-r4", "sdk"),
-    ("modules", "nsx-ambiq-usb-r5", "sdk"),
+    ("modules", "nsx-ambiq-usb", "sdk"),
     ("modules", "nsx-freertos", "sdk"),
 }
 

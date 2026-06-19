@@ -158,7 +158,7 @@ def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) 
 
     legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
     offenders = []
-    for module_name in ("nsx-ambiq-hal", "nsx-ambiq-bsp", "nsx-ambiq-usb-r5"):
+    for module_name in ("nsx-ambiq-hal", "nsx-ambiq-bsp", "nsx-ambiq-usb"):
         path = repo_root / "modules" / module_name / "CMakeLists.txt"
         text = path.read_text(encoding="utf-8")
         if legacy_selector.search(text):
@@ -422,7 +422,7 @@ def test_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp_pa
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")
 
-    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", ("nsx-ambiq-usb-r5",))
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", ("nsx-ambiq-usb",))
     assert result.returncode == 0, result.stdout
 
 
@@ -440,7 +440,7 @@ def test_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Path) 
             "nsx-interrupt",
             "nsx-timer",
             "nsx-perf",
-            "nsx-ambiq-usb-r5",
+            "nsx-ambiq-usb",
             "nsx-usb",
         ),
     )
@@ -515,7 +515,7 @@ def test_r4_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp
         tmp_path,
         "apollo4p_evb",
         "gcc",
-        ("nsx-ambiq-usb-r4",),
+        ("nsx-ambiq-usb",),
         provider="ambiqsuite",
         ambiqsuite_version="R4.5.0",
         provider_module="nsx-ambiqsuite",
@@ -538,7 +538,7 @@ def test_r4_usb_module_configures_inside_sdk_repo(repo_root: Path, tmp_path: Pat
             "nsx-core",
             "nsx-interrupt",
             "nsx-timer",
-            "nsx-ambiq-usb-r4",
+            "nsx-ambiq-usb",
             "nsx-usb",
         ),
         provider="ambiqsuite",

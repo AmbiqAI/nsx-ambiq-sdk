@@ -101,11 +101,6 @@ endif()
 add_library(nsx_ambiq_hal STATIC ${NSX_AMBIQ_HAL_SOURCES})
 set_target_properties(nsx_ambiq_hal PROPERTIES EXPORT_NAME ambiq_hal)
 add_library(nsx::ambiq_hal ALIAS nsx_ambiq_hal)
-# Back-compat aliases for SoC-family-specific consumers (e.g. nsx-ambiq-usb-r*).
-add_library(nsx::ambiq_hal_r2 ALIAS nsx_ambiq_hal)
-add_library(nsx::ambiq_hal_r3 ALIAS nsx_ambiq_hal)
-add_library(nsx::ambiq_hal_r4 ALIAS nsx_ambiq_hal)
-add_library(nsx::ambiq_hal_r5 ALIAS nsx_ambiq_hal)
 target_link_libraries(nsx_ambiq_hal PUBLIC
     nsx::board_flags
     nsx::cmsis_core

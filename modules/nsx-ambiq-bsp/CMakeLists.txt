@@ -38,11 +38,6 @@ set(NSX_BSP_LIB "${NSX_BSP_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite BSP 
 add_library(nsx_ambiq_bsp INTERFACE)
 set_target_properties(nsx_ambiq_bsp PROPERTIES EXPORT_NAME ambiq_bsp)
 add_library(nsx::ambiq_bsp ALIAS nsx_ambiq_bsp)
-# Back-compat aliases for SoC-family-specific consumers (e.g. nsx-ambiq-usb-r*).
-add_library(nsx::ambiq_bsp_r2 ALIAS nsx_ambiq_bsp)
-add_library(nsx::ambiq_bsp_r3 ALIAS nsx_ambiq_bsp)
-add_library(nsx::ambiq_bsp_r4 ALIAS nsx_ambiq_bsp)
-add_library(nsx::ambiq_bsp_r5 ALIAS nsx_ambiq_bsp)
 if(NOT TARGET nsx_ambiq_hal)
     message(FATAL_ERROR "nsx-ambiq-bsp requires nsx_ambiq_hal to be added first.")
 endif()

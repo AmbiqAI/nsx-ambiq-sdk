@@ -1,18 +1,24 @@
-# nsx-ambiq-usb-r5
+# nsx-ambiq-usb
 
-AmbiqSuite R5 USB substrate for TinyUSB on supported Ambiq SoCs.
+Unified AmbiqSuite USB substrate for TinyUSB on supported Ambiq SoCs.
 
-This module stages the USB material that ships with the AmbiqSuite R5 SDK drop
-and exposes it as an opt-in NSX module. It is intentionally separate from the
-base `nsx-ambiqsuite-r5` SDK provider so applications that do not use USB do not
-inherit TinyUSB or USB class-driver sources.
+This module stages the USB material that ships with the AmbiqSuite SDK drop and
+exposes it as an opt-in NSX module. It is intentionally separate from the base
+`nsx-ambiqsuite` SDK provider so applications that do not use USB do not inherit
+TinyUSB or USB class-driver sources.
+
+The TinyUSB device-controller driver (DCD) and `CFG_TUSB_MCU` are selected from
+`NSX_SOC_FAMILY` at configure time: Apollo4P uses the Apollo4 port
+(`dcd_apollo4.c`, `CFG_TUSB_MCU=9001`); the Apollo5 generations
+(apollo330P/apollo510/apollo510b/apollo510L/apollo5b) share the Apollo5 port
+(`dcd_apollo5.c`, `CFG_TUSB_MCU=9002`).
 
 ## Owns
 
-- Ambiq TinyUSB device-controller port for R5-family SoCs.
-- SDK-vendored TinyUSB sources needed by the Ambiq port.
+- Ambiq TinyUSB device-controller ports for Apollo4P and Apollo5-family SoCs.
+- SDK-vendored TinyUSB sources needed by the Ambiq ports.
 - The patched Ambiq CDC/vendor class sources staged from the SDK drop.
-- CMake target `nsx::ambiq_usb_r5` and compatibility alias `nsx::tinyusb`.
+- CMake target `nsx::ambiq_usb` and compatibility alias `nsx::tinyusb`.
 
 ## Does Not Own
 
