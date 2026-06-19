@@ -101,7 +101,7 @@
  *
  *   The `nsx view` CLI command and the CMake `<app>_view` target handle
  *   this automatically via the per-SoC `NSX_SEGGER_CPUFREQ` setting in
- *   `cmake/segger/socs/<soc>.cmake`. When using JLink manually:
+ *   `cmake/socs/facts/<soc>.cmake`. When using JLink manually:
  *   ```
  *   JLinkSWOViewerCLExe -device <dev> -cpufreq <trace_freq> -swofreq 1000000 -itmport 0
  *   ```

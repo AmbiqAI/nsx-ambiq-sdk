@@ -417,7 +417,8 @@ def test_platform_coverage_names_unstaged_r5_variants(repo_root: Path) -> None:
     coverage = (repo_root / "docs" / "platform-coverage.md").read_text(encoding="utf-8")
     for expected in ("apollo510dL_evb", "apollo510L", "apollo330P", "apollo330mP_evb"):
         assert expected in coverage
-    assert "artifact-built" in coverage
+    assert "staged" in coverage
+    assert "descriptor-only" in coverage
 
 
 def test_staged_platform_coverage_matches_payload(repo_root: Path) -> None:

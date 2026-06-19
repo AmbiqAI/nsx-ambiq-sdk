@@ -48,21 +48,28 @@ drop and tightly coupled to the HAL/BSP, it may live in this repository as a
 separate opt-in module. It must not be bundled into the base `nsx-ambiqsuite`
 provider surface.
 
+Several such opt-in modules now ship inside this monorepo alongside the base
+provider — for example `nsx-freertos`, `nsx-usb` / `nsx-ambiq-usb`, `nsx-audio`,
+and `nsx-psram`. They are independent CMake modules with their own targets and
+opt-in selection; none of them is linked into `nsx::sdk_ambiqsuite`,
+`nsx::ambiq_hal`, or `nsx::ambiq_bsp`. "Out of scope" here means out of the base
+provider surface, not necessarily out of the repository.
+
 ## Optional Module Candidates
 
-| Component | Preferred home |
-| --- | --- |
-| FreeRTOS | `nsx-freertos` or application-owned RTOS module |
-| TinyUSB | `nsx-ambiq-usb` for the SDK-vendored substrate; wrapper policy in `nsx-usb` |
-| Ambiq USB integration | `nsx-ambiq-usb` substrate plus higher-level `nsx-usb` wrapper |
-| CMSIS-NN | separate `nsx-cmsis-nn` module/repo |
-| CMSIS-DSP | separate `nsx-cmsis-dsp` module/repo |
-| Cordio/Bluetooth | separate wireless/Bluetooth module family |
-| SEGGER RTT/SystemView/J-Link helpers | tooling/debug module, not core SDK |
-| AmbiqSuite examples | examples repo or app templates, not core SDK |
-| GPIO button/trigger helpers | `nsx-gpio-input` or board/application module |
-| PSRAM setup helpers | `nsx-external-memory` or `nsx-psram-ambiqsuite` |
-| MSPI flash/NVM helpers | `nsx-mspi-flash` plus concrete flash driver module |
+| Component | Preferred home | In this repo today |
+| --- | --- | --- |
+| FreeRTOS | `nsx-freertos` or application-owned RTOS module | yes — `modules/nsx-freertos` |
+| TinyUSB | `nsx-ambiq-usb` for the SDK-vendored substrate; wrapper policy in `nsx-usb` | yes — `modules/nsx-ambiq-usb` |
+| Ambiq USB integration | `nsx-ambiq-usb` substrate plus higher-level `nsx-usb` wrapper | yes — `modules/nsx-usb` |
+| Audio capture/processing | `nsx-audio` board-aware helper module | yes — `modules/nsx-audio` |
+| PSRAM / external memory setup | `nsx-psram` (was `nsx-external-memory`) | yes — `modules/nsx-psram` |
+| CMSIS-NN | separate `nsx-cmsis-nn` module/repo | no |
+| CMSIS-DSP | separate `nsx-cmsis-dsp` module/repo | no |
+| Cordio/Bluetooth | separate wireless/Bluetooth module family | no |
+| SEGGER RTT/SystemView/J-Link helpers | tooling/debug module, not core SDK | no |
+| AmbiqSuite examples | examples repo or app templates, not core SDK | no |
+| MSPI flash/NVM helpers | `nsx-mspi-flash` plus concrete flash driver module | no |
 
 ## Intake Rule
 

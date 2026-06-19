@@ -1,9 +1,5 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before nsx-psram is added.")
-endif()
-if(NOT TARGET nsx::board_flags)
-    message(FATAL_ERROR "nsx::board_flags must be defined before nsx-psram is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-psram)
+nsx_require_target(nsx::board_flags nsx-psram)
 if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-psram is added.")
 endif()
@@ -11,18 +7,7 @@ if(NOT DEFINED NSX_AMBIQ_BOARD_NAME)
     message(FATAL_ERROR "NSX_AMBIQ_BOARD_NAME must be defined before nsx-psram is added.")
 endif()
 
-if(DEFINED NSX_MODULE_DIR_nsx_core)
-    set(NSX_PSRAM_CORE_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_core}")
-else()
-    set(NSX_PSRAM_CORE_DIR "${NSX_ROOT}/modules/nsx-core")
-endif()
-
-if(DEFINED NSX_MODULE_DIR_nsx_interrupt)
-    set(NSX_PSRAM_INTERRUPT_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_interrupt}")
-else()
-    set(NSX_PSRAM_INTERRUPT_DIR "${NSX_ROOT}/modules/nsx-interrupt")
-endif()
-
+# apollo330P reuses the Apollo5-class PSRAM sources (apollo5 arch dir).
 nsx_select_soc_arch_dir(NSX_PSRAM_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
@@ -106,13 +91,7 @@ target_compile_definitions(nsx_psram PRIVATE ${NSX_PSRAM_EXTRA_COMPILE_DEFINITIO
 
 target_include_directories(nsx_psram PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_PSRAM_CORE_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-psram/includes-api>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core/includes-api>
-)
-
-target_include_directories(nsx_psram PRIVATE
-    $<BUILD_INTERFACE:${NSX_PSRAM_INTERRUPT_DIR}/includes-api>
 )
 
 install(DIRECTORY

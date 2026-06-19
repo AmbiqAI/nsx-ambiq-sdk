@@ -1,25 +1,10 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before nsx-timer is added.")
-endif()
-if(NOT TARGET nsx::interrupt)
-    message(FATAL_ERROR "nsx::interrupt must be defined before nsx-timer is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-timer)
+nsx_require_target(nsx::interrupt nsx-timer)
 if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-timer is added.")
 endif()
 
-if(DEFINED NSX_MODULE_DIR_nsx_core)
-    set(NSX_TIMER_CORE_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_core}")
-else()
-    set(NSX_TIMER_CORE_DIR "${NSX_ROOT}/modules/nsx-core")
-endif()
-
-if(DEFINED NSX_MODULE_DIR_nsx_interrupt)
-    set(NSX_TIMER_INTERRUPT_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_interrupt}")
-else()
-    set(NSX_TIMER_INTERRUPT_DIR "${NSX_ROOT}/modules/nsx-interrupt")
-endif()
-
+# apollo330P uses its dedicated apollo330 arch sources.
 nsx_select_soc_arch_dir(NSX_TIMER_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
@@ -53,11 +38,7 @@ target_link_libraries(nsx_timer PUBLIC
 
 target_include_directories(nsx_timer PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_TIMER_CORE_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_TIMER_INTERRUPT_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-timer/includes-api>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core/includes-api>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-interrupt/includes-api>
 )
 
 install(DIRECTORY

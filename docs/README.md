@@ -4,6 +4,8 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 
 ## Current State
 
+- This repo carries a single SDK provider (`nsx-ambiqsuite`) spanning the Apollo2, Apollo3, Apollo4, and Apollo5 families, with HAL/BSP shipped as prebuilt static libraries under `modules/nsx-ambiqsuite/sdk/lib/<toolchain>/`.
+- Per-SoC facts live in `cmake/socs/facts/<skew>.cmake` (the single source of truth, including SEGGER/J-Link defaults) and are loaded by `nsx_load_soc_facts()`; see [../cmake/README.md](../cmake/README.md).
 - `platform-coverage.md` lists staged, descriptor-only, and planned SoC/board coverage.
 - `toolchain-smoke.md` describes opt-in local/CI link smokes for staged toolchains.
 

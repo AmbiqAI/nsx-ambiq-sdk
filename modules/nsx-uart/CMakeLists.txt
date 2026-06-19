@@ -1,25 +1,10 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before ns-uart is added.")
-endif()
-if(NOT TARGET nsx::interrupt)
-    message(FATAL_ERROR "nsx::interrupt must be defined before ns-uart is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-uart)
+nsx_require_target(nsx::interrupt nsx-uart)
 if(NOT DEFINED NSX_SOC_FAMILY)
-    message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before ns-uart is added.")
+    message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-uart is added.")
 endif()
 
-if(DEFINED NSX_MODULE_DIR_nsx_core)
-    set(NSX_UART_CORE_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_core}")
-else()
-    set(NSX_UART_CORE_DIR "${NSX_ROOT}/modules/nsx-core")
-endif()
-
-if(DEFINED NSX_MODULE_DIR_nsx_interrupt)
-    set(NSX_UART_INTERRUPT_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_interrupt}")
-else()
-    set(NSX_UART_INTERRUPT_DIR "${NSX_ROOT}/modules/nsx-interrupt")
-endif()
-
+# apollo330P uses its dedicated apollo330 arch sources.
 nsx_select_soc_arch_dir(NSX_UART_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
@@ -42,11 +27,7 @@ target_link_libraries(nsx_uart PUBLIC
 
 target_include_directories(nsx_uart PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_UART_CORE_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_UART_INTERRUPT_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-uart/includes-api>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core/includes-api>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-interrupt/includes-api>
 )
 
 install(DIRECTORY

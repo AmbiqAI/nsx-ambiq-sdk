@@ -1,13 +1,12 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before ns-power is added.")
-endif()
-if(NOT TARGET nsx::timer AND DEFINED NSX_SOC_FAMILY AND NSX_SOC_FAMILY STREQUAL "APOLLO4")
+nsx_require_target(nsx::soc_hal nsx-power)
+if(NOT TARGET nsx::timer AND DEFINED NSX_SOC_FAMILY AND NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_APOLLO4)
     message(FATAL_ERROR "nsx::timer must be defined before Apollo4 nsx-power is added.")
 endif()
 if(NOT DEFINED NSX_SOC_FAMILY)
-    message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before ns-power is added.")
+    message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-power is added.")
 endif()
 
+# apollo330P uses its dedicated apollo330 arch sources.
 nsx_select_soc_arch_dir(NSX_POWER_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
@@ -35,7 +34,7 @@ add_library(nsx::power ALIAS nsx_power)
 
 target_link_libraries(nsx_power PUBLIC
     nsx::soc_hal
-    nsx_core
+    nsx::core
 )
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo4")
@@ -45,10 +44,8 @@ endif()
 target_include_directories(nsx_power PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}>
-    $<BUILD_INTERFACE:${NSX_ROOT}/modules/nsx-core/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src/${NSX_POWER_ARCH_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core/includes-api>
 )
 
 install(DIRECTORY

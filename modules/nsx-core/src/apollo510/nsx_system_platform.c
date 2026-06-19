@@ -172,7 +172,7 @@ uint32_t nsx_platform_spot_mgr_profile(void) {
  *
  * The JLink SWO viewer must be told the *trace clock* frequency
  * (not CPU clock) via -cpufreq so that its ACPR override matches.
- * See segger/socs/<soc>.cmake for the per-SoC NSX_SEGGER_CPUFREQ values.
+ * See cmake/socs/facts/<soc>.cmake for the per-SoC NSX_SEGGER_CPUFREQ values.
  * =================================================================== */
 
 uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {

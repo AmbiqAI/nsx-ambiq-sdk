@@ -1,41 +1,71 @@
 # Platform Coverage
 
-This file separates logical R5-family platform coverage from the artifacts that
-are currently staged in this curated core SDK repo.
+This file tracks the SoC/skew and board coverage actually carried by this
+unified SDK repo. The repo spans the Apollo2, Apollo3, Apollo4, and Apollo5
+families through a single SDK provider (`nsx-ambiqsuite`).
 
-A SoC or board should not be treated as configure-ready until its descriptor and
-its AmbiqSuite artifacts are both present.
+A SoC or board should not be treated as configure-ready until both its NSX
+descriptor (`cmake/socs/<skew>.cmake` / `boards/<board>/board.cmake`) and the
+matching AmbiqSuite prebuilt artifacts (`modules/nsx-ambiqsuite/sdk/lib/...`)
+are present.
 
 ## Coverage States
 
 | State | Meaning |
 | --- | --- |
-| `staged` | Descriptor and curated AmbiqSuite artifacts are present in this repo. |
-| `artifact-built` | Source drop was staged locally and HAL/BSP artifacts were built, but CMake descriptors/adapters are not fully wired yet. |
-| `descriptor-only` | NSX descriptor exists, but the matching SDK artifacts are not staged yet. |
-| `planned` | Expected R5-family skew or board that should be pulled from a future SDK drop. |
+| `staged` | Descriptor and curated AmbiqSuite HAL/BSP artifacts are present in this repo. |
+| `descriptor-only` | NSX descriptor exists, but the matching prebuilt HAL/BSP artifacts are not staged yet. |
+| `planned` | Expected skew or board that should be pulled from a future SDK drop. |
+
+HAL/BSP for every staged part are shipped as prebuilt static libraries under
+`modules/nsx-ambiqsuite/sdk/lib/<toolchain>/<part>/...` for the `gcc`, `atfe`,
+and `acfe` toolchains. There is no per-family "build from source" path: all
+families use the same prebuilt-artifact intake.
 
 ## SoC / Skew Coverage
 
-| Logical skew | Status | Staged Ambiq artifacts | Notes |
-| --- | --- | --- | --- |
-| `apollo510` | staged | `mcu/apollo510`, `src/apollo510`, `lib/apollo510` | Base AP510 R5-family skew. |
-| `apollo510b` | staged | reuses `mcu/apollo510`, `src/apollo510`, `lib/apollo510` | Logical skew with AP510B board/BSP coverage. |
-| `apollo510L` | staged | `modules/nsx-ambiqsuite/sdk/lib/{gcc,atfe,acfe}/apollo510L/libam_hal.a` | Native R5.2.0 source family for AP510DL board coverage. |
-| `apollo510d` | planned | not staged as that exact name | R5.2.0 names the discovered board `apollo510dL_evb` and maps it to `apollo510L`. |
-| `apollo5b` | descriptor-only | not staged | Descriptor exists, but `mcu/apollo5b`, `src/apollo5b`, and `lib/apollo5b` are absent from the curated payload. |
-| `apollo330P` | staged | `modules/nsx-ambiqsuite/sdk/lib/{gcc,atfe,acfe}/apollo330P/libam_hal.a` | R5.2.0 HAL/BSP artifacts promoted into the provider payload. |
-| `apollo330` family skews | planned | not staged | Add explicit skews from SDK drop metadata instead of inferring them from board names. |
+Per-SoC facts (core, DSP/MVE/FPU, PMU tier, toolchain selectors, and SEGGER
+defaults) are the single source of truth in `cmake/socs/facts/<skew>.cmake`,
+loaded by `nsx_load_soc_facts()`; the descriptor `cmake/socs/<skew>.cmake`
+builds targets on top. See [cmake/README.md](../cmake/README.md).
+
+| Logical skew | Status | Core | PMU tier | HAL artifact | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `apollo2` | staged | cortex-m4 | none | `.../apollo2/libam_hal.a` | Apollo2 family. |
+| `apollo3` | staged | cortex-m4 | none | `.../apollo3/libam_hal.a` | Apollo3 Blue family. |
+| `apollo3p` | staged | cortex-m4 | none | `.../apollo3p/libam_hal.a` | Apollo3P Blue family. |
+| `apollo4l` | staged | cortex-m4 | none | `.../apollo4l/libam_hal.a` | Apollo4 Lite family. |
+| `apollo4p` | staged | cortex-m4 | none | `.../apollo4p/libam_hal.a` | Apollo4 Plus family. |
+| `apollo330P` | staged | cortex-m55 | armv8m | `.../apollo330P/libam_hal.a` | Apollo330P (Apollo5-gen Cortex-M55). |
+| `apollo510` | staged | cortex-m55 | armv8m | `.../apollo510/libam_hal.a` | Base Apollo510 skew. |
+| `apollo510b` | staged | cortex-m55 | armv8m | reuses `.../apollo510/libam_hal.a` | Apollo510B board/BSP coverage on the Apollo510 HAL. |
+| `apollo510L` | staged | cortex-m55 | armv8m | `.../apollo510L/libam_hal.a` | Apollo510L (AP510DL) family. |
+| `apollo5b` | descriptor-only | cortex-m55 | armv8m | not staged | Descriptor + facts exist, but no `apollo5b` HAL/BSP artifacts are present. |
+
+Artifact paths above are relative to `modules/nsx-ambiqsuite/sdk/lib/<toolchain>/`.
 
 ## Board Coverage
 
-| NSX board | Status | Logical skew | Staged Ambiq artifacts | Notes |
+| NSX board | Status | Logical skew | BSP artifact | Notes |
 | --- | --- | --- | --- | --- |
-| `apollo510_evb` | staged | `apollo510` | `boards/apollo510_evb/bsp`, `lib/apollo510/evb/libam_bsp.*` | Configure-ready with current payload. |
-| `apollo510b_evb` | staged | `apollo510b` | `boards/apollo510b_evb/bsp`, `lib/apollo510/apollo510b_evb/libam_bsp.*` | Configure-ready with current payload. |
-| `apollo510dL_evb` | staged | `apollo510L` | `modules/nsx-ambiqsuite/sdk/lib/{gcc,atfe,acfe}/apollo510L/apollo510dL_evb/libam_bsp.a` | Native R5.2.0 AP510DL board name. |
-| `apollo5b_evb` | descriptor-only | `apollo5b` | not staged | Existing descriptor should not be advertised as configure-ready until artifacts arrive. |
-| `apollo330mP_evb` | staged | `apollo330P` | `modules/nsx-ambiqsuite/sdk/lib/{gcc,atfe,acfe}/apollo330P/apollo330mP_evb/libam_bsp.a` | R5.2.0 BSP artifacts promoted into the provider payload. |
+| `apollo2_evb` | staged | `apollo2` | `apollo2/apollo2_evb/libam_bsp.a` | |
+| `apollo3_evb` | staged | `apollo3` | `apollo3/apollo3_evb/libam_bsp.a` | |
+| `apollo3_evb_cygnus` | staged | `apollo3` | `apollo3/apollo3_evb_cygnus/libam_bsp.a` | Cygnus board variant. |
+| `apollo3p_evb` | staged | `apollo3p` | `apollo3p/apollo3p_evb/libam_bsp.a` | |
+| `apollo3p_evb_cygnus` | staged | `apollo3p` | `apollo3p/apollo3p_evb_cygnus/libam_bsp.a` | Cygnus board variant. |
+| `apollo4l_evb` | staged | `apollo4l` | `apollo4l/apollo4l_evb/libam_bsp.a` | |
+| `apollo4l_blue_evb` | staged | `apollo4l` | `apollo4l/apollo4l_blue_evb/libam_bsp.a` | BLE variant. |
+| `apollo4p_evb` | staged | `apollo4p` | `apollo4p/apollo4p_evb/libam_bsp.a` | |
+| `apollo4p_blue_kbr_evb` | staged | `apollo4p` | `apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a` | KBR package, BLE. |
+| `apollo4p_blue_kxr_evb` | staged | `apollo4p` | `apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a` | KXR package, BLE. |
+| `apollo330mP_evb` | staged | `apollo330P` | `apollo330P/apollo330mP_evb/libam_bsp.a` | |
+| `apollo510_evb` | staged | `apollo510` | `apollo510/apollo510_evb/libam_bsp.a` | |
+| `apollo510b_evb` | staged | `apollo510b` | `apollo510/apollo510b_evb/libam_bsp.a` | |
+| `apollo510dL_evb` | staged | `apollo510L` | `apollo510L/apollo510dL_evb/libam_bsp.a` | AP510DL board. |
+| `apollo5b_evb` | descriptor-only | `apollo5b` | not staged | Not configure-ready until `apollo5b` artifacts arrive. |
+
+BSP artifact paths above are relative to
+`modules/nsx-ambiqsuite/sdk/lib/<toolchain>/`.
 
 ## Board Button Facts
 
@@ -60,14 +90,14 @@ Application code reads a button by feeding `NSX_BOARD_BUTTONn_PIN` into
 IRQ callback). Because the pin macros expand to `AM_BSP_GPIO_BUTTON*`, the board
 BSP header must be on the include path where they are used.
 
-Coverage: published on the Apollo3 family (3 buttons), Apollo4 family, and the
-staged R5 boards (`apollo510_evb`, `apollo510b_evb`, `apollo510dL_evb`,
-`apollo330mP_evb`). Not published on `apollo5b_evb`, which is descriptor-only and
-has no staged BSP button definitions.
+Coverage: published on every staged board whose BSP defines buttons, across the
+Apollo2/Apollo3 (typically 3 buttons), Apollo4, and Apollo5 (Apollo330P/510)
+families. Not published on `apollo5b_evb`, which is descriptor-only and has no
+staged BSP button definitions.
 
 ## Intake Rule
 
-When a new SWS AmbiqSuite R5 drop arrives, update this file from the drop
+When a new SWS AmbiqSuite drop arrives, update this file from the drop
 manifest before wiring CMake. The required minimum for a staged SoC/skew is:
 
 - an explicit logical skew name;

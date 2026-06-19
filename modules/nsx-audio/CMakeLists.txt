@@ -1,14 +1,6 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before nsx-audio is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-audio)
 if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-audio is added.")
-endif()
-
-if(DEFINED NSX_MODULE_DIR_nsx_core)
-    set(NSX_AUDIO_CORE_DIR "${NSX_ROOT}/${NSX_MODULE_DIR_nsx_core}")
-else()
-    set(NSX_AUDIO_CORE_DIR "${NSX_ROOT}/modules/nsx-core")
 endif()
 
 if(NSX_SOC_FAMILY STREQUAL "apollo3" OR NSX_SOC_FAMILY STREQUAL "apollo3p")
@@ -30,7 +22,6 @@ target_link_libraries(nsx_audio PUBLIC
 
 target_include_directories(nsx_audio PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
-    $<BUILD_INTERFACE:${NSX_AUDIO_CORE_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-audio/includes-api>
 )
 

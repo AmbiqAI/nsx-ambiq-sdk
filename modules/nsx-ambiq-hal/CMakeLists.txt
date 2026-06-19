@@ -1,9 +1,7 @@
 if(NOT DEFINED NSX_AMBIQSUITE_ROOT)
     message(FATAL_ERROR "NSX_AMBIQSUITE_ROOT must be configured before nsx-ambiq-hal is added.")
 endif()
-if(NOT TARGET nsx::board_flags)
-    message(FATAL_ERROR "Board must define nsx::board_flags before nsx-ambiq-hal is added.")
-endif()
+nsx_require_target(nsx::board_flags nsx-ambiq-hal)
 if(NOT DEFINED NSX_AMBIQ_PART_NAME OR NOT DEFINED NSX_AMBIQ_MCU_DIR OR NOT DEFINED NSX_AMBIQ_HAL_DIR)
     message(FATAL_ERROR "Board must define NSX_AMBIQ_* MCU/HAL paths before nsx-ambiq-hal is added.")
 endif()
@@ -13,7 +11,7 @@ endif()
 
 # The PMU helper surface (includes-api + nsx_ambiq_pmu.c + am_util_pmu.c) ships
 # only for SoCs whose HAL exposes the armv8m PMU. Derive that capability from
-# the published SoC fact (NSX_SOC_PMU_TIER, set by cmake/socs/_facts/<skew>.cmake
+# the published SoC fact (NSX_SOC_PMU_TIER, set by cmake/socs/facts/<skew>.cmake
 # via nsx_load_soc_facts) so neither the SDK SoC descriptors nor downstream
 # board.cmake files have to set NSX_AMBIQ_HAL_HAS_PMU by hand. An explicit value
 # set before this module is added still wins.
