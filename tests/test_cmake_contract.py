@@ -15,11 +15,11 @@ def soc_facts_text(repo_root: Path, skew: str) -> str:
 
     SoC facts are the single source of truth shared between the SDK's own
     cmake/socs/<skew>.cmake descriptor and downstream board.cmake files. They
-    may be extracted into a side-effect-free cmake/socs/_facts/<skew>.cmake or
+    may be extracted into a side-effect-free cmake/socs/facts/<skew>.cmake or
     still inlined in cmake/socs/<skew>.cmake. Prefer the extracted file when it
     exists so the contract holds during a mixed (partially-extracted) state.
     """
-    facts = repo_root / "cmake" / "socs" / "_facts" / f"{skew}.cmake"
+    facts = repo_root / "cmake" / "socs" / "facts" / f"{skew}.cmake"
     if facts.exists():
         return facts.read_text(encoding="utf-8")
     return read(repo_root, f"cmake/socs/{skew}.cmake")

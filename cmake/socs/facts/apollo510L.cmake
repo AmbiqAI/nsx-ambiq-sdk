@@ -25,3 +25,30 @@ set(NSX_FLOAT_ABI "hard")
 # core's FPU spelling is a SoC fact rather than a per-board decision.
 set(NSX_FPU "")
 set(NSX_ABI_FLAGS "thumbv8.1m-fpv5-hard")
+
+# SoC compile definitions (single source) consumed by nsx_soc_flags_target();
+# see ../../nsx_soc_facts.cmake. Each is gated to C by the helper.
+set(NSX_SOC_COMPILE_DEFINITIONS
+    PART_apollo510L
+    AM_PART_APOLLO510L
+    ARMCM55
+    __FPU_PRESENT
+    NSX_SOC_CORE_M55=1
+    NSX_SOC_HAS_DSP=1
+    NSX_SOC_HAS_MVE=1
+    NSX_SOC_HAS_FPU=1
+    NSX_SOC_PMU_ARMV8M=1
+)
+
+# SEGGER / J-Link configuration (SoC-level defaults).
+#
+# NSX_SEGGER_DEVICE and NSX_SEGGER_PF_ADDR are package/board-specific defaults; a
+# board.cmake may override NSX_SEGGER_DEVICE for its exact silicon package (e.g.
+# a -KXR vs -KBR part). NSX_SEGGER_CPUFREQ is the TPIU *trace clock*, used by the
+# SWO viewer to derive the baud scaler, not the CPU clock.
+set(NSX_SEGGER_CPU "Cortex-M55")
+set(NSX_SEGGER_DEVICE "AP510DLA-CBR")
+set(NSX_SEGGER_IF_SPEED "4000")
+set(NSX_SEGGER_PF_ADDR "0x00410000")
+set(NSX_SEGGER_CPUFREQ "48000000")
+set(NSX_SEGGER_SWOFREQ "1000000")

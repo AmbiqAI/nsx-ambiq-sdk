@@ -1,8 +1,9 @@
 # SDK Drop Workflow
 
-This repo is the NSX adapter and validation layer for AmbiqSuite R5-family SDK
-drops. It should make new SWS drops repeatable without turning the repo into a
-hand-maintained fork of AmbiqSuite.
+This repo is the NSX adapter and validation layer for AmbiqSuite SDK drops
+across the Apollo2, Apollo3, Apollo4, and Apollo5 families. It should make new
+SWS drops repeatable without turning the repo into a hand-maintained fork of
+AmbiqSuite.
 
 ## Goals
 
@@ -51,25 +52,29 @@ sdk-intake/
     work/
       AmbiqSuite_R5.4.0/
 
-artifacts/
-    ambiqsuite/R5.4.0/
-        include/             # redistributable headers if approved
-    <toolchain>/lib/<part>/libam_hal.a
-    <toolchain>/lib/<part>/<bsp>/libam_bsp.a
-        manifest.yaml
-
-cmake/sdks/
-    ambiqsuite.cmake  # SDK-provider descriptor
+modules/nsx-ambiqsuite/        # SDK-provider module (promoted output payload)
+  CMakeLists.txt               # defines nsx::sdk_ambiqsuite provider/version anchor
+  sdk/
+    include/                   # approved redistributable headers
+    src/                       # curated utility sources (am_util_*.c)
+    lib/<toolchain>/<part>/libam_hal.a
+    lib/<toolchain>/<part>/<board>/libam_bsp.a
 
 cmake/socs/
-    apollo510.cmake
-    apollo510b.cmake
-    ...
+    apollo2.cmake ... apollo5b.cmake   # SoC descriptors (build targets)
+    facts/
+      apollo2.cmake ... apollo5b.cmake # side-effect-free SoC facts (single source)
 
 boards/
+    apollo2_evb/board.cmake
     apollo510_evb/board.cmake
     ...
 ```
+
+The SDK provider descriptor is no longer a standalone `cmake/sdks/ambiqsuite.cmake`
+file; the `nsx::sdk_ambiqsuite` provider/version anchor is defined in
+`modules/nsx-ambiqsuite/CMakeLists.txt`, and each SoC descriptor checks
+`NSX_SDK_PROVIDER`.
 
 The exact artifact path can change, but the important split should not: raw SDK
 source is an input, bundled binaries/approved headers are outputs, and NSX CMake

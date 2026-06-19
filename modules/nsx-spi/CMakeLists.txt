@@ -1,9 +1,5 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before ns-spi is added.")
-endif()
-if(NOT TARGET nsx::core)
-    message(FATAL_ERROR "nsx::core must be defined before ns-spi is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-spi)
+nsx_require_target(nsx::core nsx-spi)
 
 add_library(nsx_spi STATIC
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_spi.c

@@ -1,7 +1,6 @@
-if(NOT TARGET nsx::soc_hal)
-    message(FATAL_ERROR "nsx::soc_hal must be defined before nsx-core is added.")
-endif()
+nsx_require_target(nsx::soc_hal nsx-core)
 
+# apollo330P reuses the Apollo5-class core sources (apollo510 arch dir).
 nsx_select_soc_arch_dir(NSX_CORE_ARCH_DIR
     APOLLO5 apollo510
     APOLLO330 apollo510

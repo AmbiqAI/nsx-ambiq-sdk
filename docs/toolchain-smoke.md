@@ -32,14 +32,27 @@ uv run --group ci python tools/nsx_link_smoke.py \
 build root when `--toolchain-file` is omitted. Pass `--toolchain-file` only when
 validating a custom CMake toolchain definition.
 
-Expected outputs:
+Expected outputs (one `smoke.elf` per staged board):
 
 ```text
+/tmp/nsx-link-smoke/armclang/apollo2_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo3_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo3_evb_cygnus/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo3p_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo3p_evb_cygnus/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo4l_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo4l_blue_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo4p_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo4p_blue_kbr_evb/smoke.elf
+/tmp/nsx-link-smoke/armclang/apollo4p_blue_kxr_evb/smoke.elf
 /tmp/nsx-link-smoke/armclang/apollo330mP_evb/smoke.elf
 /tmp/nsx-link-smoke/armclang/apollo510_evb/smoke.elf
 /tmp/nsx-link-smoke/armclang/apollo510b_evb/smoke.elf
 /tmp/nsx-link-smoke/armclang/apollo510dL_evb/smoke.elf
 ```
+
+`apollo5b_evb` is descriptor-only and is skipped by the smoke runner until its
+HAL/BSP artifacts are staged.
 
 ## Standard Dev/CI Container
 

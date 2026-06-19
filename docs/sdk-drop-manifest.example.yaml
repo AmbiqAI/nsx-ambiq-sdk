@@ -5,21 +5,26 @@ sdk:
   raw_drop_checksum: sha256:<fill-me>
 
 artifacts:
-  output_root: artifacts/ambiqsuite/R5.4.0
+  # Promoted payload lives in the provider module, not a top-level artifacts/ tree.
+  output_root: modules/nsx-ambiqsuite/sdk
   release_approved: false
   generated_by: <tool-or-person>
   generated_at: <timestamp>
 
 scope:
   core_artifacts:
-    - lib/*/libam_hal.*
-    - lib/*/*/libam_bsp.*
-    - approved headers needed by NSX HAL/BSP consumers
+    - lib/<toolchain>/<part>/libam_hal.*
+    - lib/<toolchain>/<part>/<board>/libam_bsp.*
+    - approved headers needed by NSX HAL/BSP consumers (sdk/include)
+    - curated utility sources linked by nsx-ambiq-hal (sdk/src/am_util_*.c)
   optional_module_candidates:
-    - third_party/FreeRTOS*
-    - third_party/tinyusb
+    # These ship in-repo as separate opt-in modules, never in the base provider surface.
+    - third_party/FreeRTOS*        # -> nsx-freertos
+    - third_party/tinyusb          # -> nsx-ambiq-usb / nsx-usb
+    - src/usb                      # -> nsx-ambiq-usb
+    - audio helpers                # -> nsx-audio
+    - psram / external memory      # -> nsx-psram
     - third_party/cordio
-    - src/usb
     - CMSIS/NN
     - CMSIS/DSP
   ignored_upstream_content:
@@ -28,83 +33,95 @@ scope:
     - raw HAL/BSP source unless explicitly cleared
     - vendor debug/tool packages not needed by core descriptors
 
+# Per-part facts (core/dsp/mve/fpu/pmu and SEGGER defaults) are the single source
+# of truth in cmake/socs/facts/<skew>.cmake. This manifest mirrors the intake side
+# of the same coverage; statuses are 'staged' (artifacts present) or
+# 'descriptor-only' (descriptor present, artifacts not yet staged).
 parts:
-  - logical_skew: apollo510
-    ambiq_part_name: apollo510
-    mcu_dir: mcu/apollo510
-    system_source: src/apollo510/system_apollo510.c
-    hal_lib_part_name: apollo510
-    capabilities:
-      core: cortex-m55
-      dsp: true
-      mve: true
-      fpu: true
-      pmu: armv8m
+  - logical_skew: apollo2
+    status: staged
+    ambiq_part_name: apollo2
+    hal_lib_part_name: apollo2
+    capabilities: {core: cortex-m4, dsp: false, mve: false, fpu: true, pmu: none}
 
-  - logical_skew: apollo510b
-    ambiq_part_name: apollo510b
-    mcu_dir: mcu/apollo510
-    system_source: src/apollo510/system_apollo510.c
-    hal_lib_part_name: apollo510
-    capabilities:
-      core: cortex-m55
-      dsp: true
-      mve: true
-      fpu: true
-      pmu: armv8m
+  - logical_skew: apollo3
+    status: staged
+    ambiq_part_name: apollo3
+    hal_lib_part_name: apollo3
+    capabilities: {core: cortex-m4, dsp: false, mve: false, fpu: true, pmu: none}
 
-  - logical_skew: apollo510L
-    status: artifact-built
-    ambiq_part_name: apollo510L
-    mcu_dir: mcu/apollo510L
-    system_source: <fill-from-sdk-drop>
-    hal_lib_part_name: apollo510L
-    capabilities:
-      core: cortex-m55
-      dsp: true
-      mve: true
-      fpu: true
-      pmu: armv8m
+  - logical_skew: apollo3p
+    status: staged
+    ambiq_part_name: apollo3p
+    hal_lib_part_name: apollo3p
+    capabilities: {core: cortex-m4, dsp: false, mve: false, fpu: true, pmu: none}
+
+  - logical_skew: apollo4l
+    status: staged
+    ambiq_part_name: apollo4l
+    hal_lib_part_name: apollo4l
+    capabilities: {core: cortex-m4, dsp: false, mve: false, fpu: true, pmu: none}
+
+  - logical_skew: apollo4p
+    status: staged
+    ambiq_part_name: apollo4p
+    hal_lib_part_name: apollo4p
+    capabilities: {core: cortex-m4, dsp: false, mve: false, fpu: true, pmu: none}
 
   - logical_skew: apollo330P
-    status: artifact-built
+    status: staged
     ambiq_part_name: apollo330P
     mcu_dir: mcu/apollo330P
     system_source: src/apollo330P/system_apollo330P.c
     hal_lib_part_name: apollo330P
-    capabilities:
-      core: cortex-m55
-      dsp: true
-      mve: true
-      fpu: true
-      pmu: armv8m
+    capabilities: {core: cortex-m55, dsp: true, mve: true, fpu: true, pmu: armv8m}
+
+  - logical_skew: apollo510
+    status: staged
+    ambiq_part_name: apollo510
+    mcu_dir: mcu/apollo510
+    system_source: src/apollo510/system_apollo510.c
+    hal_lib_part_name: apollo510
+    capabilities: {core: cortex-m55, dsp: true, mve: true, fpu: true, pmu: armv8m}
+
+  - logical_skew: apollo510b
+    status: staged
+    ambiq_part_name: apollo510b
+    mcu_dir: mcu/apollo510
+    system_source: src/apollo510/system_apollo510.c
+    hal_lib_part_name: apollo510   # reuses apollo510 HAL
+    capabilities: {core: cortex-m55, dsp: true, mve: true, fpu: true, pmu: armv8m}
+
+  - logical_skew: apollo510L
+    status: staged
+    ambiq_part_name: apollo510L
+    mcu_dir: mcu/apollo510L
+    system_source: <fill-from-sdk-drop>
+    hal_lib_part_name: apollo510L
+    capabilities: {core: cortex-m55, dsp: true, mve: true, fpu: true, pmu: armv8m}
+
+  - logical_skew: apollo5b
+    status: descriptor-only
+    ambiq_part_name: apollo5b
+    hal_lib_part_name: apollo5b   # not staged yet
+    capabilities: {core: cortex-m55, dsp: true, mve: true, fpu: true, pmu: armv8m}
 
 boards:
-  - nsx_board: apollo510_evb
-    ambiq_board_name: apollo510_evb
-    logical_skew: apollo510
-    bsp_lib_part_name: apollo510
-    bsp_lib_subdir: evb
-
-  - nsx_board: apollo510b_evb
-    ambiq_board_name: apollo510b_evb
-    logical_skew: apollo510b
-    bsp_lib_part_name: apollo510
-    bsp_lib_subdir: apollo510b_evb
-
-  - nsx_board: apollo510dL_evb
-    status: artifact-built
-    ambiq_board_name: apollo510dL_evb
-    logical_skew: apollo510L
-    bsp_lib_part_name: apollo510L
-    bsp_lib_subdir: apollo510dL_evb
-
-  - nsx_board: apollo330mP_evb
-    status: artifact-built
-    ambiq_board_name: apollo330mP_evb
-    logical_skew: apollo330P
-    bsp_lib_part_name: apollo330P
-    bsp_lib_subdir: apollo330mP_evb
+  - {nsx_board: apollo2_evb,            status: staged, logical_skew: apollo2,    bsp_lib_part_name: apollo2,    bsp_lib_subdir: apollo2_evb}
+  - {nsx_board: apollo3_evb,            status: staged, logical_skew: apollo3,    bsp_lib_part_name: apollo3,    bsp_lib_subdir: apollo3_evb}
+  - {nsx_board: apollo3_evb_cygnus,     status: staged, logical_skew: apollo3,    bsp_lib_part_name: apollo3,    bsp_lib_subdir: apollo3_evb_cygnus}
+  - {nsx_board: apollo3p_evb,           status: staged, logical_skew: apollo3p,   bsp_lib_part_name: apollo3p,   bsp_lib_subdir: apollo3p_evb}
+  - {nsx_board: apollo3p_evb_cygnus,    status: staged, logical_skew: apollo3p,   bsp_lib_part_name: apollo3p,   bsp_lib_subdir: apollo3p_evb_cygnus}
+  - {nsx_board: apollo4l_evb,           status: staged, logical_skew: apollo4l,   bsp_lib_part_name: apollo4l,   bsp_lib_subdir: apollo4l_evb}
+  - {nsx_board: apollo4l_blue_evb,      status: staged, logical_skew: apollo4l,   bsp_lib_part_name: apollo4l,   bsp_lib_subdir: apollo4l_blue_evb}
+  - {nsx_board: apollo4p_evb,           status: staged, logical_skew: apollo4p,   bsp_lib_part_name: apollo4p,   bsp_lib_subdir: apollo4p_evb}
+  - {nsx_board: apollo4p_blue_kbr_evb,  status: staged, logical_skew: apollo4p,   bsp_lib_part_name: apollo4p,   bsp_lib_subdir: apollo4p_blue_kbr_evb}
+  - {nsx_board: apollo4p_blue_kxr_evb,  status: staged, logical_skew: apollo4p,   bsp_lib_part_name: apollo4p,   bsp_lib_subdir: apollo4p_blue_kxr_evb}
+  - {nsx_board: apollo330mP_evb,        status: staged, logical_skew: apollo330P, bsp_lib_part_name: apollo330P, bsp_lib_subdir: apollo330mP_evb}
+  - {nsx_board: apollo510_evb,          status: staged, logical_skew: apollo510,  bsp_lib_part_name: apollo510,  bsp_lib_subdir: apollo510_evb}
+  - {nsx_board: apollo510b_evb,         status: staged, logical_skew: apollo510b, bsp_lib_part_name: apollo510,  bsp_lib_subdir: apollo510b_evb}
+  - {nsx_board: apollo510dL_evb,        status: staged, logical_skew: apollo510L, bsp_lib_part_name: apollo510L, bsp_lib_subdir: apollo510dL_evb}
+  - {nsx_board: apollo5b_evb,           status: descriptor-only, logical_skew: apollo5b, bsp_lib_part_name: apollo5b, bsp_lib_subdir: apollo5b_evb}
 
 validation:
   scope_classification: pending

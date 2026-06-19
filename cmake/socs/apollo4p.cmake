@@ -1,6 +1,6 @@
 # SoC facts (NSX_SOC_* + NSX_CPU/NSX_FPU/NSX_FLOAT_ABI/NSX_ABI_FLAGS) are the
-# single source of truth shared with downstream board.cmake files; see _facts/.
-include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo4p.cmake")
+# single source of truth shared with downstream board.cmake files; see facts/.
+include("${CMAKE_CURRENT_LIST_DIR}/facts/apollo4p.cmake")
 
 if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR
@@ -14,6 +14,7 @@ set(NSX_AMBIQ_HAL_DIR "${NSX_AMBIQ_MCU_DIR}/hal")
 set(NSX_AMBIQ_HAL_MCU_DIR "${NSX_AMBIQ_HAL_DIR}/mcu")
 
 include("${NSX_CMAKE_DIR}/nsx_toolchain_flags.cmake")
+include("${NSX_CMAKE_DIR}/nsx_soc_facts.cmake")
 
 nsx_toolchain_is_armclang(NSX_TOOLCHAIN_IS_ARMCLANG)
 if(NSX_TOOLCHAIN_IS_ARMCLANG)
@@ -24,9 +25,6 @@ else()
     set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo4p/gcc/linker_script.ld")
 endif()
 set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_apollo4p.c")
-
-include("${NSX_CMAKE_DIR}/segger/socs/apollo4.cmake")
-
 set(NSX_SOC_TARGET nsx_soc_apollo4p)
 set(NSX_SOC_FLAGS_TARGET nsx_soc_apollo4p_flags)
 set(NSX_SOC_DESCRIPTOR_TARGET_EXPORT_NAME "soc_apollo4p")
@@ -39,19 +37,8 @@ nsx_assert_file_exists("${NSX_STARTUP_SOURCE}")
 nsx_assert_file_exists("${NSX_SYSTEM_SOURCE}")
 
 if(NOT TARGET ${NSX_SOC_FLAGS_TARGET})
-    add_library(${NSX_SOC_FLAGS_TARGET} INTERFACE)
+    nsx_soc_flags_target(${NSX_SOC_FLAGS_TARGET})
     set_target_properties(${NSX_SOC_FLAGS_TARGET} PROPERTIES EXPORT_NAME ${NSX_SOC_FLAGS_TARGET_EXPORT_NAME})
-    target_compile_definitions(${NSX_SOC_FLAGS_TARGET} INTERFACE
-        $<$<COMPILE_LANGUAGE:C>:PART_apollo4p>
-        $<$<COMPILE_LANGUAGE:C>:AM_PART_APOLLO4P>
-        $<$<COMPILE_LANGUAGE:C>:ARMCM4>
-        $<$<COMPILE_LANGUAGE:C>:__FPU_PRESENT>
-        $<$<COMPILE_LANGUAGE:C>:NSX_SOC_CORE_M4=1>
-        $<$<COMPILE_LANGUAGE:C>:NSX_SOC_HAS_DSP=1>
-        $<$<COMPILE_LANGUAGE:C>:NSX_SOC_HAS_MVE=0>
-        $<$<COMPILE_LANGUAGE:C>:NSX_SOC_HAS_FPU=1>
-        $<$<COMPILE_LANGUAGE:C>:NSX_SOC_PMU_ARMV8M=0>
-    )
     nsx_apply_toolchain_flags(${NSX_SOC_FLAGS_TARGET})
 endif()
 

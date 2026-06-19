@@ -24,3 +24,30 @@ set(NSX_FLOAT_ABI "hard")
 # of the core, so it is declared here at the SoC layer rather than per board.
 set(NSX_FPU "fpv4-sp-d16")
 set(NSX_ABI_FLAGS "thumbv7em-fpv4sp-hard")
+
+# SoC compile definitions (single source) consumed by nsx_soc_flags_target();
+# see ../../nsx_soc_facts.cmake. Each is gated to C by the helper.
+set(NSX_SOC_COMPILE_DEFINITIONS
+    PART_apollo3p
+    AM_PART_APOLLO3P
+    ARMCM4
+    __FPU_PRESENT
+    NSX_SOC_CORE_M4=1
+    NSX_SOC_HAS_DSP=1
+    NSX_SOC_HAS_MVE=0
+    NSX_SOC_HAS_FPU=1
+    NSX_SOC_PMU_ARMV8M=0
+)
+
+# SEGGER / J-Link configuration (SoC-level defaults).
+#
+# NSX_SEGGER_DEVICE and NSX_SEGGER_PF_ADDR are package/board-specific defaults; a
+# board.cmake may override NSX_SEGGER_DEVICE for its exact silicon package (e.g.
+# a -KXR vs -KBR part). NSX_SEGGER_CPUFREQ is the TPIU *trace clock*, used by the
+# SWO viewer to derive the baud scaler, not the CPU clock.
+set(NSX_SEGGER_CPU "Cortex-M4")
+set(NSX_SEGGER_DEVICE "AMA3B2KK-KBR")
+set(NSX_SEGGER_IF_SPEED "4000")
+set(NSX_SEGGER_PF_ADDR "0xC000")
+set(NSX_SEGGER_CPUFREQ "48000000")
+set(NSX_SEGGER_SWOFREQ "1000000")

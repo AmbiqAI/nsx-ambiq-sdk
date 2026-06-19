@@ -80,12 +80,12 @@ while still carrying its own part define and linker script.
 
 ### Single Source Of Truth For SoC Facts
 
-The side-effect-free SoC facts for a skew (the `NSX_SOC_*` facts plus the
-`NSX_CPU` / `NSX_FPU` / `NSX_FLOAT_ABI` / `NSX_ABI_FLAGS` toolchain selectors)
-live in a dedicated data-only file:
+The side-effect-free SoC facts for a skew (the `NSX_SOC_*` facts, the
+`NSX_CPU` / `NSX_FPU` / `NSX_FLOAT_ABI` / `NSX_ABI_FLAGS` toolchain selectors,
+and the SoC-level SEGGER / J-Link defaults) live in a dedicated data-only file:
 
 ```
-cmake/socs/_facts/<skew>.cmake
+cmake/socs/facts/<skew>.cmake
 ```
 
 These files contain only `set()` calls — no targets, includes, or other side

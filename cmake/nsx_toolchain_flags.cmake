@@ -35,6 +35,15 @@ function(nsx_require_enum_value var_name)
     endif()
 endfunction()
 
+# Assert that an imported/aliased NSX target exists before a dependent module is
+# added. Centralizes the repeated dependency-contract guard so every module
+# emits a consistent diagnostic.
+function(nsx_require_target target requiring_module)
+    if(NOT TARGET ${target})
+        message(FATAL_ERROR "${target} must be defined before ${requiring_module} is added.")
+    endif()
+endfunction()
+
 # Select the active linker script from the named NSX_LINKER_PROFILE. Precedence:
 #   1. An explicit NSX_LINKER_SCRIPT set by the caller always wins.
 #   2. NSX_LINKER_PROFILE picks one of the built-in profiles (default, itcm).
