@@ -31,10 +31,7 @@ OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
 }
 
 PROVIDER_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiqsuite-r2"),
-    ("modules", "nsx-ambiqsuite-r3"),
-    ("modules", "nsx-ambiqsuite-r4"),
-    ("modules", "nsx-ambiqsuite-r5"),
+    ("modules", "nsx-ambiqsuite"),
 }
 
 FORBIDDEN_POLICY_TERMS = (
@@ -63,10 +60,7 @@ MULTI_SOC_CURATED_MODULES = {
 }
 
 PROVIDER_SDK_MODULE_PREFIXES = {
-    ("modules", "nsx-ambiqsuite-r2", "sdk"),
-    ("modules", "nsx-ambiqsuite-r3", "sdk"),
-    ("modules", "nsx-ambiqsuite-r4", "sdk"),
-    ("modules", "nsx-ambiqsuite-r5", "sdk"),
+    ("modules", "nsx-ambiqsuite", "sdk"),
     ("modules", "nsx-ambiq-usb-r4", "sdk"),
     ("modules", "nsx-ambiq-usb-r5", "sdk"),
     ("modules", "nsx-freertos", "sdk"),
@@ -338,7 +332,7 @@ def test_nsx_modules_do_not_ship_freertos_allocator_residue(repo_root: Path) -> 
     allocator_symbols = ("pvTasklessPortMalloc", "vTasklessPortFree")
     offenders = []
     for path in (repo_root / "modules").rglob("*"):
-        if not path.is_file() or "nsx-ambiqsuite-r5/sdk" in path.as_posix():
+        if not path.is_file() or "nsx-ambiqsuite/sdk" in path.as_posix():
             continue
         relative_parts = path.relative_to(repo_root).parts
         if any(relative_parts[:len(prefix)] == prefix for prefix in PROVIDER_MODULE_PREFIXES):
@@ -429,7 +423,7 @@ def test_platform_coverage_names_unstaged_r5_variants(repo_root: Path) -> None:
 
 
 def test_staged_platform_coverage_matches_payload(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     assert (payload / "artifact-manifest.yaml").is_file()
     assert (payload.parent / "UPSTREAM-LICENSE-NOTICE.md").is_file()
     assert (payload.parent / "THIRD-PARTY-PAYLOAD.md").is_file()
@@ -492,7 +486,7 @@ def test_staged_platform_coverage_matches_payload(repo_root: Path) -> None:
 
 
 def test_provider_payload_third_party_boundaries(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     files = [path for path in payload.rglob("*") if path.is_file()]
 
     segger_payload = [
@@ -512,7 +506,7 @@ def test_provider_payload_third_party_boundaries(repo_root: Path) -> None:
 
 
 def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
-    payload = repo_root / "modules" / "nsx-ambiqsuite-r5" / "sdk"
+    payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
     top_level_sources = sorted(path.name for path in (payload / "src").glob("*.c"))
     assert top_level_sources == [
         "am_util_delay.c",
@@ -521,7 +515,12 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
     ]
     cmsis_system_sources = sorted(path.name for path in (payload / "CMSIS" / "AmbiqMicro" / "Source").glob("system_*.c"))
     assert cmsis_system_sources == [
+        "system_apollo2.c",
+        "system_apollo3.c",
         "system_apollo330P.c",
+        "system_apollo3p.c",
+        "system_apollo4l.c",
+        "system_apollo4p.c",
         "system_apollo510.c",
         "system_apollo510L.c",
     ]
