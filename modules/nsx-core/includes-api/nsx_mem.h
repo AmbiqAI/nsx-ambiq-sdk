@@ -230,11 +230,76 @@
  * Cache helpers
  *
  * Lightweight cache control without the full power-management teardown.
- * Enable/disable is available on staged NSX targets with hardware cache
- * (AP2+). Flush is available on AP3+ staged targets; Apollo2 currently
- * falls back to a no-op because this SDK surface does not expose a standard
- * public bus-flush helper for that family.
+ *
+ * Two layers are provided:
+ *
+ *  1. Enable/disable — turn the hardware cache on or off. Available on all
+ *     staged NSX targets that have a cache (AP2+).
+ *
+ *  2. Coherence helpers — named by the guarantee they provide rather than by
+ *     the overloaded word "flush". Because the public HAL surface differs by
+ *     family, each guarantee is gated by an NSX_CACHE_HAS_* capability macro
+ *     and returns NSX_CACHE_UNSUPPORTED where the target cannot honor it:
+ *
+ *       - nsx_cache_publish_writes(): make prior CPU writes visible to other
+ *         bus masters (device -> host/DMA). AP3 drains write buffers, AP4
+ *         flushes DAXI, AP5 cleans the D-cache.
+ *       - nsx_cache_invalidate_observed_data(): discard stale CPU copies so
+ *         the next read observes external writes (host/DMA -> device). Only
+ *         AP5-class parts expose a real data-cache invalidate; on AP2/AP3/AP4
+ *         data memory is not CPU read-cached, so this reports unsupported.
+ *       - nsx_cache_sync_shared_data(): conservative bidirectional sync point
+ *         for a shared buffer. AP4 drains+invalidates DAXI, AP5 performs a
+ *         clean+invalidate.
+ *
+ * nsx_cache_flush() is retained as a backward-compatible alias of
+ * nsx_cache_publish_writes() (and remains a no-op on parts without a public
+ * bus-flush primitive, e.g. Apollo2).
  * =================================================================== */
+
+/* Returned by the coherence helpers when the requested guarantee is not
+ * available on the current target. Distinct from AM_HAL_STATUS_SUCCESS (0). */
+#define NSX_CACHE_UNSUPPORTED  0xE0CAC4E1u
+
+/* ---- Internal family groupings (do not use directly) ---- */
+#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
+    defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+  #define NSX_CACHE__FAMILY_AP5 1
+#elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
+  #define NSX_CACHE__FAMILY_AP4 1
+#elif defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+  #define NSX_CACHE__FAMILY_AP3 1
+#elif defined(AM_PART_APOLLO2)
+  #define NSX_CACHE__FAMILY_AP2 1
+#endif
+
+/* ---- Capability flags (1 = guarantee honored, 0 = reports unsupported) ---- */
+#if defined(NSX_CACHE__FAMILY_AP3) || defined(NSX_CACHE__FAMILY_AP4) || \
+    defined(NSX_CACHE__FAMILY_AP5)
+  #define NSX_CACHE_HAS_PUBLISH_WRITES 1
+#else
+  #define NSX_CACHE_HAS_PUBLISH_WRITES 0
+#endif
+
+#if defined(NSX_CACHE__FAMILY_AP5)
+  #define NSX_CACHE_HAS_INVALIDATE_OBSERVED 1
+#else
+  #define NSX_CACHE_HAS_INVALIDATE_OBSERVED 0
+#endif
+
+#if defined(NSX_CACHE__FAMILY_AP4) || defined(NSX_CACHE__FAMILY_AP5)
+  #define NSX_CACHE_HAS_SYNC_SHARED 1
+#else
+  #define NSX_CACHE_HAS_SYNC_SHARED 0
+#endif
+
+#if defined(NSX_CACHE__FAMILY_AP5)
+  #define NSX_CACHE_HAS_EXPLICIT_DCACHE 1
+#else
+  #define NSX_CACHE_HAS_EXPLICIT_DCACHE 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -242,6 +307,10 @@ extern "C" {
 uint32_t nsx_cache_enable(void);
 void nsx_cache_disable(void);
 uint32_t nsx_cache_flush(void);
+
+uint32_t nsx_cache_publish_writes(void);
+uint32_t nsx_cache_invalidate_observed_data(void);
+uint32_t nsx_cache_sync_shared_data(void);
 
 #ifdef __cplusplus
 }
