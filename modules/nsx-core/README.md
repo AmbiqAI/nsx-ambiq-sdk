@@ -81,14 +81,42 @@ Macros degrade gracefully on simpler SoCs (fall back to default sections).
 
 `nsx_mem.h` also exposes lightweight cache helpers for common portable flows:
 
-- `nsx_cache_enable()` / `nsx_cache_disable()` for turning cache on or off
-- `nsx_cache_flush()` for making prior CPU writes visible on AP3+ without
-  callers needing to know whether the target uses Apollo3 sync-read flush,
-  Apollo4 DAXI flush, or Apollo5 split-cache maintenance
+- `nsx_cache_enable()` / `nsx_cache_disable()` for turning cache on or off.
+- Guarantee-named coherence helpers that say *what* they promise rather than
+  the overloaded word "flush". Each is gated by an `NSX_CACHE_HAS_*` capability
+  macro and returns `NSX_CACHE_UNSUPPORTED` where the target cannot honor it:
+  - `nsx_cache_publish_writes()` — make prior CPU writes visible to other bus
+    masters (device → host/DMA).
+  - `nsx_cache_invalidate_observed_data()` — discard stale CPU copies so the
+    next read observes external writes (host/DMA → device).
+  - `nsx_cache_sync_shared_data()` — conservative bidirectional sync point for a
+    shared buffer.
+- `nsx_cache_flush()` is retained as a backward-compatible alias of
+  `nsx_cache_publish_writes()`.
 
-Apollo2 also uses the shared `nsx_cache_enable()` / `nsx_cache_disable()`
-shim, but `nsx_cache_flush()` currently degrades to a no-op there because the
-public r2 HAL surface in this SDK does not expose a standard bus-flush helper.
+Capability matrix (✓ = honored, — = reports `NSX_CACHE_UNSUPPORTED`):
+
+| Family | enable/disable | publish_writes | invalidate_observed | sync_shared | Underlying primitive |
+| --- | :---: | :---: | :---: | :---: | --- |
+| Apollo2 | ✓ | — | — | — | enable/disable only; no public bus-flush |
+| Apollo3 / 3P | ✓ | ✓ | — | — | `am_hal_sysctrl_bus_write_flush()` (SYNC_READ) |
+| Apollo4 / 4L / 4P | ✓ | ✓ | — | ✓ | DAXI flush (+invalidate); data memory is not CPU read-cached |
+| Apollo5xx / 330P / 510L | ✓ | ✓ | ✓ | ✓ | split D-cache `clean` / `invalidate` / `clean+invalidate` |
+
+`invalidate_observed_data` is honored only on Apollo5-class parts, which have a
+real CPU data cache over data memory. On Apollo2/3/4 data memory is not CPU
+read-cached (Apollo4 DAXI is a write buffer, not a read cache), so that
+guarantee correctly reports unsupported rather than pretending to act.
+
+These helpers maintain data only; none of them touch the instruction cache.
+
+Callers can branch at compile time on the capability macros
+(`NSX_CACHE_HAS_PUBLISH_WRITES`, `NSX_CACHE_HAS_INVALIDATE_OBSERVED`,
+`NSX_CACHE_HAS_SYNC_SHARED`, `NSX_CACHE_HAS_EXPLICIT_DCACHE`) or at run time on
+the `NSX_CACHE_UNSUPPORTED` return code. `NSX_CACHE_HAS_EXPLICIT_DCACHE` marks
+parts with explicit data-cache clean/invalidate semantics and is reserved for a
+future address-range maintenance API; the current helpers operate on the whole
+cache only.
 
 ## Toolchains
 
