@@ -43,8 +43,12 @@ Unsupported utility headers that are not backed by the staged sources or
 prebuilt libraries, such as `am_util_id.h`, are omitted so the promoted
 `sdk/utils/` surface only advertises supported APIs.
 
-Prebuilts under `sdk/lib/` cover `gcc`, `atfe`, and `acfe` artifact families.
+Prebuilts under `sdk/lib/` carry `gcc`, `atfe`, and `acfe` artifact families.
 NSX maps the `armclang` toolchain family to the `acfe` artifact directory.
+For HAL/BSP linking today, NSX also maps the `atfe` toolchain family to the
+`gcc` prebuilts as a temporary runtime workaround for the Apollo510 USB CDC
+regression; the staged `atfe` archives remain in the provider payload for intake
+and validation but are not the default consumer link target yet.
 
 CMSIS core headers are provided by `nsx-cmsis-core` (CMSIS 6). CMSIS NN and
 CMSIS DSP are separate module inputs.
