@@ -38,9 +38,9 @@ build:
 
 depends:
   required:
-    - nsx-ambiqsuite-r4
-    - nsx-ambiq-hal-r4
-    - nsx-ambiq-bsp-r4
+    - nsx-ambiqsuite
+    - nsx-ambiq-hal
+    - nsx-ambiq-bsp
   optional: []
 
 compatibility:

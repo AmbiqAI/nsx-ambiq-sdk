@@ -43,9 +43,9 @@ requires_app_contract:
 
 depends:
   required:
-    - nsx-ambiqsuite-r5
-    - nsx-ambiq-hal-r5
-    - nsx-ambiq-bsp-r5
+    - nsx-ambiqsuite
+    - nsx-ambiq-hal
+    - nsx-ambiq-bsp
   optional: []
 
 compatibility:

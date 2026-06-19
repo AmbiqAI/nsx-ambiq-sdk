@@ -2,9 +2,9 @@
 # single source of truth shared with downstream board.cmake files; see _facts/.
 include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo4p.cmake")
 
-if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r4")
+if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR
-        "apollo4p requires NSX_SDK_PROVIDER=ambiqsuite-r4, got '${NSX_SDK_PROVIDER}'."
+        "apollo4p requires NSX_SDK_PROVIDER=ambiqsuite, got '${NSX_SDK_PROVIDER}'."
     )
 endif()
 

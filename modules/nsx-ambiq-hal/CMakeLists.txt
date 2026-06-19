@@ -1,14 +1,14 @@
 if(NOT DEFINED NSX_AMBIQSUITE_ROOT)
-    message(FATAL_ERROR "NSX_AMBIQSUITE_ROOT must be configured before ns-ambiq-hal-r5 is added.")
+    message(FATAL_ERROR "NSX_AMBIQSUITE_ROOT must be configured before nsx-ambiq-hal is added.")
 endif()
 if(NOT TARGET nsx::board_flags)
-    message(FATAL_ERROR "Board must define nsx::board_flags before ns-ambiq-hal-r5 is added.")
+    message(FATAL_ERROR "Board must define nsx::board_flags before nsx-ambiq-hal is added.")
 endif()
-if(NOT DEFINED NSX_AMBIQ_PART_NAME OR NOT DEFINED NSX_AMBIQ_MCU_DIR OR NOT DEFINED NSX_AMBIQ_HAL_DIR OR NOT DEFINED NSX_AMBIQ_HAL_MCU_DIR)
-    message(FATAL_ERROR "Board must define NSX_AMBIQ_* MCU/HAL paths before ns-ambiq-hal-r5 is added.")
+if(NOT DEFINED NSX_AMBIQ_PART_NAME OR NOT DEFINED NSX_AMBIQ_MCU_DIR OR NOT DEFINED NSX_AMBIQ_HAL_DIR)
+    message(FATAL_ERROR "Board must define NSX_AMBIQ_* MCU/HAL paths before nsx-ambiq-hal is added.")
 endif()
-if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r5")
-    message(FATAL_ERROR "ns-ambiq-hal-r5 requires NSX_SDK_PROVIDER=ambiqsuite-r5.")
+if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
+    message(FATAL_ERROR "nsx-ambiq-hal requires NSX_SDK_PROVIDER=ambiqsuite.")
 endif()
 
 option(NSX_AMBIQSUITE_USE_PREBUILT "Use prebuilt AmbiqSuite static libraries" ON)
@@ -29,36 +29,55 @@ endif()
 nsx_assert_directory_exists("${NSX_AMBIQSUITE_ROOT}")
 nsx_assert_directory_exists("${NSX_AMBIQ_MCU_DIR}")
 nsx_assert_directory_exists("${NSX_AMBIQ_HAL_DIR}")
-nsx_assert_directory_exists("${NSX_AMBIQ_HAL_MCU_DIR}")
+# Newer SoCs (apollo4+) split the HAL into an additional hal/mcu tree; older
+# parts (apollo2/apollo3) do not. The SoC cmake defines NSX_AMBIQ_HAL_MCU_DIR
+# only when that tree is present.
+if(DEFINED NSX_AMBIQ_HAL_MCU_DIR)
+    nsx_assert_directory_exists("${NSX_AMBIQ_HAL_MCU_DIR}")
+endif()
 nsx_assert_path_component(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
 nsx_assert_path_component(NSX_AMBIQ_HAL_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_MCU_INSTALL_NAME)
 
+# Prebuilt libraries are laid out per-toolchain: lib/<toolchain>/<part>/libam_hal.a.
+# The atfe->gcc USB CDC workaround is applied centrally by
+# nsx_resolve_ambiqsuite_artifact_toolchain.
 set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal.a")
 set(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite HAL static library")
 
 # Core CMSIS headers (core_cm*, cmsis_compiler.h, m-profile/*) come from
 # nsx-cmsis-core via target_link_libraries below. Only AmbiqMicro device,
-# MCU/HAL, and utility headers remain owned here.
-set(NSX_AMBIQ_HAL_BUILD_INCLUDES
-    ${CMAKE_CURRENT_LIST_DIR}/includes-api
+# MCU/HAL, and utility headers remain owned here. The PMU helper headers
+# (includes-api) ship only for SoCs whose HAL exposes the armv8m PMU.
+set(NSX_AMBIQ_HAL_BUILD_INCLUDES "")
+if(NSX_AMBIQ_HAL_HAS_PMU)
+    list(APPEND NSX_AMBIQ_HAL_BUILD_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/includes-api)
+endif()
+list(APPEND NSX_AMBIQ_HAL_BUILD_INCLUDES
     ${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Include
     ${NSX_AMBIQSUITE_ROOT}/devices
     ${NSX_AMBIQ_MCU_DIR}
     ${NSX_AMBIQ_HAL_DIR}
-    ${NSX_AMBIQ_HAL_MCU_DIR}
-    ${NSX_AMBIQSUITE_ROOT}/utils
 )
+if(DEFINED NSX_AMBIQ_HAL_MCU_DIR)
+    list(APPEND NSX_AMBIQ_HAL_BUILD_INCLUDES ${NSX_AMBIQ_HAL_MCU_DIR})
+endif()
+list(APPEND NSX_AMBIQ_HAL_BUILD_INCLUDES ${NSX_AMBIQSUITE_ROOT}/utils)
 
-set(NSX_AMBIQ_HAL_INSTALL_INCLUDES
-    ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-ambiq-hal-r5/includes-api
+set(NSX_AMBIQ_HAL_INSTALL_INCLUDES "")
+if(NSX_AMBIQ_HAL_HAS_PMU)
+    list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-ambiq-hal/includes-api)
+endif()
+list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES
     ${NSX_AMBIQ_INSTALL_BASE}/CMSIS/AmbiqMicro/Include
     ${NSX_AMBIQ_INSTALL_BASE}/devices
     ${NSX_AMBIQ_INSTALL_BASE}/mcu/${NSX_AMBIQ_MCU_INSTALL_NAME}
     ${NSX_AMBIQ_INSTALL_BASE}/mcu/${NSX_AMBIQ_MCU_INSTALL_NAME}/hal
-    ${NSX_AMBIQ_INSTALL_BASE}/mcu/${NSX_AMBIQ_MCU_INSTALL_NAME}/hal/mcu
-    ${NSX_AMBIQ_INSTALL_BASE}/utils
 )
+if(DEFINED NSX_AMBIQ_HAL_MCU_DIR)
+    list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES ${NSX_AMBIQ_INSTALL_BASE}/mcu/${NSX_AMBIQ_MCU_INSTALL_NAME}/hal/mcu)
+endif()
+list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES ${NSX_AMBIQ_INSTALL_BASE}/utils)
 
 set(NSX_AMBIQ_HAL_INCLUDE_ARGS "")
 foreach(p IN LISTS NSX_AMBIQ_HAL_BUILD_INCLUDES)
@@ -68,21 +87,31 @@ foreach(p IN LISTS NSX_AMBIQ_HAL_INSTALL_INCLUDES)
     list(APPEND NSX_AMBIQ_HAL_INCLUDE_ARGS "$<INSTALL_INTERFACE:${p}>")
 endforeach()
 
-add_library(nsx_ambiq_hal STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_ambiq_pmu.c
+set(NSX_AMBIQ_HAL_SOURCES
     ${NSX_AMBIQSUITE_ROOT}/src/am_util_stdio.c
     ${NSX_AMBIQSUITE_ROOT}/src/am_util_delay.c
-    ${NSX_AMBIQSUITE_ROOT}/src/am_util_pmu.c
 )
-set_target_properties(nsx_ambiq_hal PROPERTIES EXPORT_NAME ambiq_hal_r5)
+if(NSX_AMBIQ_HAL_HAS_PMU)
+    list(APPEND NSX_AMBIQ_HAL_SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_ambiq_pmu.c
+        ${NSX_AMBIQSUITE_ROOT}/src/am_util_pmu.c
+    )
+endif()
+
+add_library(nsx_ambiq_hal STATIC ${NSX_AMBIQ_HAL_SOURCES})
+set_target_properties(nsx_ambiq_hal PROPERTIES EXPORT_NAME ambiq_hal)
 add_library(nsx::ambiq_hal ALIAS nsx_ambiq_hal)
+# Back-compat aliases for SoC-family-specific consumers (e.g. nsx-ambiq-usb-r*).
+add_library(nsx::ambiq_hal_r2 ALIAS nsx_ambiq_hal)
+add_library(nsx::ambiq_hal_r3 ALIAS nsx_ambiq_hal)
+add_library(nsx::ambiq_hal_r4 ALIAS nsx_ambiq_hal)
 add_library(nsx::ambiq_hal_r5 ALIAS nsx_ambiq_hal)
 target_link_libraries(nsx_ambiq_hal PUBLIC
     nsx::board_flags
     nsx::cmsis_core
 )
 target_include_directories(nsx_ambiq_hal PUBLIC ${NSX_AMBIQ_HAL_INCLUDE_ARGS})
-target_compile_definitions(nsx_ambiq_hal PUBLIC NSX_AMBIQSUITE_R5)
+target_compile_definitions(nsx_ambiq_hal PUBLIC NSX_AMBIQSUITE)
 
 if(NSX_AMBIQSUITE_USE_PREBUILT)
     nsx_validate_prebuilt_abi()
@@ -93,9 +122,9 @@ if(NSX_AMBIQSUITE_USE_PREBUILT)
         target_link_libraries(nsx_ambiq_hal PUBLIC m)
     endif()
 elseif(NSX_AMBIQSUITE_USE_SOURCE_FALLBACK)
-    message(FATAL_ERROR "ns-ambiq-hal-r5 source fallback is not implemented yet.")
+    message(FATAL_ERROR "nsx-ambiq-hal source fallback is not implemented yet.")
 else()
-    message(FATAL_ERROR "Prebuilt disabled and source fallback disabled for ns-ambiq-hal-r5.")
+    message(FATAL_ERROR "Prebuilt disabled and source fallback disabled for nsx-ambiq-hal.")
 endif()
 
 # CMSIS/ARM/Include now ships from nsx-cmsis-core; only AmbiqMicro device
@@ -120,10 +149,12 @@ install(DIRECTORY
     ${NSX_AMBIQSUITE_ROOT}/utils
     DESTINATION ${NSX_AMBIQ_INSTALL_BASE}
 )
-install(DIRECTORY
-    ${CMAKE_CURRENT_LIST_DIR}/includes-api
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-ambiq-hal-r5
-)
+if(NSX_AMBIQ_HAL_HAS_PMU)
+    install(DIRECTORY
+        ${CMAKE_CURRENT_LIST_DIR}/includes-api
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-ambiq-hal
+    )
+endif()
 
 install(TARGETS
     nsx_ambiq_hal

@@ -2,9 +2,9 @@
 # single source of truth shared with downstream board.cmake files; see _facts/.
 include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo510b.cmake")
 
-if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r5")
+if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR
-        "apollo510b requires NSX_SDK_PROVIDER=ambiqsuite-r5, got '${NSX_SDK_PROVIDER}'."
+        "apollo510b requires NSX_SDK_PROVIDER=ambiqsuite, got '${NSX_SDK_PROVIDER}'."
     )
 endif()
 
@@ -13,6 +13,8 @@ set(NSX_AMBIQ_MCU_DIR "${NSX_AMBIQSUITE_ROOT}/mcu/apollo510")
 set(NSX_AMBIQ_HAL_LIB_PART_NAME "apollo510")
 set(NSX_AMBIQ_HAL_DIR "${NSX_AMBIQ_MCU_DIR}/hal")
 set(NSX_AMBIQ_HAL_MCU_DIR "${NSX_AMBIQ_HAL_DIR}/mcu")
+# This SoC's HAL exposes the armv8m PMU helper surface (nsx-ambiq-hal/includes-api).
+set(NSX_AMBIQ_HAL_HAS_PMU TRUE)
 
 include("${NSX_CMAKE_DIR}/nsx_toolchain_flags.cmake")
 

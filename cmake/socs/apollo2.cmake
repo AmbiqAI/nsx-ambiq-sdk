@@ -2,9 +2,9 @@
 # single source of truth shared with downstream board.cmake files; see _facts/.
 include("${CMAKE_CURRENT_LIST_DIR}/_facts/apollo2.cmake")
 
-if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite-r2")
+if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     message(FATAL_ERROR
-        "apollo2 requires NSX_SDK_PROVIDER=ambiqsuite-r2, got '${NSX_SDK_PROVIDER}'."
+        "apollo2 requires NSX_SDK_PROVIDER=ambiqsuite, got '${NSX_SDK_PROVIDER}'."
     )
 endif()
 

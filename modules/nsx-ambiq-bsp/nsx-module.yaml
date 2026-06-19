@@ -1,42 +1,43 @@
 schema_version: 1
 
 module:
-  name: nsx-ambiqsuite
-  type: sdk_provider
-  category: sdk_provider
-  provider: ambiqsuite
+  name: nsx-ambiq-bsp
+  type: backend_specific
+  category: sdk_component
   version: "0.1.0"
-  sdk_release: "stable-2026.06.17"
-  upstream_revision: "stable-6cdd4ccf96"
 
 support:
   ambiqsuite: true
   zephyr: false
 
-summary: Unified AmbiqSuite SDK provider covering all staged Apollo NSX targets.
+summary: Curated BSP wrapper surface for board-support integration on AmbiqSuite targets (all SoCs).
 
 capabilities:
-  - sdk_provider
-  - ambiqsuite
+  - bsp_wrapper
+  - board_support
+  - sdk_component
 
 use_cases:
-  - choose the AmbiqSuite SDK baseline for any Apollo-generation app
-  - provide upstream SDK content for platform stacks
-  - foundation for the Ambiq HAL and BSP layers
+  - board-support integration for any AmbiqSuite target
+  - stable BSP access without wiring raw SDK board files by hand
+  - dependency for board-oriented application bring-up
 
 agent_keywords:
+  - bsp
+  - board support
   - ambiqsuite
-  - sdk
-  - provider
+  - wrapper
 
 build:
   cmake:
-    package: nsx_sdk_ambiqsuite
+    package: nsx_ambiq_bsp
     targets:
-      - nsx::sdk_ambiqsuite
+      - nsx::ambiq_bsp
 
 depends:
-  required: []
+  required:
+    - nsx-ambiqsuite
+    - nsx-ambiq-hal
   optional: []
 
 compatibility:
