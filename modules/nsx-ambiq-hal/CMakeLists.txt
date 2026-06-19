@@ -11,7 +11,7 @@ endif()
 
 # The PMU helper surface (includes-api + nsx_ambiq_pmu.c + am_util_pmu.c) ships
 # only for SoCs whose HAL exposes the armv8m PMU. Derive that capability from
-# the published SoC fact (NSX_SOC_PMU_TIER, set by cmake/socs/_facts/<skew>.cmake
+# the published SoC fact (NSX_SOC_PMU_TIER, set by cmake/socs/facts/<skew>.cmake
 # via nsx_load_soc_facts) so neither the SDK SoC descriptors nor downstream
 # board.cmake files have to set NSX_AMBIQ_HAL_HAS_PMU by hand. An explicit value
 # set before this module is added still wins.
