@@ -235,9 +235,17 @@
  * falls back to a no-op because this SDK surface does not expose a standard
  * public bus-flush helper for that family.
  * =================================================================== */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint32_t nsx_cache_enable(void);
 void nsx_cache_disable(void);
 uint32_t nsx_cache_flush(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #if defined(AM_PART_APOLLO2) || defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || \
   defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
