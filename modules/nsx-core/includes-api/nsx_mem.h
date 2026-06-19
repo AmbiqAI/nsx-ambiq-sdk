@@ -234,6 +234,7 @@
  * =================================================================== */
 uint32_t nsx_cache_enable(void);
 void nsx_cache_disable(void);
+uint32_t nsx_cache_flush(void);
 
 #if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
     defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \

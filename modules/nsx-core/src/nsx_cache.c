@@ -42,3 +42,15 @@ void nsx_cache_disable(void)
     am_hal_cachectrl_disable();
 #endif
 }
+
+uint32_t nsx_cache_flush(void)
+{
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
+    defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
+    defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    return am_hal_sysctrl_bus_write_flush();
+#else
+    return 0;
+#endif
+}
