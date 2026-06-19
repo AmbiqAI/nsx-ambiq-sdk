@@ -82,9 +82,13 @@ Macros degrade gracefully on simpler SoCs (fall back to default sections).
 `nsx_mem.h` also exposes lightweight cache helpers for common portable flows:
 
 - `nsx_cache_enable()` / `nsx_cache_disable()` for turning cache on or off
-- `nsx_cache_flush()` for making prior CPU writes visible without callers
-  needing to know whether the target uses Apollo4 DAXI flush or Apollo5
-  split-cache maintenance
+- `nsx_cache_flush()` for making prior CPU writes visible on AP3+ without
+  callers needing to know whether the target uses Apollo3 sync-read flush,
+  Apollo4 DAXI flush, or Apollo5 split-cache maintenance
+
+Apollo2 also uses the shared `nsx_cache_enable()` / `nsx_cache_disable()`
+shim, but `nsx_cache_flush()` currently degrades to a no-op there because the
+public r2 HAL surface in this SDK does not expose a standard bus-flush helper.
 
 ## Toolchains
 

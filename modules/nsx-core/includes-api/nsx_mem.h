@@ -230,13 +230,17 @@
  * Cache helpers
  *
  * Lightweight cache control without the full power-management teardown.
- * Only available on SoCs with hardware I/D cache (AP4+).
+ * Enable/disable is available on staged NSX targets with hardware cache
+ * (AP2+). Flush is available on AP3+ staged targets; Apollo2 currently
+ * falls back to a no-op because this SDK surface does not expose a standard
+ * public bus-flush helper for that family.
  * =================================================================== */
 uint32_t nsx_cache_enable(void);
 void nsx_cache_disable(void);
 uint32_t nsx_cache_flush(void);
 
-#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
+#if defined(AM_PART_APOLLO2) || defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || \
+  defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
     defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
     defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
