@@ -39,8 +39,8 @@ depends:
     - nsx-core
     - nsx-timer
     - nsx-soc-hal
-  optional:
     - nsx-ambiq-usb
+  optional: []
 
 compatibility:
   boards:
