@@ -62,11 +62,15 @@ compatibility:
     - apollo4p_blue_kxr_evb
     - apollo510_evb
     - apollo510b_evb
+    - apollo330mP_evb
+    - apollo510dL_evb
   socs:
     - apollo3p
     - apollo4p
     - apollo510
     - apollo510b
+    - apollo330P
+    - apollo510L
   toolchains:
     - arm-none-eabi-gcc
 
