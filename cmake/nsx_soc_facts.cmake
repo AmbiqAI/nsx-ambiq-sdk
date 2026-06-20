@@ -30,8 +30,10 @@ endmacro()
 #
 # Create an INTERFACE library <target> that carries the SoC compile
 # definitions published by nsx_load_soc_facts() in NSX_SOC_COMPILE_DEFINITIONS,
-# each gated to C (so assembly startup and the link step are unaffected), and
-# alias it as nsx::soc_flags.
+# each gated to the C and C++ compile languages (so assembly startup and the
+# link step are unaffected, while mixed C/C++ apps — e.g. TFLM/heliaRT C++
+# sources that include SoC-gated headers such as nsx_pmu_map.h — still see the
+# PART/AM_PART/core selection macros), and alias it as nsx::soc_flags.
 #
 # This is the single point where the SoC define list becomes compiler flags. It
 # is shared by the SDK's own cmake/socs/<skew>.cmake descriptors and by
@@ -54,7 +56,7 @@ function(nsx_soc_flags_target _nsx_soc_flags_target)
     add_library(${_nsx_soc_flags_target} INTERFACE)
     foreach(_nsx_soc_def IN LISTS NSX_SOC_COMPILE_DEFINITIONS)
         target_compile_definitions(${_nsx_soc_flags_target} INTERFACE
-            $<$<COMPILE_LANGUAGE:C>:${_nsx_soc_def}>)
+            $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:${_nsx_soc_def}>)
     endforeach()
     if(NOT TARGET nsx::soc_flags)
         add_library(nsx::soc_flags ALIAS ${_nsx_soc_flags_target})
