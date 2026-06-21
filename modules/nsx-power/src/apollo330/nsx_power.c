@@ -48,7 +48,6 @@
 #include "nsx_core.h"
 #include "nsx_power.h"
 #include "am_hal_clkmgr.h"
-#include "am_hal_spotmgr.h"
 
 uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
     uint32_t retval = NSX_STATUS_SUCCESS;
@@ -192,12 +191,14 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
 
     am_bsp_low_power_init();
 
-    if (pCfg->spotmgr_collapse) {
-        am_hal_spotmgr_profile_t spotmgr_profile;
-        spotmgr_profile.PROFILE = 0;
-        spotmgr_profile.PROFILE_b.COLLAPSESTMANDSTMP = 1;
-        am_hal_spotmgr_profile_set(&spotmgr_profile);
-    }
+    // NOTE: The SpotManager PROFILE "collapse STM and STM+" API
+    // (am_hal_spotmgr_profile_t / am_hal_spotmgr_profile_set) is an Apollo5
+    // (apollo510) feature only. The Apollo330P / Apollo510L HALs ship a
+    // different (SCM-based) spot manager that has no profile-collapse
+    // concept, so pCfg->spotmgr_collapse is intentionally not acted upon
+    // here. See modules/nsx-power/src/apollo5/nsx_power.c for the Apollo5 path.
+    (void)pCfg->spotmgr_collapse;
+
     #define ELP_ON                              1
     am_hal_pwrctrl_pwrmodctl_cpdlp_t sDefaultCpdlpConfig =
     {
