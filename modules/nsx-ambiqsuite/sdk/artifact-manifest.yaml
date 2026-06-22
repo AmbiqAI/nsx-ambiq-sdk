@@ -135,6 +135,19 @@ parts:
       atfe:
         path: atfe/lib/apollo2/libam_hal.a
         sha256: 87f7af709f9fcb971e1206f25bef096b87a334de1c79188c825dc2381f995960
+  - logical_skew: atomiq110
+    mcu_dir: mcu/atomiq110
+    hal_source_dir: mcu/atomiq110/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/atomiq110/libam_hal.a
+        sha256: bfc82130abae9e5eda36c31c8c85ead1fbd1c93c086130dd592465be444d6043
+      atfe:
+        path: atfe/lib/atomiq110/libam_hal.a
+        sha256: 154727253973eebfee081a0afbe9f3d5507e8f998fe1692198e2c9f56a2ed5e4
+      acfe:
+        path: acfe/lib/atomiq110/libam_hal.a
+        sha256: 5491fc555d0dca9763381ddb282c0a03fd94aedb4c2beceb9f33701da38eee9b
 
 boards:
   - nsx_board: apollo330mP_evb
@@ -330,3 +343,17 @@ boards:
       atfe:
         path: atfe/lib/apollo2/apollo2_evb/libam_bsp.a
         sha256: 96ee7d07ec752c493dff97dad892a6d31e40cd51bae35a5b31b09ff593acc43d
+  - nsx_board: atomiq110_fpga_turbo
+    ambiq_board_name: atomiq110_fpga_turbo
+    logical_skew: atomiq110
+    bsp_source_dir: boards/atomiq110_fpga_turbo/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+        sha256: 1084d4b8d56bf11768860b660c81c72d5f75c9fd21607ec8911ff20fda379bc4
+      atfe:
+        path: atfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+        sha256: c988be73d0b3ad9daf2cc9e17c165b32e6dede6b067e30b1afd32e483933b370
+      acfe:
+        path: acfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+        sha256: 9210306bf8230358ab120aabe30df35b4b6ed14a41ba26216a3d89c60e1f9daa

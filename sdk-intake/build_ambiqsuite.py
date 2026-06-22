@@ -119,7 +119,10 @@ DISPLAY_BSP_HEADERS = (
 # parts; `promote_vendor_headers` copies the whole CMSIS/Include directory, so
 # these are pruned here to keep the public provider payload limited to released
 # parts. apollo5a/apollo5b are pre-production Apollo5 silicon superseded by the
-# released Apollo510 family; bronco and atomiq110 are unannounced parts.
+# released Apollo510 family; bronco is an unannounced part. atomiq110 (AT110) is
+# promoted: it is staged as the FPGA part with its own HAL/BSP archives (upstream
+# mcu/atomiq110/am_mcu_apollo.h hardcodes ATOMIQ11X_FPGA, so the HAL builds in
+# FPGA mode by default).
 OMITTED_PART_HEADERS = (
     "apollo5a.h",
     "apollo5a_generic.h",
@@ -127,9 +130,6 @@ OMITTED_PART_HEADERS = (
     "bronco.h",
     "bronco_generic.h",
     "system_bronco.h",
-    "atomiq110.h",
-    "atomiq110_generic.h",
-    "system_atomiq110.h",
 )
 
 # Single unified provider descriptor. Mirrors upstream `stable`: one
@@ -167,6 +167,10 @@ TRAINS: dict[str, TrainSpec] = {
             PartBuild("apollo3p", clang_fpu=DEFAULT_M4F_FPU),
             # Apollo2 predates ACfE; build it for gcc+atfe only.
             PartBuild("apollo2", clang_fpu=DEFAULT_M4F_FPU, toolchains=("gcc", "atfe")),
+            # AT110 (Atomiq), Cortex-M55. Realized today only as an FPGA; upstream
+            # mcu/atomiq110/am_mcu_apollo.h hardcodes ATOMIQ11X_FPGA, so the HAL is
+            # built in FPGA mode with no extra flags.
+            PartBuild("atomiq110"),
         ),
         boards=(
             BoardBuild("apollo330mP_evb", "apollo330P"),
@@ -183,6 +187,8 @@ TRAINS: dict[str, TrainSpec] = {
             BoardBuild("apollo3p_evb", "apollo3p"),
             BoardBuild("apollo3p_evb_cygnus", "apollo3p"),
             BoardBuild("apollo2_evb", "apollo2", inject_gpio_pincfg_shim=True),
+            # AT110 ships only as the FPGA turbo board today.
+            BoardBuild("atomiq110_fpga_turbo", "atomiq110"),
         ),
         toolchains=PROMOTED_TOOLCHAINS,
         omitted_device_headers=OMITTED_DEVICE_HEADERS,

@@ -1,0 +1,164 @@
+//*****************************************************************************
+//
+//! @file am_hal_utils.h
+//!
+//! @brief HAL Utility Functions
+//!
+//! @addtogroup utils4_at110 Utils - HAL Utility Functions
+//! @ingroup atomiq110_hal
+//! @{
+//
+//*****************************************************************************
+
+//*****************************************************************************
+//
+// Copyright (c) 2026, Ambiq Micro, Inc.
+// All rights reserved.
+//
+// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+//
+//*****************************************************************************
+#ifndef AM_HAL_UTILS_H
+#define AM_HAL_UTILS_H
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include <stdint.h>
+#include <stdbool.h>
+
+
+//*****************************************************************************
+//
+//! Enumerations for am_hal_utils_memory_address_valid() eMemType argument.
+//
+//*****************************************************************************
+typedef enum
+{
+    //! Address is a valid memory address
+    AM_HAL_UTILS_MEMADDRVALID_VALID = 0,
+
+    //! RAM (DTCM, SRAM) address (writable)
+    AM_HAL_UTILS_MEMADDRVALID_RAM,
+
+    //! NVM (RRAM) address is valid
+    AM_HAL_UTILS_MEMADDRVALID_NVM,
+
+    //! DTCM address is valid
+    AM_HAL_UTILS_MEMADDRVALID_DTCM,
+
+    //! DTCM address is valid
+    AM_HAL_UTILS_MEMADDRVALID_SRAM,
+
+    //! Virtual address is valid
+    AM_HAL_UTILS_MEMADDRVALID_VIRTUAL,
+
+} am_hal_utils_memaddrvalid_e;
+
+//*****************************************************************************
+//
+//! @brief Determine whether a given address is a valid Atomiq110 address.
+//!
+//! @param eMemType  - One of the enums:
+//!     AM_HAL_UTILS_MEMADDRVALID_VALID
+//!     AM_HAL_UTILS_MEMADDRVALID_RAM
+//!     AM_HAL_UTILS_MEMADDRVALID_NVM
+//!     AM_HAL_UTILS_MEMADDRVALID_DTCM
+//!     AM_HAL_UTILS_MEMADDRVALID_SRAM
+//!     AM_HAL_UTILS_MEMADDRVALID_VIRTUAL
+//! @param pui32RAMaddr - Address to be checked.
+//! @param pbValidRAMaddr - Caller's variable that is set to true if
+//! pui32RAMaddr is a valid RAM address. Set to false otherwise.
+//!
+//*****************************************************************************
+extern uint32_t am_hal_utils_memory_address_valid(am_hal_utils_memaddrvalid_e eMemType,
+                                                  uint32_t *pui32addr, bool *pbValid);
+
+//*****************************************************************************
+//
+//! @brief Use the bootrom to implement a spin loop.
+//!
+//! @param ui32us - Number of microseconds to delay.  Must be >=1; the
+//! value of 0 will result in an extremely long delay.
+//!
+//! Use this function to implement a CPU busy waiting spin loop without cache
+//! or delay uncertainties.
+//!
+//! @note Interrupts are not disabled during execution of this function.
+//!       Therefore, any interrupt taken will affect the delay timing.
+//
+//*****************************************************************************
+extern void am_hal_delay_us(uint32_t ui32us);
+
+//*****************************************************************************
+//
+//! @brief Delays for a desired amount of cycles while also waiting for a
+//! status to change a value.
+//!
+//! @param ui32usMaxDelay - Maximum number of ~1uS delay loops.
+//! @param ui32Address    - Address of the register for the status change.
+//! @param ui32Mask   - Mask for the status change.
+//! @param ui32Value  - Target value for the status change.
+//!
+//! This function will delay for approximately the given number of microseconds
+//! while checking for a status change, exiting when either the given time has
+//! expired or the status change is detected.
+//!
+//! @returns AM_HAL_STATUS_SUCCESS = status change detected.
+//!          AM_HAL_STATUS_TIMEOUT = timeout.
+//
+//*****************************************************************************
+extern uint32_t am_hal_delay_us_status_change(uint32_t ui32usMaxDelay, uint32_t ui32Address,
+                                 uint32_t ui32Mask, uint32_t ui32Value);
+
+//*****************************************************************************
+//
+//! @brief Delays for a desired amount of cycles while also waiting for a
+//! status to equal OR not-equal to a value.
+//!
+//! @param ui32usMaxDelay - Maximum number of ~1uS delay loops.
+//! @param ui32Address    - Address of the register for the status change.
+//! @param ui32Mask   - Mask for the status change.
+//! @param ui32Value  - Target value for the status change.
+//! @param bIsEqual   - Check for equal if true; not-equal if false.
+//!
+//! This function will delay for approximately the given number of microseconds
+//! while checking for a status change, exiting when either the given time has
+//! expired or the status change is detected.
+//!
+//! @returns 0 = timeout.
+//!          1 = status change detected.
+//
+//*****************************************************************************
+extern uint32_t am_hal_delay_us_status_check(uint32_t ui32usMaxDelay, uint32_t ui32Address,
+                                uint32_t ui32Mask, uint32_t ui32Value,
+                                bool bIsEqual);
+
+//*****************************************************************************
+//
+//!  @brief Read words
+//!
+//!  @param pSrcAddr The starting address to read from.
+//!  @param pDstAddr The starting address to write to.
+//!  @param numWords The number of words to read.
+//!
+//!  The core of this function is located in TCM, which means instruction fetch bypasses
+//!  I-Cache.
+//
+//*****************************************************************************
+extern void am_hal_read_words(uint32_t *pSrcAddr, uint32_t *pDstAddr, uint32_t numWords);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // AM_HAL_UTILS_H
+
+//*****************************************************************************
+//
+// End Doxygen group.
+//! @}
+//
+//*****************************************************************************
