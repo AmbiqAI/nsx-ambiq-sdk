@@ -1,329 +1,332 @@
 sdk:
   provider: ambiqsuite
-  version: stable-2026.06.17
+  version: stable-2026.06.18
   source_kind: git_ref
   source_ref: stable
-  source_commit: 6cdd4ccf96e53339ac6714e97eb12771065e438e
+  source_commit: caaf5af86087881647f56c70646c748d40c86e23
   source_root: sdk-intake/local/work/ambiqsuite-stable
   raw_source_committed: false
+
 build:
-  generated_at: 2026-06-17
+  generated_at: 2026-06-22
   source: native AmbiqSuite Makefiles
   toolchains:
     gcc:
       status: built
-      compiler: arm-none-eabi-gcc
-      archive_tool: arm-none-eabi-ar
+      compiler: 'arm-none-eabi-gcc'
+      archive_tool: 'arm-none-eabi-ar'
       output_config: bin
       debug_symbols: false
-      release_cflags: -g0
+      release_cflags: '-g0'
     atfe:
       status: built
       compiler: clang
-      archive_tool: llvm-ar
+      archive_tool: 'llvm-ar'
       output_config: bin-atfe
       debug_symbols: false
-      release_cflags: -g0
+      release_cflags: '-g0'
     acfe:
       status: built
       compiler: armclang
       archive_tool: armar
       output_config: bin-acfe
       debug_symbols: false
-      release_cflags: -g0
+      release_cflags: '-g0'
+
 parts:
-- logical_skew: apollo2
-  mcu_dir: mcu/apollo2
-  hal_source_dir: mcu/apollo2/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo2/libam_hal.a
-      sha256: a7c4e49f5efdfec25a87d73a7ec1f73ebba462d0ea1165ce888e751edba68c26
-    atfe:
-      path: atfe/lib/apollo2/libam_hal.a
-      sha256: 87f7af709f9fcb971e1206f25bef096b87a334de1c79188c825dc2381f995960
-- logical_skew: apollo3
-  mcu_dir: mcu/apollo3
-  hal_source_dir: mcu/apollo3/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo3/libam_hal.a
-      sha256: 8b4b8662793cd74399a807e1f70c6246cd688d9aed9d27d15827586996e6bcba
-    atfe:
-      path: atfe/lib/apollo3/libam_hal.a
-      sha256: e6aa34308c19026c8cacbfbfeacaa400eb1264613f0f16bff6dbb065657ed043
-    acfe:
-      path: acfe/lib/apollo3/libam_hal.a
-      sha256: 3a138405cf07c7a698eadb95238bc047165d5a41cd3f6c49205b6331fd5af135
-- logical_skew: apollo330P
-  mcu_dir: mcu/apollo330P
-  hal_source_dir: mcu/apollo330P/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo330P/libam_hal.a
-      sha256: 93f188ba2d70bdd3c0307a174d4bd37e357673a367873866f47364a6de5bb284
-    atfe:
-      path: atfe/lib/apollo330P/libam_hal.a
-      sha256: cc591109ae8959453d2c410f18bf8c80727b95c7578f7960bef7807ff09b9e32
-    acfe:
-      path: acfe/lib/apollo330P/libam_hal.a
-      sha256: a25513e2ae400bfc552952e24f8eeb044873c044408993399eed1f0563f0568a
-- logical_skew: apollo3p
-  mcu_dir: mcu/apollo3p
-  hal_source_dir: mcu/apollo3p/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo3p/libam_hal.a
-      sha256: 22ff1798bfd9e7c46842c56a5b5422095d07e9df11652fe498fc1fd414a67777
-    atfe:
-      path: atfe/lib/apollo3p/libam_hal.a
-      sha256: 49bc14b34671c6bcf1c426ba215d0f70b65e1eba7495b52f71fac179fbb954d8
-    acfe:
-      path: acfe/lib/apollo3p/libam_hal.a
-      sha256: c73dccb25bcb5ae65acce1ab7ddf721f8a88d09c716df7835f75539fa9ee7964
-- logical_skew: apollo4l
-  mcu_dir: mcu/apollo4l
-  hal_source_dir: mcu/apollo4l/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo4l/libam_hal.a
-      sha256: 1af4b4a38608416249766786d147b4c6e00949788addc554bf0da92869f3181e
-    atfe:
-      path: atfe/lib/apollo4l/libam_hal.a
-      sha256: 46739d5c887332137f3aad62c52d1fbf55fe9c62ccd3d14be78dc930f32960b8
-    acfe:
-      path: acfe/lib/apollo4l/libam_hal.a
-      sha256: 98e9488050818e40bc36ef632048cf7b5b42924b290c1d71ac0b48fd210d9853
-- logical_skew: apollo4p
-  mcu_dir: mcu/apollo4p
-  hal_source_dir: mcu/apollo4p/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo4p/libam_hal.a
-      sha256: ce97fb76e073bab643b60ecc978d997573ca0bb54c5d178972b8639e4fed3815
-    atfe:
-      path: atfe/lib/apollo4p/libam_hal.a
-      sha256: 16d579300a02b2efabae2d37b2a306c67828c194c5ecb21c0a5716d2d659ec34
-    acfe:
-      path: acfe/lib/apollo4p/libam_hal.a
-      sha256: 5cddfc9b45b77766252759e2dc1b55127c341ea8cbe674e8b4817c29af6ece7e
-- logical_skew: apollo510
-  mcu_dir: mcu/apollo510
-  hal_source_dir: mcu/apollo510/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo510/libam_hal.a
-      sha256: 7cd87500999ebda0c5fcf362248c9e78f0befe8811dc27470f2614b41dd4932c
-    atfe:
-      path: atfe/lib/apollo510/libam_hal.a
-      sha256: b5ed4341e69eff357330ec1e352a27d45d55bbbaec11f90abae5dd64571e7a63
-    acfe:
-      path: acfe/lib/apollo510/libam_hal.a
-      sha256: 3c048b9ad7a0d18c6ab82dd90038e6f72f4baf19242d755c408e26612e05b83d
-- logical_skew: apollo510L
-  mcu_dir: mcu/apollo510L
-  hal_source_dir: mcu/apollo510L/hal
-  hal_artifacts:
-    gcc:
-      path: gcc/lib/apollo510L/libam_hal.a
-      sha256: fc108d085cb9983ea648ed7203e046e8cb70c39a17850de6ab7ef4291f315d70
-    atfe:
-      path: atfe/lib/apollo510L/libam_hal.a
-      sha256: 9dcece3a00ec4adc4d3b66c107943dbcae2d90b9205d2b67a8c878cbe46090a9
-    acfe:
-      path: acfe/lib/apollo510L/libam_hal.a
-      sha256: 3efd0b29c5afebb5005e22e8be74ebce5d6b6595aa3bb768d93f5ca4d8f20c3d
+  - logical_skew: apollo330P
+    mcu_dir: mcu/apollo330P
+    hal_source_dir: mcu/apollo330P/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo330P/libam_hal.a
+        sha256: 89335b678addb5a3930cba471345620097f1eedffded59024b22ded89b6a1dab
+      atfe:
+        path: atfe/lib/apollo330P/libam_hal.a
+        sha256: cc591109ae8959453d2c410f18bf8c80727b95c7578f7960bef7807ff09b9e32
+      acfe:
+        path: acfe/lib/apollo330P/libam_hal.a
+        sha256: 3b616580667b8a2c0780a61446d4b809d4e1df78425c1c2a9a6b07a992d94adf
+  - logical_skew: apollo510
+    mcu_dir: mcu/apollo510
+    hal_source_dir: mcu/apollo510/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo510/libam_hal.a
+        sha256: 44e56e40ad9a683b481bdf24ef7bfad82a2e340cbbd24942502913c02b14dc01
+      atfe:
+        path: atfe/lib/apollo510/libam_hal.a
+        sha256: b5ed4341e69eff357330ec1e352a27d45d55bbbaec11f90abae5dd64571e7a63
+      acfe:
+        path: acfe/lib/apollo510/libam_hal.a
+        sha256: 921af557d811a83625f5f4a32a96e0d3f734c029ada3fb7c690e65d7e2b42d5d
+  - logical_skew: apollo510L
+    mcu_dir: mcu/apollo510L
+    hal_source_dir: mcu/apollo510L/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo510L/libam_hal.a
+        sha256: a608bffd749929712c80fc2b0622c8d173829835cd66eebbdb9d47bd8f4655e6
+      atfe:
+        path: atfe/lib/apollo510L/libam_hal.a
+        sha256: 9dcece3a00ec4adc4d3b66c107943dbcae2d90b9205d2b67a8c878cbe46090a9
+      acfe:
+        path: acfe/lib/apollo510L/libam_hal.a
+        sha256: c852d3098cb377c4190eed904902673b8d6e266e428e963e28ce626c5837d689
+  - logical_skew: apollo4l
+    mcu_dir: mcu/apollo4l
+    hal_source_dir: mcu/apollo4l/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo4l/libam_hal.a
+        sha256: 3d8a9dd3f2bb1ebb76ebe71a9be9107ff60028f890331f20ddfe47ae7a24cf2c
+      atfe:
+        path: atfe/lib/apollo4l/libam_hal.a
+        sha256: 46739d5c887332137f3aad62c52d1fbf55fe9c62ccd3d14be78dc930f32960b8
+      acfe:
+        path: acfe/lib/apollo4l/libam_hal.a
+        sha256: 54a9229f19fdcdd36842ead40393054de61ef0e39f2289603a2c2eeb7e9af0fd
+  - logical_skew: apollo4p
+    mcu_dir: mcu/apollo4p
+    hal_source_dir: mcu/apollo4p/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo4p/libam_hal.a
+        sha256: 4c2c028dbba127415018cb7f79f7b61e98212ad57c45e0055a1e3c6793b54b62
+      atfe:
+        path: atfe/lib/apollo4p/libam_hal.a
+        sha256: 16d579300a02b2efabae2d37b2a306c67828c194c5ecb21c0a5716d2d659ec34
+      acfe:
+        path: acfe/lib/apollo4p/libam_hal.a
+        sha256: 515091ad78be3ed432124a4442fbccb2508f8c7f33b9eeee71b91c0a30336fe5
+  - logical_skew: apollo3
+    mcu_dir: mcu/apollo3
+    hal_source_dir: mcu/apollo3/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo3/libam_hal.a
+        sha256: f7421942c876a0abb2527369ae16903aac0f64d5cd6c9188ab5f78cc346e63cc
+      atfe:
+        path: atfe/lib/apollo3/libam_hal.a
+        sha256: e6aa34308c19026c8cacbfbfeacaa400eb1264613f0f16bff6dbb065657ed043
+      acfe:
+        path: acfe/lib/apollo3/libam_hal.a
+        sha256: c98df7defb8b61bcb9b3216d8542dfd4cee03fba52ccc4613fbbe22cb7dbc5c7
+  - logical_skew: apollo3p
+    mcu_dir: mcu/apollo3p
+    hal_source_dir: mcu/apollo3p/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo3p/libam_hal.a
+        sha256: 6405606718595725574e76290a881f7720ca67a4364e1e3c4e29d433fe13b89e
+      atfe:
+        path: atfe/lib/apollo3p/libam_hal.a
+        sha256: 49bc14b34671c6bcf1c426ba215d0f70b65e1eba7495b52f71fac179fbb954d8
+      acfe:
+        path: acfe/lib/apollo3p/libam_hal.a
+        sha256: 639c311762cc411e074acaaed78d64bcdc61159cdbb81c63b918483569ed1bef
+  - logical_skew: apollo2
+    mcu_dir: mcu/apollo2
+    hal_source_dir: mcu/apollo2/hal
+    hal_artifacts:
+      gcc:
+        path: gcc/lib/apollo2/libam_hal.a
+        sha256: 29eda35f1e40e5e66dc5d496141684d0ce0e667094f84f14808e047fdc1f2e5f
+      atfe:
+        path: atfe/lib/apollo2/libam_hal.a
+        sha256: 87f7af709f9fcb971e1206f25bef096b87a334de1c79188c825dc2381f995960
+
 boards:
-- nsx_board: apollo2_evb
-  ambiq_board_name: apollo2_evb
-  logical_skew: apollo2
-  bsp_source_dir: boards/apollo2_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo2/apollo2_evb/libam_bsp.a
-      sha256: 2fdfebd591ecff9fa7dcd0317329e983cf85377cf293f9f908e97dc71f784419
-    atfe:
-      path: atfe/lib/apollo2/apollo2_evb/libam_bsp.a
-      sha256: 96ee7d07ec752c493dff97dad892a6d31e40cd51bae35a5b31b09ff593acc43d
-- nsx_board: apollo330mP_evb
-  ambiq_board_name: apollo330mP_evb
-  logical_skew: apollo330P
-  bsp_source_dir: boards/apollo330mP_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-      sha256: 9946f5fc26c5f4089e5174aa216f790c0be4f9127ea52aee67332232fa9e80de
-    atfe:
-      path: atfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-      sha256: d8fda0cdce536bbb2d533f5255a58c9519b5d7b843e4737e95c41a56bae16f5b
-    acfe:
-      path: acfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
-      sha256: bbdae11a6c38931668bbef3e0816baba24a4f266a290cacdbf1d67d39deb772d
-- nsx_board: apollo3_evb
-  ambiq_board_name: apollo3_evb
-  logical_skew: apollo3
-  bsp_source_dir: boards/apollo3_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo3/apollo3_evb/libam_bsp.a
-      sha256: 25adad5560dd1ea4122d40dc3e34578d5c904f2bd43e90e0590cd1a2236b1d21
-    atfe:
-      path: atfe/lib/apollo3/apollo3_evb/libam_bsp.a
-      sha256: 2fbcd41518479c461eea3453d6ff2fe6c6e8daaa811a02633cad4ce198c9521d
-    acfe:
-      path: acfe/lib/apollo3/apollo3_evb/libam_bsp.a
-      sha256: 31756529cf396d7843a4f9bae621438787a6ac8360052fe606bfc0554ca0a2aa
-- nsx_board: apollo3_evb_cygnus
-  ambiq_board_name: apollo3_evb_cygnus
-  logical_skew: apollo3
-  bsp_source_dir: boards/apollo3_evb_cygnus/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
-      sha256: b4b4bdcc4f21fd964077c34c248bba580ca0623ecb8828675a47c1b85eb08413
-    atfe:
-      path: atfe/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
-      sha256: d1c9612009fde2bb8955b2d02c7634d750f48d45c702f6b01dbc5a37d3c42957
-    acfe:
-      path: acfe/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
-      sha256: 9fd0f7db593b4f70d8056dcd2a529e9cf1a3aa85421386da48111f7e5b8ce982
-- nsx_board: apollo3p_evb
-  ambiq_board_name: apollo3p_evb
-  logical_skew: apollo3p
-  bsp_source_dir: boards/apollo3p_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo3p/apollo3p_evb/libam_bsp.a
-      sha256: 7eef3f71f32a23d56092ae5484d38e68932432d18cbdb1a91b11728bfd941abe
-    atfe:
-      path: atfe/lib/apollo3p/apollo3p_evb/libam_bsp.a
-      sha256: 6a1b1cf4f86d2faf4b9e25db2e475611451dea5a72f509846a7b894f4ef23db1
-    acfe:
-      path: acfe/lib/apollo3p/apollo3p_evb/libam_bsp.a
-      sha256: 9991425d570f427112a90220914798bcc3f4c3fe14e24d677b4490dd4411ee1c
-- nsx_board: apollo3p_evb_cygnus
-  ambiq_board_name: apollo3p_evb_cygnus
-  logical_skew: apollo3p
-  bsp_source_dir: boards/apollo3p_evb_cygnus/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
-      sha256: 533e1f520b4f0aeff2e2ea5503450aca3537d0e5acfe4726e49f8d738955c9ec
-    atfe:
-      path: atfe/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
-      sha256: e5324713dff5a539dc5e98ee496e0eb56689b3859468b47eecee861c463d168c
-    acfe:
-      path: acfe/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
-      sha256: da8fdbd1d65b16108ba8c82d7ffaafb58db579674400f62c1e9e40dfeedfad4a
-- nsx_board: apollo4l_blue_evb
-  ambiq_board_name: apollo4l_blue_evb
-  logical_skew: apollo4l
-  bsp_source_dir: boards/apollo4l_blue_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
-      sha256: ba45a77235f9cab34b29feb1bf11d91fe998284dc98cbed503d045057bf08ae1
-    atfe:
-      path: atfe/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
-      sha256: d03c8134c0942b4377c430ade9d534e4989888c2b087a0f45f911345dddb0f0a
-    acfe:
-      path: acfe/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
-      sha256: b39d58667f0dad0607a09e988892123f57a86768711a7c1b1d385385f4e6b07e
-- nsx_board: apollo4l_evb
-  ambiq_board_name: apollo4l_evb
-  logical_skew: apollo4l
-  bsp_source_dir: boards/apollo4l_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo4l/apollo4l_evb/libam_bsp.a
-      sha256: 197f3006e8d626dd3a3e34d449f9d60dd359f708ad81f6e1240765bc79ce040b
-    atfe:
-      path: atfe/lib/apollo4l/apollo4l_evb/libam_bsp.a
-      sha256: ae725645f924604c81045895aa6280f2a99a22336fb10f728166ad9856d45162
-    acfe:
-      path: acfe/lib/apollo4l/apollo4l_evb/libam_bsp.a
-      sha256: db4719fdc8faff2c98ccf8467ae7fc3103953d5237a009c7834f46d4150cbde8
-- nsx_board: apollo4p_blue_kbr_evb
-  ambiq_board_name: apollo4p_blue_kbr_evb
-  logical_skew: apollo4p
-  bsp_source_dir: boards/apollo4p_blue_kbr_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
-      sha256: 994f6acd54a88fbbbc7b5ffca049d3cbe25f953e22bfc829b03169fd4759b707
-    atfe:
-      path: atfe/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
-      sha256: cef50f79aa33598893488ef60b170f0c142a82228979e753c4fe8285e8ca7f9d
-    acfe:
-      path: acfe/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
-      sha256: b8142e53f8bdb1498f8544f6110036ecb943827c2fc112dc67395979f6c3d8bf
-- nsx_board: apollo4p_blue_kxr_evb
-  ambiq_board_name: apollo4p_blue_kxr_evb
-  logical_skew: apollo4p
-  bsp_source_dir: boards/apollo4p_blue_kxr_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
-      sha256: 79f7b59d7919a0d8110f53f1b08ec84b242d8b76094549558b54724c6829a43b
-    atfe:
-      path: atfe/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
-      sha256: 836946d0a424a301ec077836d9c48e05a5ca68c5b017a2998b7d177b4e6cd023
-    acfe:
-      path: acfe/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
-      sha256: 7f0f37778255e899102bd4f0ede1ae375e46a193c035dd85d4eb05b4789a9ca4
-- nsx_board: apollo4p_evb
-  ambiq_board_name: apollo4p_evb
-  logical_skew: apollo4p
-  bsp_source_dir: boards/apollo4p_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo4p/apollo4p_evb/libam_bsp.a
-      sha256: 57125501f128e84ed8e4d773207d0ae78794e0a9ffe7165f587e5643a7c31069
-    atfe:
-      path: atfe/lib/apollo4p/apollo4p_evb/libam_bsp.a
-      sha256: 4336046b61995a3ed642e09436c2a98362796d94ff25cb0488f96c01063959f6
-    acfe:
-      path: acfe/lib/apollo4p/apollo4p_evb/libam_bsp.a
-      sha256: db4f727352bce01001f4ebbc58ce45dfdaf345c00fdc9bb537a1c3854eaa6a36
-- nsx_board: apollo510_evb
-  ambiq_board_name: apollo510_evb
-  logical_skew: apollo510
-  bsp_source_dir: boards/apollo510_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo510/apollo510_evb/libam_bsp.a
-      sha256: d1a8a3064a0e9c5021c10aca635225a1d6d93bfe961347f8704c9e04de87780f
-    atfe:
-      path: atfe/lib/apollo510/apollo510_evb/libam_bsp.a
-      sha256: f99860fd5035ba9c0c20d0e2ef12aa57582fab7d78c6db37545371a7ff7ff43e
-    acfe:
-      path: acfe/lib/apollo510/apollo510_evb/libam_bsp.a
-      sha256: f7241fb0641095bf0072d4680455298effeb82246eb57cf4185e146081adb1be
-- nsx_board: apollo510b_evb
-  ambiq_board_name: apollo510b_evb
-  logical_skew: apollo510
-  bsp_source_dir: boards/apollo510b_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo510/apollo510b_evb/libam_bsp.a
-      sha256: 4fb76244f7063b9f5da486ff20878426059be3b0a0596d8952810a1d5410c321
-    atfe:
-      path: atfe/lib/apollo510/apollo510b_evb/libam_bsp.a
-      sha256: 7adb25e973d8b15793192b6711eb9a91045948ccf7d8e4b3378bb721af86a2fd
-    acfe:
-      path: acfe/lib/apollo510/apollo510b_evb/libam_bsp.a
-      sha256: cad61c06d0bfbfa13a197efa7554020d7ec23a81672b7335fc03376f0879a2cc
-- nsx_board: apollo510dL_evb
-  ambiq_board_name: apollo510dL_evb
-  logical_skew: apollo510L
-  bsp_source_dir: boards/apollo510dL_evb/bsp
-  bsp_artifacts:
-    gcc:
-      path: gcc/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-      sha256: 5785647d108163e1e6f5b3dd825686780ec245efba17e7f24c0a3e60a6bb0595
-    atfe:
-      path: atfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-      sha256: f03925f61bcfd2495c624be22f05c10749afa4ae436203caf967dec5f79f26fc
-    acfe:
-      path: acfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
-      sha256: b79b5ff10ebd913b371b952a5871c500e2b3b675bfdd7e97458735834d7b6120
+  - nsx_board: apollo330mP_evb
+    ambiq_board_name: apollo330mP_evb
+    logical_skew: apollo330P
+    bsp_source_dir: boards/apollo330mP_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo330P/apollo330mP_evb/libam_bsp.a
+        sha256: 6ee1b97de0b1cffb40ccd5bdbf6bdf3bc0258e1b5c4c1a441e4d5e9fecc5b24c
+      atfe:
+        path: atfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
+        sha256: d8fda0cdce536bbb2d533f5255a58c9519b5d7b843e4737e95c41a56bae16f5b
+      acfe:
+        path: acfe/lib/apollo330P/apollo330mP_evb/libam_bsp.a
+        sha256: 4365a5f3c4939775782f507d3e002dfa9656fa49c167f1a4675c2272a315a47b
+  - nsx_board: apollo510_evb
+    ambiq_board_name: apollo510_evb
+    logical_skew: apollo510
+    bsp_source_dir: boards/apollo510_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo510/apollo510_evb/libam_bsp.a
+        sha256: c74b1169aadd4e9c991b485eb43fd6f8d819705332a9ab2c0d346c55487269ac
+      atfe:
+        path: atfe/lib/apollo510/apollo510_evb/libam_bsp.a
+        sha256: f99860fd5035ba9c0c20d0e2ef12aa57582fab7d78c6db37545371a7ff7ff43e
+      acfe:
+        path: acfe/lib/apollo510/apollo510_evb/libam_bsp.a
+        sha256: d7ef0a0caaedb641035e4d03def5a2dbcf59919bb8c59cac518a20a2c3b038b4
+  - nsx_board: apollo510b_evb
+    ambiq_board_name: apollo510b_evb
+    logical_skew: apollo510
+    bsp_source_dir: boards/apollo510b_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo510/apollo510b_evb/libam_bsp.a
+        sha256: c2702452d46ac25b348aa1c2d02450265f8ad920dcc258e34cb6d48d59b2b7ed
+      atfe:
+        path: atfe/lib/apollo510/apollo510b_evb/libam_bsp.a
+        sha256: 7adb25e973d8b15793192b6711eb9a91045948ccf7d8e4b3378bb721af86a2fd
+      acfe:
+        path: acfe/lib/apollo510/apollo510b_evb/libam_bsp.a
+        sha256: 711f60daa82ee11e18f49355c6d211a37e47d556ee85d03a9ab59c7427a09917
+  - nsx_board: apollo510dL_evb
+    ambiq_board_name: apollo510dL_evb
+    logical_skew: apollo510L
+    bsp_source_dir: boards/apollo510dL_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo510L/apollo510dL_evb/libam_bsp.a
+        sha256: d56f2f58c42545e37fddefb18822dc7547cc294c1a1363a854d6b08d016da672
+      atfe:
+        path: atfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
+        sha256: f03925f61bcfd2495c624be22f05c10749afa4ae436203caf967dec5f79f26fc
+      acfe:
+        path: acfe/lib/apollo510L/apollo510dL_evb/libam_bsp.a
+        sha256: dff722bba938e335540ae86c813adedfda7c1e173ca9301912ad7f6b435342cb
+  - nsx_board: apollo4l_evb
+    ambiq_board_name: apollo4l_evb
+    logical_skew: apollo4l
+    bsp_source_dir: boards/apollo4l_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4l/apollo4l_evb/libam_bsp.a
+        sha256: 745648aea44a1c3e53a4c7a4b952c8182be55b9dfd01b38ddf0d6bfbaf6f74cf
+      atfe:
+        path: atfe/lib/apollo4l/apollo4l_evb/libam_bsp.a
+        sha256: ae725645f924604c81045895aa6280f2a99a22336fb10f728166ad9856d45162
+      acfe:
+        path: acfe/lib/apollo4l/apollo4l_evb/libam_bsp.a
+        sha256: 816d214003488b3143ea29754f80b68bae6f3fbecdbe1b4ae48d01aa95544f8e
+  - nsx_board: apollo4l_blue_evb
+    ambiq_board_name: apollo4l_blue_evb
+    logical_skew: apollo4l
+    bsp_source_dir: boards/apollo4l_blue_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
+        sha256: 0d650eb2d62c63d59dcb1d29c7357f458c95f980a580e67c4bdac09f87232037
+      atfe:
+        path: atfe/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
+        sha256: d03c8134c0942b4377c430ade9d534e4989888c2b087a0f45f911345dddb0f0a
+      acfe:
+        path: acfe/lib/apollo4l/apollo4l_blue_evb/libam_bsp.a
+        sha256: d2346932555d41d8c8379153f9a364870b182e3b57725d49fd68a658c27250fa
+  - nsx_board: apollo4p_evb
+    ambiq_board_name: apollo4p_evb
+    logical_skew: apollo4p
+    bsp_source_dir: boards/apollo4p_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4p/apollo4p_evb/libam_bsp.a
+        sha256: 9d225f1c137eb6096a6377005830ba131deaaf5f31a4798a68969afa997e80dc
+      atfe:
+        path: atfe/lib/apollo4p/apollo4p_evb/libam_bsp.a
+        sha256: 4336046b61995a3ed642e09436c2a98362796d94ff25cb0488f96c01063959f6
+      acfe:
+        path: acfe/lib/apollo4p/apollo4p_evb/libam_bsp.a
+        sha256: af5d93fd5c794dc3d545e69fb787fb36d0bc4a2a73c70a217c30698d130daa04
+  - nsx_board: apollo4p_blue_kbr_evb
+    ambiq_board_name: apollo4p_blue_kbr_evb
+    logical_skew: apollo4p
+    bsp_source_dir: boards/apollo4p_blue_kbr_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
+        sha256: 746fbfbc75fc895d1f4150ffed8620e6ea1a7598fe6bd5137fca0aa5768a2304
+      atfe:
+        path: atfe/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
+        sha256: cef50f79aa33598893488ef60b170f0c142a82228979e753c4fe8285e8ca7f9d
+      acfe:
+        path: acfe/lib/apollo4p/apollo4p_blue_kbr_evb/libam_bsp.a
+        sha256: 97512c2f66a4b6bc37e0df5cfcb62255290c03281b173c5d5d2595de17cafb73
+  - nsx_board: apollo4p_blue_kxr_evb
+    ambiq_board_name: apollo4p_blue_kxr_evb
+    logical_skew: apollo4p
+    bsp_source_dir: boards/apollo4p_blue_kxr_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
+        sha256: db51e81c3d002facd145c5c3ea4503363d59233c485f7c6195ca3b7f2ba2b925
+      atfe:
+        path: atfe/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
+        sha256: 836946d0a424a301ec077836d9c48e05a5ca68c5b017a2998b7d177b4e6cd023
+      acfe:
+        path: acfe/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
+        sha256: 160d0d5a383d9b4511d754943db9c4f67c4b9028ca068c36d94697acb0d06236
+  - nsx_board: apollo3_evb
+    ambiq_board_name: apollo3_evb
+    logical_skew: apollo3
+    bsp_source_dir: boards/apollo3_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo3/apollo3_evb/libam_bsp.a
+        sha256: 462b9b434b2aa149afb6a943babe87978d16c999a40cc6148e5a188103d157ca
+      atfe:
+        path: atfe/lib/apollo3/apollo3_evb/libam_bsp.a
+        sha256: 2fbcd41518479c461eea3453d6ff2fe6c6e8daaa811a02633cad4ce198c9521d
+      acfe:
+        path: acfe/lib/apollo3/apollo3_evb/libam_bsp.a
+        sha256: 2f79ca9b9ddcf349699e65e8c82d74b047b556497c96ba191285487168f2aa6a
+  - nsx_board: apollo3_evb_cygnus
+    ambiq_board_name: apollo3_evb_cygnus
+    logical_skew: apollo3
+    bsp_source_dir: boards/apollo3_evb_cygnus/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
+        sha256: 0da93e87c128165c3aaf047c8a270b3cbdcba27962ef662f55970ada6b4a56ef
+      atfe:
+        path: atfe/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
+        sha256: d1c9612009fde2bb8955b2d02c7634d750f48d45c702f6b01dbc5a37d3c42957
+      acfe:
+        path: acfe/lib/apollo3/apollo3_evb_cygnus/libam_bsp.a
+        sha256: bb862bfb2461053630215cc730e67cbc7d8d954f6a861285ea8d366100357218
+  - nsx_board: apollo3p_evb
+    ambiq_board_name: apollo3p_evb
+    logical_skew: apollo3p
+    bsp_source_dir: boards/apollo3p_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo3p/apollo3p_evb/libam_bsp.a
+        sha256: 9e633c345c7da17aae53bc1571a6b534b1508dedf531a9d87546d516171870e2
+      atfe:
+        path: atfe/lib/apollo3p/apollo3p_evb/libam_bsp.a
+        sha256: 6a1b1cf4f86d2faf4b9e25db2e475611451dea5a72f509846a7b894f4ef23db1
+      acfe:
+        path: acfe/lib/apollo3p/apollo3p_evb/libam_bsp.a
+        sha256: 4de6bcd910b0267f55221db7afd0a53da6326b7304606098aa99a7bca0ef9530
+  - nsx_board: apollo3p_evb_cygnus
+    ambiq_board_name: apollo3p_evb_cygnus
+    logical_skew: apollo3p
+    bsp_source_dir: boards/apollo3p_evb_cygnus/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
+        sha256: da0f9ae34bb7ac574bbff6847e9fc2a66bc9897d3f8c885976ce1cbb807a3e25
+      atfe:
+        path: atfe/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
+        sha256: e5324713dff5a539dc5e98ee496e0eb56689b3859468b47eecee861c463d168c
+      acfe:
+        path: acfe/lib/apollo3p/apollo3p_evb_cygnus/libam_bsp.a
+        sha256: 27b96f26d816336f402e3185eca3ec7e30979b7446ca940a9b828fe118f43298
+  - nsx_board: apollo2_evb
+    ambiq_board_name: apollo2_evb
+    logical_skew: apollo2
+    bsp_source_dir: boards/apollo2_evb/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo2/apollo2_evb/libam_bsp.a
+        sha256: 6734d782063917b575414f70ac3bbaccd9bf8d0e132a0ecf6bac6c79f0495cd3
+      atfe:
+        path: atfe/lib/apollo2/apollo2_evb/libam_bsp.a
+        sha256: 96ee7d07ec752c493dff97dad892a6d31e40cd51bae35a5b31b09ff593acc43d
