@@ -155,6 +155,7 @@ def test_unified_cmake_selectors_cover_multi_tier_soc_families(repo_root: Path) 
     assert "set(NSX_SOC_FAMILIES_APOLLO3 apollo3 apollo3p)" in helper
     assert "set(NSX_SOC_FAMILIES_APOLLO4 apollo4l apollo4p)" in helper
     assert "set(NSX_SOC_FAMILIES_APOLLO5 apollo5b apollo510 apollo510b apollo510L)" in helper
+    assert "set(NSX_SOC_FAMILIES_ATOMIQ atomiq110)" in helper
 
     legacy_selector = re.compile(r"\b(APOLLO3|APOLLO4|NSX_SOC_FAMILIES_APOLLO3|NSX_SOC_FAMILIES_APOLLO4)\b")
     offenders = []
@@ -328,6 +329,7 @@ M55_ITCM_BOARDS = {
     "apollo510_evb": "apollo510",
     "apollo510b_evb": "apollo510b",
     "apollo510dL_evb": "apollo510L",
+    "atomiq110_fpga_turbo": "atomiq110",
 }
 
 
@@ -662,6 +664,7 @@ EXPECTED_RTOS_PORT_FACTS = {
     "apollo510b": ("AMapollo5", "ARM_CM55_NTZ"),
     "apollo510L": ("AMapollo5", "ARM_CM55_NTZ"),
     "apollo330P": ("AMapollo5", "ARM_CM55_NTZ"),
+    "atomiq110": ("AMapollo5", "ARM_CM55_NTZ"),
 }
 
 

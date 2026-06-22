@@ -11,6 +11,7 @@ nsx_select_soc_arch_dir(NSX_POWER_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
     APOLLO5 apollo5
+    ATOMIQ apollo5
     APOLLO330 apollo330
 )
 

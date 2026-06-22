@@ -84,6 +84,13 @@ set(NSX_NEWLIB_TOOLCHAIN_FAMILIES gcc atfe)
 # callers. Selection is driven by the NSX_LINKER_PROFILE cache/cmd-line value.
 set(NSX_LINKER_PROFILES default itcm)
 set(NSX_SOC_FAMILIES_APOLLO5 apollo5b apollo510 apollo510b apollo510L)
+# atomiq110 (Atomiq / R6 generation) is its own SoC family, not an Apollo5 part.
+# It is a Cortex-M55 design with substantial Apollo5 overlap, so consumers may
+# reuse the Apollo5-class NSX backends by mapping the ATOMIQ selector to an
+# apollo5 arch dir (mirrors how apollo330P reuses apollo510). Keeping it a
+# distinct family preserves the correct SoC identity and lets any backend
+# diverge later without disturbing the Apollo5 parts.
+set(NSX_SOC_FAMILIES_ATOMIQ atomiq110)
 set(NSX_SOC_FAMILIES_APOLLO330 apollo330P)
 set(NSX_SOC_FAMILIES_APOLLO4 apollo4l apollo4p)
 set(NSX_SOC_FAMILIES_APOLLO3 apollo3 apollo3p)
@@ -112,10 +119,12 @@ function(nsx_select_soc_arch_dir out_var)
         message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before selecting an NSX implementation directory.")
     endif()
 
-    cmake_parse_arguments(NSX_SOC_ARCH "" "APOLLO5;APOLLO330;APOLLO4;APOLLO3;APOLLO2" "" ${ARGN})
+    cmake_parse_arguments(NSX_SOC_ARCH "" "APOLLO5;ATOMIQ;APOLLO330;APOLLO4;APOLLO3;APOLLO2" "" ${ARGN})
     set(result "")
     if(DEFINED NSX_SOC_ARCH_APOLLO5 AND NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_APOLLO5)
         set(result "${NSX_SOC_ARCH_APOLLO5}")
+    elseif(DEFINED NSX_SOC_ARCH_ATOMIQ AND NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_ATOMIQ)
+        set(result "${NSX_SOC_ARCH_ATOMIQ}")
     elseif(DEFINED NSX_SOC_ARCH_APOLLO330 AND NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_APOLLO330)
         set(result "${NSX_SOC_ARCH_APOLLO330}")
     elseif(DEFINED NSX_SOC_ARCH_APOLLO4 AND NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_APOLLO4)
