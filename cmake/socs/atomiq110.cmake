@@ -17,17 +17,21 @@ set(NSX_AMBIQ_HAL_MCU_DIR "${NSX_AMBIQ_HAL_DIR}/mcu")
 include("${NSX_CMAKE_DIR}/nsx_toolchain_flags.cmake")
 include("${NSX_CMAKE_DIR}/nsx_soc_facts.cmake")
 
+# The only atomiq110 board today is the FPGA (atomiq110_fpga_turbo), which loads
+# directly via J-Link with no secure bootloader, so the default profile is "nbl"
+# (app at the emulated MRAM base 0x22000000, matching the J-Link gStartAddr). The
+# "sbl" scripts (app base 0x22010000) are kept for a future silicon AT110.
 nsx_toolchain_is_armclang(NSX_TOOLCHAIN_IS_ARMCLANG)
 if(NSX_TOOLCHAIN_IS_ARMCLANG)
     set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/atomiq110/armclang/startup_keil6.c")
     set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_atomiq110.c")
-    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct")
-    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct")
+    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct")
+    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct")
 else()
     set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/atomiq110/gcc/startup_gcc.c")
     set(NSX_SYSTEM_SOURCE "${NSX_AMBIQSUITE_ROOT}/CMSIS/AmbiqMicro/Source/system_atomiq110.c")
-    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld")
-    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld")
+    set(_nsx_linker_script_default "${NSX_ROOT}/modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld")
+    set(_nsx_linker_script_itcm "${NSX_ROOT}/modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld")
 endif()
 
 if(NOT DEFINED NSX_LINKER_SCRIPT)

@@ -5,12 +5,18 @@
  *****************************************************************************/
 ENTRY(Reset_Handler)
 
+/*
+ * atomiq110 FPGA memory map (AmbiqSuite tools/config/atomiq110-system-config.yaml).
+ * The FPGA emulates MRAM at 0x22000000 and SRAM at 0x21000000 -- these differ from
+ * Apollo5 silicon (0x00400000 / 0x20080000). This is the ITCM-execution "sbl" variant
+ * (app base 0x22010000, 64 KB secure-bootloader reserve).
+ */
 MEMORY
 {
     MCU_ITCM     (rwx) : ORIGIN = 0x00000000, LENGTH = 262144
-    MCU_MRAM     (rx)  : ORIGIN = 0x00410000, LENGTH = 4128768
-    MCU_TCM      (rwx) : ORIGIN = 0x20000000, LENGTH = 524288
-    SHARED_SRAM  (rwx) : ORIGIN = 0x20080000, LENGTH = 3145728
+    MCU_MRAM     (rx)  : ORIGIN = 0x22010000, LENGTH = 4128768
+    MCU_TCM      (rwx) : ORIGIN = 0x20000000, LENGTH = 507904
+    SHARED_SRAM  (rwx) : ORIGIN = 0x21000000, LENGTH = 4194304
     /* STACK        (rw)  : ORIGIN = 0x2007D000, LENGTH = 12288
     HEAP         (rw)  : ORIGIN = 0x2007C000, LENGTH = 4096 */
 }

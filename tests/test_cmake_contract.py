@@ -333,6 +333,13 @@ M55_ITCM_BOARDS = {
 }
 
 
+def _m55_linker_profile(soc: str) -> str:
+    # atomiq110 is FPGA-only (no secure bootloader) so it loads directly at the
+    # emulated MRAM base 0x22000000 and defaults to the "nbl" profile; the Apollo5
+    # silicon parts reserve 64 KB for the secure bootloader and default to "sbl".
+    return "nbl" if soc == "atomiq110" else "sbl"
+
+
 def test_m55_default_linker_profile_selects_default_script(repo_root: Path, tmp_path: Path) -> None:
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")
@@ -347,8 +354,9 @@ def test_m55_default_linker_profile_selects_default_script(repo_root: Path, tmp_
         )
 
         assert result.returncode == 0, result.stdout
-        assert f"src/{soc}/gcc/linker_script_sbl.ld" in result.stdout
-        assert "linker_script_itcm_sbl.ld" not in result.stdout
+        profile = _m55_linker_profile(soc)
+        assert f"src/{soc}/gcc/linker_script_{profile}.ld" in result.stdout
+        assert f"linker_script_itcm_{profile}.ld" not in result.stdout
 
 
 def test_m55_itcm_linker_profile_selects_itcm_script(repo_root: Path, tmp_path: Path) -> None:
@@ -366,7 +374,8 @@ def test_m55_itcm_linker_profile_selects_itcm_script(repo_root: Path, tmp_path: 
         )
 
         assert result.returncode == 0, result.stdout
-        assert f"src/{soc}/gcc/linker_script_itcm_sbl.ld" in result.stdout
+        profile = _m55_linker_profile(soc)
+        assert f"src/{soc}/gcc/linker_script_itcm_{profile}.ld" in result.stdout
 
 
 def test_invalid_linker_profile_is_rejected(repo_root: Path, tmp_path: Path) -> None:
@@ -387,10 +396,11 @@ def test_invalid_linker_profile_is_rejected(repo_root: Path, tmp_path: Path) -> 
 
 def test_m55_itcm_linker_scripts_match_generated_object_names(repo_root: Path) -> None:
     for soc in M55_ITCM_BOARDS.values():
-        gcc_itcm = read(repo_root, f"modules/nsx-core/src/{soc}/gcc/linker_script_itcm_sbl.ld")
+        profile = _m55_linker_profile(soc)
+        gcc_itcm = read(repo_root, f"modules/nsx-core/src/{soc}/gcc/linker_script_itcm_{profile}.ld")
         armclang_itcm = read(
             repo_root,
-            f"modules/nsx-core/src/{soc}/armclang/linker_script_itcm_sbl.sct",
+            f"modules/nsx-core/src/{soc}/armclang/linker_script_itcm_{profile}.sct",
         )
 
         assert "KEEP(*arm_*.obj" in gcc_itcm, soc

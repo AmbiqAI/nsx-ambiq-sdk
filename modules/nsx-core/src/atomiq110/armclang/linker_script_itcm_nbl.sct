@@ -4,11 +4,12 @@
 ;
 ;******************************************************************************
 ; atomiq110 FPGA: MRAM is emulated at 0x22000000 and SRAM at 0x21000000, unlike
-; Apollo5 silicon (0x00400000 / 0x20080000). This ITCM-execution "sbl" variant
-; reserves the first 64 KB of MRAM for the secure bootloader -> app base 0x22010000.
-LR_1 0x22010000
+; Apollo5 silicon (0x00400000 / 0x20080000). This ITCM-execution "nbl" (no bootloader)
+; variant is the FPGA default ITCM profile: the app loads at the MRAM base 0x22000000
+; and uses the full 4 MB.
+LR_1 0x22000000
 {
-    MCU_MRAM 0x22010000 0x003F0000
+    MCU_MRAM 0x22000000 0x00400000
     {
         *.o (RESET, +First)
         * (+RO)

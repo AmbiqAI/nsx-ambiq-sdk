@@ -57,12 +57,14 @@ set(NSX_SOC_COMPILE_DEFINITIONS
 # J-Link device as "Atomiq110" (CPU Cortex-M55F, WorkRAM at 0x20000000), and
 # the bare_gcc flash.jlink template connects over SWD at 4000 kHz. The FPGA
 # "turbo" core runs at 25 MHz (the ATOMIQ11X_FPGA value baked into the HAL
-# header), which sets NSX_SEGGER_CPUFREQ. PF_ADDR is the MRAM/flash base
-# (IROM start 0x00400000 in the keil project). boards/atomiq110_fpga_turbo/
-# board.cmake may override these for board-specific debug probes.
+# header), which sets NSX_SEGGER_CPUFREQ. PF_ADDR is the MRAM/flash base: on the
+# FPGA, MRAM is emulated at 0x22000000 (the app IROM base in the keil6
+# jlink.project and the J-Link gStartAddr), not the Apollo5 silicon 0x00400000.
+# boards/atomiq110_fpga_turbo/board.cmake may override these for board-specific
+# debug probes.
 set(NSX_SEGGER_CPU "Cortex-M55")
 set(NSX_SEGGER_DEVICE "Atomiq110")
 set(NSX_SEGGER_IF_SPEED "4000")
-set(NSX_SEGGER_PF_ADDR "0x00400000")
+set(NSX_SEGGER_PF_ADDR "0x22000000")
 set(NSX_SEGGER_CPUFREQ "25000000")
 set(NSX_SEGGER_SWOFREQ "1000000")
