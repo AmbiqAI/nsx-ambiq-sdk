@@ -22,7 +22,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.17 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_UTIL_DRAW_2D1BPP_H
