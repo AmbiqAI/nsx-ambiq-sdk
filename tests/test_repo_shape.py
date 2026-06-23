@@ -522,6 +522,7 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
         "system_apollo4p.c",
         "system_apollo510.c",
         "system_apollo510L.c",
+        "system_atomiq110.c",
     ]
 
     forbidden_fragments = (

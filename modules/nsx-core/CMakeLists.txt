@@ -3,6 +3,7 @@ nsx_require_target(nsx::soc_hal nsx-core)
 # apollo330P reuses the Apollo5-class core sources (apollo510 arch dir).
 nsx_select_soc_arch_dir(NSX_CORE_ARCH_DIR
     APOLLO5 apollo510
+    ATOMIQ apollo510
     APOLLO330 apollo510
     APOLLO4 apollo4p
     APOLLO3 apollo3p

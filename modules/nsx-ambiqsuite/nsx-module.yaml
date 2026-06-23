@@ -55,6 +55,7 @@ compatibility:
     - apollo510_evb
     - apollo510b_evb
     - apollo510dL_evb
+    - atomiq110_fpga_turbo
   socs:
     - apollo2
     - apollo3
@@ -65,6 +66,7 @@ compatibility:
     - apollo510
     - apollo510b
     - apollo510L
+    - atomiq110
   toolchains:
     - arm-none-eabi-gcc
     - atfe

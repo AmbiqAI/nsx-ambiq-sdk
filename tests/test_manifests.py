@@ -58,6 +58,7 @@ STAGED_PROVIDER_BOARDS = {
     "apollo510_evb",
     "apollo510b_evb",
     "apollo510dL_evb",
+    "atomiq110_fpga_turbo",
 }
 STAGED_PROVIDER_SOCS = {
     "apollo2",
@@ -69,6 +70,7 @@ STAGED_PROVIDER_SOCS = {
     "apollo510",
     "apollo510b",
     "apollo510L",
+    "atomiq110",
 }
 STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"

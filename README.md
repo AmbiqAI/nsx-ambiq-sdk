@@ -20,8 +20,11 @@ for module metadata, integration fixes, and packaging updates.
 | `apollo510_evb` | `apollo510` | staged |
 | `apollo510b_evb` | `apollo510b` | staged |
 | `apollo510dL_evb` | `apollo510L` | staged |
+| `atomiq110_fpga_turbo` | `atomiq110` | experimental |
 
 `apollo5b_evb` is descriptor-only until matching AmbiqSuite artifacts are promoted into the provider payload.
+
+> **Experimental — not officially released:** `atomiq110` (AT110) and its `atomiq110_fpga_turbo` FPGA board are an early-evaluation preview only, not for production. See [Platform Maturity](docs/platform-coverage.md#platform-maturity).
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 

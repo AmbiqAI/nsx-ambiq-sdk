@@ -52,12 +52,21 @@ NSX_IRQ_VECTOR(am_uart3_isr, UART3_IRQn)
 
 // MSPI lines. MSPI0..2 exist across the family; MSPI3 is only present on the
 // full Apollo510 part (not Apollo510L), so its IRQn enumerator is gated on the
-// part macro.
+// part macro. On Atomiq (AT110) the same three controllers are enumerated as
+// XSPIMC0..2 in the CMSIS header (identical vector positions 25..27), so only
+// the IRQn argument is aliased here — the vector symbol names stay
+// am_mspiN_isr to match the AT110 startup vector table.
+#if defined(AM_PART_ATOMIQ11X_API)
+NSX_IRQ_VECTOR(am_mspi0_isr, XSPIMC0_IRQn)
+NSX_IRQ_VECTOR(am_mspi1_isr, XSPIMC1_IRQn)
+NSX_IRQ_VECTOR(am_mspi2_isr, XSPIMC2_IRQn)
+#else
 NSX_IRQ_VECTOR(am_mspi0_isr, MSPI0_IRQn)
 NSX_IRQ_VECTOR(am_mspi1_isr, MSPI1_IRQn)
 NSX_IRQ_VECTOR(am_mspi2_isr, MSPI2_IRQn)
 #if defined(AM_PART_APOLLO510)
 NSX_IRQ_VECTOR(am_mspi3_isr, MSPI3_IRQn)
+#endif
 #endif
 
 // Timer lines
