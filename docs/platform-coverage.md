@@ -26,11 +26,14 @@ Maturity is independent of whether a part's artifacts are staged:
 
 On the AT110 FPGA, `atomiq110` is wired for the core runtime stack only:
 `nsx-cmsis-core`, `nsx-cmsis-startup`, `nsx-soc-hal`, `nsx-core`, `nsx-interrupt`,
-`nsx-timer`, `nsx-power`, `nsx-gpio`, `nsx-perf`, and `nsx-uart`. The following
+`nsx-timer`, `nsx-gpio`, `nsx-perf`, and `nsx-uart`. The following
 are intentionally **not** enabled for `atomiq110` yet (follow-up as the FPGA /
 silicon exposes them): `nsx-i2c` and `nsx-spi` (basic buses), `nsx-freertos`
 (RTOS port facts are ready), `nsx-psram` (external MSPI memory not present on the
-FPGA), and the audio/USB middleware (`nsx-audio`, `nsx-usb`, `nsx-ambiq-usb`).
+FPGA), `nsx-power` (the Apollo5 power backend references HAL enums the AT110 HAL
+does not define, such as `AM_HAL_PWRCTRL_PERIPH_AUDADC` and
+`AM_HAL_PWRCTRL_NVM0_AND_NVM1`, and has no AT110 memory-config branch), and the
+audio/USB middleware (`nsx-audio`, `nsx-usb`, `nsx-ambiq-usb`).
 
 ### Family Overview
 
