@@ -52,7 +52,7 @@ LR_1 0x22000000
     {   ; Reserve empty region for heap
     }
 
-    SHARED_SRAM 0x21000000 0x00400000
+    SHARED_SRAM 0x21000000 0x00300000 ; 3 MB powered SSRAM (3x1MB blocks, PWRENSSRAM=7); upper 1 MB of the 4 MB aperture is unpopulated
     {
         * (RESOURCE_TABLE)
         * (.resource_table)
