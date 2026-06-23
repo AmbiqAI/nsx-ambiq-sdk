@@ -40,6 +40,7 @@ builds targets on top. See [cmake/README.md](../cmake/README.md).
 | `apollo510` | staged | cortex-m55 | armv8m | `.../apollo510/libam_hal.a` | Base Apollo510 skew. |
 | `apollo510b` | staged | cortex-m55 | armv8m | reuses `.../apollo510/libam_hal.a` | Apollo510B board/BSP coverage on the Apollo510 HAL. |
 | `apollo510L` | staged | cortex-m55 | armv8m | `.../apollo510L/libam_hal.a` | Apollo510L (AP510DL) family. |
+| `atomiq110` | staged | cortex-m55 | armv8m | `.../atomiq110/libam_hal.a` | Atomiq (AT110) family; FPGA target, first Ambiq part with an NPU. |
 | `apollo5b` | descriptor-only | cortex-m55 | armv8m | not staged | Descriptor + facts exist, but no `apollo5b` HAL/BSP artifacts are present. |
 
 Artifact paths above are relative to `modules/nsx-ambiqsuite/sdk/lib/<toolchain>/`.
@@ -62,6 +63,7 @@ Artifact paths above are relative to `modules/nsx-ambiqsuite/sdk/lib/<toolchain>
 | `apollo510_evb` | staged | `apollo510` | `apollo510/apollo510_evb/libam_bsp.a` | |
 | `apollo510b_evb` | staged | `apollo510b` | `apollo510/apollo510b_evb/libam_bsp.a` | |
 | `apollo510dL_evb` | staged | `apollo510L` | `apollo510L/apollo510dL_evb/libam_bsp.a` | AP510DL board. |
+| `atomiq110_fpga_turbo` | staged | `atomiq110` | `atomiq110/atomiq110_fpga_turbo/libam_bsp.a` | Atomiq (AT110) FPGA board; no AM package, FPGA-only target. |
 | `apollo5b_evb` | descriptor-only | `apollo5b` | not staged | Not configure-ready until `apollo5b` artifacts arrive. |
 
 BSP artifact paths above are relative to
