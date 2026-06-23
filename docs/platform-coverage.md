@@ -2,12 +2,38 @@
 
 This file tracks the SoC/skew and board coverage actually carried by this
 unified SDK repo. The repo spans the Apollo2, Apollo3, Apollo4, and Apollo5
-families through a single SDK provider (`nsx-ambiqsuite`).
+families through a single SDK provider (`nsx-ambiqsuite`), plus an experimental
+Atomiq (AT110) preview.
 
 A SoC or board should not be treated as configure-ready until both its NSX
 descriptor (`cmake/socs/<skew>.cmake` / `boards/<board>/board.cmake`) and the
 matching AmbiqSuite prebuilt artifacts (`modules/nsx-ambiqsuite/sdk/lib/...`)
 are present.
+
+## Platform Maturity
+
+Maturity is independent of whether a part's artifacts are staged:
+
+- **released** — officially supported for production use.
+- **experimental** — present for early evaluation only. **Not officially
+  released**: not production-supported, and its NSX descriptors, linker maps,
+  and module wiring may change or break without notice.
+
+> **AT110 (Atomiq) is experimental.** The `atomiq110` SoC and its
+> `atomiq110_fpga_turbo` FPGA board are an unreleased preview for early
+> evaluation only. They are **not officially released** and must not be used in
+> production.
+
+### Family Overview
+
+| Series | Core | SoCs | Boards (EVB) | Maturity |
+| --- | --- | --- | --- | --- |
+| `apollo2` | cortex-m4 | apollo2 | apollo2_evb | released |
+| `apollo3` | cortex-m4 | apollo3, apollo3p | apollo3_evb, apollo3_evb_cygnus, apollo3p_evb, apollo3p_evb_cygnus | released |
+| `apollo4` | cortex-m4 | apollo4l, apollo4p | apollo4l_evb, apollo4l_blue_evb, apollo4p_evb, apollo4p_blue_kbr_evb, apollo4p_blue_kxr_evb | released |
+| `apollo330` | cortex-m55 | apollo330P | apollo330mP_evb | released |
+| `apollo5` | cortex-m55 | apollo510, apollo510b, apollo510L, apollo5b | apollo510_evb, apollo510b_evb, apollo510dL_evb, apollo5b_evb | released (`apollo5b` descriptor-only) |
+| `atomiq` | cortex-m55 + NPU | atomiq110 | atomiq110_fpga_turbo | **experimental** (not officially released) |
 
 ## Coverage States
 
@@ -40,7 +66,7 @@ builds targets on top. See [cmake/README.md](../cmake/README.md).
 | `apollo510` | staged | cortex-m55 | armv8m | `.../apollo510/libam_hal.a` | Base Apollo510 skew. |
 | `apollo510b` | staged | cortex-m55 | armv8m | reuses `.../apollo510/libam_hal.a` | Apollo510B board/BSP coverage on the Apollo510 HAL. |
 | `apollo510L` | staged | cortex-m55 | armv8m | `.../apollo510L/libam_hal.a` | Apollo510L (AP510DL) family. |
-| `atomiq110` | staged | cortex-m55 | armv8m | `.../atomiq110/libam_hal.a` | Atomiq (AT110) family; FPGA target, first Ambiq part with an NPU. |
+| `atomiq110` | staged | cortex-m55 | armv8m | `.../atomiq110/libam_hal.a` | **Experimental — not officially released.** Atomiq (AT110) family; FPGA target, first Ambiq part with an NPU. |
 | `apollo5b` | descriptor-only | cortex-m55 | armv8m | not staged | Descriptor + facts exist, but no `apollo5b` HAL/BSP artifacts are present. |
 
 Artifact paths above are relative to `modules/nsx-ambiqsuite/sdk/lib/<toolchain>/`.
@@ -63,7 +89,7 @@ Artifact paths above are relative to `modules/nsx-ambiqsuite/sdk/lib/<toolchain>
 | `apollo510_evb` | staged | `apollo510` | `apollo510/apollo510_evb/libam_bsp.a` | |
 | `apollo510b_evb` | staged | `apollo510b` | `apollo510/apollo510b_evb/libam_bsp.a` | |
 | `apollo510dL_evb` | staged | `apollo510L` | `apollo510L/apollo510dL_evb/libam_bsp.a` | AP510DL board. |
-| `atomiq110_fpga_turbo` | staged | `atomiq110` | `atomiq110/atomiq110_fpga_turbo/libam_bsp.a` | Atomiq (AT110) FPGA board; no AM package, FPGA-only target. |
+| `atomiq110_fpga_turbo` | staged | `atomiq110` | `atomiq110/atomiq110_fpga_turbo/libam_bsp.a` | **Experimental — not officially released.** Atomiq (AT110) FPGA board; no AM package, FPGA-only target. |
 | `apollo5b_evb` | descriptor-only | `apollo5b` | not staged | Not configure-ready until `apollo5b` artifacts arrive. |
 
 BSP artifact paths above are relative to
