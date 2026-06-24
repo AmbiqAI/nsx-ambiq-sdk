@@ -45,6 +45,52 @@ target_include_directories(nsx_ambiq_bsp INTERFACE
     $<INSTALL_INTERFACE:${NSX_AMBIQ_INSTALL_BASE}/boards/${NSX_AMBIQ_BOARD_NAME}/bsp>
 )
 
+# --- nsx::bsp role seam (issue #154a.2) -------------------------------------
+# Provider-neutral alias so consumers can depend on the BSP role without
+# binding to the AmbiqSuite-specific target name. A configure may only have a
+# single BSP producer (a duplicate ALIAS is a hard CMake error), which enforces
+# the single-producer rule between the SDK provider and any custom BSP module.
+set(NSX_BSP_CONTRACT_VERSION 1 CACHE INTERNAL "nsx::bsp role contract version" FORCE)
+add_library(nsx::bsp ALIAS nsx_ambiq_bsp)
+
+# Capability advertisement. Board-layer fragments declare hardware facts as
+# plain variables before this module is added; we surface them as an open,
+# additive token list and as interface compile definitions on the BSP target.
+# Unknown tokens are never an error for consumers.
+set(_nsx_bsp_caps "")
+if(NSX_BOARD_HAS_BUTTONS)
+    if(NOT DEFINED NSX_BOARD_BUTTON_COUNT OR NOT DEFINED NSX_BOARD_BUTTON_PINS)
+        message(FATAL_ERROR
+            "Board set NSX_BOARD_HAS_BUTTONS but did not set "
+            "NSX_BOARD_BUTTON_COUNT and NSX_BOARD_BUTTON_PINS.")
+    endif()
+    list(LENGTH NSX_BOARD_BUTTON_PINS _nsx_button_pin_count)
+    if(NOT _nsx_button_pin_count EQUAL NSX_BOARD_BUTTON_COUNT)
+        message(FATAL_ERROR
+            "NSX_BOARD_BUTTON_COUNT (${NSX_BOARD_BUTTON_COUNT}) does not match the "
+            "number of entries in NSX_BOARD_BUTTON_PINS (${_nsx_button_pin_count}).")
+    endif()
+    list(APPEND _nsx_bsp_caps buttons)
+    target_compile_definitions(nsx_ambiq_bsp INTERFACE
+        $<$<COMPILE_LANGUAGE:C>:NSX_BOARD_HAS_BUTTONS=1>
+        $<$<COMPILE_LANGUAGE:C>:NSX_BOARD_BUTTON_COUNT=${NSX_BOARD_BUTTON_COUNT}>
+    )
+    math(EXPR _nsx_button_last "${NSX_BOARD_BUTTON_COUNT} - 1")
+    foreach(_nsx_button_idx RANGE 0 ${_nsx_button_last})
+        list(GET NSX_BOARD_BUTTON_PINS ${_nsx_button_idx} _nsx_button_pin)
+        target_compile_definitions(nsx_ambiq_bsp INTERFACE
+            $<$<COMPILE_LANGUAGE:C>:NSX_BOARD_BUTTON${_nsx_button_idx}_PIN=${_nsx_button_pin}>)
+    endforeach()
+    unset(_nsx_button_pin_count)
+    unset(_nsx_button_last)
+    unset(_nsx_button_idx)
+    unset(_nsx_button_pin)
+endif()
+set(NSX_BSP_CAPABILITIES "${_nsx_bsp_caps}" CACHE INTERNAL
+    "Capability tokens advertised by nsx::bsp" FORCE)
+unset(_nsx_bsp_caps)
+# ---------------------------------------------------------------------------
+
 if(NSX_AMBIQSUITE_USE_PREBUILT)
     nsx_validate_prebuilt_abi()
     nsx_assert_file_exists("${NSX_BSP_LIB}")
