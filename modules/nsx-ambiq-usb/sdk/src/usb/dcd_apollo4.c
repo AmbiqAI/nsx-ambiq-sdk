@@ -696,12 +696,18 @@ dcd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr)
 
 //*****************************************************************************
 //
-// the usb isr
+// USB device interrupt handler
+//
+// Mirrors the dcd_apollo5.c entry point so the TinyUSB dispatcher
+// (tusb_int_handler -> dcd_int_handler) resolves on Apollo4. GNU ld
+// garbage-collects the unreferenced dispatcher, but armlink keeps the
+// reference, so this definition is required for armclang/armlink builds.
 //
 //*****************************************************************************
 void
-am_usb_isr(void)
+dcd_int_handler(uint8_t rhport)
 {
+    (void) rhport;
     uint32_t ui32IntStatus[3];
     am_hal_usb_intr_status_get(pUSBHandle,
                                &ui32IntStatus[0],
@@ -711,6 +717,27 @@ am_usb_isr(void)
                                  ui32IntStatus[0],
                                  ui32IntStatus[1],
                                  ui32IntStatus[2]);
+}
+
+//*****************************************************************************
+//
+// the usb isr
+//
+//*****************************************************************************
+void
+am_usb_isr(void)
+{
+    dcd_int_handler(0);
+}
+
+//*****************************************************************************
+//
+// Dummy implementation for tusb time acquisition. It should be implemented in
+// the board/application layer if USB Host mode is supported.
+//
+//*****************************************************************************
+TU_ATTR_WEAK uint32_t tusb_time_millis_api(void) {
+    return 0;
 }
 
 //
