@@ -28,6 +28,18 @@ SECTIONS
         _etext = .;
     } > ROMEM
 
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } > ROMEM
+
+    __exidx_start = .;
+    .ARM.exidx :
+    {
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    } > ROMEM
+    __exidx_end = .;
+
     .data :
     {
         . = ALIGN(4);
