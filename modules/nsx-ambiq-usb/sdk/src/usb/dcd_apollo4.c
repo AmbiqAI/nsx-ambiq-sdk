@@ -698,10 +698,10 @@ dcd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr)
 //
 // USB device interrupt handler
 //
-// Mirrors the dcd_apollo5.c entry point so the TinyUSB dispatcher
-// (tusb_int_handler -> dcd_int_handler) resolves on Apollo4. GNU ld
-// garbage-collects the unreferenced dispatcher, but armlink keeps the
-// reference, so this definition is required for armclang/armlink builds.
+// Provides the dcd_int_handler symbol that TinyUSB declares (as in
+// dcd_apollo5.c). GNU ld garbage-collects this unreferenced dispatcher, but
+// armlink keeps the reference, so the definition is required for
+// armclang/armlink builds. am_usb_isr() calls it directly below.
 //
 //*****************************************************************************
 void
