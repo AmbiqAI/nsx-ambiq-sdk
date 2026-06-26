@@ -11,9 +11,24 @@ LR_1 0x00018000
         * (+RO)
     }
 
-    MCU_TCM 0x10000000 0x00060000
+    ; RW + ZI at the base of TCM.  Bounded to leave the top 20 KB of TCM for the
+    ; C-library heap + stack regions below (matching the legacy startup's
+    ; 4 KB heap + 16 KB stack).
+    MCU_TCM 0x10000000 0x0005B000
     {
         * (+RW, +ZI)
+    }
+
+    ; 4 KB heap, just below the stack.  __heap_base/__heap_limit
+    ; (Image$$ARM_LIB_HEAP$$...) resolve to this region for the C library.
+    ARM_LIB_HEAP 0x1005B000 EMPTY 0x00001000
+    {
+    }
+
+    ; 16 KB stack growing down from 0x10060000 (top of TCM).  __INITIAL_SP
+    ; (Image$$ARM_LIB_STACK$$ZI$$Limit) resolves to 0x10060000.
+    ARM_LIB_STACK 0x10060000 EMPTY -0x00004000
+    {
     }
 
     SHARED_SRAM 0x10060000 0x00100000
