@@ -17,7 +17,7 @@ include("${NSX_CMAKE_DIR}/nsx_soc_facts.cmake")
 
 nsx_toolchain_is_armclang(NSX_TOOLCHAIN_IS_ARMCLANG)
 if(NSX_TOOLCHAIN_IS_ARMCLANG)
-    set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo3p/armclang/startup_keil6.s")
+    set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo3p/armclang/startup_keil6.c")
     set(NSX_LINKER_SCRIPT "${NSX_ROOT}/modules/nsx-core/src/apollo3p/armclang/linker_script.sct")
 else()
     set(NSX_STARTUP_SOURCE "${NSX_ROOT}/modules/nsx-core/src/apollo3p/gcc/startup_gcc.c")

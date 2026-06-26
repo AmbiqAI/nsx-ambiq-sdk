@@ -21,8 +21,15 @@ LR_1 0x0000C000
         * (.tcm)
     }
 
-    STACKMEM 0x10010000 0x00001000
+    ; Zero-length heap (the legacy startup reserved no heap).  Placed at the
+    ; stack-region base so the C library has a defined, non-overlapping heap.
+    ARM_LIB_HEAP 0x10010000 EMPTY 0x00000000
     {
-        startup_keil6.o (STACK)
+    }
+
+    ; 4 KB stack growing down from 0x10011000 to 0x10010000.  __INITIAL_SP
+    ; (Image$$ARM_LIB_STACK$$ZI$$Limit) resolves to 0x10011000.
+    ARM_LIB_STACK 0x10011000 EMPTY -0x00001000
+    {
     }
 }

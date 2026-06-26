@@ -218,6 +218,16 @@ ACFE_COMPAT_DEFINES = (
     "-D__MODULE__=__FILE__",
 )
 
+ACFE_ABI_FLAGS = (
+    # NSX images and the heliaRT prebuilts compile with -fshort-wchar and
+    # -fshort-enums (wchar_t=2, smallest-container enums). armclang otherwise
+    # defaults to wchar_t=4 / 32-bit enums, so the acfe HAL/BSP archives must
+    # match or armlink rejects them with L6242E ("attributes are incompatible
+    # with the image attributes"). gcc/atfe archives keep their native ABI.
+    "-fshort-wchar",
+    "-fshort-enums",
+)
+
 RELEASE_CFLAGS = (
     "-g0",
 )
@@ -644,7 +654,7 @@ def toolchain_profile(args: argparse.Namespace, toolchain: str) -> ToolchainProf
                 ("RD", str(fromelf)),
                 ("AR", f"{sys.executable} {armar_wrapper} {armar}"),
                 ("SIZE", str(fromelf)),
-                ("EXTRA_CFLAGS", extra_cflags(ACFE_WARNING_SUPPRESSIONS, ACFE_COMPAT_DEFINES, debug_symbols=args.debug_symbols)),
+                ("EXTRA_CFLAGS", extra_cflags(ACFE_WARNING_SUPPRESSIONS, ACFE_COMPAT_DEFINES, ACFE_ABI_FLAGS, debug_symbols=args.debug_symbols)),
             ),
             required_tools=(str(armlink), str(fromelf)),
         )
