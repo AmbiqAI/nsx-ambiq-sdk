@@ -224,6 +224,12 @@ __NO_RETURN void Reset_Handler(void)
     __DSB();
     __ISB();
 
+    // The Apollo secure-boot handoff may leave global interrupts masked
+    // (PRIMASK=1).  Restore the architectural app-entry expectation before user
+    // code runs, matching the GCC startup's `cpsie i`.  Without this, interrupt-
+    // driven peripherals never service their IRQs.
+    __enable_irq();
+
     __PROGRAM_START();
 }
 
