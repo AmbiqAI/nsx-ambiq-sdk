@@ -25,8 +25,14 @@
 #include <time.h>
 
 /* As required by POSIX.1-2008, declare tm as incomplete type.
-   The actual definition is in time.h. */
+   The actual definition is in time.h.
+   In C++, <time.h> brings std::tm into the global namespace via a
+   using-declaration, so this redundant global `struct tm;` is both
+   unnecessary and ill-formed (it clashes with the using-declared name under
+   Arm Compiler 6 / LLVM ATfE libc). Restrict it to C translation units. */
+#ifndef __cplusplus
 struct tm;
+#endif
 
 #if !defined(AM_PART_APOLLO4_API) && !defined(AM_PART_APOLLO5_API)
 #error "Error: am_util_crypto.h only supports Apollo4 and Apollo5."
