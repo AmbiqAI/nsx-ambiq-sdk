@@ -35,6 +35,15 @@ def test_hal_and_bsp_use_provider_local_toolchain_artifacts(repo_root: Path) -> 
     assert "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a" not in bsp
 
 
+def test_bsp_lib_subdir_defaults_to_board_name(repo_root: Path) -> None:
+    bsp = read(repo_root, "modules/nsx-ambiq-bsp/CMakeLists.txt")
+
+    # Prebuilt libs live at lib/<toolchain>/<part>/<board>/libam_bsp.a, so the
+    # board name is the only correct fallback when a fragment omits the subdir.
+    assert 'set(NSX_AMBIQ_BSP_LIB_SUBDIR "${NSX_AMBIQ_BOARD_NAME}")' in bsp
+    assert 'set(NSX_AMBIQ_BSP_LIB_SUBDIR "evb")' not in bsp
+
+
 def test_soc_hal_alias_is_descriptor_driven(repo_root: Path) -> None:
     cmake = read(repo_root, "modules/nsx-soc-hal/CMakeLists.txt")
     manifest = read(repo_root, "modules/nsx-soc-hal/nsx-module.yaml")
