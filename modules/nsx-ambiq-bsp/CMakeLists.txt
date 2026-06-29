@@ -12,8 +12,13 @@ endif()
 option(NSX_AMBIQSUITE_USE_PREBUILT "Use prebuilt AmbiqSuite static libraries" ON)
 
 set(NSX_AMBIQ_INSTALL_BASE "${CMAKE_INSTALL_INCLUDEDIR}/nsx/ambiqsuite/${NSX_AMBIQSUITE_VERSION}")
+# Prebuilt BSP libs ship under lib/<toolchain>/<part>/<board>/libam_bsp.a, so the
+# board name is the correct default subdir. A board fragment may override this for
+# vendor folders that diverge from the board name (e.g. apollo5b_evb -> eb_revb).
+# The legacy bare "evb" default produced wrong paths for boards like apollo4p_evb
+# when the fragment did not pre-set the subdir.
 if(NOT DEFINED NSX_AMBIQ_BSP_LIB_SUBDIR)
-    set(NSX_AMBIQ_BSP_LIB_SUBDIR "evb")
+    set(NSX_AMBIQ_BSP_LIB_SUBDIR "${NSX_AMBIQ_BOARD_NAME}")
 endif()
 if(NOT DEFINED NSX_AMBIQ_BSP_LIB_PART_NAME)
     set(NSX_AMBIQ_BSP_LIB_PART_NAME "${NSX_AMBIQ_PART_NAME}")
