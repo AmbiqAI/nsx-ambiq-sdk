@@ -19,6 +19,9 @@ LR_1 0x00018000
     SHARED_SRAM 0x10060000 0x00100000
     {
         * (RESOURCE_TABLE)
+        * (.resource_table)
         * (SHARED_RW)
+        * (.shared)
+        * (.sram_bss)
     }
 }
