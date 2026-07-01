@@ -74,6 +74,7 @@
  *   .itcm_text  → MCU_ITCM, initialized from NVM     (AT>MCU_MRAM)
  *   .dtcm_text  → MCU_TCM, initialized from NVM      (AT>MCU_MRAM)
  *   .tcm        → TCM, initialized from NVM           (AT>ROMEM)
+ *   .tcm_bss    → TCM, NOLOAD (Apollo3P only)
  *   .rodata     → NVM in-place
  * =================================================================== */
 
@@ -82,6 +83,7 @@
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    1
   #define NSX_MEM__HAS_FAST_CODE   1
+  #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets TCM here */
   #define NSX_MEM__SEC_SRAM        ".shared"
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
   #define NSX_MEM__SEC_FAST_CODE   ".itcm_text"
@@ -91,6 +93,7 @@
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    0  /* no .sram_bss in AP5A/5B linker */
   #define NSX_MEM__HAS_FAST_CODE   1
+  #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets TCM here */
   #define NSX_MEM__SEC_SRAM        ".shared"
   /* NSX_MEM__SEC_SRAM_BSS not defined — falls back */
   #define NSX_MEM__SEC_FAST_CODE   ".itcm_text"
@@ -100,6 +103,7 @@
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    1
   #define NSX_MEM__HAS_FAST_CODE   1
+  #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets TCM here */
   #define NSX_MEM__SEC_SRAM        ".shared"
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
   #define NSX_MEM__SEC_FAST_CODE   ".dtcm_text"
@@ -109,28 +113,39 @@
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    1
   #define NSX_MEM__HAS_FAST_CODE   0
+  #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets MCU_TCM here */
   #define NSX_MEM__SEC_SRAM        ".shared"
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
   /* NSX_MEM__SEC_FAST_CODE not defined — falls back to NVM */
 
-/* ------ Apollo3P (Cortex-M4F, 64 KB TCM + 768 KB SRAM) ------ */
+/* ------ Apollo3P (Cortex-M4F, 64 KB TCM + 768 KB SRAM) ------
+ * Unlike AP4/AP5/AP510, default .bss/.data on Apollo3P targets the 704 KB
+ * Main SRAM (RWMEM), NOT the physical 64 KB low-latency TCM at 0x10000000
+ * (see linker_script.ld/.sct — MCU_TCM's only default occupant is the
+ * initialized `.tcm` code-overlay section). NSX_MEM_FAST_BSS therefore
+ * needs an explicit section here, unlike every other current SoC where it
+ * is a documented no-op. */
 #elif defined(AM_PART_APOLLO3P)
   #define NSX_MEM__HAS_SRAM        0  /* no shared SRAM concept */
   #define NSX_MEM__HAS_SRAM_BSS    0
   #define NSX_MEM__HAS_FAST_CODE   1
+  #define NSX_MEM__HAS_FAST_BSS    1  /* real TCM at 0x10000000, .bss does NOT target it */
   #define NSX_MEM__SEC_FAST_CODE   ".tcm"
+  #define NSX_MEM__SEC_FAST_BSS    ".tcm_bss"
 
 /* ------ Apollo3 (Cortex-M4F, single SRAM) ------ */
 #elif defined(AM_PART_APOLLO3)
   #define NSX_MEM__HAS_SRAM        0
   #define NSX_MEM__HAS_SRAM_BSS    0
   #define NSX_MEM__HAS_FAST_CODE   0
+  #define NSX_MEM__HAS_FAST_BSS    0
 
 /* ------ Unknown SoC — safe defaults (everything goes to compiler default) */
 #else
   #define NSX_MEM__HAS_SRAM        0
   #define NSX_MEM__HAS_SRAM_BSS    0
   #define NSX_MEM__HAS_FAST_CODE   0
+  #define NSX_MEM__HAS_FAST_BSS    0
 #endif
 
 /* ===================================================================
@@ -160,10 +175,17 @@
 /**
  * @brief Place zero-initialized data in the fastest data memory (TCM).
  *
- * On all current SoCs, .bss already targets TCM — this is a no-op
- * that documents intent. Zeroed at boot.
+ * On most current SoCs, .bss already targets TCM and this is a no-op that
+ * documents intent. Apollo3P is the exception: its default .bss targets
+ * Main SRAM, not the separate 64 KB low-latency TCM, so this maps to a
+ * dedicated NOLOAD `.tcm_bss` section there instead. Zeroed at boot either
+ * way.
  */
-#define NSX_MEM_FAST_BSS  /* .bss default is TCM on all current SoCs */
+#if NSX_MEM__HAS_FAST_BSS
+  #define NSX_MEM_FAST_BSS  NSX_MEM__SEC(NSX_MEM__SEC_FAST_BSS)
+#else
+  #define NSX_MEM_FAST_BSS  /* .bss default is TCM on this SoC */
+#endif
 
 /**
  * @brief Place initialized data in shared SRAM (copied from NVM at boot).

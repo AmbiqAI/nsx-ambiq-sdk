@@ -243,6 +243,8 @@ extern uint32_t _sdata;
 extern uint32_t _edata;
 extern uint32_t _stcm;
 extern uint32_t _etcm;
+extern uint32_t _stcm_bss;
+extern uint32_t _etcm_bss;
 extern uint32_t _sbss;
 extern uint32_t _ebss;
 
@@ -303,6 +305,19 @@ Reset_Handler(void)
           "        str   r3, [r1], #4\n"
           "        cmp     r1, r2\n"
           "        blt     copy_tcm\n");
+    //
+    // Zero fill the tcm_bss segment (real low-latency TCM at 0x10000000 —
+    // distinct from .bss, which targets Main SRAM on this SoC).
+    //
+    __asm("    ldr     r0, =_stcm_bss\n"
+          "    ldr     r1, =_etcm_bss\n"
+          "    mov     r2, #0\n"
+          "zero_tcm_bss:\n"
+          "        cmp     r0, r1\n"
+          "        it      lt\n"
+          "        strlt   r2, [r0], #4\n"
+          "        blt     zero_tcm_bss");
+
     //
     // Zero fill the bss segment.
     //

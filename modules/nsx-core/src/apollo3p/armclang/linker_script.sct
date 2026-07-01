@@ -19,6 +19,7 @@ LR_1 0x0000C000
     TCM 0x10000000 0x00010000
     {
         * (.tcm)
+        * (.tcm_bss)
     }
 
     ; Zero-length heap (the legacy startup reserved no heap).  Placed at the

@@ -53,6 +53,28 @@ SECTIONS
     /* used by startup to initialize data */
     _init_data = LOADADDR(.data);
 
+    /*--------------------------------------------------------------------------
+     * Uninitialized data in the real low-latency TCM (0x10000000, 64 KB).
+     * Place with __attribute__((section(".tcm_bss"))) — see nsx_mem.h
+     * NSX_MEM_FAST_BSS. Unlike .bss (which targets Main SRAM/RWMEM on this
+     * SoC), this is the only path onto the physical TCM for data.
+     *
+     * NOTE: this rule MUST precede the `.tcm` rule below. GNU ld assigns
+     * each input section to the first SECTIONS rule that matches it, and
+     * `.tcm`'s `*(.tcm*)` wildcard would otherwise also match `.tcm_bss`
+     * input sections, silently pulling this "uninitialized" data into the
+     * loaded/initialized `.tcm` output section instead.
+     *--------------------------------------------------------------------------*/
+    .tcm_bss (NOLOAD) :
+    {
+        . = ALIGN(4);
+        _stcm_bss = .;
+        *(.tcm_bss)
+        *(.tcm_bss*)
+        . = ALIGN(4);
+        _etcm_bss = .;
+    } > TCM
+
     .tcm :
     {
         . = ALIGN(4);
