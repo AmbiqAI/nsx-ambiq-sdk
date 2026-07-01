@@ -1,0 +1,65 @@
+schema_version: 1
+
+module:
+  name: nsx-ble
+  type: backend_specific
+  category: sdk_component
+  version: "0.1.0"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Optional app-facing Bluetooth LE convenience API. Ports the legacy neuralSPOT ns-ble wrapper onto NSX, providing simple "define a service + read/write/notify characteristics with callbacks" bring-up on top of the Cordio host stack (nsx-cordio).
+
+capabilities:
+  - bluetooth_le
+  - ble_peripheral
+  - gatt_server
+  - ns_ble_api
+  - sdk_component
+
+use_cases:
+  - stand up a single BLE GATT service with read/write/notify characteristics
+  - port existing neuralSPOT ns-ble applications to NSX with minimal source changes
+  - drive the Cordio stack from a FreeRTOS dispatcher task
+
+agent_keywords:
+  - ble
+  - bluetooth
+  - ns_ble
+  - gatt
+  - characteristic
+  - notify
+
+build:
+  cmake:
+    package: nsx_ble
+    targets:
+      - nsx::ble
+
+requires_app_contract:
+  - The application supplies a WSF buffer pool (ns_ble_pool_config_t) sized for its service.
+  - The application creates a FreeRTOS dispatcher task that calls wsfOsDispatcher() (see the ported web_ble example flow) and calls ns_ble_pre_init() to set radio IRQ priorities.
+  - FreeRTOSConfig.h is application policy (through nsx-freertos / nsx::freertos_config).
+  - Current limits inherited from ns-ble: single service, single connection, no OOB pairing, minimal disconnect/error handling.
+
+depends:
+  required:
+    - nsx-core
+    - nsx-cordio
+    - nsx-freertos
+  optional: []
+
+compatibility:
+  boards:
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang
+
+phase: "Phase 1 MVP: Apollo4P Blue (Cooper transport), GCC, ATFE, and armclang/ACFE build-validated. Public API preserves the legacy ns_ble_* names for source portability; a compat shim (nsx_ble_compat.h) maps the old harness onto nsx-core + FreeRTOS. EM9305/Apollo510B, Apollo3 integrated BLE, and other transports follow with nsx-cordio."

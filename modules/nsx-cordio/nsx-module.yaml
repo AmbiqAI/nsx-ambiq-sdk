@@ -1,0 +1,77 @@
+schema_version: 1
+
+module:
+  name: nsx-cordio
+  type: backend_specific
+  category: sdk_component
+  version: "0.1.0"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) pinned to the provider SDK drop and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
+
+vendored:
+  cordio:
+    upstream: AmbiqSuite third_party/cordio
+    revision: stable-2026.06.18 (caaf5af860)
+    path: sdk/third_party/cordio
+    license: See sdk/third_party/cordio (Packetcraft/Arm + Ambiq)
+  uecc:
+    upstream: AmbiqSuite third_party/uecc (micro-ECC)
+    revision: stable-2026.06.18 (caaf5af860)
+    path: sdk/third_party/uecc
+    license: BSD-2-Clause
+
+capabilities:
+  - bluetooth_le
+  - cordio
+  - wsf
+  - ble_host_stack
+  - sdk_component
+
+use_cases:
+  - provide the Cordio BLE host stack (HCI/DM/L2CAP/ATT/SMP/GATT) to higher-level BLE modules
+  - build the WSF FreeRTOS port for the active SoC
+  - supply the SoC-specific BLE HCI transport driver (Cooper on Apollo4P)
+
+agent_keywords:
+  - ble
+  - bluetooth
+  - cordio
+  - wsf
+  - cooper
+  - apollo4p
+
+build:
+  cmake:
+    package: nsx_cordio
+    targets:
+      - nsx::cordio
+
+requires_app_contract:
+  - WSF buffer pool sizing and descriptors are application/wrapper policy.
+  - The application provides FreeRTOSConfig.h via nsx::freertos_config (transitively through nsx-freertos).
+  - A dedicated dispatcher task running wsfOsDispatcher() and the radio IRQ glue are owned by the consuming wrapper (nsx-ble), not this module.
+
+depends:
+  required:
+    - nsx-ambiqsuite
+    - nsx-ambiq-hal
+    - nsx-ambiq-bsp
+    - nsx-freertos
+  optional: []
+
+compatibility:
+  boards:
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang
+
+phase: "Phase 1 MVP: Apollo4P Blue (Cooper transport), GCC, ATFE, and armclang/ACFE build-validated, WSF FreeRTOS port on FreeRTOS v11. EM9305 (Apollo510B), integrated Apollo3 controller, and 510L/330P IPC radio transports are follow-up phases."

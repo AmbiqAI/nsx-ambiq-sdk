@@ -32,6 +32,7 @@ depends:
   required:
     - nsx-core
     - nsx-soc-hal
+    - nsx-timer
   optional: []
 compatibility:
   boards:
