@@ -8,12 +8,26 @@
  * @copyright Copyright (c) 2023
  *
  */
+#if defined(AM_PART_APOLLO4P)
+    #include "am_devices_cooper.h"
+#elif defined(AM_PART_APOLLO510B)
+    #include "am_devices_em9305.h"
+#endif
 #include "ns_ble.h"
 
 const ns_core_api_t ns_ble_V0_0_1 = {.apiId = NS_BLE_API_ID, .version = NS_BLE_V0_0_1};
 
 // *** Globals
 ns_ble_control_t g_ns_ble_control;
+volatile uint32_t g_ns_ble_radio_boot_status = 0xFFFFFFFFu;
+volatile uint32_t g_ns_ble_last_event = 0;
+volatile uint32_t g_ns_ble_last_status = 0;
+volatile uint32_t g_ns_ble_reset_complete_count = 0;
+volatile uint32_t g_ns_ble_adv_start_count = 0;
+volatile uint32_t g_ns_ble_adv_stop_count = 0;
+volatile uint32_t g_ns_ble_conn_open_count = 0;
+volatile uint32_t g_ns_ble_conn_close_count = 0;
+volatile uint32_t g_ns_ble_hw_error_count = 0;
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
 AM_SHARED_RW uint32_t g_pui32IpcShm[AM_DEVICES_510L_RADIO_IPC_SHM_DEFAULT_SIZE / sizeof(uint32_t)] __attribute__((aligned(32)));
 am_devices_510L_radio_ipc_shm_t sIpcShm =
@@ -53,7 +67,30 @@ am_hal_mpu_attr_t sMPUAttr =
 };
 #endif
 
-static dmConnId_t currentConnId = 0;
+static dmConnId_t currentConnId = DM_CONN_ID_NONE;
+
+static const ns_ble_device_info_t ns_ble_default_device_info = {
+    .manufacturerName = "Ambiq",
+    .modelNumber = "NSX BLE Device",
+    .serialNumber = "unknown",
+    .firmwareRevision = "5.2.23",
+    .hardwareRevision = "Ambiq EVB",
+    .softwareRevision = "nsx-ble",
+    .vendorIdSource = NS_BLE_DIS_VENDOR_ID_SOURCE_BLUETOOTH_SIG,
+    .vendorId = NS_BLE_COMPANY_ID_AMBIQ,
+    .productId = 0x0001,
+    .productVersion = 0x0001,
+};
+
+static const ns_ble_connection_config_t ns_ble_default_connection_config = {
+    .preferredMtu = 247,
+    .dataLenTxOctets = 251,
+    .dataLenTxTime = 0x0848,
+    .connIntervalMin = 24,
+    .connIntervalMax = 40,
+    .connLatency = 0,
+    .supervisionTimeout = 600,
+};
 
 // *** Generic Default Configurations
 
@@ -108,6 +145,182 @@ static smpCfg_t ns_ble_default_SmpCfg = {
     3,                   /*! Attempts to trigger 'repeated attempts' timeout */
     0,                   /*! Device authentication requirements */
 };
+
+static void ns_ble_emit_event(
+    ns_ble_event_type_t type, dmConnId_t connId, uint8_t status, uint8_t rawEvent,
+    uint16_t value0, uint16_t value1, uint32_t detail) {
+    ns_ble_service_control_t *svc = g_ns_ble_control.service_config;
+    if (svc == NULL || svc->eventHandler == NULL) {
+        return;
+    }
+
+    ns_ble_event_t event = {
+        .type = type,
+        .connId = connId,
+        .status = status,
+        .rawEvent = rawEvent,
+        .value0 = value0,
+        .value1 = value1,
+        .detail = detail,
+    };
+    svc->eventHandler(&event, svc->eventContext);
+}
+
+static const char *ns_ble_select_string(const char *configured, const char *fallback) {
+    return (configured != NULL && configured[0] != '\0') ? configured : fallback;
+}
+
+static int ns_ble_set_dis_string(uint16_t handle, const char *value) {
+    const size_t len = strlen(value);
+    if (len > UINT16_MAX) {
+        return NS_STATUS_FAILURE;
+    }
+    return (AttsSetAttr(handle, (uint16_t)len, (uint8_t *)value) == ATT_SUCCESS)
+               ? NS_STATUS_SUCCESS
+               : NS_STATUS_FAILURE;
+}
+
+static int ns_ble_apply_device_info(const ns_ble_device_info_t *configured) {
+    ns_ble_device_info_t info = ns_ble_default_device_info;
+    if (configured != NULL) {
+        if (configured->manufacturerName != NULL) {
+            info.manufacturerName = configured->manufacturerName;
+        }
+        if (configured->modelNumber != NULL) {
+            info.modelNumber = configured->modelNumber;
+        }
+        if (configured->serialNumber != NULL) {
+            info.serialNumber = configured->serialNumber;
+        }
+        if (configured->firmwareRevision != NULL) {
+            info.firmwareRevision = configured->firmwareRevision;
+        }
+        if (configured->hardwareRevision != NULL) {
+            info.hardwareRevision = configured->hardwareRevision;
+        }
+        if (configured->softwareRevision != NULL) {
+            info.softwareRevision = configured->softwareRevision;
+        }
+        if (configured->vendorIdSource != 0) {
+            info.vendorIdSource = configured->vendorIdSource;
+        }
+        if (configured->vendorId != 0) {
+            info.vendorId = configured->vendorId;
+        }
+        if (configured->productId != 0) {
+            info.productId = configured->productId;
+        }
+        if (configured->productVersion != 0) {
+            info.productVersion = configured->productVersion;
+        }
+    }
+
+    if (ns_ble_set_dis_string(DIS_MFR_HDL, ns_ble_select_string(info.manufacturerName, "Ambiq")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+    if (ns_ble_set_dis_string(DIS_MN_HDL, ns_ble_select_string(info.modelNumber, "NSX BLE Device")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+    if (ns_ble_set_dis_string(DIS_SN_HDL, ns_ble_select_string(info.serialNumber, "unknown")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+    if (ns_ble_set_dis_string(DIS_FWR_HDL, ns_ble_select_string(info.firmwareRevision, "5.2.23")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+    if (ns_ble_set_dis_string(DIS_HWR_HDL, ns_ble_select_string(info.hardwareRevision, "Ambiq EVB")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+    if (ns_ble_set_dis_string(DIS_SWR_HDL, ns_ble_select_string(info.softwareRevision, "nsx-ble")) !=
+        NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+
+    uint8_t pnpId[] = {
+        (uint8_t)info.vendorIdSource,
+        UINT16_TO_BYTE0(info.vendorId),
+        UINT16_TO_BYTE1(info.vendorId),
+        UINT16_TO_BYTE0(info.productId),
+        UINT16_TO_BYTE1(info.productId),
+        UINT16_TO_BYTE0(info.productVersion),
+        UINT16_TO_BYTE1(info.productVersion),
+    };
+    if (AttsSetAttr(DIS_PNP_ID_HDL, sizeof(pnpId), pnpId) != ATT_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+
+    uint8_t systemId[DIS_SIZE_SID_ATT] = {
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        UINT16_TO_BYTE0(info.vendorId),
+        UINT16_TO_BYTE1(info.vendorId),
+        0x00,
+    };
+    if (AttsSetAttr(DIS_SID_HDL, sizeof(systemId), systemId) != ATT_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
+
+    return NS_STATUS_SUCCESS;
+}
+
+static ns_ble_connection_config_t ns_ble_effective_connection_config(
+    const ns_ble_connection_config_t *configured) {
+    ns_ble_connection_config_t config = ns_ble_default_connection_config;
+    if (configured == NULL) {
+        return config;
+    }
+    if (configured->preferredMtu != 0) {
+        config.preferredMtu = configured->preferredMtu;
+    }
+    if (configured->dataLenTxOctets != 0) {
+        config.dataLenTxOctets = configured->dataLenTxOctets;
+    }
+    if (configured->dataLenTxTime != 0) {
+        config.dataLenTxTime = configured->dataLenTxTime;
+    }
+    if (configured->connIntervalMin != 0) {
+        config.connIntervalMin = configured->connIntervalMin;
+    }
+    if (configured->connIntervalMax != 0) {
+        config.connIntervalMax = configured->connIntervalMax;
+    }
+    if (configured->connLatency != 0) {
+        config.connLatency = configured->connLatency;
+    }
+    if (configured->supervisionTimeout != 0) {
+        config.supervisionTimeout = configured->supervisionTimeout;
+    }
+    return config;
+}
+
+static void ns_ble_apply_connection_update_config(ns_ble_service_control_t *service_cfg) {
+    ns_ble_connection_config_t config =
+        ns_ble_effective_connection_config(&service_cfg->connConfig);
+    ns_ble_default_UpdateCfg.connIntervalMin = config.connIntervalMin;
+    ns_ble_default_UpdateCfg.connIntervalMax = config.connIntervalMax;
+    ns_ble_default_UpdateCfg.connLatency = config.connLatency;
+    ns_ble_default_UpdateCfg.supTimeout = config.supervisionTimeout;
+}
+
+static void ns_ble_request_connection_features(dmConnId_t connId) {
+    ns_ble_service_control_t *svc = g_ns_ble_control.service_config;
+    ns_ble_connection_config_t config =
+        ns_ble_effective_connection_config(svc != NULL ? &svc->connConfig : NULL);
+
+    if (config.dataLenTxOctets != 0) {
+        DmConnSetDataLen(connId, config.dataLenTxOctets, config.dataLenTxTime);
+    }
+    if (config.preferredMtu != 0) {
+        AttcMtuReq(connId, config.preferredMtu);
+    }
+}
 
 /*! advertising data, discoverable mode */
 static const uint8_t ns_ble_generic_data_disc[] = {
@@ -184,6 +397,10 @@ static const uint8_t ns_ble_generic_scan_data_disc[] = {
     ' ',
     ' ',
 };
+
+#define NS_BLE_LEGACY_ADV_DATA_LEN         31U
+#define NS_BLE_SCAN_NAME_HEADER_LEN        2U
+#define NS_BLE_SCAN_NAME_MAX_PAYLOAD_LEN   (NS_BLE_LEGACY_ADV_DATA_LEN - NS_BLE_SCAN_NAME_HEADER_LEN)
 
 /*************************************************************************************************/
 /*!
@@ -343,6 +560,8 @@ static void ns_ble_generic_advSetup(ns_ble_msg_t *pMsg) {
 static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
     uint8_t uiEvent = APP_UI_NONE;
     ns_ble_service_control_t *svc = g_ns_ble_control.service_config;
+    g_ns_ble_last_event = pMsg->hdr.event;
+    g_ns_ble_last_status = pMsg->hdr.status;
     // ns_lp_printf("ns_ble_generic_procMsg %d\n", pMsg->hdr.event);
     // Pass it to the service message handler first, if it returns true, then it means
     // the message is handled by the service
@@ -357,10 +576,16 @@ static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
 
     case ATTS_CCC_STATE_IND:
         ns_lp_printf("ATTS_CCC_STATE_IND\n");
+        ns_ble_emit_event(
+            NS_BLE_EVENT_CCC_CHANGED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event,
+            ((attsCccEvt_t *)pMsg)->idx, ((attsCccEvt_t *)pMsg)->value, 0);
         break;
 
     case ATT_MTU_UPDATE_IND:
         ns_lp_printf("Negotiated MTU %d", ((attEvt_t *)pMsg)->mtu);
+        ns_ble_emit_event(
+            NS_BLE_EVENT_MTU_UPDATED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event,
+            ((attEvt_t *)pMsg)->mtu, 0, 0);
         break;
 
     case DM_CONN_DATA_LEN_CHANGE_IND:
@@ -368,43 +593,75 @@ static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
             "DM_CONN_DATA_LEN_CHANGE_IND, Tx=%d, Rx=%d",
             ((hciLeDataLenChangeEvt_t *)pMsg)->maxTxOctets,
             ((hciLeDataLenChangeEvt_t *)pMsg)->maxRxOctets);
+        ns_ble_emit_event(
+            NS_BLE_EVENT_DATA_LENGTH_UPDATED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event,
+            ((hciLeDataLenChangeEvt_t *)pMsg)->maxTxOctets,
+            ((hciLeDataLenChangeEvt_t *)pMsg)->maxRxOctets, 0);
         break;
 
     case DM_RESET_CMPL_IND:
+        g_ns_ble_reset_complete_count++;
         ns_lp_printf("DM_RESET_CMPL_IND\n");
         AttsCalculateDbHash();
         DmSecGenerateEccKeyReq();
         ns_ble_generic_advSetup(pMsg);
         uiEvent = APP_UI_RESET_CMPL;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_RESET_COMPLETE, DM_CONN_ID_NONE, pMsg->hdr.status, pMsg->hdr.event, 0, 0,
+            0);
         break;
 
     case DM_ADV_START_IND:
+        g_ns_ble_adv_start_count++;
         uiEvent = APP_UI_ADV_START;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_ADV_STARTED, DM_CONN_ID_NONE, pMsg->hdr.status, pMsg->hdr.event, 0, 0, 0);
         break;
 
     case DM_ADV_STOP_IND:
+        g_ns_ble_adv_stop_count++;
         uiEvent = APP_UI_ADV_STOP;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_ADV_STOPPED, DM_CONN_ID_NONE, pMsg->hdr.status, pMsg->hdr.event, 0, 0, 0);
         break;
 
     case DM_CONN_OPEN_IND:
-        currentConnId = pMsg->dm.connOpen.handle;
+        g_ns_ble_conn_open_count++;
+        currentConnId = pMsg->hdr.param;
         ns_ble_generic_conn_open((dmEvt_t *)pMsg);
+        ns_ble_request_connection_features(currentConnId);
         uiEvent = APP_UI_CONN_OPEN;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_CONNECTED, currentConnId, pMsg->hdr.status, pMsg->hdr.event,
+            pMsg->dm.connOpen.connInterval, pMsg->dm.connOpen.connLatency,
+            pMsg->dm.connOpen.supTimeout);
         break;
 
     case DM_CONN_CLOSE_IND:
+        g_ns_ble_conn_close_count++;
         ns_lp_printf("DM_CONN_CLOSE_IND, reason = 0x%x", pMsg->dm.connClose.reason);
         uiEvent = APP_UI_CONN_CLOSE;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_DISCONNECTED, currentConnId, pMsg->hdr.status, pMsg->hdr.event,
+            pMsg->dm.connClose.reason, 0, 0);
+        currentConnId = DM_CONN_ID_NONE;
         break;
 
     case DM_CONN_UPDATE_IND:
         ns_ble_generic_conn_update((dmEvt_t *)pMsg);
+        ns_ble_emit_event(
+            NS_BLE_EVENT_CONN_UPDATED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event,
+            pMsg->dm.connUpdate.connInterval, pMsg->dm.connUpdate.connLatency,
+            pMsg->dm.connUpdate.supTimeout);
         break;
 
     case DM_PHY_UPDATE_IND:
         APP_TRACE_INFO3(
             "DM_PHY_UPDATE_IND status: %d, RX: %d, TX: %d", pMsg->dm.phyUpdate.status,
             pMsg->dm.phyUpdate.rxPhy, pMsg->dm.phyUpdate.txPhy);
+        ns_ble_emit_event(
+            NS_BLE_EVENT_PHY_UPDATED, pMsg->hdr.param, pMsg->dm.phyUpdate.status,
+            pMsg->hdr.event, pMsg->dm.phyUpdate.rxPhy, pMsg->dm.phyUpdate.txPhy, 0);
         break;
 
     case DM_SEC_PAIR_CMPL_IND:
@@ -412,6 +669,9 @@ static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
             DmSecGenerateEccKeyReq();
         }
         uiEvent = APP_UI_SEC_PAIR_CMPL;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_SECURITY_UPDATED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event, 0,
+            0, 0);
         break;
 
     case DM_SEC_PAIR_FAIL_IND:
@@ -443,8 +703,11 @@ static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
         break;
 
     case DM_HW_ERROR_IND:
+        g_ns_ble_hw_error_count++;
         ns_lp_printf("DM_HW_ERROR_IND\n");
         uiEvent = APP_UI_HW_ERROR;
+        ns_ble_emit_event(
+            NS_BLE_EVENT_HW_ERROR, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event, 0, 0, 0);
         break;
 
     case DM_VENDOR_SPEC_CMD_CMPL_IND:
@@ -469,6 +732,7 @@ void ns_ble_generic_handlerInit(wsfHandlerId_t handlerId, ns_ble_service_control
     pAppAdvCfg = g_ns_ble_control.advCfg;
     pAppSlaveCfg = g_ns_ble_control.slaveCfg;
     pAppSecCfg = g_ns_ble_control.secCfg;
+    ns_ble_apply_connection_update_config(cfg);
     pAppUpdateCfg = g_ns_ble_control.updateCfg;
 
     /* Set stack configuration pointers */
@@ -515,10 +779,11 @@ void ns_ble_generic_handler(wsfEventMask_t event, wsfMsgHdr_t *pMsg) {
     }
 }
 
-void ns_ble_generic_init(
+int ns_ble_generic_init(
     bool useDefault, ns_ble_control_t *generic_cfg, ns_ble_service_control_t *service_cfg) {
     wsfHandlerId_t handlerId;
     uint16_t wsfBufMemLen;
+    uint32_t radioBootStatus;
 
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     ns_lp_printf("Initializing IPC Share Memory\n");
@@ -549,7 +814,12 @@ void ns_ble_generic_init(
     //
 #endif
     // Boot the radio.
-    HciDrvRadioBoot(1);
+    radioBootStatus = HciDrvRadioBoot(1);
+    g_ns_ble_radio_boot_status = radioBootStatus;
+    if (radioBootStatus != AM_HAL_STATUS_SUCCESS) {
+        ns_lp_printf("HciDrvRadioBoot failed: 0x%08lx\r\n", (unsigned long)radioBootStatus);
+        return NS_STATUS_FAILURE;
+    }
 
     // Initialize the control block.
     if (useDefault) {
@@ -591,6 +861,7 @@ void ns_ble_generic_init(
     if (wsfBufMemLen > service_cfg->bufferPoolSize) {
         ns_lp_printf(
             "Memory pool is too small by %d\r\n", wsfBufMemLen - service_cfg->bufferPoolSize);
+        return NS_STATUS_FAILURE;
     }
 
     // Initialize the WSF security service.
@@ -652,7 +923,17 @@ void ns_ble_generic_init(
 
     // Add generic groups
     SvcCoreAddGroup();
+    if ((service_cfg->deviceName != NULL) && (service_cfg->deviceNameLen > 0)) {
+        if (!SvcCoreGapSetDevName(service_cfg->deviceName, service_cfg->deviceNameLen)) {
+            ns_lp_printf("Failed to set GAP device name\r\n");
+            return NS_STATUS_FAILURE;
+        }
+    }
     SvcDisAddGroup();
+    if (ns_ble_apply_device_info(&service_cfg->deviceInfo) != NS_STATUS_SUCCESS) {
+        ns_lp_printf("Failed to set Device Information Service fields\r\n");
+        return NS_STATUS_FAILURE;
+    }
 #if defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO3)
     HciVscSetRfPowerLevelEx(TX_POWER_LEVEL_MINUS_10P0_dBm);
 #elif defined(AM_PART_APOLLO330P)
@@ -664,40 +945,35 @@ void ns_ble_generic_init(
     // if (useDefault) {
     //     *control = &g_ns_ble_control;
     // }
+    return NS_STATUS_SUCCESS;
 }
 
+void ns_ble_handle_controller_irq(void) {
 #if defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO3)
-void am_ble_isr(void) { HciDrvIntService(); }
-#elif defined(AM_PART_APOLLO5B)
-void
-GPIO_INT_ISR(void)
-{
-    am_hal_gpio_mask_t IntStatus;
-    uint32_t    ui32IntStatus;
-
-    am_hal_gpio_interrupt_status_get(GPIO_INT_CHANNEL,
-                                     false,
-                                     &IntStatus);
-    am_hal_gpio_interrupt_irq_status_get(GPIO_INT_IRQ, false, &ui32IntStatus);
-    am_hal_gpio_interrupt_irq_clear(GPIO_INT_IRQ, ui32IntStatus);
-    am_hal_gpio_interrupt_service(GPIO_INT_IRQ, ui32IntStatus);
+    HciDrvIntService();
+#endif
 }
-#elif !defined(AM_PART_APOLLO330P)
-void am_cooper_irq_isr(void) {
+
+void ns_ble_handle_cooper_gpio_irq(void) {
+#if defined(AM_PART_APOLLO4P)
     uint32_t ui32IntStatus;
     AM_CRITICAL_BEGIN
     am_hal_gpio_interrupt_irq_status_get(AM_COOPER_IRQn, false, &ui32IntStatus);
     am_hal_gpio_interrupt_irq_clear(AM_COOPER_IRQn, ui32IntStatus);
     AM_CRITICAL_END
     am_hal_gpio_interrupt_service(AM_COOPER_IRQn, ui32IntStatus);
-}
 #endif
-void am_uart_isr(void) {
-    uint32_t ui32Status;
+}
 
-    // Read and save the interrupt status, but clear out the status register.
-    ui32Status = UARTn(0)->MIS;
-    UARTn(0)->IEC = ui32Status;
+void ns_ble_handle_em9305_gpio_irq(void) {
+#if defined(AM_PART_APOLLO510B)
+    uint32_t ui32IntStatus;
+    AM_CRITICAL_BEGIN
+    am_hal_gpio_interrupt_irq_status_get(GPIO_INT_IRQ, false, &ui32IntStatus);
+    am_hal_gpio_interrupt_irq_clear(GPIO_INT_IRQ, ui32IntStatus);
+    AM_CRITICAL_END
+    am_hal_gpio_interrupt_service(GPIO_INT_IRQ, ui32IntStatus);
+#endif
 }
 
 //*****************************************************************************
@@ -705,15 +981,7 @@ void am_uart_isr(void) {
 //*****************************************************************************
 
 void ns_ble_pre_init(void) {
-// Set NVICs for BLE
-#if defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO3)
-    NVIC_SetPriority(BLE_IRQn, NVIC_configMAX_SYSCALL_INTERRUPT_PRIORITY);
-#elif defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
-// Dont know yet.
-#else
-    NVIC_SetPriority(COOPER_IOM_IRQn, 4);
-    NVIC_SetPriority(AM_COOPER_IRQn, 4);
-#endif
+    /* Intentionally empty: apps own vector symbols and NVIC priority policy. */
 }
 
 void ns_ble_new_handler(wsfEventMask_t event, wsfMsgHdr_t *pMsg) {
@@ -726,19 +994,36 @@ void ns_ble_new_handler_init(wsfHandlerId_t handlerId) {
 
 static void ns_ble_generic_new_handle_cnf(attEvt_t *pMsg){};
 
-void ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg) {
-    dmConnId_t connId = 1; //currentConnId;
+dmConnId_t ns_ble_current_connection_id(void) { return currentConnId; }
+
+int ns_ble_request_mtu(uint16_t mtu) {
+    if (currentConnId == DM_CONN_ID_NONE || mtu < ATT_DEFAULT_MTU || mtu > ATT_MAX_MTU) {
+        return NS_STATUS_FAILURE;
+    }
+    AttcMtuReq(currentConnId, mtu);
+    return NS_STATUS_SUCCESS;
+}
+
+int ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg) {
+    dmConnId_t connId = currentConnId;
+    (void)pMsg;
     // ns_lp_printf("ns_ble_send_value");
+    if (connId == DM_CONN_ID_NONE) {
+        return NS_STATUS_FAILURE;
+    }
     if (AttsCccEnabled(connId, c->indicationTimer.msg.status)) {
         int ret = AttsSetAttr(c->valueHandle, c->valueLen, c->applicationValue);
         if (ret != ATT_SUCCESS) {
             ns_lp_printf("... failed to send\n");
+            return NS_STATUS_FAILURE;
         }
         ns_interrupt_master_disable(); // critical region
         AttsHandleValueNtf(connId, c->valueHandle, c->valueLen, c->applicationValue);
         ns_interrupt_master_enable();
+        return NS_STATUS_SUCCESS;
     } else {
         // ns_lp_printf("... not sent\n");
+        return NS_STATUS_FAILURE;
     }
 }
 
@@ -751,12 +1036,15 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
         for (int j = 0; j < service->numCharacteristics; j++) {
             if (service->characteristics[j]->cccIndicationHandle == event) {
                 ns_ble_characteristic_t *c = service->characteristics[j];
+                int status = NS_STATUS_SUCCESS;
                 // Found a match, handle timer expiry
                 // Call the callback to update the value of attribute
-                c->notifyHandlerCb(service, c);
+                if (c->notifyHandlerCb != NULL) {
+                    status = c->notifyHandlerCb(service, c);
+                }
 
                 // Send the value if not asynchronous
-                if (c->indicationIsAsynchronous == false) {
+                if (status == NS_STATUS_SUCCESS && c->indicationIsAsynchronous == false) {
                     ns_ble_send_value(c, (attEvt_t *)pMsg);
                 }
 
@@ -772,6 +1060,9 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
 static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
     uint8_t idx = pMsg->idx;
     ns_ble_service_t *service;
+    ns_ble_emit_event(
+        NS_BLE_EVENT_CCC_CHANGED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event, pMsg->idx,
+        pMsg->value, 0);
     // ns_lp_printf("ns_ble_process_ccc_state\n");
     for (int i = 0; i < g_ns_ble_control.numServices; i++) {
         service = g_ns_ble_control.services[i];
@@ -799,13 +1090,11 @@ bool ns_ble_new_proc_msg(ns_ble_msg_t *pMsg) {
     // ns_lp_printf("ns_ble_new_proc_msg: %d\n", pMsg->hdr.event);
     switch (pMsg->hdr.event) {
     case DM_CONN_OPEN_IND:
-        currentConnId = pMsg->dm.connOpen.handle;
-        ns_ble_generic_conn_open((dmEvt_t *)pMsg);
-        DmConnSetDataLen(1, 251, 0x848);
+        messageHandled = false;
         break;
 
     case DM_CONN_CLOSE_IND:
-        // amdtps_conn_close((dmEvt_t *) pMsg);
+        messageHandled = false;
         break;
 
     case ATTS_CCC_STATE_IND:
@@ -932,6 +1221,9 @@ int ns_ble_create_service(ns_ble_service_t *service) {
     // Allocate memory for characteristic array
     service->characteristics =
         ns_malloc(sizeof(ns_ble_characteristic_t *) * service->numCharacteristics);
+    if (service->characteristics == NULL) {
+        return NS_STATUS_FAILURE;
+    }
     service->nextCharacteristicIndex = 0;
 
     // *** Discovery and Advertisement structs
@@ -954,11 +1246,16 @@ int ns_ble_create_service(ns_ble_service_t *service) {
         return NS_STATUS_FAILURE;
     }
 
-    // service->scanDataLen = sizeof(ns_ble_generic_scan_data_disc);
-    service->scanDataLen = service->nameLen + 2;
+    uint8_t scanNameLen = service->nameLen;
+    if (scanNameLen > NS_BLE_SCAN_NAME_MAX_PAYLOAD_LEN) {
+        scanNameLen = NS_BLE_SCAN_NAME_MAX_PAYLOAD_LEN;
+    }
+    service->scanDataLen = scanNameLen + NS_BLE_SCAN_NAME_HEADER_LEN;
     memcpy(service->scanData, &ns_ble_generic_scan_data_disc, service->scanDataLen);
-    memcpy(service->scanData + 2, service->name, service->nameLen); // name is at offset 2
-    service->scanData[0] = service->nameLen + 1;
+    memcpy(service->scanData + NS_BLE_SCAN_NAME_HEADER_LEN, service->name, scanNameLen);
+    service->scanData[0] = scanNameLen + 1;
+    service->scanData[1] =
+        (scanNameLen == service->nameLen) ? DM_ADV_TYPE_LOCAL_NAME : DM_ADV_TYPE_SHORT_NAME;
 
     // *** CCC Configuration
     // Allocate memory for CCCSet array
@@ -997,19 +1294,67 @@ int ns_ble_create_service(ns_ble_service_t *service) {
     service->control->advDataLen = service->advDataLen;
     service->control->scanData = service->scanData;
     service->control->scanDataLen = service->scanDataLen;
+    service->control->deviceName = service->name;
+    service->control->deviceNameLen = service->nameLen;
     service->control->cccSet = service->cccSet;
     service->control->cccCount = numCccAttributes + 1;
     service->control->handler_init_cb = &ns_ble_new_handler_init;
     service->control->handler_cb = &ns_ble_new_handler;
     service->control->procMsg_cb = &ns_ble_new_proc_msg;
+    service->control->deviceInfo = service->deviceInfo;
+    service->control->connConfig = service->connConfig;
+    service->control->eventHandler = service->eventHandler;
+    service->control->eventContext = service->eventContext;
 
     // Generic_init will fill in g_ns_ble_control with handlerIds
     // (after initializing the cordio stack.)
-    ns_ble_generic_init(TRUE, &g_ns_ble_control, service->control);
+    if (ns_ble_generic_init(TRUE, &g_ns_ble_control, service->control) != NS_STATUS_SUCCESS) {
+        return NS_STATUS_FAILURE;
+    }
     g_ns_ble_control.services[0] = service;
     g_ns_ble_control.numServices = 1;
 
     return NS_STATUS_SUCCESS;
+}
+
+int ns_ble_service_set_device_info(ns_ble_service_t *s, const ns_ble_device_info_t *info) {
+    if (s == NULL || info == NULL) {
+        return NS_STATUS_FAILURE;
+    }
+    s->deviceInfo = *info;
+    if (s->control != NULL) {
+        s->control->deviceInfo = *info;
+    }
+    return NS_STATUS_SUCCESS;
+}
+
+int ns_ble_service_set_connection_config(
+    ns_ble_service_t *s, const ns_ble_connection_config_t *config) {
+    if (s == NULL || config == NULL) {
+        return NS_STATUS_FAILURE;
+    }
+    if (config->preferredMtu != 0 &&
+        (config->preferredMtu < ATT_DEFAULT_MTU || config->preferredMtu > ATT_MAX_MTU)) {
+        return NS_STATUS_FAILURE;
+    }
+    s->connConfig = *config;
+    if (s->control != NULL) {
+        s->control->connConfig = *config;
+    }
+    return NS_STATUS_SUCCESS;
+}
+
+void ns_ble_service_set_event_handler(
+    ns_ble_service_t *s, ns_ble_event_handler_t handler, void *context) {
+    if (s == NULL) {
+        return;
+    }
+    s->eventHandler = handler;
+    s->eventContext = context;
+    if (s->control != NULL) {
+        s->control->eventHandler = handler;
+        s->control->eventContext = context;
+    }
 }
 
 // Create a Characteristic and related attributes

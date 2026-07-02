@@ -189,6 +189,12 @@ def test_required_manifest_dependencies_resolve(manifests: dict[Path, dict]) -> 
     assert unresolved == []
 
 
+def test_power_manifest_declares_timer_dependency(manifests: dict[Path, dict]) -> None:
+    power = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-power")
+
+    assert "nsx-timer" in power["depends"].get("required", [])
+
+
 def test_cmsis_core_policy_is_explicit(manifests: dict[Path, dict]) -> None:
     cmsis_core = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-cmsis-core")
     capabilities = set(cmsis_core.get("capabilities", []))

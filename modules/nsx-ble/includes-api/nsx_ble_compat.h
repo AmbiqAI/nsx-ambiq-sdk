@@ -20,12 +20,9 @@
 // nsx_core_api_t, NSX_STATUS_*, nsx_semver_t.
 #include "nsx_core.h"
 
-// AmbiqSuite HAL + BSP umbrella headers. The legacy harness pulled these in;
-// ns_ble.c needs CMSIS/HAL symbols directly (IRQn_Type, NVIC_SetPriority,
-// UARTn, AM_CRITICAL_BEGIN/END, IOMSTR0_IRQn, GPIO0_*_IRQn, am_hal_*).
-// Provided on the include path transitively via nsx::ambiq_hal / nsx::ambiq_bsp.
+// AmbiqSuite HAL umbrella header. The legacy harness pulled this in; ns_ble.c
+// needs CMSIS/HAL symbols directly for the BLE transport helpers.
 #include "am_mcu_apollo.h"
-#include "am_bsp.h"
 
 // The WSF port is the FreeRTOS port; use the RTOS heap for the small dynamic
 // allocations ns-ble makes (characteristic/handle bookkeeping).

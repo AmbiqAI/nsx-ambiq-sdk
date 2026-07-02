@@ -4,7 +4,7 @@ module:
   name: nsx-ble
   type: backend_specific
   category: sdk_component
-  version: "0.1.0"
+  version: "5.2.23"
 
 support:
   ambiqsuite: true
@@ -40,7 +40,7 @@ build:
 
 requires_app_contract:
   - The application supplies a WSF buffer pool (ns_ble_pool_config_t) sized for its service.
-  - The application creates a FreeRTOS dispatcher task that calls wsfOsDispatcher() (see the ported web_ble example flow) and calls ns_ble_pre_init() to set radio IRQ priorities.
+  - The application creates a FreeRTOS dispatcher task that calls wsfOsDispatcher() (see the ported web_ble example flow) and owns BLE vector symbols/NVIC priority policy.
   - FreeRTOSConfig.h is application policy (through nsx-freertos / nsx::freertos_config).
   - Current limits inherited from ns-ble: single service, single connection, no OOB pairing, minimal disconnect/error handling.
 
@@ -53,13 +53,19 @@ depends:
 
 compatibility:
   boards:
+    - apollo3_evb
+    - apollo3p_evb
+    - apollo510b_evb
     - apollo4p_blue_kbr_evb
     - apollo4p_blue_kxr_evb
   socs:
+    - apollo3
+    - apollo3p
+    - apollo510b
     - apollo4p
   toolchains:
     - arm-none-eabi-gcc
     - atfe
     - armclang
 
-phase: "Phase 1 MVP: Apollo4P Blue (Cooper transport), GCC, ATFE, and armclang/ACFE build-validated. Public API preserves the legacy ns_ble_* names for source portability; a compat shim (nsx_ble_compat.h) maps the old harness onto nsx-core + FreeRTOS. EM9305/Apollo510B, Apollo3 integrated BLE, and other transports follow with nsx-cordio."
+phase: "Phase 3: Apollo4P Blue (Cooper transport), Apollo3/Apollo3P Blue (integrated BLE via nsx-cordio), and Apollo510B (EM9305 via nsx-cordio). Apollo4P and Apollo3P are hardware-validated; Apollo510B is initially build-gated pending hardware validation. Public API preserves the legacy ns_ble_* names for source portability; a compat shim (nsx_ble_compat.h) maps the old harness onto nsx-core + FreeRTOS. Other transports follow with nsx-cordio."

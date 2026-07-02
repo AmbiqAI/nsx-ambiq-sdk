@@ -39,53 +39,53 @@
 #endif
 
 /*! Default manufacturer name */
-#define DIS_DEFAULT_MFR_NAME        "Arm Ltd."
+#define DIS_DEFAULT_MFR_NAME        "Ambiq"
 
 /*! Length of default manufacturer name */
-#define DIS_DEFAULT_MFR_NAME_LEN    8
+#define DIS_DEFAULT_MFR_NAME_LEN    5
 
 /*! Default model number */
-#define DIS_DEFAULT_MODEL_NUM       "Packetcraft model num"
+#define DIS_DEFAULT_MODEL_NUM       "NSX BLE Device"
 
 /*! Length of default model number */
-#define DIS_DEFAULT_MODEL_NUM_LEN   21
+#define DIS_DEFAULT_MODEL_NUM_LEN   14
 
 /*! Default serial number */
-#define DIS_DEFAULT_SERIAL_NUM      "Packetcraft serial num"
+#define DIS_DEFAULT_SERIAL_NUM      "unknown"
 
 /*! Length of default serial number */
-#define DIS_DEFAULT_SERIAL_NUM_LEN  22
+#define DIS_DEFAULT_SERIAL_NUM_LEN  7
 
 /*! Default firmware revision */
-#define DIS_DEFAULT_FW_REV          "Packetcraft fw rev"
+#define DIS_DEFAULT_FW_REV          "5.2.23"
 
 /*! Length of default firmware revision */
-#define DIS_DEFAULT_FW_REV_LEN      18
+#define DIS_DEFAULT_FW_REV_LEN      6
 
 /*! Default hardware revision */
-#define DIS_DEFAULT_HW_REV          "Packetcraft hw rev"
+#define DIS_DEFAULT_HW_REV          "Ambiq EVB"
 
 /*! Length of default hardware revision */
-#define DIS_DEFAULT_HW_REV_LEN      18
+#define DIS_DEFAULT_HW_REV_LEN      9
 
 /*! Default software revision */
-#define DIS_DEFAULT_SW_REV          "Packetcraft sw rev"
+#define DIS_DEFAULT_SW_REV          "nsx-ble"
 
 /*! Length of default software revision */
-#define DIS_DEFAULT_SW_REV_LEN      18
+#define DIS_DEFAULT_SW_REV_LEN      7
 
 /*! Vendor ID source */
 #define DIS_VENDOR_ID_SRC_BT        0x01    /* Bluetooth SIG - assigned Device ID Vendor ID value from Assigned Numbers document */
 #define DIS_VENDOR_ID_SRC_USB       0x02    /* USB Implementer's Forum assigned Vendor ID value */
 
 /*! Vendor ID: Company Identifier from Bluetooth SIG or Vendor ID from USB Implementer's Forum */
-#define DIS_VENDOR_ID               HCI_ID_PACKETCRAFT
+#define DIS_VENDOR_ID               0x09AC
 
 /*! Product ID */
-#define DIS_PRODUCT_ID              0x1234
+#define DIS_PRODUCT_ID              0x0001
 
 /*! Product version: 0xJJMN for version JJ.M.N (JJ - major version number, M - minor version number, N - sub-minor version number) */
-#define DIS_PRODUCT_VER             0x2030 /* version 20.3.0 */
+#define DIS_PRODUCT_VER             0x0001
 
 /**************************************************************************************************
  Service variables
@@ -110,7 +110,7 @@ static const uint16_t disLenSidCh = sizeof(disValSidCh);
 
 /* System ID */
 static const uint8_t disUuSid[] = {UINT16_TO_BYTES(ATT_UUID_SYSTEM_ID)};
-static uint8_t disValSid[DIS_SIZE_SID_ATT] = {0x01, 0x02, 0x03, 0x04, 0x05, UINT16_TO_BYTE0(HCI_ID_PACKETCRAFT), UINT16_TO_BYTE1(HCI_ID_PACKETCRAFT), 0x00};
+static uint8_t disValSid[DIS_SIZE_SID_ATT] = {0x00, 0x00, 0x00, 0x00, 0x00, UINT16_TO_BYTE0(DIS_VENDOR_ID), UINT16_TO_BYTE1(DIS_VENDOR_ID), 0x00};
 static const uint16_t disLenSid = sizeof(disValSid);
 
 /* Model number string characteristic */

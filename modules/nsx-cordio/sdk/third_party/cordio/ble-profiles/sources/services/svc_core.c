@@ -53,6 +53,9 @@
 /*! Length of default device name */
 #define CORE_DEFAULT_DEV_NAME_LEN   11
 
+/*! Maximum GAP device name length supported by the NSX wrapper/API */
+#define CORE_DEV_NAME_MAX_LEN       31
+
 /**************************************************************************************************
  GAP group
 **************************************************************************************************/
@@ -66,7 +69,7 @@ static const uint8_t gapValDnCh[] = {ATT_PROP_READ, UINT16_TO_BYTES(GAP_DN_HDL),
 static const uint16_t gapLenDnCh = sizeof(gapValDnCh);
 
 /* device name */
-static uint8_t gapValDn[ATT_DEFAULT_PAYLOAD_LEN] = CORE_DEFAULT_DEV_NAME;
+static uint8_t gapValDn[CORE_DEV_NAME_MAX_LEN] = CORE_DEFAULT_DEV_NAME;
 static uint16_t gapLenDn = CORE_DEFAULT_DEV_NAME_LEN;
 
 /* appearance characteristic */
@@ -442,6 +445,28 @@ void SvcCoreGattCbackRegister(attsReadCback_t readCback, attsWriteCback_t writeC
 {
   svcGattGroup.readCback = readCback;
   svcGattGroup.writeCback = writeCback;
+}
+
+/*************************************************************************************************/
+/*!
+ *  \brief  Set the GAP device name attribute value.
+ *
+ *  \param  pName   UTF-8 device name.
+ *  \param  len     Device name length.
+ *
+ *  \return TRUE if the name was set; FALSE if the name is invalid or too long.
+ */
+/*************************************************************************************************/
+bool_t SvcCoreGapSetDevName(const char *pName, uint8_t len)
+{
+  if ((pName == NULL) || (len == 0) || (len > sizeof(gapValDn)))
+  {
+    return FALSE;
+  }
+
+  memcpy(gapValDn, pName, len);
+  gapLenDn = len;
+  return TRUE;
 }
 
 /*************************************************************************************************/

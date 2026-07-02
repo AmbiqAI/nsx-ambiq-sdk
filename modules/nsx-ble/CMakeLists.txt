@@ -1,12 +1,12 @@
-# nsx-ble: optional app-facing BLE convenience API (Phase 1 MVP).
+# nsx-ble: optional app-facing BLE convenience API.
 #
 # Ports the legacy neuralSPOT ns-ble wrapper onto NSX. It provides the simple
 # "define a service + characteristics with read/write/notify callbacks" API on
 # top of the Cordio host stack (nsx::cordio), and owns the radio IRQ glue and
 # the WSF dispatcher plumbing for the active SoC's BLE transport.
 #
-# Phase 1 scope: Apollo4P Blue (Cooper transport), GCC + ATFE +
-# armclang/ACFE build-validated. Matches nsx-cordio.
+# Scope matches nsx-cordio transport coverage: Apollo4P Blue (Cooper transport),
+# Apollo3/Apollo3P Blue (integrated BLE transport), and Apollo510B (EM9305).
 
 if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "nsx-ble requires NSX_SOC_FAMILY.")
@@ -24,10 +24,14 @@ if(NOT TARGET nsx::freertos)
         "Add nsx-freertos before nsx-ble.")
 endif()
 
-# Phase 1 support gate: same transport coverage as nsx-cordio.
-if(NOT NSX_SOC_FAMILY STREQUAL "apollo4p")
+# Support gate: same transport coverage as nsx-cordio.
+if(NOT (NSX_SOC_FAMILY STREQUAL "apollo4p"
+        OR NSX_SOC_FAMILY STREQUAL "apollo3"
+        OR NSX_SOC_FAMILY STREQUAL "apollo3p"
+        OR NSX_SOC_FAMILY STREQUAL "apollo510b"))
     message(FATAL_ERROR
-        "nsx-ble Phase 1 supports only NSX_SOC_FAMILY=apollo4p (Cooper). "
+        "nsx-ble supports NSX_SOC_FAMILY=apollo4p (Cooper) and "
+        "apollo3/apollo3p (integrated BLE), and apollo510b (EM9305). "
         "Requested '${NSX_SOC_FAMILY}'.")
 endif()
 

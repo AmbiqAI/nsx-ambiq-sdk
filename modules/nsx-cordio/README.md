@@ -9,17 +9,23 @@ for the active SoC's BLE transport. It is the low-level host stack only; the
 app-facing convenience API (an `ns_ble.h`-equivalent) lives in the separate
 `nsx-ble` module.
 
-## Status / scope (Phase 1 MVP)
+## Status / scope
 
-- **Target:** Apollo4P Blue (`apollo4p`) with the **Cooper** external controller
-  over IOM/SPI.
-- **Toolchain:** `arm-none-eabi-gcc` only.
+- **Status:** Experimental. The supported transports have hardware-smoke
+  coverage through `ble_webble`, but this module is still being integrated into
+  the normal NSX registry/release flow.
+- **Targets/transports:**
+  - Apollo3 / Apollo3P integrated BLE controller.
+  - Apollo4P Blue Cooper external controller over IOM/SPI.
+  - Apollo510B EM9305 external controller over SPI/GPIO IRQ.
+- **Toolchain:** GCC build-validated across supported BLE targets.
 - **RTOS:** the WSF port is the **FreeRTOS** port, built against NSX's FreeRTOS
   v11 (`nsx-freertos`).
+- **Runtime validation:** `ble_webble` has been flashed and smoke-tested on AP3,
+  AP4, and AP510B.
 
-Other transports are recognised by the upstream tree but intentionally **not**
-wired yet (they fail configure loudly): EM9305 (Apollo510B), the integrated
-Apollo3 controller, and the 510L/330P IPC radio.
+Other upstream transports, such as the 510L/330P IPC radio, are intentionally
+not wired yet and should fail configure loudly until explicitly supported.
 
 ## Target / dependencies
 
@@ -31,8 +37,8 @@ nsx::cordio
   └─ nsx::freertos    (FreeRTOS.h for the WSF FreeRTOS port)
 ```
 
-`am_devices_cooper.c` ships in the provider payload but is not compiled by any
-core module; this module compiles it (the Cooper HCI driver depends on it).
+Transport-specific Ambiq device/util sources that are BLE-only are compiled
+here rather than in the core SDK provider.
 
 ## App contract
 

@@ -154,6 +154,18 @@ void SvcCoreGapCbackRegister(attsReadCback_t readCback, attsWriteCback_t writeCb
 
 /*************************************************************************************************/
 /*!
+ *  \brief  Set the GAP device name attribute value.
+ *
+ *  \param  pName   UTF-8 device name.
+ *  \param  len     Device name length.
+ *
+ *  \return TRUE if the name was set; FALSE if the name is invalid or too long.
+ */
+/*************************************************************************************************/
+bool_t SvcCoreGapSetDevName(const char *pName, uint8_t len);
+
+/*************************************************************************************************/
+/*!
  *  \brief  Update the central address resolution attribute value.
  *
  *  \param  value   New value.
@@ -218,4 +230,3 @@ void SvcCoreGapSetSeclvl(uint8_t mode, uint8_t level);
 #endif
 
 #endif /* SVC_CORE_H */
-

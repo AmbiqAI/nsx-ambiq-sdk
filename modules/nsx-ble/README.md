@@ -5,13 +5,18 @@ port of the legacy neuralSPOT `ns-ble` wrapper: it lets an application define a
 single GATT service with read / write / notify characteristics and callbacks,
 on top of the Cordio host stack provided by `nsx-cordio`.
 
-## Status / scope (Phase 1 MVP)
+## Status / scope
 
-- **Target:** Apollo4P Blue (`apollo4p`) with the Cooper controller.
-- **Toolchain:** `arm-none-eabi-gcc` only.
-- Validated end-to-end: a `web_ble`-style app builds and **links** to a full
-  Apollo4P image (wrapper → Cordio → Cooper HCI driver → HAL/BSP → FreeRTOS v11)
-  with zero undefined references. On-hardware runtime validation is the next step.
+- **Status:** Experimental. The API and example have hardware-smoke coverage,
+  but this is the first NSX BLE baseline and should remain explicitly
+  experimental until the modules are published through the normal registry flow
+  and broader app coverage exists.
+- **Targets:** Apollo3 Blue Plus, Apollo4 Blue Plus, and Apollo510B EVB.
+- **Toolchains:** GCC build-validated across the BLE targets; Apollo3/Apollo4
+  module startup coverage also validates ATFE/armclang paths.
+- **Runtime validation:** `ble_webble` has been flashed and smoke-tested on AP3,
+  AP4, and AP510B for advertising, GAP name, Device Information Service fields,
+  custom GATT service discovery, characteristic reads, and notifications.
 
 ## API
 
@@ -22,6 +27,9 @@ so existing neuralSPOT ns-ble applications port with minimal changes:
 - `ns_ble_create_service`, `ns_ble_create_characteristic`,
   `ns_ble_add_characteristic`, `ns_ble_start_service`
 - `ns_ble_send_value`, `ns_ble_set_tx_power`
+- `ns_ble_service_set_device_info`, `ns_ble_service_set_connection_config`,
+  `ns_ble_service_set_event_handler`
+- `ns_ble_current_connection_id`, `ns_ble_request_mtu`
 
 ### Compatibility shim
 
@@ -52,6 +60,22 @@ nsx::ble
 
 - Provide a WSF buffer pool (`ns_ble_pool_config_t`).
 - Create a FreeRTOS task that calls `wsfOsDispatcher()` in a loop, and call
-  `ns_ble_pre_init()` to set radio IRQ priorities.
-- Inherited limits from ns-ble: single service, single connection, no OOB
-  pairing, minimal disconnect/error handling.
+  `ns_ble_pre_init()` before starting the dispatcher.
+- Own board/radio IRQ policy in the app: vector symbols, NVIC priorities, power,
+  cache, task sizing, WSF pool sizing, service contents, TX power, and security
+  policy are intentionally not owned by this module.
+- For periodic notify characteristics, the notify callback updates the
+  application value and returns a status; the wrapper sends the notification for
+  non-async characteristics after a successful callback. Async characteristics
+  may call `ns_ble_send_value()` themselves.
+- Current intentional limits: one wrapper-managed service, one active
+  connection, and no high-level pairing/bonding policy helpers.
+
+## BLE model
+
+`nsx-ble` intentionally exposes a small GATT-peripheral model. The app defines
+service metadata, characteristics, callbacks, WSF buffers, tasking, and board
+policy. The wrapper wires those pieces into Cordio so the app can advertise,
+accept one connection, serve reads/writes, and send notifications. It does not
+try to own product policy such as bonding, privacy, application protocol design,
+or multi-service orchestration.

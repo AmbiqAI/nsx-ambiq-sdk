@@ -70,10 +70,13 @@ extern "C" {
     #define NS_BLE_API_ID 0xCA0008
 
     #define NS_BLE_DEFAULT_MALLOC_K 8
+    #define NS_BLE_COMPANY_ID_AMBIQ 0x09ACu
+    #define NS_BLE_DIS_VENDOR_ID_SOURCE_BLUETOOTH_SIG 0x01u
+    #define NS_BLE_DIS_VENDOR_ID_SOURCE_USB_IF 0x02u
 
-extern const ns_core_api_t ns_ble_V0_0_1;
-extern const ns_core_api_t ns_ble_oldest_supported_version;
-extern const ns_core_api_t ns_ble_current_version;
+    extern const ns_core_api_t ns_ble_V0_0_1;
+    extern const ns_core_api_t ns_ble_oldest_supported_version;
+    extern const ns_core_api_t ns_ble_current_version;
 
     // *** Helper Macros
     #define NS_BLE_CHAR_DECL(_char)                                                                \
@@ -133,6 +136,56 @@ typedef void (*ns_ble_service_specific_init_cb)(
     struct ns_ble_service_control *specific_cfg);
 typedef bool (*ns_ble_service_specific_procMsg_cb)(ns_ble_msg_t *pMsg);
 
+typedef enum {
+    NS_BLE_EVENT_RESET_COMPLETE,
+    NS_BLE_EVENT_ADV_STARTED,
+    NS_BLE_EVENT_ADV_STOPPED,
+    NS_BLE_EVENT_CONNECTED,
+    NS_BLE_EVENT_DISCONNECTED,
+    NS_BLE_EVENT_CONN_UPDATED,
+    NS_BLE_EVENT_PHY_UPDATED,
+    NS_BLE_EVENT_MTU_UPDATED,
+    NS_BLE_EVENT_DATA_LENGTH_UPDATED,
+    NS_BLE_EVENT_CCC_CHANGED,
+    NS_BLE_EVENT_HW_ERROR,
+    NS_BLE_EVENT_SECURITY_UPDATED,
+} ns_ble_event_type_t;
+
+typedef struct {
+    ns_ble_event_type_t type;
+    dmConnId_t connId;
+    uint8_t status;
+    uint8_t rawEvent;
+    uint16_t value0;
+    uint16_t value1;
+    uint32_t detail;
+} ns_ble_event_t;
+
+typedef void (*ns_ble_event_handler_t)(const ns_ble_event_t *event, void *context);
+
+typedef struct {
+    const char *manufacturerName;
+    const char *modelNumber;
+    const char *serialNumber;
+    const char *firmwareRevision;
+    const char *hardwareRevision;
+    const char *softwareRevision;
+    uint16_t vendorIdSource;
+    uint16_t vendorId;
+    uint16_t productId;
+    uint16_t productVersion;
+} ns_ble_device_info_t;
+
+typedef struct {
+    uint16_t preferredMtu;
+    uint16_t dataLenTxOctets;
+    uint16_t dataLenTxTime;
+    uint16_t connIntervalMin;
+    uint16_t connIntervalMax;
+    uint16_t connLatency;
+    uint16_t supervisionTimeout;
+} ns_ble_connection_config_t;
+
 /*! Application message type */
 
 /**
@@ -169,6 +222,8 @@ typedef struct ns_ble_service_control {
     uint8_t advDataLen;  /*! Advertising data length */
     uint8_t *scanData;   /*! Scan data */
     uint8_t scanDataLen; /*! Scan data length */
+    const char *deviceName; /*! GAP device name owned by the service */
+    uint8_t deviceNameLen; /*! GAP device name length */
 
     // Service callbacks
     // attsReadCback_t read_cb; /*! Read callback */
@@ -185,6 +240,11 @@ typedef struct ns_ble_service_control {
     wsfBufPoolDesc_t
         *bufferDescriptors;         ///< Pointer to WSF buffer descriptors (allocated by caller)
     uint32_t bufferDescriptorsSize; ///< in bytes
+
+    ns_ble_device_info_t deviceInfo;
+    ns_ble_connection_config_t connConfig;
+    ns_ble_event_handler_t eventHandler;
+    void *eventContext;
 } ns_ble_service_control_t;
 
 /**
@@ -290,6 +350,11 @@ typedef struct ns_ble_service {
     // Cordio Callbacks
     attsReadCback_t readCback;   /* Read callback function */
     attsWriteCback_t writeCback; /* Write callback function */
+
+    ns_ble_device_info_t deviceInfo;
+    ns_ble_connection_config_t connConfig;
+    ns_ble_event_handler_t eventHandler;
+    void *eventContext;
 } ns_ble_service_t;
 
 typedef int (*ns_ble_characteristic_read_handler_t)(
@@ -348,10 +413,36 @@ enum {
 };
 
 /**
- * @brief Call this function from the setup_task, prior to creating the RadioTask
- * All this does is set up NVIC priorities
+ * @brief Compatibility hook retained for legacy callers.
+ *
+ * Interrupt vector ownership and NVIC priority policy are app/board concerns in
+ * NSX, so this function intentionally does not configure interrupts.
  */
 extern void ns_ble_pre_init(void);
+
+/**
+ * @brief Service the Apollo3/Apollo3P integrated BLE controller interrupt.
+ *
+ * Apps that target Apollo3/Apollo3P should call this from their app-owned
+ * am_ble_isr vector.
+ */
+extern void ns_ble_handle_controller_irq(void);
+
+/**
+ * @brief Service the Apollo4P Cooper GPIO interrupt fanout.
+ *
+ * Apps that target Apollo4P Blue should call this from their app-owned Cooper
+ * GPIO vector, e.g. am_gpio0_203f_isr on the KXR EVB.
+ */
+extern void ns_ble_handle_cooper_gpio_irq(void);
+
+/**
+ * @brief Service the Apollo510B EM9305 GPIO interrupt fanout.
+ *
+ * Apps that target Apollo510B should call this from their app-owned EM9305 GPIO
+ * vector, e.g. AM_BSP_EM9305_RADIO_INT_ISR.
+ */
+extern void ns_ble_handle_em9305_gpio_irq(void);
 
 /**
  * @brief Create a BLE service based on the given configuration.
@@ -368,7 +459,19 @@ extern void ns_ble_pre_init(void);
  */
 extern int ns_ble_create_service(ns_ble_service_t *s);
 
-extern void ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg);
+extern int ns_ble_service_set_device_info(ns_ble_service_t *s, const ns_ble_device_info_t *info);
+
+extern int ns_ble_service_set_connection_config(
+    ns_ble_service_t *s, const ns_ble_connection_config_t *config);
+
+extern void ns_ble_service_set_event_handler(
+    ns_ble_service_t *s, ns_ble_event_handler_t handler, void *context);
+
+extern dmConnId_t ns_ble_current_connection_id(void);
+
+extern int ns_ble_request_mtu(uint16_t mtu);
+
+extern int ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg);
 
 /**
  * @brief Define a characteristic for subsequent addition to a service.

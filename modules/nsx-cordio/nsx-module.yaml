@@ -4,7 +4,7 @@ module:
   name: nsx-cordio
   type: backend_specific
   category: sdk_component
-  version: "0.1.0"
+  version: "5.2.23"
 
 support:
   ambiqsuite: true
@@ -34,7 +34,7 @@ capabilities:
 use_cases:
   - provide the Cordio BLE host stack (HCI/DM/L2CAP/ATT/SMP/GATT) to higher-level BLE modules
   - build the WSF FreeRTOS port for the active SoC
-  - supply the SoC-specific BLE HCI transport driver (Cooper on Apollo4P)
+  - supply the SoC-specific BLE HCI transport driver (Cooper on Apollo4P, integrated BLE on Apollo3/Apollo3P, EM9305 on Apollo510B)
 
 agent_keywords:
   - ble
@@ -42,7 +42,11 @@ agent_keywords:
   - cordio
   - wsf
   - cooper
+  - apollo3
+  - apollo3p
   - apollo4p
+  - apollo510b
+  - em9305
 
 build:
   cmake:
@@ -65,13 +69,19 @@ depends:
 
 compatibility:
   boards:
+    - apollo3_evb
+    - apollo3p_evb
+    - apollo510b_evb
     - apollo4p_blue_kbr_evb
     - apollo4p_blue_kxr_evb
   socs:
+    - apollo3
+    - apollo3p
+    - apollo510b
     - apollo4p
   toolchains:
     - arm-none-eabi-gcc
     - atfe
     - armclang
 
-phase: "Phase 1 MVP: Apollo4P Blue (Cooper transport), GCC, ATFE, and armclang/ACFE build-validated, WSF FreeRTOS port on FreeRTOS v11. EM9305 (Apollo510B), integrated Apollo3 controller, and 510L/330P IPC radio transports are follow-up phases."
+phase: "Phase 3: Apollo4P Blue (Cooper transport), Apollo3/Apollo3P Blue (integrated BLE transport), and Apollo510B (EM9305 transport) build from source on top of the WSF FreeRTOS port. Apollo4P and Apollo3P are hardware-validated; Apollo510B is initially build-gated pending hardware validation. 510L/330P IPC radio transports remain follow-up phases."
