@@ -440,9 +440,11 @@ extern void ns_ble_handle_cooper_gpio_irq(void);
  * @brief Service the Apollo510B EM9305 GPIO interrupt fanout.
  *
  * Apps that target Apollo510B should call this from their app-owned EM9305 GPIO
- * vector, e.g. AM_BSP_EM9305_RADIO_INT_ISR.
+ * vector, passing the board's EM9305 GPIO IRQ number.
+ *
+ * @param irq GPIO IRQ routed to the EM9305 interrupt pin.
  */
-extern void ns_ble_handle_em9305_gpio_irq(void);
+extern void ns_ble_handle_em9305_gpio_irq(IRQn_Type irq);
 
 /**
  * @brief Create a BLE service based on the given configuration.
@@ -509,14 +511,14 @@ extern int ns_ble_create_characteristic(
 extern int ns_ble_add_characteristic(ns_ble_service_t *s, ns_ble_characteristic_t *c);
 
 /**
- * @brief Helper function to convert a 16-byte UUID string to a 128-bit UUID byte array.
- * UUID string must be exactly 16 characters long and only contain hex characters.
+ * @brief Helper function to convert a 128-bit UUID hex string to a byte array.
+ * UUID string must be exactly 32 hex characters long, with no separators.
  *
- * @param uuidString - a 16-byte UUID string
+ * @param uuidString - a 32-character UUID hex string
  * @param uuid128 - a pointer to a 128-bit UUID byte array (uuid128.array)
  * @return int
  */
-extern int ns_ble_char2uuid(const char uuidString[16], ns_ble_uuid128_t *uuid128);
+extern int ns_ble_char2uuid(const char uuidString[32], ns_ble_uuid128_t *uuid128);
 
 /**
  * @brief Invoked by RadioTask to start the service. This function should be called after all

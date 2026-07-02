@@ -195,7 +195,6 @@ nsx_cordio_sources(NSX_CORDIO_SEC_COMMON_SRC "${NSX_CORDIO_BLE_HOST}/sources/sec
     sec_aes_rev.c
     sec_ccm_hci.c
     sec_cmac_hci.c
-    sec_ecc_debug.c
     sec_ecc_hci.c
     sec_main.c
 )
@@ -379,7 +378,31 @@ target_include_directories(nsx_cordio PUBLIC
     $<BUILD_INTERFACE:${NSX_CORDIO_BLE_PROFILES}/sources/profiles/gatt>
     $<BUILD_INTERFACE:${NSX_CORDIO_BLE_PROFILES}/sources/services>
     $<BUILD_INTERFACE:${NSX_CORDIO_UECC_ROOT}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/wsf/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/wsf/sources>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/wsf/sources/util>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/wsf/sources/port/freertos>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/cfg>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/hci>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/dm>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/l2c>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/att>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/stack/smp>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/sec/common>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/cooper>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/apollo3>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/em9305>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/ambiq>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/include/app>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/apps>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/apps/app>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/profiles/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/profiles>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/profiles/gatt>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/cordio/ble-profiles/sources/services>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party/uecc>
 )
 
 # ---------------------------------------------------------------------------
@@ -396,6 +419,7 @@ target_link_libraries(nsx_cordio PUBLIC
 )
 
 target_compile_definitions(nsx_cordio PUBLIC NSX_CORDIO)
+target_compile_definitions(nsx_cordio PRIVATE SEC_ECC_CFG=SEC_ECC_CFG_UECC)
 
 # The vendored stack has many upstream-style warnings; keep them non-fatal so a
 # strict app (-Werror) does not fail on third-party code we do not own.
@@ -404,4 +428,22 @@ target_compile_options(nsx_cordio PRIVATE -w)
 install(TARGETS
     nsx_cordio
     EXPORT nsxTargets
+)
+
+install(DIRECTORY
+    ${CMAKE_CURRENT_LIST_DIR}/sdk/third_party/cordio
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party
+    FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY
+    ${CMAKE_CURRENT_LIST_DIR}/sdk/third_party/uecc
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/third_party
+    FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY
+    ${CMAKE_CURRENT_LIST_DIR}/sdk/ambiq/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/cordio/sdk/ambiq
+    FILES_MATCHING PATTERN "*.h"
 )

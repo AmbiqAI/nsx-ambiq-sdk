@@ -1,9 +1,9 @@
 # nsx-ble
 
-Optional **app-facing Bluetooth LE convenience API** for NSX. This is the NSX
-port of the legacy neuralSPOT `ns-ble` wrapper: it lets an application define a
-single GATT service with read / write / notify characteristics and callbacks,
-on top of the Cordio host stack provided by `nsx-cordio`.
+Optional **app-facing Bluetooth LE convenience API** for NSX. It lets an
+application define a single GATT service with read / write / notify
+characteristics and callbacks, on top of the Cordio host stack provided by
+`nsx-cordio`.
 
 ## Status / scope
 

@@ -10,8 +10,6 @@
  */
 #if defined(AM_PART_APOLLO4P)
     #include "am_devices_cooper.h"
-#elif defined(AM_PART_APOLLO510B)
-    #include "am_devices_em9305.h"
 #endif
 #include "ns_ble.h"
 
@@ -965,14 +963,16 @@ void ns_ble_handle_cooper_gpio_irq(void) {
 #endif
 }
 
-void ns_ble_handle_em9305_gpio_irq(void) {
+void ns_ble_handle_em9305_gpio_irq(IRQn_Type irq) {
 #if defined(AM_PART_APOLLO510B)
     uint32_t ui32IntStatus;
     AM_CRITICAL_BEGIN
-    am_hal_gpio_interrupt_irq_status_get(GPIO_INT_IRQ, false, &ui32IntStatus);
-    am_hal_gpio_interrupt_irq_clear(GPIO_INT_IRQ, ui32IntStatus);
+    am_hal_gpio_interrupt_irq_status_get(irq, false, &ui32IntStatus);
+    am_hal_gpio_interrupt_irq_clear(irq, ui32IntStatus);
     AM_CRITICAL_END
-    am_hal_gpio_interrupt_service(GPIO_INT_IRQ, ui32IntStatus);
+    am_hal_gpio_interrupt_service(irq, ui32IntStatus);
+#else
+    (void)irq;
 #endif
 }
 
@@ -1114,7 +1114,7 @@ bool ns_ble_new_proc_msg(ns_ble_msg_t *pMsg) {
     return messageHandled;
 }
 
-int ns_ble_char2uuid(char const uuidString[16], ns_ble_uuid128_t *uuid128) {
+int ns_ble_char2uuid(char const uuidString[32], ns_ble_uuid128_t *uuid128) {
     // Convert the string into uint array needed by WSF
     // Written by CoPilot!
 
@@ -1393,6 +1393,14 @@ int ns_ble_create_characteristic(
         prop |= ATT_PROP_NOTIFY;
     }
     c->pValue = ns_malloc(valueLength);
+    if (c->pValue == NULL) {
+        return NS_STATUS_FAILURE;
+    }
+    if (applicationValue != NULL) {
+        memcpy(c->pValue, applicationValue, valueLength);
+    } else {
+        memset(c->pValue, 0, valueLength);
+    }
 
     // *** Create Attribute List entries (Declaration, Value, CCC)
 

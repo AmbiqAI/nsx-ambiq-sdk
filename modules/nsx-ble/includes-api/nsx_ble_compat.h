@@ -3,8 +3,8 @@
  * @brief Thin compatibility shim mapping legacy neuralSPOT ns-ble harness
  *        symbols onto neuralSPOT-X (NSX) equivalents.
  *
- * The ns-ble wrapper was written against the old neuralSPOT harness
- * (ns_ambiqsuite_harness.h + ns_malloc.h). Under NSX those facilities are
+ * The ns-ble wrapper was written against the old neuralSPOT platform helpers
+ * (HAL umbrella includes + ns_malloc.h). Under NSX those facilities are
  * provided by nsx-core (logging, interrupt master enable/disable, status
  * codes, API version negotiation) and by FreeRTOS (heap). This header lets the
  * ported ns_ble.c stay almost verbatim while resolving those names to NSX.
