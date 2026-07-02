@@ -58,6 +58,8 @@ def test_soc_hal_alias_is_descriptor_driven(repo_root: Path) -> None:
 
 
 def test_native_artifact_names_are_explicit(repo_root: Path) -> None:
+    apollo3 = read(repo_root, "cmake/socs/apollo3.cmake")
+    apollo4l = read(repo_root, "cmake/socs/apollo4l.cmake")
     apollo330p = read(repo_root, "cmake/socs/apollo330P.cmake")
     apollo510_soc = read(repo_root, "cmake/socs/apollo510.cmake")
     apollo510b = read(repo_root, "cmake/socs/apollo510b.cmake")
@@ -68,6 +70,10 @@ def test_native_artifact_names_are_explicit(repo_root: Path) -> None:
     apollo330 = read(repo_root, "boards/apollo330mP_evb/board.cmake")
     apollo510dl = read(repo_root, "boards/apollo510dL_evb/board.cmake")
 
+    assert "src/apollo3/gcc/startup_gcc.c" in apollo3
+    assert "src/apollo3/armclang/startup_keil6.c" in apollo3
+    assert "src/apollo4l/gcc/startup_gcc.c" in apollo4l
+    assert "src/apollo4l/armclang/startup_keil6.c" in apollo4l
     assert "CMSIS/AmbiqMicro/Source/system_apollo330P.c" in apollo330p
     assert "CMSIS/AmbiqMicro/Source/system_apollo510.c" in apollo510_soc
     assert 'set(NSX_AMBIQ_HAL_LIB_PART_NAME "apollo510")' in apollo510b
@@ -84,6 +90,51 @@ def test_native_artifact_names_are_explicit(repo_root: Path) -> None:
     assert 'set(NSX_AMBIQ_BSP_LIB_SUBDIR "apollo330mP_evb")' in apollo330
     assert 'set(NSX_AMBIQ_BSP_LIB_PART_NAME "apollo510L")' in apollo510dl
     assert 'set(NSX_AMBIQ_BSP_LIB_SUBDIR "apollo510dL_evb")' in apollo510dl
+
+
+def test_armclang_startups_are_c_sources(repo_root: Path) -> None:
+    offenders = sorted(
+        path.relative_to(repo_root).as_posix()
+        for path in (repo_root / "modules" / "nsx-core" / "src").glob("*/armclang/startup_keil6.s")
+    )
+    assert offenders == []
+
+
+def test_legacy_cm4f_armclang_boards_configure_with_c_startup(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    for board in ("apollo3_evb", "apollo4l_evb"):
+        result = configure_contract_project(repo_root, tmp_path, board, "armclang")
+        assert result.returncode == 0, result.stdout
+
+
+def test_ble_public_api_exposes_app_owned_config_and_events(repo_root: Path) -> None:
+    header = read(repo_root, "modules/nsx-ble/includes-api/ns_ble.h")
+    source = read(repo_root, "modules/nsx-ble/src/ns_ble.c")
+    dis = read(
+        repo_root,
+        "modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c",
+    )
+
+    assert "typedef struct {\n    const char *manufacturerName;" in header
+    assert "ns_ble_service_set_device_info" in header
+    assert "ns_ble_service_set_connection_config" in header
+    assert "ns_ble_service_set_event_handler" in header
+    assert "NS_BLE_EVENT_MTU_UPDATED" in header
+    assert "NS_BLE_COMPANY_ID_AMBIQ 0x09ACu" in header
+
+    assert "ns_ble_default_device_info" in source
+    assert "ns_ble_apply_device_info" in source
+    assert "ns_ble_request_connection_features(currentConnId)" in source
+    assert "DmConnSetDataLen(1, 251" not in source
+    assert "dmConnId_t connId = 1" not in source
+
+    assert "Packetcraft model num" not in dis
+    assert "Packetcraft serial num" not in dis
+    assert "HCI_ID_PACKETCRAFT" not in dis
+    assert '"Ambiq"' in dis
+    assert "0x09AC" in dis
 
 
 def test_promoted_provider_payload_keeps_precompiled_buckets_source_free(repo_root: Path) -> None:
@@ -437,6 +488,30 @@ def test_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp
     for board in ("apollo510_evb", "apollo510dL_evb"):
         result = configure_contract_project(repo_root, tmp_path, board, "gcc", modules)
         assert result.returncode == 0, result.stdout
+
+
+def test_power_apollo4_requires_timer_target(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    without_timer = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo4p_blue_kxr_evb",
+        "gcc",
+        ("nsx-core", "nsx-power"),
+    )
+    assert without_timer.returncode != 0
+    assert "nsx::timer must be defined before Apollo4 nsx-power is added." in without_timer.stdout
+
+    with_timer = configure_contract_project(
+        repo_root,
+        tmp_path / "with_timer",
+        "apollo4p_blue_kxr_evb",
+        "gcc",
+        ("nsx-core", "nsx-interrupt", "nsx-timer", "nsx-power"),
+    )
+    assert with_timer.returncode == 0, with_timer.stdout
 
 
 def test_usb_substrate_configures_as_optional_sdk_module(repo_root: Path, tmp_path: Path) -> None:

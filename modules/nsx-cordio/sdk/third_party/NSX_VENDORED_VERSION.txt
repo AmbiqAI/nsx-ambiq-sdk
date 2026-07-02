@@ -1,0 +1,8 @@
+stable-2026.06.18 (caaf5af860)
+
+Vendored from ~/Ambiq/sws/ambiqsuite/third_party/{cordio,uecc}
+- cordio/{ble-host,ble-profiles,wsf}
+- uecc (micro-ECC, used by ble-host/sources/sec)
+
+This is the same AmbiqSuite drop the nsx-ambiqsuite provider payload is built
+from, so the stack links against the current HAL/BSP and device drivers.

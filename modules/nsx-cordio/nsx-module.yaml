@@ -1,0 +1,87 @@
+schema_version: 1
+
+module:
+  name: nsx-cordio
+  type: backend_specific
+  category: sdk_component
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) pinned to the provider SDK drop and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
+
+vendored:
+  cordio:
+    upstream: AmbiqSuite third_party/cordio
+    revision: stable-2026.06.18 (caaf5af860)
+    path: sdk/third_party/cordio
+    license: See sdk/third_party/cordio (Packetcraft/Arm + Ambiq)
+  uecc:
+    upstream: AmbiqSuite third_party/uecc (micro-ECC)
+    revision: stable-2026.06.18 (caaf5af860)
+    path: sdk/third_party/uecc
+    license: BSD-2-Clause
+
+capabilities:
+  - bluetooth_le
+  - cordio
+  - wsf
+  - ble_host_stack
+  - sdk_component
+
+use_cases:
+  - provide the Cordio BLE host stack (HCI/DM/L2CAP/ATT/SMP/GATT) to higher-level BLE modules
+  - build the WSF FreeRTOS port for the active SoC
+  - supply the SoC-specific BLE HCI transport driver (Cooper on Apollo4P, integrated BLE on Apollo3/Apollo3P, EM9305 on Apollo510B)
+
+agent_keywords:
+  - ble
+  - bluetooth
+  - cordio
+  - wsf
+  - cooper
+  - apollo3
+  - apollo3p
+  - apollo4p
+  - apollo510b
+  - em9305
+
+build:
+  cmake:
+    package: nsx_cordio
+    targets:
+      - nsx::cordio
+
+requires_app_contract:
+  - WSF buffer pool sizing and descriptors are application/wrapper policy.
+  - The application provides FreeRTOSConfig.h via nsx::freertos_config (transitively through nsx-freertos).
+  - A dedicated dispatcher task running wsfOsDispatcher() and the radio IRQ glue are owned by the consuming wrapper (nsx-ble), not this module.
+
+depends:
+  required:
+    - nsx-ambiqsuite
+    - nsx-ambiq-hal
+    - nsx-ambiq-bsp
+    - nsx-freertos
+  optional: []
+
+compatibility:
+  boards:
+    - apollo3_evb
+    - apollo3p_evb
+    - apollo510b_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+  socs:
+    - apollo3
+    - apollo3p
+    - apollo510b
+    - apollo4p
+  toolchains:
+    - arm-none-eabi-gcc
+    - atfe
+    - armclang
+
+phase: "Phase 3: Apollo4P Blue (Cooper transport), Apollo3/Apollo3P Blue (integrated BLE transport), and Apollo510B (EM9305 transport) build from source on top of the WSF FreeRTOS port. Apollo4P and Apollo3P are hardware-validated; Apollo510B is initially build-gated pending hardware validation. 510L/330P IPC radio transports remain follow-up phases."

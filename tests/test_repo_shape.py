@@ -25,6 +25,8 @@ OUT_OF_CORE_PATH_SUFFIXES = {
 
 OPTIONAL_MIDDLEWARE_MODULE_PREFIXES = {
     ("modules", "nsx-ambiq-usb"),
+    ("modules", "nsx-ble"),
+    ("modules", "nsx-cordio"),
     ("modules", "nsx-usb"),
     ("modules", "nsx-freertos"),
 }
@@ -51,6 +53,7 @@ FORBIDDEN_CORE_MODULES = {
 MULTI_SOC_CURATED_MODULES = {
     "nsx-audio",
     "nsx-core",
+    "nsx-cordio",
     "nsx-interrupt",
     "nsx-power",
     "nsx-psram",

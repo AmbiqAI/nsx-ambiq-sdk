@@ -51,10 +51,23 @@ LR_1 0x0000C000
         * (+RO)
     }
 
-    SRAM 0x10000000 0x00060000
+    ; RW + ZI at the base of SRAM.  Bounded to leave the top 4 KB for the
+    ; C-library stack region below (matching the legacy startup's 4 KB stack
+    ; and zero-length heap).
+    SRAM 0x10000000 0x0005F000
     {
-        startup_keil6.o (STACK, +First)
         * (+RW, +ZI)
     }
-}
 
+    ; Zero-length heap (the legacy startup reserved no heap).  Placed at the
+    ; stack-region base so the C library has a defined, non-overlapping heap.
+    ARM_LIB_HEAP 0x1005F000 EMPTY 0x00000000
+    {
+    }
+
+    ; 4 KB stack growing down from 0x10060000 (top of SRAM).  __INITIAL_SP
+    ; (Image$$ARM_LIB_STACK$$ZI$$Limit) resolves to 0x10060000.
+    ARM_LIB_STACK 0x10060000 EMPTY -0x00001000
+    {
+    }
+}
