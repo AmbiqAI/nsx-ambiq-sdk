@@ -290,6 +290,9 @@ nsx_cordio_sources(NSX_CORDIO_UECC_SRC "${NSX_CORDIO_UECC_ROOT}"
     uECC.c
     uECC_ll.c
 )
+set_source_files_properties(${NSX_CORDIO_UECC_SRC}
+    PROPERTIES COMPILE_OPTIONS "$<$<COMPILE_LANG_AND_ID:C,GNU>:-fomit-frame-pointer>"
+)
 
 # Transport-specific HCI driver + Ambiq device driver.
 if(NSX_CORDIO_TRANSPORT STREQUAL "cooper")

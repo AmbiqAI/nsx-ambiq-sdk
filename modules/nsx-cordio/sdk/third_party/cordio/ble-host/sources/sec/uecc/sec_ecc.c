@@ -98,12 +98,16 @@ bool_t SecEccGenKey(wsfHandlerId_t handlerId, uint16_t param, uint8_t event)
   if (pMsg)
   {
     /* Generate the keys */
-    uECC_make_key(pMsg->data.key.pubKey_x, pMsg->data.key.privKey);
+    bool_t keyGenerated = uECC_make_key(pMsg->data.key.pubKey_x, pMsg->data.key.privKey);
+    if (!keyGenerated)
+    {
+      memset(&pMsg->data.key, 0, sizeof(pMsg->data.key));
+    }
 
     /* Send shared secret to handler */
     pMsg->hdr.event = event;
     pMsg->hdr.param = param;
-    pMsg->hdr.status = HCI_SUCCESS;
+    pMsg->hdr.status = keyGenerated ? HCI_SUCCESS : HCI_ERR_INVALID_PARAM;
     WsfMsgSend(handlerId, pMsg);
 
     return TRUE;
@@ -134,7 +138,7 @@ bool_t SecEccGenSharedSecret(secEccKey_t *pKey, wsfHandlerId_t handlerId, uint16
 
     if (keyValid)
     {
-      uECC_shared_secret(pKey->pubKey_x, pKey->privKey, pMsg->data.sharedSecret.secret);
+      keyValid = uECC_shared_secret(pKey->pubKey_x, pKey->privKey, pMsg->data.sharedSecret.secret);
     }
     else
     {

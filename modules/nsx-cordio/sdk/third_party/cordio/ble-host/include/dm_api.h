@@ -3165,7 +3165,8 @@ void DmSecGenerateEccKeyReq(void);
 
 /*************************************************************************************************/
 /*!
- *  \brief  This function sets the ECC key for use with LESC security.
+ *  \brief  This function sets the ECC key for use with LESC security. Passing
+ *          NULL invalidates the current key.
  *
  *  \param  pKey      Pointer to key.
  *
@@ -3178,7 +3179,7 @@ void DmSecSetEccKey(secEccKey_t *pKey);
 /*!
  *  \brief  This function gets the local ECC key for use with LESC security.
  *
- *  \return Pointer to local ECC key.
+ *  \return Pointer to local ECC key, or NULL if no valid key is available.
  */
 /*************************************************************************************************/
 secEccKey_t *DmSecGetEccKey(void);

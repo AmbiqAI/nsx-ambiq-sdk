@@ -14,6 +14,10 @@
 #include "ns_ble.h"
 
 const ns_core_api_t ns_ble_V0_0_1 = {.apiId = NS_BLE_API_ID, .version = NS_BLE_V0_0_1};
+const ns_core_api_t ns_ble_oldest_supported_version = {
+    .apiId = NS_BLE_API_ID, .version = NS_BLE_OLDEST_SUPPORTED_VERSION};
+const ns_core_api_t ns_ble_current_version = {
+    .apiId = NS_BLE_API_ID, .version = NS_BLE_CURRENT_VERSION};
 
 // *** Globals
 ns_ble_control_t g_ns_ble_control;
@@ -693,7 +697,15 @@ static void ns_ble_generic_procMsg(ns_ble_msg_t *pMsg) {
         break;
 
     case DM_SEC_ECC_KEY_IND:
-        DmSecSetEccKey(&pMsg->dm.eccMsg.data.key);
+        if (pMsg->hdr.status == HCI_SUCCESS) {
+            DmSecSetEccKey(&pMsg->dm.eccMsg.data.key);
+        } else {
+            DmSecSetEccKey(NULL);
+            ns_lp_printf("DM_SEC_ECC_KEY_IND failed, status = 0x%x", pMsg->hdr.status);
+            ns_ble_emit_event(
+                NS_BLE_EVENT_SECURITY_UPDATED, pMsg->hdr.param, pMsg->hdr.status,
+                pMsg->hdr.event, 0, 0, 0);
+        }
         break;
 
     case DM_SEC_COMPARE_IND:
@@ -871,6 +883,7 @@ int ns_ble_generic_init(
     // Set up callback functions for the various layers of the ExactLE stack.
     handlerId = WsfOsSetNextHandler(HciHandler);
     HciHandlerInit(handlerId);
+    SecRandInit();
 
     handlerId = WsfOsSetNextHandler(DmHandler);
     DmDevVsInit(0);

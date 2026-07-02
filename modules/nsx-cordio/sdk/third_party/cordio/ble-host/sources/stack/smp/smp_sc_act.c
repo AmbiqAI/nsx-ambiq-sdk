@@ -318,13 +318,24 @@ bool_t smpScProcPairing(smpCcb_t *pCcb, uint8_t *pOob, uint8_t *pDisplay)
     /* Allocate a scratch pad for Peer Key and CMAC calculations */
     if (SmpScAllocScratchBuffers(pCcb))
     {
-      /* Store the current ECC key */
-      memcpy(pCcb->pScCcb->pLocalPublicKey->pubKeyX, DmSecGetEccKey()->pubKey_x, SMP_PUB_KEY_LEN);
-      memcpy(pCcb->pScCcb->pLocalPublicKey->pubKeyY, DmSecGetEccKey()->pubKey_y, SMP_PUB_KEY_LEN);
-      memcpy(pCcb->pScCcb->pPrivateKey, DmSecGetEccKey()->privKey, SMP_PRIVATE_KEY_LEN);
+      secEccKey_t *pEccKey = DmSecGetEccKey();
+      if (pEccKey)
+      {
+        /* Store the current ECC key */
+        memcpy(pCcb->pScCcb->pLocalPublicKey->pubKeyX, pEccKey->pubKey_x, SMP_PUB_KEY_LEN);
+        memcpy(pCcb->pScCcb->pLocalPublicKey->pubKeyY, pEccKey->pubKey_y, SMP_PUB_KEY_LEN);
+        memcpy(pCcb->pScCcb->pPrivateKey, pEccKey->privKey, SMP_PRIVATE_KEY_LEN);
 
-      /* Send internal message indicating LESC was requested */
-      hdr.event = SMP_MSG_INT_LESC;
+        /* Send internal message indicating LESC was requested */
+        hdr.event = SMP_MSG_INT_LESC;
+      }
+      else
+      {
+        hdr.status = SMP_ERR_UNSPECIFIED;
+        hdr.event = SMP_MSG_API_CANCEL_REQ;
+        smpSmExecute(pCcb, (smpMsg_t *) &hdr);
+        return FALSE;
+      }
     }
     else
     {
@@ -1010,4 +1021,3 @@ void smpScActDHKeyCalcF6Eb(smpCcb_t *pCcb, smpMsg_t *pMsg)
   /* Copy Ea from the previous state (smpScActDHKeyCalcF6Ea) */
   Calc128Cpy(pCcb->pScCcb->pScratch->Na_Ea, pMsg->aes.pCiphertext);
 }
-

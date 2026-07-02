@@ -54,6 +54,7 @@ static uint8_t *dmSecOobRand;
 
 /* Local device's ECC Key */
 static secEccKey_t localEccKey;
+static bool_t localEccKeyValid;
 
 /*************************************************************************************************/
 /*!
@@ -231,6 +232,7 @@ void DmSecSetDebugEccKey()
   memcpy(localEccKey.privKey, privateKey, SEC_ECC_KEY_LEN);
   memcpy(localEccKey.pubKey_x, publicKeyX, SEC_ECC_KEY_LEN);
   memcpy(localEccKey.pubKey_y, publicKeyY, SEC_ECC_KEY_LEN);
+  localEccKeyValid = TRUE;
 }
 
 /*************************************************************************************************/
@@ -238,7 +240,7 @@ void DmSecSetDebugEccKey()
  *  \brief  This function sets the local ECC key for use with LESC security.  The key can be
  *          generated using DmSecGenerateEccKeyReq or the key could originate from an application
  *          specific source (e.g. prestored in non-volatile memory, generated with specialized
- *          hardware, etc).
+ *          hardware, etc). Passing NULL invalidates the current key.
  *
  *  \param  pKey        Pointer to local ECC key
  *
@@ -247,19 +249,28 @@ void DmSecSetDebugEccKey()
 /*************************************************************************************************/
 void DmSecSetEccKey(secEccKey_t *pKey)
 {
-  memcpy(&localEccKey, pKey, sizeof(secEccKey_t));
+  if (pKey)
+  {
+    memcpy(&localEccKey, pKey, sizeof(secEccKey_t));
+    localEccKeyValid = TRUE;
+  }
+  else
+  {
+    memset(&localEccKey, 0, sizeof(secEccKey_t));
+    localEccKeyValid = FALSE;
+  }
 }
 
 /*************************************************************************************************/
 /*!
  *  \brief  This function gets the local ECC key for use with LESC security.
  *
- *  \return Pointer to local ECC key.
+ *  \return Pointer to local ECC key, or NULL if no valid key is available.
  */
 /*************************************************************************************************/
 secEccKey_t *DmSecGetEccKey(void)
 {
-  return &localEccKey;
+  return localEccKeyValid ? &localEccKey : NULL;
 }
 
 /*************************************************************************************************/
