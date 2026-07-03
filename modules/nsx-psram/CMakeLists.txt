@@ -63,7 +63,24 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
             message(FATAL_ERROR "nsx-psram does not yet have an MSPI mapping for NSX_AMBIQ_BOARD_NAME='${NSX_AMBIQ_BOARD_NAME}'.")
         endif()
     endif()
-    set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616n.c)
+    # The populated PSRAM part differs by exact board even though both
+    # currently share the same AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA BSP
+    # presence macro: apollo510_evb (regular, non-Blue) is populated with an
+    # AP Memory APS512XXB part and requires the "BA" (1.2V) driver family,
+    # while apollo510b_evb (and other Apollo5-class boards) are populated
+    # with an APS512XXN part and require the "N" driver family. This split
+    # matches old neuralSPOT's ns_psram.c, which explicitly branches its
+    # driver function selection on `#ifdef apollo510_evb` for exactly this
+    # reason. Using the wrong driver for a given board still lets
+    # am_devices_mspi_psram_*_ddr_init() succeed, but produces corrupted
+    # (non-zero mismatch) data on readback.
+    if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb")
+        set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
+        set(NSX_PSRAM_USE_BA_DRIVER 1)
+    else()
+        set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616n.c)
+        set(NSX_PSRAM_USE_BA_DRIVER 0)
+    endif()
     if(NOT DEFINED NSX_PSRAM_DEVICE_SIZE_BYTES)
         set(NSX_PSRAM_DEVICE_SIZE_BYTES 33554432u)
     endif()
@@ -74,6 +91,12 @@ endif()
 if(NSX_PSRAM_ARCH_DIR STREQUAL "apollo3")
     set(NSX_PSRAM_EXTRA_COMPILE_DEFINITIONS
         NSX_PSRAM_DEVICE_SIZE_BYTES=${NSX_PSRAM_DEVICE_SIZE_BYTES}
+    )
+elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
+    set(NSX_PSRAM_EXTRA_COMPILE_DEFINITIONS
+        NSX_PSRAM_MSPI_MODULE=${NSX_PSRAM_MSPI_MODULE}
+        NSX_PSRAM_DEVICE_SIZE_BYTES=${NSX_PSRAM_DEVICE_SIZE_BYTES}
+        NSX_PSRAM_USE_BA_DRIVER=${NSX_PSRAM_USE_BA_DRIVER}
     )
 else()
     set(NSX_PSRAM_EXTRA_COMPILE_DEFINITIONS

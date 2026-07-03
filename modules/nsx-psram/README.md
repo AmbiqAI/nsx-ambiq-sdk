@@ -4,21 +4,42 @@
 
 Supported families in the unified SDK:
 - Apollo3p boards with APS6404L SDR PSRAM
-- Apollo5/Apollo330 boards with a Hex (x16) DDR PSRAM (AP Memory APS512XXN /
-  APS512XXB), driven with AmbiqSuite's `am_devices_mspi_psram_aps25616n`
-  driver
+- Apollo5/Apollo330 boards with a Hex (x16) DDR PSRAM (AP Memory
+  APS512XXN/APS512XXB), driven with the AmbiqSuite "N" (`am_devices_mspi_psram_aps25616n`)
+  or "BA" (`am_devices_mspi_psram_aps25616ba_1p2v`) driver depending on the
+  exact board (see below)
 
 ## Apollo5 (Apollo510/510B) hardware notes
 
 The BSP macro `AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA` (used as this module's
-Apollo5 `#error` presence guard) is misleadingly named: on real
-`apollo510_evb`/`apollo510b_evb` hardware, the populated PSRAM is actually a
-**Hex (x16) DDR** part (AP Memory `APS512XXN`/`APS512XXB`), not the Octal
-`APS25616BA` part the macro name implies. This module drives it with the Hex
-driver (`am_devices_mspi_psram_aps25616n`) accordingly.
+Apollo5 `#error` presence guard) is shared, unchanged, by both
+`apollo510_evb` and `apollo510b_evb` -- but the two boards are actually
+populated with **different device variants** of the same Hex (x16) DDR
+PSRAM family, confirmed via each board's official Ambiq Quick Start Guide
+component photo:
 
-Two things confirmed empirically on real hardware (both `apollo510_evb` and
-`apollo510b_evb`) that differ from what might otherwise seem "correct":
+| Board | Populated part | Required driver |
+|---|---|---|
+| `apollo510_evb` (regular, non-Blue) | AP Memory `APS512XXB-AOB5NI-WA` | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") |
+| `apollo510b_evb` (and other Apollo5-class boards) | AP Memory `APS512XXN-AOB4BI-WBRZ` | `am_devices_mspi_psram_aps25616n` ("N") |
+
+This mirrors old neuralSPOT's `ns_psram.c`, which explicitly branches its
+driver function selection on `#ifdef apollo510_evb` for exactly this reason
+-- selecting the "BA" driver only for the regular EVB, and "N" for
+everything else. `CMakeLists.txt` selects `NSX_PSRAM_DEVICE_SOURCE` (and the
+`NSX_PSRAM_USE_BA_DRIVER` compile definition consumed by
+`src/apollo5/nsx_psram.c`) the same way, based on `NSX_AMBIQ_BOARD_NAME`.
+
+**Using the wrong driver for a given board does not fail cleanly** --
+`am_devices_mspi_psram_*_ddr_init()` still returns success either way, but
+readback produces corrupted (non-zero mismatch) data. This was the actual
+root cause of an initial "PSRAM works on apollo510b_evb but not
+apollo510_evb" finding investigated this session, before the board-specific
+driver split above was identified from neuralSPOT's own code and applied
+here.
+
+Two more things confirmed empirically on real `apollo510b_evb` hardware
+(with the "N" driver) that differ from what might otherwise seem "correct":
 
 - **Do not call `am_devices_mspi_psram_aps25616n_ddr_init_timing_check()` /
   `apply_ddr_timing()`.** The automatic RXDQSDELAY calibration scan
@@ -40,14 +61,13 @@ Two things confirmed empirically on real hardware (both `apollo510_evb` and
 
 Status as validated this session:
 - `apollo510b_evb`: confirmed clean (zero mismatches over a 4KB
-  write/read/verify) via direct XIP access at `AM_HAL_MSPI_CLK_125MHZ`.
-- `apollo510_evb` (regular, non-Blue): init succeeds, but data verification
-  showed a different (non-shift, high-mismatch-rate) corruption pattern with
-  the same code, independent of clock speed (tried both 48MHz and 125MHz).
-  Root cause not yet identified — possibly a genuine difference between the
-  `APS512XXN` (AP510B) and `APS512XXB` (AP510) chip variants, or a
-  board-specific issue. Treat `apollo510_evb` PSRAM as unverified until this
-  is resolved.
+  write/read/verify) via direct XIP access at `AM_HAL_MSPI_CLK_125MHZ`,
+  using the "N" driver.
+- `apollo510_evb` (regular, non-Blue): the "BA" driver path builds
+  cleanly, matching neuralSPOT's convention for this board, but has **not
+  yet been flash-tested on real hardware** (the board was in use by another
+  process during this session). Treat as implemented-but-unverified until a
+  hardware smoke test confirms zero mismatches there too.
 
 ## Apollo4 status
 
