@@ -21,14 +21,29 @@ component photo:
 | Board | Populated part | Required driver |
 |---|---|---|
 | `apollo510_evb` (regular, non-Blue) | AP Memory `APS512XXB-AOB5NI-WA` | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") |
-| `apollo510b_evb` (and other Apollo5-class boards) | AP Memory `APS512XXN-AOB4BI-WBRZ` | `am_devices_mspi_psram_aps25616n` ("N") |
+| `apollo510b_evb` | AP Memory `APS512XXN-AOB4BI-WBRZ` | `am_devices_mspi_psram_aps25616n` ("N") |
+| `apollo330mP_evb` | Not hardware-validated. Per product-team guidance this board is very similar to `apollo510b_evb`, so it is assigned the "N" driver on that basis. | `am_devices_mspi_psram_aps25616n` ("N", **unvalidated assumption**) |
+| `apollo510dL_evb` | Not hardware-validated, and no product guidance available. **Deliberately not defaulted either way** -- `NSX_PSRAM_USE_BA_DRIVER` must be set explicitly (e.g. `-DNSX_PSRAM_USE_BA_DRIVER=0` or `=1`) until this board is validated on real hardware, and is excluded from this module's `nsx-module.yaml` `compatibility.boards` until then. |
+
+**Do not trust the vendored AmbiqSuite BSP's `bsp_pins.src` comments as
+evidence for which driver a board needs.** Each board's `bsp_pins.src` has a
+comment naming the "onboard" PSRAM part (e.g. `"Hex AP PSRAM
+APS256XXN-..."`), but this comment is demonstrably **backwards** for both
+`apollo510_evb` and `apollo510b_evb` relative to the driver actually
+confirmed correct on real hardware: `apollo510_evb`'s comment names an "N"
+part despite requiring the BA driver, and `apollo510b_evb`'s comment names a
+"B" part despite requiring the N driver. Only real hardware validation (or
+explicit product-team confirmation, as used for `apollo330mP_evb` above)
+should decide a board's driver requirement.
 
 This mirrors old neuralSPOT's `ns_psram.c`, which explicitly branches its
 driver function selection on `#ifdef apollo510_evb` for exactly this reason
 -- selecting the "BA" driver only for the regular EVB, and "N" for
 everything else. `CMakeLists.txt` selects `NSX_PSRAM_DEVICE_SOURCE` (and the
 `NSX_PSRAM_USE_BA_DRIVER` compile definition consumed by
-`src/apollo5/nsx_psram.c`) the same way, based on `NSX_AMBIQ_BOARD_NAME`.
+`src/apollo5/nsx_psram.c`) similarly, based on `NSX_AMBIQ_BOARD_NAME`, with
+an explicit per-board branch for each case above (no silent catch-all
+`else`).
 
 **Using the wrong driver for a given board does not fail cleanly** --
 `am_devices_mspi_psram_*_ddr_init()` still returns success either way, but
