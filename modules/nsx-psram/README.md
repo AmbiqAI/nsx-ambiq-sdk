@@ -39,7 +39,10 @@ driver split above was identified from neuralSPOT's own code and applied
 here.
 
 Two more things confirmed empirically on real `apollo510b_evb` hardware
-(with the "N" driver) that differ from what might otherwise seem "correct":
+(with the "N" driver) that differ from what might otherwise seem "correct"
+(not re-tested with the "BA" driver on `apollo510_evb`, but the timing-check
+call is skipped there too since this module never calls it for either
+driver):
 
 - **Do not call `am_devices_mspi_psram_aps25616n_ddr_init_timing_check()` /
   `apply_ddr_timing()`.** The automatic RXDQSDELAY calibration scan
@@ -63,11 +66,9 @@ Status as validated this session:
 - `apollo510b_evb`: confirmed clean (zero mismatches over a 4KB
   write/read/verify) via direct XIP access at `AM_HAL_MSPI_CLK_125MHZ`,
   using the "N" driver.
-- `apollo510_evb` (regular, non-Blue): the "BA" driver path builds
-  cleanly, matching neuralSPOT's convention for this board, but has **not
-  yet been flash-tested on real hardware** (the board was in use by another
-  process during this session). Treat as implemented-but-unverified until a
-  hardware smoke test confirms zero mismatches there too.
+- `apollo510_evb` (regular, non-Blue): confirmed clean (zero mismatches over
+  a 4KB write/read/verify) via direct XIP access at `AM_HAL_MSPI_CLK_48MHZ`,
+  using the "BA" driver. Both boards now validated on real hardware.
 
 ## Apollo4 status
 
