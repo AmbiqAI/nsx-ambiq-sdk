@@ -883,7 +883,6 @@ int ns_ble_generic_init(
     // Set up callback functions for the various layers of the ExactLE stack.
     handlerId = WsfOsSetNextHandler(HciHandler);
     HciHandlerInit(handlerId);
-    SecRandInit();
 
     handlerId = WsfOsSetNextHandler(DmHandler);
     DmDevVsInit(0);
