@@ -93,7 +93,15 @@ uint32_t nsx_emmc_init(nsx_emmc_config_t *cfg);
  * @param start_block Starting block number (512 bytes/block).
  * @param num_blocks   Number of consecutive blocks to write.
  * @param buf          Source buffer in SRAM (num_blocks * 512 bytes).
- * @return HAL status code (AM_HAL_STATUS_SUCCESS on success).
+ * @return NSX_STATUS_SUCCESS (== AM_HAL_STATUS_SUCCESS, both 0) on success.
+ *         Returns NSX_STATUS_INVALID_CONFIG if `buf` is NULL or `num_blocks`
+ *         is 0 (checked before any HAL call is made); otherwise returns the
+ *         underlying HAL status code from am_hal_card_block_write_sync().
+ *         Note that small NSX_STATUS_* codes numerically overlap
+ *         am_hal_status_e values other than SUCCESS (e.g.
+ *         NSX_STATUS_INVALID_CONFIG == AM_HAL_STATUS_IN_USE == 3); this
+ *         function's own validation errors are only possible before any HAL
+ *         card operation has been attempted.
  */
 uint32_t nsx_emmc_block_write(uint32_t start_block, uint32_t num_blocks, const uint8_t *buf);
 
@@ -103,7 +111,12 @@ uint32_t nsx_emmc_block_write(uint32_t start_block, uint32_t num_blocks, const u
  * @param start_block Starting block number (512 bytes/block).
  * @param num_blocks   Number of consecutive blocks to read.
  * @param buf          Destination buffer in SRAM (num_blocks * 512 bytes).
- * @return HAL status code (AM_HAL_STATUS_SUCCESS on success).
+ * @return NSX_STATUS_SUCCESS (== AM_HAL_STATUS_SUCCESS, both 0) on success.
+ *         Returns NSX_STATUS_INVALID_CONFIG if `buf` is NULL or `num_blocks`
+ *         is 0 (checked before any HAL call is made); otherwise returns the
+ *         underlying HAL status code from am_hal_card_block_read_sync(). See
+ *         nsx_emmc_block_write()'s doc comment for a note on NSX_STATUS_*
+ *         values numerically overlapping non-SUCCESS am_hal_status_e values.
  */
 uint32_t nsx_emmc_block_read(uint32_t start_block, uint32_t num_blocks, uint8_t *buf);
 

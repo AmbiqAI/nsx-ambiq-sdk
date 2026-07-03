@@ -9,6 +9,15 @@ device-driver source file is required: `am_hal_card_*`/`am_hal_sdhc_*` are
 fully precompiled into `libam_hal.a` for Apollo5, confirmed via `nm` on the
 actual `.a` file.
 
+This module registers its SDIO/SDHC interrupt line (`SDIO0_IRQn`/
+`SDIO1_IRQn`, matching `nsx_emmc_config_t.sdio_instance`) with `nsx-interrupt`
+the same way `nsx-psram`/`nsx-nvm` register their MSPI IRQ -- the module owns
+device-level servicing, `nsx-interrupt` owns the raw vector table and NVIC
+priority policy, and the app/board retains control over interrupt priority.
+This avoids the module reaching directly into NVIC/global MCU state, which
+is exactly the kind of app-policy overreach the old neuralSPOT modules were
+prone to and that this SDK's modules are designed to avoid.
+
 ## Hardware notes
 
 Both `apollo510_evb` (regular, non-Blue) and `apollo510b_evb` are populated

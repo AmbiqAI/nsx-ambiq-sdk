@@ -39,6 +39,7 @@ depends:
     - nsx-core
     - nsx-soc-hal
     - nsx-ambiqsuite
+    - nsx-interrupt
   optional: []
 
 compatibility:

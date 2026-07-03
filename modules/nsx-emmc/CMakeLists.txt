@@ -34,6 +34,7 @@ target_link_libraries(nsx_emmc PUBLIC
     nsx::board_flags
     nsx::soc_hal
     nsx::core
+    nsx::interrupt
 )
 
 target_include_directories(nsx_emmc PUBLIC
