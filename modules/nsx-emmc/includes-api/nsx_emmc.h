@@ -50,8 +50,7 @@ typedef enum {
 /**
  * @brief eMMC configuration.
  *
- * Fill in the fields below and call nsx_emmc_init(). Fields marked "out"
- * are populated by nsx_emmc_init() on success.
+ * Fill in the fields below and call nsx_emmc_init().
  */
 typedef struct {
     const nsx_core_api_t *api; //!< Must point to nsx_emmc_current_version.
@@ -63,8 +62,7 @@ typedef struct {
     nsx_emmc_bus_width_e bus_width;       //!< Bus width to negotiate with the card.
     uint32_t clock_freq_hz;               //!< e.g. 48000000.
 
-    // out: filled in by nsx_emmc_init() on success.
-    uint32_t block_count;  //!< Total number of 512-byte blocks on the card.
+    uint32_t block_count;  //!< Reserved for future capacity reporting; currently left at 0.
 } nsx_emmc_config_t;
 
 /**
