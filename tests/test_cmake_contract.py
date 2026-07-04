@@ -558,7 +558,7 @@ def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
     result = configure_contract_project(
         repo_root,
         tmp_path,
-        "apollo4p_evb",
+        "apollo4p_evb_disp_shield_rev2",
         "gcc",
         modules,
         provider="ambiqsuite",

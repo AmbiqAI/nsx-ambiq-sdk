@@ -112,6 +112,7 @@ DISPLAY_BSP_HEADERS = (
     "apollo510_evb",
     "apollo510b_evb",
     "apollo510dL_evb",
+    "apollo4p_evb_disp_shield_rev2",
 )
 
 # CMSIS device register-map headers for parts that are not publicly released.
@@ -180,6 +181,7 @@ TRAINS: dict[str, TrainSpec] = {
             BoardBuild("apollo4l_evb", "apollo4l"),
             BoardBuild("apollo4l_blue_evb", "apollo4l", strip_display_include=True),
             BoardBuild("apollo4p_evb", "apollo4p"),
+            BoardBuild("apollo4p_evb_disp_shield_rev2", "apollo4p"),
             BoardBuild("apollo4p_blue_kbr_evb", "apollo4p", strip_display_include=True),
             BoardBuild("apollo4p_blue_kxr_evb", "apollo4p", strip_display_include=True),
             BoardBuild("apollo3_evb", "apollo3"),

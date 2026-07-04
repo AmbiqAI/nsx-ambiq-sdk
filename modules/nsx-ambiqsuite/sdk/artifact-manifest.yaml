@@ -276,6 +276,20 @@ boards:
       acfe:
         path: acfe/lib/apollo4p/apollo4p_blue_kxr_evb/libam_bsp.a
         sha256: 160d0d5a383d9b4511d754943db9c4f67c4b9028ca068c36d94697acb0d06236
+  - nsx_board: apollo4p_evb_disp_shield_rev2
+    ambiq_board_name: apollo4p_evb_disp_shield_rev2
+    logical_skew: apollo4p
+    bsp_source_dir: boards/apollo4p_evb_disp_shield_rev2/bsp
+    bsp_artifacts:
+      gcc:
+        path: gcc/lib/apollo4p/apollo4p_evb_disp_shield_rev2/libam_bsp.a
+        sha256: a204392aae89501718622aa9aa4e3398058306313194513ddbcf3466ff6ad232
+      atfe:
+        path: atfe/lib/apollo4p/apollo4p_evb_disp_shield_rev2/libam_bsp.a
+        sha256: 836b3535266d62f0e3eb04bf9ae82f29df0cbcec0007e537db714f14b9898ae1
+      acfe:
+        path: acfe/lib/apollo4p/apollo4p_evb_disp_shield_rev2/libam_bsp.a
+        sha256: d595278b8cdbdca786e5762a9b7c077eed8b8f19b74c39291977e5c64b0171e0
   - nsx_board: apollo3_evb
     ambiq_board_name: apollo3_evb
     logical_skew: apollo3
