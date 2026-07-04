@@ -69,6 +69,14 @@ NSX_IRQ_VECTOR(am_mspi3_isr, MSPI3_IRQn)
 #endif
 #endif
 
+// SDIO/SDHC lines (used by nsx-emmc). SDIO0_IRQn is present on every part in
+// this family, including Atomiq (AT110); SDIO1_IRQn only exists on the
+// non-Atomiq parts (apollo510/apollo510L/apollo330P).
+NSX_IRQ_VECTOR(am_sdio0_isr, SDIO0_IRQn)
+#if !defined(AM_PART_ATOMIQ11X_API)
+NSX_IRQ_VECTOR(am_sdio1_isr, SDIO1_IRQn)
+#endif
+
 // Timer lines
 NSX_IRQ_VECTOR(am_timer01_isr, TIMER1_IRQn)
 NSX_IRQ_VECTOR(am_timer02_isr, TIMER2_IRQn)
