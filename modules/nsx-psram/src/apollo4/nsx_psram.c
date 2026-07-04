@@ -17,6 +17,10 @@
 #define NSX_PSRAM_DEVICE_SIZE_BYTES 33554432u
 #endif
 
+#ifndef NSX_PSRAM_DEVICE_CONFIG
+#define NSX_PSRAM_DEVICE_CONFIG AM_HAL_MSPI_FLASH_OCTAL_DDR_CE0
+#endif
+
 #define NSX_PSRAM_CONCAT_(a, b, c) a##b##c
 #define NSX_PSRAM_MSPI_SYM(prefix, n, suffix) NSX_PSRAM_CONCAT_(prefix, n, suffix)
 #define NSX_PSRAM_MSPI_IRQ NSX_PSRAM_MSPI_SYM(MSPI, NSX_PSRAM_MSPI_MODULE, _IRQn)
@@ -64,7 +68,7 @@ uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
     uint32_t status;
     am_devices_mspi_psram_ddr_timing_config_t timing;
     am_devices_mspi_psram_config_t psram_cfg = {
-        .eDeviceConfig = AM_HAL_MSPI_FLASH_OCTAL_DDR_CE0,
+        .eDeviceConfig = NSX_PSRAM_DEVICE_CONFIG,
         .eClockFreq = cfg->clock_freq,
         .pNBTxnBuf = cfg->nbtxn_buf != NULL ? cfg->nbtxn_buf : g_nsx_psram_dma_buffer,
         .ui32NBTxnBufLength = cfg->nbtxn_buf_len != 0
