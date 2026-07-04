@@ -554,7 +554,6 @@ def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
         "nsx-i2c",
         "nsx-spi",
         "nsx-uart",
-        "nsx-psram",
     )
     result = configure_contract_project(
         repo_root,
@@ -569,6 +568,26 @@ def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
         bsp_module="nsx-ambiq-bsp",
     )
     assert result.returncode == 0, result.stdout
+
+
+def test_r4_plain_apollo4_psram_fails_at_configure(repo_root: Path, tmp_path: Path) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo4p_evb",
+        "gcc",
+        ("nsx-core", "nsx-interrupt", "nsx-psram"),
+        provider="ambiqsuite",
+        ambiqsuite_version="R4.5.0",
+        provider_module="nsx-ambiqsuite",
+        hal_module="nsx-ambiq-hal",
+        bsp_module="nsx-ambiq-bsp",
+    )
+    assert result.returncode != 0
+    assert "no supported Apollo4 PSRAM board staged" in result.stdout
 
 
 def test_r3_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:

@@ -52,7 +52,6 @@ static void nsx_psram_irq_handler(void *ctx) {
 
 uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
     uint32_t status;
-    am_devices_mspi_psram_sdr_timing_config_t timing;
     am_devices_mspi_psram_config_t psram_cfg = {
         .eDeviceConfig = AM_HAL_MSPI_FLASH_QUAD_CE0,
         .eClockFreq = cfg->clock_freq,
@@ -64,19 +63,20 @@ uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
         .ui32ScramblingEndAddr = cfg->scrambling_end_addr,
     };
 
-    status = am_devices_mspi_psram_sdr_init_timing_check(
-        AM_BSP_MSPI_PSRAM_INST, &psram_cfg, &timing);
-    if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
-        return status;
-    }
-
+    /* am_devices_mspi_psram_sdr_init_timing_check() / apply_sdr_timing() are
+     * NOT called here: in the vendored AmbiqSuite am_devices_mspi_psram_aps6404l.c
+     * driver, those two functions are compiled only under
+     * `#if defined(AM_PART_APOLLO4) || defined(AM_PART_APOLLO4B)` -- they do
+     * not exist for Apollo3(p) at all (confirmed against upstream AmbiqSuite,
+     * not just this vendored copy). Every real AmbiqSuite Apollo3-family
+     * PSRAM reference example (mspi_psram_example, mspi_power_example,
+     * cache_monitor, freertos_psram_stress, etc.) calls
+     * am_devices_mspi_psram_init() directly with no timing-check step, which
+     * matches Apollo3's simpler Quad-SPI (non-DDR) mode not needing DQS
+     * calibration. Calling the timing-check function here previously caused
+     * a link failure (undefined reference) on every real Apollo3p build. */
     status = am_devices_mspi_psram_init(
         AM_BSP_MSPI_PSRAM_INST, &psram_cfg, &g_nsx_psram_device_handle, &g_nsx_psram_mspi_handle);
-    if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
-        return status;
-    }
-
-    status = am_devices_mspi_psram_apply_sdr_timing(g_nsx_psram_device_handle, &timing);
     if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
         return status;
     }

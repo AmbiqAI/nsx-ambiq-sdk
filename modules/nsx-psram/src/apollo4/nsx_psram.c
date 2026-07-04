@@ -5,6 +5,10 @@
 #include "am_devices_mspi_psram_aps25616n.h"
 #include "nsx_interrupt.h"
 
+#ifndef AM_BSP_MSPI_PSRAM_DEVICE_APS25616N
+#error "nsx-psram Apollo4 currently supports BSPs that advertise AM_BSP_MSPI_PSRAM_DEVICE_APS25616N. None of the Apollo4 boards currently staged in this SDK define it; see docs/contributing or the nsx-psram README for staging a PSRAM-capable Apollo4 board."
+#endif
+
 #ifndef NSX_PSRAM_MSPI_MODULE
 #define NSX_PSRAM_MSPI_MODULE 0
 #endif
