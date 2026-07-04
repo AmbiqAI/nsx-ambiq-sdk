@@ -48,11 +48,13 @@ compatibility:
     - apollo330mP_evb
     - apollo510_evb
     - apollo510b_evb
+    - apollo4p_evb_disp_shield_rev2
   socs:
     - apollo330P
     - apollo510
     - apollo510b
     - apollo3p
+    - apollo4p
   toolchains:
     - arm-none-eabi-gcc
     - armclang

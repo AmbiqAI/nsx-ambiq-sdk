@@ -28,14 +28,23 @@ if(NSX_PSRAM_ARCH_DIR STREQUAL "apollo3")
         set(NSX_PSRAM_DEVICE_SIZE_BYTES 8388608u)
     endif()
 elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo4")
-    # None of the Apollo4 boards currently staged in this SDK
-    # (apollo4l_evb, apollo4l_blue_evb, apollo4p_evb, apollo4p_blue_kbr_evb,
-    # apollo4p_blue_kxr_evb) declare a populated PSRAM device in their
-    # AmbiqSuite BSP (no AM_BSP_MSPI_PSRAM_DEVICE_APS25616N). Reject them at
-    # configure time rather than deferring to the Apollo4 source #error guard.
-    # Real Apollo4 PSRAM support requires staging a PSRAM-capable board (e.g.
-    # an AmbiqSuite disp_shield variant) into this SDK's provider first.
-    message(FATAL_ERROR "nsx-psram has no supported Apollo4 PSRAM board staged in this SDK yet. Got NSX_AMBIQ_BOARD_NAME='${NSX_AMBIQ_BOARD_NAME}'.")
+    # apollo4p_evb_disp_shield_rev2 is the only Apollo4 board currently
+    # staged in this SDK that declares a populated PSRAM device in its
+    # AmbiqSuite BSP (AM_BSP_MSPI_PSRAM_DEVICE_APS25616N, hardware-validated
+    # zero-mismatch XIP read/write). The plain apollo4l/apollo4p EVB and
+    # Blue variants do not populate PSRAM and remain unsupported here.
+    if(NOT DEFINED NSX_PSRAM_MSPI_MODULE)
+        if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo4p_evb_disp_shield_rev2")
+            set(NSX_PSRAM_MSPI_MODULE 0)
+            set(NSX_PSRAM_DEVICE_CONFIG AM_BSP_MSPI_PSRAM_MODULE_HEX_DDR_CE)
+        else()
+            message(FATAL_ERROR "nsx-psram has no supported Apollo4 PSRAM board staged for NSX_AMBIQ_BOARD_NAME='${NSX_AMBIQ_BOARD_NAME}'.")
+        endif()
+    endif()
+    set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo4/devices/am_devices_mspi_psram_aps25616n.c)
+    if(NOT DEFINED NSX_PSRAM_DEVICE_SIZE_BYTES)
+        set(NSX_PSRAM_DEVICE_SIZE_BYTES 33554432u)
+    endif()
 elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     if(NOT DEFINED NSX_PSRAM_MSPI_MODULE)
         if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb"
