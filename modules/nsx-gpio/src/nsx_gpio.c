@@ -191,7 +191,7 @@ nsx_gpio_init_interrupt(const nsx_gpio_config_t *cfg)
     return nsx_gpio_irq_enable(cfg->pin);
 }
 
-#else // AM_PART_APOLLO3 || AM_PART_APOLLO3P
+#elif defined(AM_PART_APOLLO3P)
 
 static void
 nsx_gpio_mask_clear(am_hal_gpio_mask_t *mask)
@@ -279,7 +279,85 @@ nsx_gpio_init_interrupt(const nsx_gpio_config_t *cfg)
     return nsx_gpio_irq_enable(cfg->pin);
 }
 
-#endif // AM_PART_APOLLO3 || AM_PART_APOLLO3P
+#elif defined(AM_PART_APOLLO3)
+
+static uint32_t
+nsx_gpio_pin_to_mask(uint32_t pin, uint64_t *mask)
+{
+    if (mask == NULL) {
+        return NSX_STATUS_INVALID_HANDLE;
+    }
+
+    if (pin >= AM_HAL_GPIO_MAX_PADS) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+
+    *mask = 0;
+    AM_HAL_GPIO_MASKBIT(*mask, pin);
+    return NSX_STATUS_SUCCESS;
+}
+
+static void
+nsx_gpio_handler(void *ctx)
+{
+    (void)ctx;
+    uint64_t status_mask = 0;
+
+    uint32_t status = am_hal_gpio_interrupt_status_get(true, &status_mask);
+    if (status != AM_HAL_STATUS_SUCCESS) {
+        return;
+    }
+
+    am_hal_gpio_interrupt_clear(status_mask);
+    am_hal_gpio_interrupt_service(status_mask);
+}
+
+static uint32_t
+nsx_gpio_init_interrupt(const nsx_gpio_config_t *cfg)
+{
+    if (cfg->irq_cb == NULL || cfg->pin >= AM_HAL_GPIO_MAX_PADS) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+
+    am_hal_gpio_pincfg_t pincfg;
+    uint32_t status = nsx_gpio_mode_to_pincfg(NSX_GPIO_MODE_INPUT, &pincfg);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
+    pincfg.eIntDir = nsx_gpio_trigger_to_intdir(cfg->trigger);
+
+    status = am_hal_gpio_pinconfig(cfg->pin, pincfg);
+    if (status != AM_HAL_STATUS_SUCCESS) {
+        return status;
+    }
+
+    g_nsx_gpio_pins[cfg->pin].cb = cfg->irq_cb;
+    g_nsx_gpio_pins[cfg->pin].ctx = cfg->irq_ctx;
+    g_nsx_gpio_pins[cfg->pin].pin = cfg->pin;
+
+    status = am_hal_gpio_interrupt_register_adv(cfg->pin, nsx_gpio_pin_trampoline,
+                                                &g_nsx_gpio_pins[cfg->pin]);
+    if (status != AM_HAL_STATUS_SUCCESS) {
+        return status;
+    }
+
+    nsx_irq_config_t irq_cfg = {
+        .api = &nsx_interrupt_current_version,
+        .irqn = GPIO_IRQn,
+        .handler = nsx_gpio_handler,
+        .ctx = NULL,
+        .priority = NSX_GPIO_IRQ_PRIORITY_DEFAULT,
+        .enable = true,
+    };
+    status = nsx_irq_register(&irq_cfg);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
+
+    return nsx_gpio_irq_enable(cfg->pin);
+}
+
+#endif
 
 uint32_t
 nsx_gpio_init(const nsx_gpio_config_t *cfg)
@@ -383,7 +461,7 @@ nsx_gpio_irq_clear(uint32_t pin)
     return am_hal_gpio_interrupt_irq_clear(irqn, 1u << (pin & 0x1Fu));
 }
 
-#else // AM_PART_APOLLO3 || AM_PART_APOLLO3P
+#elif defined(AM_PART_APOLLO3P)
 
 uint32_t
 nsx_gpio_irq_enable(uint32_t pin)
@@ -418,4 +496,39 @@ nsx_gpio_irq_clear(uint32_t pin)
     return am_hal_gpio_interrupt_clear(&mask);
 }
 
-#endif // AM_PART_APOLLO3 || AM_PART_APOLLO3P
+#elif defined(AM_PART_APOLLO3)
+
+uint32_t
+nsx_gpio_irq_enable(uint32_t pin)
+{
+    uint64_t mask = 0;
+    uint32_t status = nsx_gpio_pin_to_mask(pin, &mask);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
+    return am_hal_gpio_interrupt_enable(mask);
+}
+
+uint32_t
+nsx_gpio_irq_disable(uint32_t pin)
+{
+    uint64_t mask = 0;
+    uint32_t status = nsx_gpio_pin_to_mask(pin, &mask);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
+    return am_hal_gpio_interrupt_disable(mask);
+}
+
+uint32_t
+nsx_gpio_irq_clear(uint32_t pin)
+{
+    uint64_t mask = 0;
+    uint32_t status = nsx_gpio_pin_to_mask(pin, &mask);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
+    return am_hal_gpio_interrupt_clear(mask);
+}
+
+#endif
