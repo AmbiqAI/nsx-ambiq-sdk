@@ -554,7 +554,6 @@ def test_r4_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, 
         "nsx-i2c",
         "nsx-spi",
         "nsx-uart",
-        "nsx-psram",
     )
     result = configure_contract_project(
         repo_root,

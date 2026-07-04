@@ -1,0 +1,55 @@
+schema_version: 1
+
+module:
+  name: nsx-emmc
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Thin, stable wrapper over the AmbiqSuite SDIO/eMMC HAL (am_hal_card_*/am_hal_sdhc_*) for block read/write on supported Apollo510-family NSX boards.
+
+capabilities:
+  - emmc
+  - external-storage
+  - sdio
+
+use_cases:
+  - store data logs, model updates, or recorded datasets in external eMMC storage
+  - block-level read/write to external eMMC through a stable, versioned NSX API
+
+agent_keywords:
+  - emmc
+  - sdio
+  - sdmmc
+  - is21ef08g
+  - external storage
+  - block storage
+
+build:
+  cmake:
+    package: nsx_emmc
+    targets:
+      - nsx::emmc
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+    - nsx-ambiqsuite
+    - nsx-interrupt
+  optional: []
+
+compatibility:
+  boards:
+    - apollo510_evb
+    - apollo510b_evb
+  socs:
+    - apollo510
+    - apollo510b
+  toolchains:
+    - arm-none-eabi-gcc
+    - armclang
+    - atfe

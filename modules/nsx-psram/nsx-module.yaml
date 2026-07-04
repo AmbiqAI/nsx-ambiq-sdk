@@ -9,7 +9,7 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: BSP-aware external PSRAM initialization shim for supported Apollo3p, Apollo5, and Apollo330 NSX boards. (Apollo4 support is pending staging a PSRAM-capable board; see README.)
+summary: BSP-aware external PSRAM initialization shim for supported Apollo3p, Apollo4 Display Shield, Apollo5, and Apollo330 NSX boards.
 
 capabilities:
   - psram
