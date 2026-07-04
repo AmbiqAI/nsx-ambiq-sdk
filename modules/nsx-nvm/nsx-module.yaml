@@ -1,0 +1,58 @@
+schema_version: 1
+
+module:
+  name: nsx-nvm
+  type: runtime
+  version: "5.2.23"
+
+support:
+  ambiqsuite: true
+  zephyr: false
+
+summary: Thin, stable wrapper over the AmbiqSuite IS25WX064 MSPI NOR flash HAL for erase/read/write and XIP on supported Apollo5-family NSX boards.
+
+capabilities:
+  - nvm
+  - external-flash
+  - xip
+
+use_cases:
+  - store data logs or model updates in external NOR flash
+  - execute-in-place (XIP) from external flash when on-chip MRAM/flash is insufficient
+  - erase/read/write external flash through a stable, versioned NSX API
+
+agent_keywords:
+  - nvm
+  - flash
+  - mspi
+  - is25wx064
+  - xip
+  - external flash
+
+build:
+  cmake:
+    package: nsx_nvm
+    targets:
+      - nsx::nvm
+
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+    - nsx-interrupt
+    - nsx-ambiqsuite
+  optional: []
+
+compatibility:
+  boards:
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  socs:
+    - apollo510
+    - apollo510b
+    - apollo510L
+  toolchains:
+    - arm-none-eabi-gcc
+    - armclang
+    - atfe
