@@ -11,9 +11,10 @@ app-facing convenience API (an `ns_ble.h`-equivalent) lives in the separate
 
 ## Status / scope
 
-- **Status:** Experimental. The supported transports have hardware-smoke
-  coverage through `ble_webble`, but this module is still being integrated into
-  the normal NSX registry/release flow.
+- **Status:** Registered/first-class NSX module (available via the standard
+  `nsx module add nsx-cordio` registry flow). The supported transports have
+  hardware-smoke coverage through `ble_webble`; Apollo510B EM9305 support
+  remains build-gated pending hardware validation.
 - **Targets/transports:**
   - Apollo3 / Apollo3P integrated BLE controller.
   - Apollo4P Blue Cooper external controller over IOM/SPI.
