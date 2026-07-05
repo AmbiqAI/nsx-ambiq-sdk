@@ -103,10 +103,11 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     # QSG names the fitted part "APS512XXN...", an "N"-suffix marking, yet the BA
     # driver is the correct one: part marking is NOT the driver family.)
     #
-    # apollo510_evb (regular, non-Blue) was already defaulted to the BA driver
-    # here and remains so (it has not been re-validated in this session); its
-    # size default is left at the conservative Apollo5 fallback (32 MB) below
-    # since only apollo510b_evb's 64 MB size has been confirmed on hardware.
+    # apollo510_evb (regular, non-Blue): BA driver + 64 MB, hardware-validated
+    # 2026-07-05 — heliaPROFILER profiled a model from PSRAM XIP end-to-end on
+    # a real board (BA driver, DDR timing scan on), and XIP address-aliasing
+    # confirmed the populated APS512XXB is 512 Mbit = 64 MB (+32 MB holds
+    # distinct data; +64 MB falls off the MSPI aperture).
     #
     # apollo330mP_evb has NOT been hardware-validated, but per product-team
     # guidance it is very similar to apollo510b_evb, so it tracks apollo510b_evb
@@ -117,11 +118,10 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     # caller (e.g. via -DNSX_PSRAM_USE_BA_DRIVER=0/1) until it is validated one way
     # or the other, at which point it should move into one of the explicit branches
     # below like apollo330mP_evb did.
-    if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb")
-        set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
-        set(NSX_PSRAM_USE_BA_DRIVER 1)
-    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510b_evb")
-        # apollo510b_evb: BA driver + 64 MB, hardware-validated (see note above).
+    if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb"
+       OR NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510b_evb")
+        # Both 510 EVBs: BA driver + 64 MB, hardware-validated (see notes above;
+        # 510b on 2026-07-05 morning, non-B the same afternoon).
         set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
         set(NSX_PSRAM_USE_BA_DRIVER 1)
         if(NOT DEFINED NSX_PSRAM_DEVICE_SIZE_BYTES)
