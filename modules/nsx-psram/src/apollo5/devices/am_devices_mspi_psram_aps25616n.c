@@ -2623,6 +2623,7 @@ am_devices_mspi_psram_aps25616n_ddr_init_timing_check(uint32_t module,
     if (AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS != ui32Status)
     {
         am_util_debug_printf("    Failed to disable XIP mode in the MSPI!\n");
+        am_devices_mspi_psram_aps25616n_ddr_deinit(pDevHandle);
         return ui32Status;
     }
 
@@ -2646,6 +2647,7 @@ am_devices_mspi_psram_aps25616n_ddr_init_timing_check(uint32_t module,
                 ui32Status = am_hal_mspi_control(pHandle, AM_HAL_MSPI_REQ_DQS, &scanCfg);
                 if (AM_HAL_STATUS_SUCCESS != ui32Status)
                 {
+                    am_devices_mspi_psram_aps25616n_ddr_deinit(pDevHandle);
                     return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
                 }
 
@@ -2688,6 +2690,7 @@ am_devices_mspi_psram_aps25616n_ddr_init_timing_check(uint32_t module,
         if ( ui32TxResult == 0 )
         {
             // RX window is too small at all TX setting
+            am_devices_mspi_psram_aps25616n_ddr_deinit(pDevHandle);
             return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
         }
 
@@ -2717,6 +2720,7 @@ am_devices_mspi_psram_aps25616n_ddr_init_timing_check(uint32_t module,
             ui32Status = am_hal_mspi_control(pHandle, AM_HAL_MSPI_REQ_DQS, &scanCfg);
             if (AM_HAL_STATUS_SUCCESS != ui32Status)
             {
+                am_devices_mspi_psram_aps25616n_ddr_deinit(pDevHandle);
                 return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
             }
 
@@ -2761,6 +2765,7 @@ am_devices_mspi_psram_aps25616n_ddr_init_timing_check(uint32_t module,
         if ( ui32Result < PSRAM_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH )
         {
             // too short is the passing settings
+            am_devices_mspi_psram_aps25616n_ddr_deinit(pDevHandle);
             return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
         }
     }

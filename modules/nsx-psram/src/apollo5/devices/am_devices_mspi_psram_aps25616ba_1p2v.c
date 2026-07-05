@@ -2819,6 +2819,7 @@ am_devices_mspi_psram_aps25616ba_ddr_init_timing_check(uint32_t ui32Module,
     ui32Status = am_hal_mspi_control(pPsram->pMspiHandle, AM_HAL_MSPI_REQ_TIMING_SCAN_GET, &scanCfg);
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
     {
+        am_devices_mspi_psram_aps25616ba_ddr_deinit(pPsram);
         return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
     }
 
@@ -2829,6 +2830,7 @@ am_devices_mspi_psram_aps25616ba_ddr_init_timing_check(uint32_t ui32Module,
     if (AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS != ui32Status)
     {
         am_util_debug_printf("    Failed to disable XIP mode in the MSPI!\n");
+        am_devices_mspi_psram_aps25616ba_ddr_deinit(pPsram);
         return ui32Status;
     }
 
@@ -2898,6 +2900,7 @@ am_devices_mspi_psram_aps25616ba_ddr_init_timing_check(uint32_t ui32Module,
                             ui32Status = am_hal_mspi_control(pPsram->pMspiHandle, AM_HAL_MSPI_REQ_TIMING_SCAN, &scanCfg);
                             if (AM_HAL_STATUS_SUCCESS != ui32Status)
                             {
+                                am_devices_mspi_psram_aps25616ba_ddr_deinit(pPsram);
                                 return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
                             }
                             uint32_t ui32Offset = (scanCfg.bTxNeg + scanCfg.bRxNeg + scanCfg.bRxCap + scanCfg.ui8Turnaround) * PSRAM_TIMING_SCAN_SIZE_BYTES + (scanCfg.ui8TxDQSDelay + scanCfg.ui8RxDQSDelay) * 2;
