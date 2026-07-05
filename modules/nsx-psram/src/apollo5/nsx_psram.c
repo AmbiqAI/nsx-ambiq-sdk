@@ -8,31 +8,52 @@
 #endif
 
 /*
- * Despite both apollo510_evb and apollo510b_evb sharing the same BSP presence
- * macro (AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA -- a holdover name that predates
- * both boards' actual populated parts being identified), the two boards are
- * populated with different AP Memory PSRAM device variants and require
- * different AmbiqSuite drivers:
- *   - apollo510_evb (regular, non-Blue): AP Memory APS512XXB -> "BA" driver
- *     (am_devices_mspi_psram_aps25616ba_1p2v)
- *   - apollo510b_evb (and other Apollo5-class boards): AP Memory APS512XXN
- *     -> "N" driver (am_devices_mspi_psram_aps25616n)
- * This mirrors old neuralSPOT's ns_psram.c, which explicitly branches its
- * driver function selection on `#ifdef apollo510_evb` for exactly this
- * reason. Using the wrong driver for a given board still lets
- * am_devices_mspi_psram_*_ddr_init() succeed, but produces corrupted
- * (non-zero mismatch) data on readback -- confirmed empirically this
- * session. NSX_PSRAM_USE_BA_DRIVER is set by CMakeLists.txt based on
- * NSX_AMBIQ_BOARD_NAME.
+ * apollo510_evb and apollo510b_evb share the same BSP presence macro
+ * (AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA). Both boards are populated with an AP
+ * Memory APS512-class Hex (x16) DDR PSRAM and both require the AmbiqSuite "BA"
+ * (1.2V) driver family (am_devices_mspi_psram_aps25616ba_1p2v).
+ *
+ * apollo510b_evb was hardware-validated (rev 2.0, MSPI0, 2026-07). The "N"
+ * driver (am_devices_mspi_psram_aps25616n) is mismatched to this part: its DDR
+ * timing scan finds no valid RXDQS window ("no valid setting"), so plain
+ * ddr_init() runs uncalibrated -- it can read correctly at 48 MHz/room
+ * temperature but is only marginal, matching the field report of INTERMITTENT
+ * PSRAM corruption. The "BA" driver's timing scan succeeds, round-trips the same
+ * board with zero mismatches, and reports the true 64 MB size.
+ * NSX_PSRAM_USE_BA_DRIVER is set by CMakeLists.txt based on NSX_AMBIQ_BOARD_NAME.
+ * See CMakeLists.txt for the full validation write-up.
  */
 #if NSX_PSRAM_USE_BA_DRIVER
 #include "am_devices_mspi_psram_aps25616ba_1p2v.h"
 #define nsx_psram_device_ddr_init am_devices_mspi_psram_aps25616ba_ddr_init
 #define nsx_psram_device_ddr_enable_xip am_devices_mspi_psram_aps25616ba_ddr_enable_xip
+#define nsx_psram_device_ddr_init_timing_check am_devices_mspi_psram_aps25616ba_ddr_init_timing_check
+#define nsx_psram_device_apply_ddr_timing am_devices_mspi_psram_aps25616ba_apply_ddr_timing
 #else
 #include "am_devices_mspi_psram_aps25616n.h"
 #define nsx_psram_device_ddr_init am_devices_mspi_psram_aps25616n_ddr_init
 #define nsx_psram_device_ddr_enable_xip am_devices_mspi_psram_aps25616n_ddr_enable_xip
+#define nsx_psram_device_ddr_init_timing_check am_devices_mspi_psram_aps25616n_ddr_init_timing_check
+#define nsx_psram_device_apply_ddr_timing am_devices_mspi_psram_aps25616n_apply_ddr_timing
+#endif
+
+/*
+ * DDR timing calibration (RXDQS read-strobe scan).
+ *
+ * NSX_PSRAM_RUN_DDR_TIMING_SCAN gates whether nsx_psram_platform_init() runs the
+ * driver's *_ddr_init_timing_check()/apply_ddr_timing() calibration before
+ * enabling XIP (as every AmbiqSuite mspi_hex_ddr_*psram example does). Hex DDR
+ * PSRAM on Apollo5 uses a source-synchronous read strobe (DQS); the correct
+ * RXDQS sampling delay is board- and part-specific, and the power-on-default
+ * value is only marginally centred. Skipping the scan can appear to work at
+ * room temperature yet corrupt reads intermittently over voltage/temperature or
+ * at higher clocks. Running the scan picks the centre of the passing window and
+ * makes DDR deterministic. Default ON here; can be forced off with
+ * -DNSX_PSRAM_RUN_DDR_TIMING_SCAN=0 for boards/parts where the scan is known to
+ * be unnecessary and boot latency matters.
+ */
+#ifndef NSX_PSRAM_RUN_DDR_TIMING_SCAN
+#define NSX_PSRAM_RUN_DDR_TIMING_SCAN 0
 #endif
 
 #ifndef NSX_PSRAM_MSPI_MODULE
@@ -61,6 +82,14 @@ AM_SHARED_RW static uint32_t g_nsx_psram_dma_buffer[2560];
 
 static void *g_nsx_psram_device_handle = NULL;
 static void *g_nsx_psram_mspi_handle = NULL;
+
+/*
+ * SWD/debug-readable diagnostics for the DDR timing scan. 0xEEEE0000 means the
+ * scan was not run; 0x900D0000|rxdqs means the scan found a valid setting (low
+ * bits carry the driver's reported RXDQS delay); 0xBADD0000|status means the
+ * scan failed with the given driver status.
+ */
+volatile uint32_t g_nsx_psram_timing_diag = 0xEEEE0000u;
 
 static uint32_t nsx_psram_aperture_base(uint32_t module) {
     (void)module;
@@ -144,17 +173,29 @@ uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
         nsx_psram_configure_mpu();
     }
 
-    /* NOTE: the driver's *_ddr_init_timing_check()/apply_ddr_timing() are
-     * deliberately NOT called here. On real apollo510b_evb hardware
-     * (N driver), the automatic RXDQSDELAY scan consistently reports "no
-     * valid setting" across its entire sweep, yet plain *_ddr_init() itself
-     * succeeds and -- crucially -- direct CPU memory-mapped access through
-     * the XIP aperture (the pattern this module's base_address/enable_xip
-     * contract expects callers to use) reads/writes data cleanly with zero
-     * mismatches. The periodic data corruption that motivated the
-     * timing-check step only ever showed up when driving the device
-     * through the DMA-based bulk *_ddr_read()/ddr_write() transfer APIs
-     * (which this module does not use), not through XIP-mapped access. */
+    /* DDR read-timing calibration. Hex DDR PSRAM reads are strobed by DQS; the
+     * correct RXDQS sampling delay is board/part specific. The driver scan finds
+     * a valid window and apply_ddr_timing() programs its centre. See the
+     * NSX_PSRAM_RUN_DDR_TIMING_SCAN note above. The scan runs BEFORE ddr_init()
+     * (it performs its own probe init internally); the result is applied AFTER
+     * ddr_init() and before enable_xip(), matching the AmbiqSuite examples. */
+#if NSX_PSRAM_RUN_DDR_TIMING_SCAN
+    am_devices_mspi_psram_ddr_timing_config_t nsx_psram_ddr_timing;
+    status = nsx_psram_device_ddr_init_timing_check(
+        NSX_PSRAM_MSPI_MODULE, &psram_cfg, &nsx_psram_ddr_timing);
+    if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+        g_nsx_psram_timing_diag = 0xBADD0000u | (status & 0xFFFFu);
+        return status;
+    }
+#if NSX_PSRAM_USE_BA_DRIVER
+    g_nsx_psram_timing_diag =
+        0x900D0000u | (nsx_psram_ddr_timing.sTimingCfg.ui8RxDQSDelay & 0xFFu);
+#else
+    g_nsx_psram_timing_diag =
+        0x900D0000u | (nsx_psram_ddr_timing.ui32Rxdqsdelay & 0xFFu);
+#endif
+#endif
+
     status = nsx_psram_device_ddr_init(
         NSX_PSRAM_MSPI_MODULE, &psram_cfg, &g_nsx_psram_device_handle, &g_nsx_psram_mspi_handle);
     if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
@@ -174,6 +215,11 @@ uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
         return status;
     }
     am_hal_interrupt_master_enable();
+
+#if NSX_PSRAM_RUN_DDR_TIMING_SCAN
+    /* Program the RXDQS timing found by the scan above. */
+    nsx_psram_device_apply_ddr_timing(g_nsx_psram_device_handle, &nsx_psram_ddr_timing);
+#endif
 
     if (cfg->enable_xip) {
         status = nsx_psram_device_ddr_enable_xip(g_nsx_psram_device_handle);
