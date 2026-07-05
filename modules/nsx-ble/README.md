@@ -7,10 +7,11 @@ characteristics and callbacks, on top of the Cordio host stack provided by
 
 ## Status / scope
 
-- **Status:** Experimental. The API and example have hardware-smoke coverage,
-  but this is the first NSX BLE baseline and should remain explicitly
-  experimental until the modules are published through the normal registry flow
-  and broader app coverage exists.
+- **Status:** Registered/first-class NSX module (available via the standard
+  `nsx module add nsx-ble` registry flow). The API and example have
+  hardware-smoke coverage, but this is still the first NSX BLE baseline —
+  scope is limited to a single service/connection with no OOB pairing, and
+  broader app coverage is still growing.
 - **Targets:** Apollo3 Blue Plus, Apollo4 Blue Plus, and Apollo510B EVB.
 - **Toolchains:** GCC build-validated across the BLE targets; Apollo3/Apollo4
   module startup coverage also validates ATFE/armclang paths.
