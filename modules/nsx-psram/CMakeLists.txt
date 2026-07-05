@@ -120,15 +120,21 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb")
         set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
         set(NSX_PSRAM_USE_BA_DRIVER 1)
-    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510b_evb"
-           OR NSX_AMBIQ_BOARD_NAME STREQUAL "apollo330mP_evb")
+    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510b_evb")
         # apollo510b_evb: BA driver + 64 MB, hardware-validated (see note above).
-        # apollo330mP_evb: inferred from apollo510b_evb similarity, NOT validated.
         set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
         set(NSX_PSRAM_USE_BA_DRIVER 1)
         if(NOT DEFINED NSX_PSRAM_DEVICE_SIZE_BYTES)
             set(NSX_PSRAM_DEVICE_SIZE_BYTES 67108864u)
         endif()
+    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo330mP_evb")
+        # apollo330mP_evb: driver family inferred from apollo510b_evb
+        # similarity, NOT hardware-validated. Size deliberately stays at the
+        # conservative 32 MB default until proven on hardware — advertising
+        # 64 MB without validation would let callers place data in an upper
+        # half that may alias or fault.
+        set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
+        set(NSX_PSRAM_USE_BA_DRIVER 1)
     elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510dL_evb")
         if(NOT DEFINED NSX_PSRAM_USE_BA_DRIVER)
             message(FATAL_ERROR "nsx-psram has no validated PSRAM driver choice for apollo510dL_evb yet. Pass -DNSX_PSRAM_USE_BA_DRIVER=0 (N driver) or =1 (BA driver) explicitly once this has been confirmed on real hardware, then update this CMakeLists.txt to add an explicit branch for it.")
