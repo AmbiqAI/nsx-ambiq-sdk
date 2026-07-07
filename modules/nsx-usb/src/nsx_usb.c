@@ -10,8 +10,50 @@
 
 nsx_usb_config_t *g_usb_cfg = NULL;
 
+/*
+ * Task-context vs timer-ISR mutual exclusion for the TinyUSB core.
+ *
+ * usb_timer_callback() below runs in the NSX_TIMER_USB timer ISR and calls
+ * tud_task(), which is not reentrant. The send/receive paths (task context)
+ * also call tud_* functions, so they must not be interleaved with the ISR.
+ *
+ * Previous implementation wrapped every task-context chunk in
+ * nsx_interrupt_master_disable()/_enable() (global PRIMASK). That blacks
+ * out ALL interrupts -- including latency-sensitive sensor GPIO IRQs (e.g.
+ * AS7058 bio-sensors, whose driver requires its INT be serviced within a
+ * bounded window) -- many times per packet during sustained USB streaming,
+ * which was observed on hardware starving such sensors.
+ *
+ * Since these SoCs are single-core, a volatile flag is sufficient: the task
+ * side sets g_usb_task_lock around its tud_* critical section, and the
+ * timer ISR skips its tick when the flag is set (the task side calls
+ * tud_task() itself inside the section, so no servicing is lost -- at worst
+ * one poll tick is skipped). Compiler barriers order the flag accesses
+ * against the guarded calls. No interrupts are ever masked.
+ *
+ * Note: like the previous PRIMASK approach, this guards ISR-vs-task
+ * reentrancy only -- concurrent nsx_usb_* calls from multiple tasks remain
+ * the application's responsibility, unchanged from before.
+ */
+static volatile uint8_t g_usb_task_lock = 0;
+
+static inline void nsx_usb_guard_enter(void) {
+    g_usb_task_lock = 1;
+    __asm volatile("" ::: "memory");
+}
+
+static inline void nsx_usb_guard_exit(void) {
+    __asm volatile("" ::: "memory");
+    g_usb_task_lock = 0;
+}
+
 static void usb_timer_callback(nsx_timer_config_t *tc) {
     (void)tc;
+    if (g_usb_task_lock) {
+        /* Task-context code is inside a tud_* critical section; it will run
+         * tud_task() itself. Skip this tick instead of reentering TinyUSB. */
+        return;
+    }
     tud_task();
     if (g_usb_cfg != NULL) {
         if (g_usb_cfg->_rx_ready == 0 && tud_cdc_available()) {
@@ -97,20 +139,20 @@ uint32_t nsx_usb_send(nsx_usb_config_t *cfg, const void *data, uint32_t len,
     uint32_t elapsed_ms = 0;
 
     while (tud_cdc_write_available() < len && elapsed_ms < timeout_ms) {
-        nsx_interrupt_master_disable();
+        nsx_usb_guard_enter();
         tud_cdc_write_flush();
         tud_task();
-        nsx_interrupt_master_enable();
+        nsx_usb_guard_exit();
         am_util_delay_ms(1);
         elapsed_ms++;
     }
 
     while (remaining > 0 && elapsed_ms < timeout_ms) {
-        nsx_interrupt_master_disable();
+        nsx_usb_guard_enter();
         uint32_t chunk = tud_cdc_write(src + sent, remaining);
         tud_cdc_write_flush();
         tud_task();
-        nsx_interrupt_master_enable();
+        nsx_usb_guard_exit();
 
         if (chunk > 0) {
             sent += chunk;
@@ -162,10 +204,10 @@ uint32_t nsx_usb_receive(nsx_usb_config_t *cfg, void *data, uint32_t len,
                 want = avail;
             }
 
-            nsx_interrupt_master_disable();
+            nsx_usb_guard_enter();
             tud_task();
             uint32_t got = tud_cdc_read((uint8_t *)data + total_rx, want);
-            nsx_interrupt_master_enable();
+            nsx_usb_guard_exit();
 
             total_rx += got;
             cfg->_rx_ready = 0;
@@ -216,7 +258,7 @@ uint32_t nsx_usb_read_nb(nsx_usb_config_t *cfg, void *data, uint32_t max_len,
         return NSX_STATUS_INVALID_HANDLE;
     }
 
-    nsx_interrupt_master_disable();
+    nsx_usb_guard_enter();
     tud_task();
     uint32_t avail = tud_cdc_available();
     uint32_t got = 0;
@@ -224,7 +266,7 @@ uint32_t nsx_usb_read_nb(nsx_usb_config_t *cfg, void *data, uint32_t max_len,
         uint32_t want = (avail < max_len) ? avail : max_len;
         got = tud_cdc_read(data, want);
     }
-    nsx_interrupt_master_enable();
+    nsx_usb_guard_exit();
 
     if (bytes_read != NULL) {
         *bytes_read = got;
@@ -272,7 +314,7 @@ uint32_t nsx_usb_vendor_send(nsx_usb_config_t *cfg, const void *data,
     uint32_t elapsed_ms = 0;
 
     while (remaining > 0 && elapsed_ms < timeout_ms) {
-        nsx_interrupt_master_disable();
+        nsx_usb_guard_enter();
         uint32_t avail = tud_vendor_write_available();
         uint32_t chunk = 0;
         if (avail > 0) {
@@ -281,7 +323,7 @@ uint32_t nsx_usb_vendor_send(nsx_usb_config_t *cfg, const void *data,
             tud_vendor_flush();
         }
         tud_task();
-        nsx_interrupt_master_enable();
+        nsx_usb_guard_exit();
 
         if (chunk > 0) {
             sent += chunk;
@@ -310,7 +352,7 @@ uint32_t nsx_usb_vendor_read_nb(nsx_usb_config_t *cfg, void *data,
         return NSX_STATUS_INVALID_HANDLE;
     }
 
-    nsx_interrupt_master_disable();
+    nsx_usb_guard_enter();
     tud_task();
     uint32_t avail = tud_vendor_available();
     uint32_t got = 0;
@@ -318,7 +360,7 @@ uint32_t nsx_usb_vendor_read_nb(nsx_usb_config_t *cfg, void *data,
         uint32_t want = (avail < max_len) ? avail : max_len;
         got = tud_vendor_read(data, want);
     }
-    nsx_interrupt_master_enable();
+    nsx_usb_guard_exit();
 
     if (bytes_read != NULL) {
         *bytes_read = got;
