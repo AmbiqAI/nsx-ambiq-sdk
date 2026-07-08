@@ -13,6 +13,19 @@
  * __HeapBase / __HeapLimit symbols the linker exports and returns
  * (void *)-1 with errno=ENOMEM on overflow instead of clobbering memory.
  *
+ * IMPORTANT (link-order trap): this strong definition alone is NOT enough.
+ * The prebuilt AmbiqSuite libam_hal.a also defines a WEAK `_sbrk` stub
+ * (am_hal_global.o's GCC link-warning silencers) that returns the constant
+ * ENOSYS (0x58) as if it were a heap-break pointer. Because static-archive
+ * extraction is demand-driven and `_sbrk` is typically first demanded very
+ * late in the link (newlib malloc -> _sbrk_r, e.g. from libstdc++'s
+ * pre-main exception-pool ctor), the weak stub can win and this file's
+ * object is never scanned — malloc then writes through 0x58 (silent ITCM
+ * corruption on apollo510-family, HardFault before main() on apollo330P).
+ * nsx-core's CMakeLists.txt therefore force-links this object with
+ * `-Wl,-u,_sbrk` alongside the analogous `-u,__wrap__*` flags for
+ * nsx_retarget.c. Do not remove either half without the other.
+ *
  * armclang uses ARM_LIB_HEAP / ARM_LIB_STACK + the Arm runtime, so this file
  * is only compiled into GCC and ATfE builds (see CMakeLists.txt).
  *

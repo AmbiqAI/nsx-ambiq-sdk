@@ -101,8 +101,24 @@ target_link_libraries(nsx_system PUBLIC
 # pulls that object out of the static archive, force the linker to retain it
 # with matching `-u` (undefined-symbol) flags. Gated to newlib toolchains —
 # the stubs are compiled only when NSX_HAS_NEWLIB is set.
+#
+# `_sbrk` (sbrk.c) needs the same treatment for a subtler reason: the
+# prebuilt AmbiqSuite `libam_hal.a` ships WEAK link-warning stubs for the
+# newlib syscalls in am_hal_global.o, and its `_sbrk` stub returns the
+# constant ENOSYS (0x58) as if it were a heap-break pointer. Archive
+# extraction is demand-driven, and `_sbrk` only becomes undefined late in
+# the link (newlib malloc -> _sbrk_r -> _sbrk, typically first demanded by
+# libstdc++'s pre-main exception-pool constructor in C++ apps), after
+# libam_hal.a has already satisfied it with the weak stub — sbrk.c's strong
+# definition never gets scanned. malloc then treats 0x58 as the heap: on
+# parts with memory at that address (apollo510-family ITCM@0x0) it silently
+# corrupts ITCM; on parts without (apollo330P) it HardFaults before main().
+# `-u,_sbrk` forces sbrk.c's object out of libnsx_system.a up front, so
+# normal strong-over-weak resolution applies. Found + hardware-validated on
+# apollo330mP_evb and apollo510_evb (heliaPROFILER bring-up, 2026-07).
 if(NSX_TOOLCHAIN_USES_NEWLIB)
     target_link_options(nsx_system PUBLIC
+        -Wl,-u,_sbrk
         -Wl,-u,__wrap__write_r
         -Wl,-u,__wrap__close_r
         -Wl,-u,__wrap__lseek_r
