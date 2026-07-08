@@ -100,6 +100,34 @@ def test_armclang_startups_are_c_sources(repo_root: Path) -> None:
     assert offenders == []
 
 
+def test_newlib_bounded_sbrk_is_force_linked(repo_root: Path) -> None:
+    """nsx-core must force-link sbrk.c's strong `_sbrk` with `-u,_sbrk`.
+
+    The prebuilt AmbiqSuite libam_hal.a ships a WEAK `_sbrk` link-warning
+    stub (am_hal_global.o) that returns the constant ENOSYS (0x58) as if it
+    were a heap-break pointer. Archive extraction is demand-driven and
+    `_sbrk` is first demanded late in the link (newlib malloc -> _sbrk_r,
+    e.g. libstdc++'s pre-main exception-pool ctor), so without `-u,_sbrk`
+    the weak stub wins and sbrk.c's object is never scanned: malloc then
+    writes through 0x58 — silent ITCM corruption on apollo510-family,
+    HardFault before main() on apollo330P (no memory at 0x58). Found and
+    hardware-validated on apollo330mP_evb + apollo510_evb, 2026-07.
+    """
+    cmake = read(repo_root, "modules/nsx-core/CMakeLists.txt")
+    sbrk = read(repo_root, "modules/nsx-core/src/sbrk.c")
+
+    # The force-link flag and the retarget `-u` block must live in the same
+    # newlib-gated PUBLIC link-options block on nsx_system.
+    assert "-Wl,-u,_sbrk" in cmake
+    assert cmake.index("-Wl,-u,_sbrk") > cmake.index("target_link_options(nsx_system PUBLIC")
+
+    # sbrk.c must still provide the strong bounded implementation the flag
+    # is pulling in (guarding against renames that would silently turn the
+    # `-u` into a "symbol stays undefined, weak stub wins again" no-op).
+    assert "void *_sbrk(ptrdiff_t incr)" in sbrk
+    assert "__HeapLimit" in sbrk
+
+
 def test_legacy_cm4f_armclang_boards_configure_with_c_startup(repo_root: Path, tmp_path: Path) -> None:
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")
