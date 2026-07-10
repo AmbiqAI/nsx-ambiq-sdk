@@ -497,6 +497,84 @@ def test_m55_itcm_linker_scripts_match_generated_object_names(repo_root: Path) -
         assert "*call_once*.o (+RO-CODE)" in armclang_itcm, soc
 
 
+def test_apollo330p_tcm_startup_matches_selected_linker_profile(repo_root: Path) -> None:
+    startup = read(repo_root, "modules/nsx-core/src/apollo330P/gcc/startup_gcc.c")
+    gcc_default = read(repo_root, "modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld")
+    gcc_itcm = read(repo_root, "modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld")
+    gcc_nbl = read(repo_root, "modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld")
+    armclang_startup = read(repo_root, "modules/nsx-core/src/apollo330P/armclang/startup_keil6.c")
+    armclang_default = read(repo_root, "modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct")
+    armclang_itcm = read(repo_root, "modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct")
+
+    for symbol in ("_init_dtcm_text", "_s_dtcm_text", "_e_dtcm_text"):
+        assert symbol in gcc_default
+        assert symbol not in gcc_itcm
+    for symbol in ("_init_itcm_text", "_s_itcm_text", "_e_itcm_text"):
+        assert symbol in gcc_itcm
+        assert symbol not in gcc_default
+        assert symbol in gcc_nbl
+
+    assert "#if defined(NSX_STARTUP_COPY_ITCM_TEXT)" in startup
+    itcm_startup, default_startup = startup.split("#if defined(NSX_STARTUP_COPY_ITCM_TEXT)", 1)[1].split(
+        "#else", 1
+    )
+    assert all(symbol in itcm_startup for symbol in ("_init_itcm_text", "_s_itcm_text", "_e_itcm_text"))
+    assert "_dtcm_text" not in itcm_startup
+    assert all(symbol in default_startup for symbol in ("_init_dtcm_text", "_s_dtcm_text", "_e_dtcm_text"))
+    assert "_itcm_text" not in default_startup.split("#endif", 1)[0]
+    assert "b       copy_loop_itcm_check" in itcm_startup
+    assert "b       copy_loop_dtcm_check" in default_startup
+
+    assert "* (.dtcm_text)" in armclang_default
+    assert "* (.itcm_text)" in armclang_itcm
+    assert "__PROGRAM_START()" in armclang_startup
+
+
+def test_apollo330p_itcm_profile_defines_matching_gcc_startup_copy(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    definition_message = (
+        "get_target_property(_nsx_soc_definitions ${NSX_SOC_FLAGS_TARGET} "
+        "INTERFACE_COMPILE_DEFINITIONS)",
+        'message(STATUS "NSX_SOC_DEFINITIONS=${_nsx_soc_definitions}")',
+    )
+    default = configure_contract_project(
+        repo_root,
+        tmp_path,
+        "apollo330mP_evb",
+        "gcc",
+        post_board_include=definition_message,
+    )
+    itcm = configure_contract_project(
+        repo_root,
+        tmp_path / "itcm",
+        "apollo330mP_evb",
+        "gcc",
+        prelude=("set(NSX_LINKER_PROFILE itcm)",),
+        post_board_include=definition_message,
+    )
+    nbl = configure_contract_project(
+        repo_root,
+        tmp_path / "nbl",
+        "apollo330mP_evb",
+        "gcc",
+        prelude=(
+            f'set(NSX_LINKER_SCRIPT "{repo_root}/modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld")',
+        ),
+        post_board_include=definition_message,
+    )
+
+    assert default.returncode == 0, default.stdout
+    assert "NSX_STARTUP_COPY_ITCM_TEXT=1" not in default.stdout
+    assert itcm.returncode == 0, itcm.stdout
+    assert "NSX_STARTUP_COPY_ITCM_TEXT=1" in itcm.stdout
+    assert nbl.returncode == 0, nbl.stdout
+    assert "NSX_STARTUP_COPY_ITCM_TEXT=1" in nbl.stdout
+
+
 
 def test_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp_path: Path) -> None:
     if shutil.which("cmake") is None:

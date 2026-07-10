@@ -473,32 +473,51 @@ Reset_Handler(void)
     __asm("    ldr     r0, =_init_data\n"
           "    ldr     r1, =_sdata\n"
           "    ldr     r2, =_edata\n"
+          "    b       copy_loop_check\n"
           "copy_loop:\n"
           "        ldr   r3, [r0], #4\n"
           "        str   r3, [r1], #4\n"
+          "copy_loop_check:\n"
           "        cmp     r1, r2\n"
           "        blt     copy_loop\n");
 
     __asm("    ldr     r0, =_init_data_sram\n"
           "    ldr     r1, =_ssdata\n"
           "    ldr     r2, =_sedata\n"
+          "    b       copy_loop_sram_check\n"
           "copy_loop_sram:\n"
           "        ldr   r3, [r0], #4\n"
           "        str   r3, [r1], #4\n"
+          "copy_loop_sram_check:\n"
           "        cmp     r1, r2\n"
           "        blt     copy_loop_sram\n");
 
     //
-    // Copy the ITCM text from flash to ITCM.
+    // Copy the profile-selected TCM text from flash.
     //
+#if defined(NSX_STARTUP_COPY_ITCM_TEXT)
+    __asm("    ldr     r0, =_init_itcm_text\n"
+          "    ldr     r1, =_s_itcm_text\n"
+          "    ldr     r2, =_e_itcm_text\n"
+          "    b       copy_loop_itcm_check\n"
+          "copy_loop_itcm:\n"
+          "    ldr     r3, [r0], #4\n"
+          "    str     r3, [r1], #4\n"
+          "copy_loop_itcm_check:\n"
+          "    cmp     r1, r2\n"
+          "    blt     copy_loop_itcm\n");
+#else
     __asm("    ldr     r0, =_init_dtcm_text\n"
           "    ldr     r1, =_s_dtcm_text\n"
           "    ldr     r2, =_e_dtcm_text\n"
+          "    b       copy_loop_dtcm_check\n"
           "copy_loop_dtcm:\n"
           "    ldr     r3, [r0], #4\n"
           "    str     r3, [r1], #4\n"
+          "copy_loop_dtcm_check:\n"
           "    cmp     r1, r2\n"
           "    blt     copy_loop_dtcm\n");
+#endif
 
     //
     // Zero fill the bss segment.
