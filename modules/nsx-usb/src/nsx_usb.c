@@ -343,6 +343,19 @@ uint32_t nsx_usb_vendor_send(nsx_usb_config_t *cfg, const void *data,
     return NSX_STATUS_SUCCESS;
 }
 
+uint32_t nsx_usb_vendor_write_available(nsx_usb_config_t *cfg) {
+    uint32_t available;
+
+    if (cfg == NULL || !cfg->_initialized || !cfg->_vendor_connected) {
+        return 0u;
+    }
+    nsx_usb_guard_enter();
+    tud_task();
+    available = tud_vendor_write_available();
+    nsx_usb_guard_exit();
+    return available;
+}
+
 uint32_t nsx_usb_vendor_read_nb(nsx_usb_config_t *cfg, void *data,
                                  uint32_t max_len, uint32_t *bytes_read) {
     if (bytes_read != NULL) {

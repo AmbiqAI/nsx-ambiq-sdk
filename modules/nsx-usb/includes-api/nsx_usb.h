@@ -28,6 +28,7 @@ extern "C" {
 #define NSX_USB_STATUS_TIMEOUT       0x100
 #define NSX_USB_STATUS_NOT_CONNECTED 0x101
 #define NSX_USB_STATUS_PARTIAL       0x102
+#define NSX_USB_STATUS_BUSY          0x103
 
 #define NSX_USB_DEFAULT_POLL_US  1000
 #define NSX_USB_DEFAULT_TIMEOUT_MS  5000
@@ -77,6 +78,7 @@ uint32_t nsx_usb_read_nb(nsx_usb_config_t *cfg, void *data, uint32_t max_len,
 void nsx_usb_flush_rx(nsx_usb_config_t *cfg);
 uint32_t nsx_usb_vendor_send(nsx_usb_config_t *cfg, const void *data,
                               uint32_t len, uint32_t *bytes_sent);
+uint32_t nsx_usb_vendor_write_available(nsx_usb_config_t *cfg);
 uint32_t nsx_usb_vendor_read_nb(nsx_usb_config_t *cfg, void *data,
                                  uint32_t max_len, uint32_t *bytes_read);
 bool nsx_usb_vendor_connected(nsx_usb_config_t *cfg);
