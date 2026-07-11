@@ -117,7 +117,9 @@
 
 // Vendor FIFO size of TX and RX
 #define CFG_TUD_VENDOR_RX_BUFSIZE (TUD_OPT_HIGH_SPEED ? 512 : 64)
-#define CFG_TUD_VENDOR_TX_BUFSIZE (TUD_OPT_HIGH_SPEED ? 512 : 64)
+/* TileIO vendor frames are 256 bytes. Keep one whole frame buffered on
+ * full-speed links so callers can enqueue it atomically without blocking. */
+#define CFG_TUD_VENDOR_TX_BUFSIZE (TUD_OPT_HIGH_SPEED ? 512 : 256)
 
 // MSC Buffer size of Device Mass storage
 #define CFG_TUD_MSC_EP_BUFSIZE   512
