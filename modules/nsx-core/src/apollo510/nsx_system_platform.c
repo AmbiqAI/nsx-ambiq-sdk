@@ -28,6 +28,16 @@
     AM_HAL_DCU_CPUDBG_S_NON_INVASIVE | AM_HAL_DCU_CPUTRC_PERFCNT |     \
     AM_HAL_DCU_SWD | AM_HAL_DCU_TRACE)
 
+// atomiq110 splits the single Apollo510-style DEVPWRSTATUS register into
+// DEVPWRSTATUS0/DEVPWRSTATUS1; PWRSTOTP/PWRSTCRYPTO live in DEVPWRSTATUS0 on
+// atomiq110 vs. the unified DEVPWRSTATUS on Apollo510/5A/5B/330P/510L. Alias
+// so the rest of this shared platform file stays part-agnostic.
+#if defined(PART_atomiq110)
+    #define NSX_DEVPWRSTATUS_b DEVPWRSTATUS0_b
+#else
+    #define NSX_DEVPWRSTATUS_b DEVPWRSTATUS_b
+#endif
+
 static uint32_t nsx_platform_dcu_unlock_swo(void) {
     uint32_t ui32dcuVal;
     int32_t  i32RetValue = 0;
@@ -43,17 +53,17 @@ static uint32_t nsx_platform_dcu_unlock_swo(void) {
     // domains that are currently off, and let the HAL do the idle-wait.
     AM_CRITICAL_BEGIN;
 
-    if (PWRCTRL->DEVPWRSTATUS_b.PWRSTOTP == 0) {
+    if (PWRCTRL->NSX_DEVPWRSTATUS_b.PWRSTOTP == 0) {
         bOffOtpOnExit = true;
         am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
     }
 
-    if (PWRCTRL->DEVPWRSTATUS_b.PWRSTCRYPTO == 0) {
+    if (PWRCTRL->NSX_DEVPWRSTATUS_b.PWRSTCRYPTO == 0) {
         bOffCryptoOnExit = true;
         am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
     }
 
-    if ((PWRCTRL->DEVPWRSTATUS_b.PWRSTCRYPTO == 1) &&
+    if ((PWRCTRL->NSX_DEVPWRSTATUS_b.PWRSTCRYPTO == 1) &&
         (CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE == 1)) {
         am_hal_dcu_get(&ui32dcuVal);
         if (((ui32dcuVal & NSX_DCU_SWO_MASK) != NSX_DCU_SWO_MASK) &&
@@ -187,6 +197,42 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
          * Trace clock on these parts = XTAL_HS 48 MHz.
          * JLink SWO viewer: -cpufreq 48000000 -swofreq 1000000 */
     return am_bsp_itm_printf_enable();
+#elif defined(PART_atomiq110)
+        /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
+         *
+         * atomiq110 has its own TPIU clock-select field (CRM_TPIUCLKCFG,
+         * exposed via the AM_HAL_TPIU_CLKSEL_* macros in am_hal_tpiu.h) which
+         * is distinct from the MCUCTRL_DBGCTRL_DBGTPIUCLKSEL field used on
+         * Apollo510/5A/5B — do not reuse that enum here.
+         *
+         * The only atomiq110 realization today is the FPGA "turbo" board,
+         * whose HFRC is fixed at the ATOMIQ11X_FPGA emulation frequency
+         * (25 MHz, am_mcu_apollo.h), independent of CPU perf mode. Selecting
+         * AM_HAL_TPIU_CLKSEL_HFRC (div1) therefore yields a fixed 25 MHz
+         * trace clock, matching NSX_SEGGER_CPUFREQ in
+         * cmake/socs/facts/atomiq110.cmake.
+         * JLink SWO viewer: -cpufreq 25000000 -swofreq 1000000 */
+        am_hal_debug_enable();
+        uint32_t swo_scaler = (25000000u / 1000000u) - 1;  /* 24 → 1 MHz SWO baud */
+        am_hal_tpiu_config(
+            AM_HAL_TPIU_CLKSEL_HFRC,
+            0,
+            TPI_CSPSR_CWIDTH_1BIT,
+            TPI_SPPR_TXMODE_UART,
+            swo_scaler);
+
+        ITM->TPR = 0xFFFFFFFF;
+        ITM->TER = 0xFFFFFFFF;
+        ITM->TCR =
+            _VAL2FLD(ITM_TCR_SWOENA, 1) |
+            _VAL2FLD(ITM_TCR_DWTENA, 1) |
+            _VAL2FLD(ITM_TCR_SYNCENA, 1) |
+            _VAL2FLD(ITM_TCR_ITMENA, 1);
+
+        /* Same SWO pin (GPIO 28) and BSP pincfg symbol as Apollo510. */
+        am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, g_AM_BSP_GPIO_ITM_SWO);
+
+        am_util_stdio_printf_init((am_util_stdio_print_char_t)am_hal_itm_print);
 #else
         /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
          * Trace clock = HFRC_96MHz (fixed, independent of CPU perf mode).

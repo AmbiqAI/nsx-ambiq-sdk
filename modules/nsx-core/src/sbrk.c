@@ -35,14 +35,28 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-extern uint32_t __HeapBase;
+/* __HeapBase is the symbol nsx-core's own linker scripts export. Some
+ * board-owned linker scripts (e.g. neuralspotx's atomiq110_fpga_turbo/gcc/
+ * linker_script.ld) instead export __heap_start__ for the same purpose.
+ * Declare both weak and fall back so this file works against either
+ * linker script without per-board special-casing. */
+extern uint32_t __HeapBase __attribute__((weak));
+extern uint32_t __heap_start__ __attribute__((weak));
 extern uint32_t __HeapLimit;
+
+static char *nsx_heap_base(void) {
+    if (&__HeapBase != (uint32_t *)0) {
+        return (char *)&__HeapBase;
+    }
+    return (char *)&__heap_start__;
+}
 
 void *_sbrk(ptrdiff_t incr) {
     static char *heap_end = (char *)0;
+    char *const base = nsx_heap_base();
 
     if (heap_end == (char *)0) {
-        heap_end = (char *)&__HeapBase;
+        heap_end = base;
     }
 
     char *const limit = (char *)&__HeapLimit;
@@ -50,7 +64,7 @@ void *_sbrk(ptrdiff_t incr) {
 
     /* Reject negative shrink that would underflow below the base, and any
      * request that would push the new break past __HeapLimit. */
-    if (incr < 0 && (prev + incr) < (char *)&__HeapBase) {
+    if (incr < 0 && (prev + incr) < base) {
         errno = ENOMEM;
         return (void *)-1;
     }
