@@ -5,9 +5,9 @@ module:
   type: sdk_provider
   category: sdk_provider
   provider: ambiqsuite
-  version: "0.1.0"
-  sdk_release: "stable-2026.06.17"
-  upstream_revision: "stable-6cdd4ccf96"
+  version: "5.2.23"
+  sdk_release: "stable-2026.06.18"
+  upstream_revision: "caaf5af86087881647f56c70646c748d40c86e23"
 
 support:
   ambiqsuite: true

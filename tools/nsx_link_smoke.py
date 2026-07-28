@@ -46,7 +46,7 @@ set(NSX_ROOT "{repo.as_posix()}")
 set(NSX_CMAKE_DIR "${{NSX_ROOT}}/cmake")
 set(NSX_SDK_PROVIDER "ambiqsuite")
 set(NSX_TOOLCHAIN_FAMILY "{toolchain_family}")
-set(NSX_AMBIQSUITE_VERSION "R5.2.0")
+set(NSX_AMBIQSUITE_VERSION "stable-2026.06.18")
 set(NSX_AMBIQSUITE_ROOT "${{NSX_ROOT}}/modules/nsx-ambiqsuite/sdk")
 
 include("${{NSX_ROOT}}/boards/{board}/board.cmake")

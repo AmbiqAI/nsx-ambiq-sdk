@@ -75,35 +75,12 @@ STAGED_PROVIDER_SOCS = {
 }
 STAGED_PROVIDER_TOOLCHAINS = {"arm-none-eabi-gcc", "atfe", "armclang"}
 EXPECTED_NSX_RELEASE_VERSION = "5.2.23"
-EXPECTED_SDK_RELEASE = "stable-2026.06.17"
-EXPECTED_UPSTREAM_REVISION = "stable-6cdd4ccf96"
-# The unified AmbiqSuite provider (and its HAL/BSP/USB wrappers) carry a fresh
-# module identity at 0.1.0.
-EXPECTED_UNIFIED_MODULE_VERSION = "0.1.0"
-EXPECTED_PROVIDER_METADATA = {
-    "nsx-ambiqsuite": {
-        "version": EXPECTED_UNIFIED_MODULE_VERSION,
-        "sdk_release": EXPECTED_SDK_RELEASE,
-        "upstream_revision": EXPECTED_UPSTREAM_REVISION,
-    },
-}
-EXPECTED_VERSION_BY_MODULE_NAME = {
-    "nsx-ambiqsuite": EXPECTED_UNIFIED_MODULE_VERSION,
-    "nsx-ambiq-hal": EXPECTED_UNIFIED_MODULE_VERSION,
-    "nsx-ambiq-bsp": EXPECTED_UNIFIED_MODULE_VERSION,
-    "nsx-ambiq-usb": EXPECTED_UNIFIED_MODULE_VERSION,
-}
+EXPECTED_BOARD_DESCRIPTOR_VERSION = "0.1.0"
 
 
 def expected_manifest_version(manifest: dict) -> str:
-    name = manifest_name(manifest)
-    if name in EXPECTED_VERSION_BY_MODULE_NAME:
-        return EXPECTED_VERSION_BY_MODULE_NAME[name]
-
-    # Board manifests adopt the unified module identity alongside the
-    # consolidated provider/HAL/BSP they now depend on.
     if manifest["module"]["type"] == "board":
-        return EXPECTED_UNIFIED_MODULE_VERSION
+        return EXPECTED_BOARD_DESCRIPTOR_VERSION
 
     return EXPECTED_NSX_RELEASE_VERSION
 
@@ -155,11 +132,16 @@ def test_manifest_versions_are_aligned_to_sdk_release(manifests: dict[Path, dict
             offenders.append((path.name, manifest_name(manifest), manifest["module"]["version"]))
     assert offenders == []
 
-    for provider_name, expected in EXPECTED_PROVIDER_METADATA.items():
-        provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == provider_name)
-        assert provider["module"]["version"] == expected["version"]
-        assert provider["module"]["sdk_release"] == expected["sdk_release"]
-        assert provider["module"]["upstream_revision"] == expected["upstream_revision"]
+
+def test_provider_manifest_matches_promoted_artifact_manifest(repo_root: Path, manifests: dict[Path, dict]) -> None:
+    import yaml
+
+    provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-ambiqsuite")
+    artifact_path = repo_root / "modules" / "nsx-ambiqsuite" / "sdk" / "artifact-manifest.yaml"
+    artifact = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+
+    assert provider["module"]["sdk_release"] == artifact["sdk"]["version"]
+    assert provider["module"]["upstream_revision"] == artifact["sdk"]["source_commit"]
 
 
 def test_manifest_build_targets_are_declared(manifests: dict[Path, dict]) -> None:

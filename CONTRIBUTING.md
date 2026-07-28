@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is the coordinated release unit for NSX AmbiqSuite R5 platform modules. Keep changes focused on the SDK-core substrate: provider payload, CMake descriptors, HAL/BSP adapters, startup integration, board descriptors, and NSX-owned runtime services.
+This repository is the coordinated release unit for NSX AmbiqSuite-backed platform modules. Keep changes focused on the SDK-core substrate: provider payload, CMake descriptors, HAL/BSP adapters, startup integration, board descriptors, and NSX-owned runtime services.
 
 ## Local Checks
 
