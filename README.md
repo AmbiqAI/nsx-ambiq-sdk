@@ -2,31 +2,30 @@
 
 The unified Ambiq SDK package for NSX: curated AmbiqSuite SDK-core modules.
 
-The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate used by NSX apps: SDK provider metadata, curated HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services. A single SDK provider, `nsx-ambiqsuite`, mirrors the upstream AmbiqSuite `stable` baseline and is selected per board/SoC.
+The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate used by NSX apps: SDK provider metadata, curated HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services. A single SDK provider, `nsx-ambiqsuite`, carries the exact upstream `stable-2026.06.18` snapshot from ref `stable` at commit `caaf5af86087881647f56c70646c748d40c86e23`.
 
 It is not a full AmbiqSuite mirror. Optional middleware and examples such as FreeRTOS, TinyUSB, Cordio, USB stacks, CMSIS-NN, CMSIS-DSP, and AmbiqSuite sample applications belong in separate optional modules or applications.
 
 ## Current Coverage
 
-The provider payload is `nsx-ambiqsuite` (NSX package version `5.2.23`), with GCC and ATfE artifacts for:
+The distribution and every manifest under `modules/` use version `5.2.23`.
+This distribution maps to one promoted AmbiqSuite payload: snapshot
+`stable-2026.06.18`, ref `stable`, commit
+`caaf5af86087881647f56c70646c748d40c86e23`. The repository does not identify
+that snapshot as an official numbered AmbiqSuite release.
 
-The NSX package and module manifests use version `5.2.23`: `5.2` tracks the
-upstream AmbiqSuite R5.2 line, while `.23` is the NSX-local curated revision
-for module metadata, integration fixes, and packaging updates.
-
-| Board | SoC/skew | Status |
-| --- | --- | --- |
-| `apollo330mP_evb` | `apollo330P` | staged |
-| `apollo510_evb` | `apollo510` | staged |
-| `apollo510b_evb` | `apollo510b` | staged |
-| `apollo510dL_evb` | `apollo510L` | staged |
-| `atomiq110_fpga_turbo` | `atomiq110` | experimental |
+The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
+Apollo2, Apollo3, Apollo4, Apollo330, and Apollo510 platforms. ACfE artifacts
+are selected by the public `armclang` toolchain family.
 
 `apollo5b_evb` is descriptor-only until matching AmbiqSuite artifacts are promoted into the provider payload.
 
 > **Experimental — not officially released:** `atomiq110` (AT110) and its `atomiq110_fpga_turbo` FPGA board are an early-evaluation preview only, not for production. See [Platform Maturity](docs/platform-coverage.md#platform-maturity).
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
+Release provenance and qualification are recorded in
+[`release/nsx-ambiq-sdk-5.2.23.yaml`](release/nsx-ambiq-sdk-5.2.23.yaml) and
+[`release/qualification-5.2.23.md`](release/qualification-5.2.23.md).
 
 ## Using The Modules
 

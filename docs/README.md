@@ -14,6 +14,9 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - `sdk-drop-workflow.md` describes how to ingest a new AmbiqSuite drop and promote approved artifacts.
 - `sdk-drop-manifest.example.yaml` is the manifest shape for future SDK-drop audits.
 - `core-sdk-scope.md` defines what belongs in this core SDK bundle.
+- `versioning.md` defines distribution, API-version, and immutable-tag policy.
+- `source-ownership.md` defines generated, upstream-derived, and NSX-owned paths.
+- `release-process.md` is the concise manual release checklist.
 
 ## Internal Reviews
 

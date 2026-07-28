@@ -1,0 +1,89 @@
+schema_version: 1
+
+distribution:
+  name: nsx-ambiq-sdk
+  version: "5.2.23"
+  tag: v5.2.23
+  title: "nsx-ambiq-sdk 5.2.23 — AmbiqSuite stable-2026.06.18"
+  git:
+    commit: null
+    commit_resolution:
+      source: immutable_tag_target
+      command: git rev-list -n 1 v5.2.23
+      publication_requirement: Tag v5.2.23 must point to the approved release commit.
+
+upstream:
+  provider: ambiqsuite
+  snapshot_identity: stable-2026.06.18
+  source_kind: git_ref
+  source_ref: stable
+  source_commit: caaf5af86087881647f56c70646c748d40c86e23
+  artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  raw_source_committed: false
+  official_numbered_release_claimed: false
+
+qualification:
+  status: qualified_with_exclusions
+  report: release/qualification-5.2.23.md
+  scope:
+    socs:
+      - apollo2
+      - apollo3
+      - apollo3p
+      - apollo4l
+      - apollo4p
+      - apollo330P
+      - apollo510
+      - apollo510b
+      - apollo510L
+    boards:
+      - apollo2_evb
+      - apollo3_evb
+      - apollo3_evb_cygnus
+      - apollo3p_evb
+      - apollo3p_evb_cygnus
+      - apollo4l_evb
+      - apollo4l_blue_evb
+      - apollo4p_evb
+      - apollo4p_blue_kbr_evb
+      - apollo4p_blue_kxr_evb
+      - apollo4p_evb_disp_shield_rev2
+      - apollo330mP_evb
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+  toolchains:
+    - cmake_family: gcc
+      artifact_manifest_key: gcc
+      artifact_status: built
+      representative_link_smoke: passed
+    - cmake_family: atfe
+      artifact_manifest_key: atfe
+      artifact_status: built
+      representative_link_smoke: passed
+    - cmake_family: armclang
+      artifact_manifest_key: acfe
+      artifact_status: built
+      representative_link_smoke: passed
+  hardware_status: limited_feature_evidence_only
+
+exclusions:
+  descriptor_only:
+    socs:
+      - apollo5b
+    boards:
+      - apollo5b_evb
+  experimental:
+    socs:
+      - atomiq110
+    boards:
+      - atomiq110_fpga_turbo
+
+release_evidence:
+  - CHANGELOG.md
+  - docs/versioning.md
+  - docs/source-ownership.md
+  - release/source-ownership.yaml
+  - release/qualification-5.2.23.md
+  - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  - tests/test_release_metadata.py

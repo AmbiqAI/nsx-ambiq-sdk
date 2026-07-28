@@ -107,23 +107,28 @@ descriptors are the adapter.
 ## Build Helper
 
 The source-controlled helper in `sdk-intake/` automates the HAL/BSP build and
-artifact copy steps for R5.2.0 while keeping raw SDK source in ignored staging.
+artifact copy steps while keeping raw SDK source in ignored staging. The
+current promoted input is ref `stable` at commit
+`caaf5af86087881647f56c70646c748d40c86e23`, identified as snapshot
+`stable-2026.06.18`.
 
 ```bash
-python sdk-intake/build_ambiqsuite.py --version R5.2.0 --toolchain gcc
-python sdk-intake/build_ambiqsuite.py --version R5.2.0 --toolchain atfe --atfe-root /path/to/ATfE-22.1.0
-python sdk-intake/build_ambiqsuite.py --version R5.2.0 --toolchain acfe --acfe-root /path/to/ACfE
+python sdk-intake/build_ambiqsuite.py \
+  --ambiqsuite-repo /path/to/ambiqSuite \
+  --source-ref stable \
+  --toolchain gcc
 ```
 
 The dev/CI container installs GCC, ATfE, and ACfE under `/opt/toolchains`. The
-`Container Validation` workflow has an opt-in `run_sdk_build` mode that mounts a
-runner-local AmbiqSuite zip read-only and runs the same helper inside the
+`Container Validation` workflow has an opt-in `run_sdk_build` mode that uses a
+runner-local AmbiqSuite Git checkout and runs the same helper inside the
 container:
 
 ```text
 run_sdk_build: true
 sdk_toolchain: gcc | atfe | acfe | all
-ambiqsuite_zip_path: /ambiqsuite/AmbiqSuite_R5.2.0.zip
+ambiqsuite_repo_path: /ambiqsuite/ambiqsuite
+ambiqsuite_source_ref: stable
 ```
 
 ACfE builds require `ARMLM_ACTIVATION_CODE` to be configured as a repository
@@ -145,7 +150,10 @@ diagnostic builds.
 Promotion is repeatable and destructive for the provider payload:
 
 ```bash
-python sdk-intake/build_ambiqsuite.py --version R5.2.0 --promote-only
+python sdk-intake/build_ambiqsuite.py \
+  --promote-only \
+  --ambiqsuite-repo /path/to/ambiqSuite \
+  --source-ref stable
 ```
 
 The promoted `modules/nsx-ambiqsuite/sdk/` tree contains approved headers,

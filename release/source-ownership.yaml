@@ -1,0 +1,65 @@
+schema_version: 1
+precedence: most_specific_path_first
+
+entries:
+  - id: generated-ambiqsuite-provider
+    classification: upstream-derived-generated
+    paths:
+      - modules/nsx-ambiqsuite/sdk
+    generated: true
+    direct_edit: forbidden
+    update_mechanism: sdk-intake/build_ambiqsuite.py
+    provenance: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+
+  - id: upstream-ambiq-usb-copy
+    classification: upstream-derived-auxiliary
+    paths:
+      - modules/nsx-ambiq-usb/sdk
+    generated: false
+    direct_edit: restricted
+    update_expectation: Refresh from the approved upstream source; isolate and review any NSX patch.
+
+  - id: upstream-psram-device-drivers
+    classification: upstream-derived-auxiliary
+    paths:
+      - modules/nsx-psram/src/apollo3/devices
+      - modules/nsx-psram/src/apollo4/devices
+      - modules/nsx-psram/src/apollo5/devices
+    generated: false
+    direct_edit: restricted
+    update_expectation: Preserve upstream notices and make NSX patches explicit and reviewable.
+
+  - id: upstream-third-party-copies
+    classification: upstream-or-third-party
+    path_patterns:
+      - modules/*/sdk/third_party/**
+    generated: false
+    direct_edit: restricted
+    update_expectation: Follow the pinned version record and upstream license for each copy.
+
+  - id: nsx-module-integration
+    classification: nsx-owned
+    path_patterns:
+      - modules/*/CMakeLists.txt
+      - modules/*/nsx-module.yaml
+      - modules/*/includes-api/**
+      - modules/*/src/**
+    exclusions:
+      - modules/*/sdk/**
+      - modules/nsx-psram/src/*/devices/**
+    generated: false
+    direct_edit: allowed
+
+  - id: nsx-soc-descriptors
+    classification: nsx-owned
+    paths:
+      - cmake/socs
+    generated: false
+    direct_edit: allowed
+
+  - id: nsx-board-descriptors
+    classification: nsx-owned
+    paths:
+      - boards
+    generated: false
+    direct_edit: allowed

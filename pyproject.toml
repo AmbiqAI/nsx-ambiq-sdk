@@ -9,6 +9,7 @@ ci = [
     "pytest>=8",
     "PyYAML>=6",
     "pre-commit>=3.7",
+    "tomli>=2; python_version < '3.11'",
 ]
 
 [tool.pytest.ini_options]

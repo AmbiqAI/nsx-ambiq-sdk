@@ -7,19 +7,20 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 ## SDK Version
 
-**AmbiqSuite SDK R5.2.0** (`release_sdk5p2p0-bee737faa`)
+**AmbiqSuite snapshot `stable-2026.06.18`**, source ref `stable`, source commit
+`caaf5af86087881647f56c70646c748d40c86e23`.
 
-The NSX release version for this repo and its module manifests is `5.2.23`.
-The `5.2` prefix follows the AmbiqSuite SDK drop; the patch number is reserved
-for NSX-local curation and integration updates.
+This is the exact promoted source identity recorded by
+`sdk/artifact-manifest.yaml`; it is not represented as an official numbered
+AmbiqSuite release. The NSX distribution and module version is `5.2.23`.
 
 ## Package Contents
 
 | Directory | Contents |
 |-----------|----------|
 | `sdk/CMSIS/` | AmbiqMicro device headers plus curated per-family `system_*.c` sources |
-| `sdk/boards/` | BSP headers only (no source) — apollo330mP_evb, apollo510_evb, apollo510b_evb, apollo510dL_evb |
-| `sdk/devices/` | Device driver headers only (no source in the promoted payload today) |
+| `sdk/boards/` | Promoted BSP headers for staged boards (no BSP source) |
+| `sdk/devices/` | Approved device-driver headers and source |
 | `sdk/lib/` | Toolchain-first prebuilt `libam_hal.a`, `libam_bsp.a` for GCC, ATfE, and ACfE |
 | `sdk/mcu/` | HAL headers + register definitions (no source) |
 | `sdk/src/` | Curated utility sources (`am_util_stdio.c`, `am_util_delay.c`, `am_util_pmu.c`) |
@@ -28,10 +29,6 @@ for NSX-local curation and integration updates.
 HAL and BSP are provided as prebuilt static libraries. The provider payload
 contains the approved headers, CMSIS system sources, utility sources, and libraries
 listed above.
-
-`sdk/devices/` remains the natural expansion point if SWS later approves
-shipping device-driver source or standalone device archives through the
-provider payload.
 
 `sdk/utils/` follows the same pattern: the promoted payload keeps utility
 headers in `sdk/utils/`, while the utility implementations NSX links today live

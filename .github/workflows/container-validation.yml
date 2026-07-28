@@ -46,7 +46,7 @@ on:
       ambiqsuite_source_ref:
         description: "AmbiqSuite Git tag, branch, or commit to build"
         required: false
-        default: "release_sdk5p2p0_rc4"
+        default: "caaf5af86087881647f56c70646c748d40c86e23"
         type: string
 
 jobs:
