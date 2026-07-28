@@ -1,4 +1,5 @@
 #include "nsx_psram.h"
+#include "nsx_psram_internal.h"
 
 #include "am_bsp.h"
 #include "am_hal_mpu.h"
@@ -64,33 +65,91 @@ static void nsx_psram_irq_handler(void *ctx) {
     am_hal_mspi_interrupt_service(g_nsx_psram_mspi_handle, status);
 }
 
-uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
+static uint32_t nsx_psram_clock_from_hz(
+    uint32_t clock_hz, am_hal_mspi_clock_e *clock) {
+    switch (clock_hz) {
+        case 48000000u: *clock = AM_HAL_MSPI_CLK_48MHZ; break;
+        case 96000000u: *clock = AM_HAL_MSPI_CLK_96MHZ; break;
+        default: return NSX_PSRAM_STATUS_UNSUPPORTED;
+    }
+    return NSX_STATUS_SUCCESS;
+}
+
+static bool nsx_psram_rollback(bool irq_registered, bool xip_may_be_enabled) {
+    bool complete = true;
+    bool device_deinitialized = false;
+
+    if (irq_registered &&
+        nsx_irq_unregister(NSX_PSRAM_MSPI_IRQ) != NSX_STATUS_SUCCESS) {
+        complete = false;
+    }
+    if (g_nsx_psram_device_handle != NULL) {
+        if (xip_may_be_enabled &&
+            am_devices_mspi_psram_aps25616n_ddr_disable_xip(
+                g_nsx_psram_device_handle) !=
+                AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+            complete = false;
+        }
+        if (am_devices_mspi_psram_aps25616n_ddr_deinit(
+                g_nsx_psram_device_handle) ==
+            AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+            device_deinitialized = true;
+        } else {
+            complete = false;
+        }
+    }
+    if (device_deinitialized) {
+        g_nsx_psram_device_handle = NULL;
+        g_nsx_psram_mspi_handle = NULL;
+    }
+    return complete;
+}
+
+uint32_t nsx_psram_platform_init(
+    const nsx_psram_config_t *cfg, nsx_psram_platform_info_t *info) {
     uint32_t status;
+    am_hal_mspi_clock_e clock;
     am_devices_mspi_psram_ddr_timing_config_t timing;
+    info->clock_hz = cfg->clock_hz;
+    info->safe_to_retry = true;
+    info->timing_status = NSX_PSRAM_TIMING_NOT_RUN;
+    status = nsx_psram_clock_from_hz(cfg->clock_hz, &clock);
+    if (status != NSX_STATUS_SUCCESS) {
+        return status;
+    }
     am_devices_mspi_psram_config_t psram_cfg = {
         .eDeviceConfig = NSX_PSRAM_DEVICE_CONFIG,
-        .eClockFreq = cfg->clock_freq,
-        .pNBTxnBuf = cfg->nbtxn_buf != NULL ? cfg->nbtxn_buf : g_nsx_psram_dma_buffer,
-        .ui32NBTxnBufLength = cfg->nbtxn_buf_len != 0
-            ? cfg->nbtxn_buf_len
-            : (uint32_t)(sizeof(g_nsx_psram_dma_buffer) / sizeof(g_nsx_psram_dma_buffer[0])),
-        .ui32ScramblingStartAddr = cfg->scrambling_start_addr,
-        .ui32ScramblingEndAddr = cfg->scrambling_end_addr,
+        .eClockFreq = clock,
+        .pNBTxnBuf = g_nsx_psram_dma_buffer,
+        .ui32NBTxnBufLength = (uint32_t)(sizeof(g_nsx_psram_dma_buffer) / sizeof(g_nsx_psram_dma_buffer[0])),
+        .ui32ScramblingStartAddr = 0,
+        .ui32ScramblingEndAddr = 0,
     };
 
     if (cfg->configure_mpu) {
         nsx_psram_configure_mpu();
     }
 
+    info->safe_to_retry = false;
     status = am_devices_mspi_psram_aps25616n_ddr_init_timing_check(
         NSX_PSRAM_MSPI_MODULE, &psram_cfg, &timing);
     if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+        info->timing_status = NSX_PSRAM_TIMING_FAILED;
         return status;
     }
+    info->safe_to_retry = true;
+    info->timing_status = NSX_PSRAM_TIMING_VALID;
+    info->rxdqs_delay = (uint8_t)timing.ui32Rxdqsdelay;
 
+    g_nsx_psram_device_handle = NULL;
+    g_nsx_psram_mspi_handle = NULL;
+    info->safe_to_retry = false;
     status = am_devices_mspi_psram_aps25616n_ddr_init(
         NSX_PSRAM_MSPI_MODULE, &psram_cfg, &g_nsx_psram_device_handle, &g_nsx_psram_mspi_handle);
     if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+        if (g_nsx_psram_device_handle != NULL) {
+            info->safe_to_retry = nsx_psram_rollback(false, false);
+        }
         return status;
     }
 
@@ -104,23 +163,40 @@ uint32_t nsx_psram_platform_init(nsx_psram_config_t *cfg) {
     };
     status = nsx_irq_register(&irq_cfg);
     if (status != NSX_STATUS_SUCCESS) {
+        info->safe_to_retry = nsx_psram_rollback(false, false);
         return status;
     }
     am_hal_interrupt_master_enable();
 
     status = am_devices_mspi_psram_aps25616n_apply_ddr_timing(g_nsx_psram_device_handle, &timing);
     if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+        info->timing_status = NSX_PSRAM_TIMING_FAILED;
+        info->safe_to_retry = nsx_psram_rollback(true, false);
         return status;
     }
 
     if (cfg->enable_xip) {
         status = am_devices_mspi_psram_aps25616n_ddr_enable_xip(g_nsx_psram_device_handle);
         if (status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS) {
+            info->safe_to_retry = nsx_psram_rollback(true, true);
             return status;
         }
     }
 
-    cfg->base_address = nsx_psram_aperture_base(NSX_PSRAM_MSPI_MODULE);
-    cfg->size_bytes = NSX_PSRAM_DEVICE_SIZE_BYTES;
+    info->base_address = cfg->enable_xip ? nsx_psram_aperture_base(NSX_PSRAM_MSPI_MODULE) : 0u;
+    info->size_bytes = NSX_PSRAM_DEVICE_SIZE_BYTES;
+    info->xip_enabled = cfg->enable_xip;
+    info->timing_status = NSX_PSRAM_TIMING_VALID;
     return NSX_STATUS_SUCCESS;
+}
+
+uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length) {
+    return am_devices_mspi_psram_aps25616n_ddr_read(
+        g_nsx_psram_device_handle, buffer, offset, length, true);
+}
+
+uint32_t nsx_psram_platform_write(
+    uint32_t offset, const void *buffer, uint32_t length) {
+    return am_devices_mspi_psram_aps25616n_ddr_write(
+        g_nsx_psram_device_handle, (uint8_t *)buffer, offset, length, true);
 }
