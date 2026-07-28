@@ -20,6 +20,9 @@ manifest is authoritative.
 Public module API versions are independent of the distribution version. For
 example, `NSX_PSRAM_V1_0_0` identifies the `nsx-psram` API contract; it does
 not become `5.2.23` and does not create another distribution version axis.
+Board descriptor manifests also version independently and intentionally remain
+at `0.1.0`; that version describes the descriptor contract, not the bundled
+SDK distribution implementation.
 
 ## Change Rule
 
