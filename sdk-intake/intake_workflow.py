@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import importlib.util
+import re
 import shutil
 import subprocess
 import sys
@@ -177,7 +178,24 @@ def assert_within_repo(path: Path, *, label: str) -> Path:
     return resolved
 
 
+_SAFE_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def assert_safe_path_segment(value: str, *, label: str) -> str:
+    """Fail closed unless `value` is safe to use as a single path segment.
+    Rejects path separators, `..`, and anything else that could retarget a
+    path built from `value` (e.g. staging_root's train_id/version) somewhere
+    other than the one intended segment below its parent."""
+    if not _SAFE_PATH_SEGMENT.match(value) or value in (".", ".."):
+        raise IntakeSecurityError(
+            f"{label} {value!r} is not a safe path segment (expected to match {_SAFE_PATH_SEGMENT.pattern!r})"
+        )
+    return value
+
+
 def staging_root(train_id: str, version: str) -> Path:
+    assert_safe_path_segment(train_id, label="train id")
+    assert_safe_path_segment(version, label="version")
     return repo_root() / "sdk-intake" / "local" / "staging" / train_id / version
 
 
@@ -186,6 +204,7 @@ def staging_sdk_root(train_id: str, version: str) -> Path:
 
 
 def default_patches_dir(train_id: str) -> Path:
+    assert_safe_path_segment(train_id, label="train id")
     return repo_root() / "sdk-intake" / "patches" / train_id
 
 
@@ -280,6 +299,12 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
                     verified.append(label)
                 else:
                     mismatched.append(label)
+    if not verified and not mismatched and not missing:
+        # A manifest with no `parts`/`boards` artifact entries would otherwise
+        # report an empty, vacuously "ok" result. Fail closed instead: a
+        # generated payload must always declare at least one verifiable
+        # archive, so declaring none is itself a verification failure.
+        missing.append("<manifest declares no hal_artifacts/bsp_artifacts entries>")
     return HashVerificationResult(tuple(verified), tuple(mismatched), tuple(missing))
 
 
@@ -302,6 +327,47 @@ def verify_promoted_baseline(train: "bas.TrainSpec") -> HashVerificationResult:
 # --------------------------------------------------------------------------
 # Patch hook: ordered, ownership-tagged, fail-closed on reapplication failure
 # --------------------------------------------------------------------------
+# Patches are for exceptional fixes to generated headers/system sources, never
+# to the prebuilt binaries or the manifest that hash-verifies them -- allowing
+# either would let a patch make a tampered archive verify against a manifest
+# it also rewrote. Enforced structurally: any patch that touches these paths
+# is rejected before it is ever applied.
+FORBIDDEN_PATCH_PATH_PREFIXES = ("lib/",)
+FORBIDDEN_PATCH_PATH_NAMES = ("artifact-manifest.yaml",)
+
+
+def _patch_target_paths(patch_path: Path) -> list[str]:
+    """List the paths a patch would touch, without applying it, via
+    `git apply --numstat` (works standalone; no repository context needed)."""
+    result = subprocess.run(
+        ["git", "apply", "--numstat", str(patch_path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise IntakeSecurityError(
+            f"could not enumerate paths touched by patch {patch_path.name!r}: {result.stderr.strip()}"
+        )
+    paths: list[str] = []
+    for line in result.stdout.splitlines():
+        fields = line.split("\t")
+        if len(fields) == 3:
+            paths.append(fields[2])
+    return paths
+
+
+def _assert_patch_paths_allowed(patch_path: Path) -> None:
+    for target in _patch_target_paths(patch_path):
+        normalized = target.replace("\\", "/")
+        if normalized in FORBIDDEN_PATCH_PATH_NAMES or any(
+            normalized.startswith(prefix) for prefix in FORBIDDEN_PATCH_PATH_PREFIXES
+        ):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} touches {target!r}, which the patch hook may not modify "
+                "(prebuilt archives and the artifact manifest are hash-verified output, not patch targets)"
+            )
+
+
 def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
     if not patches_dir.is_dir():
         return []
@@ -321,6 +387,7 @@ def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
                 f"patch {patch_path.name!r} sidecar {metadata_path.name!r} must declare non-empty "
                 "'owner' and 'reason' fields"
             )
+        _assert_patch_paths_allowed(patch_path)
         upstream_ref = data.get("upstream_ref")
         queue.append(
             PatchMetadata(
@@ -341,13 +408,26 @@ def _git_apply(target_root: Path, patch_path: Path, *, owner: str) -> None:
         capture_output=True,
         text=True,
     )
-    if check.returncode != 0:
+    if check.returncode != 0 or "Skipped patch" in check.stderr:
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) failed to reapply against the generated tree "
             f"-- upstream content likely drifted since the patch was written. "
             f"git apply --check stderr: {check.stderr.strip()}"
         )
-    subprocess.run(["git", "-C", str(target_root), "apply", str(patch_path)], check=True)
+    apply_result = subprocess.run(
+        ["git", "-C", str(target_root), "apply", str(patch_path)],
+        capture_output=True,
+        text=True,
+    )
+    if apply_result.returncode != 0 or "Skipped patch" in apply_result.stderr:
+        # `git apply` can exit 0 while printing "Skipped patch ..." and
+        # leaving the tree unchanged (e.g. under path-exclusion rules).
+        # Treat that the same as an outright failure: never report a patch as
+        # applied when it was not, silently or otherwise.
+        raise IntakePatchError(
+            f"patch {patch_path.name!r} (owner={owner}) did not apply cleanly despite passing --check: "
+            f"{apply_result.stderr.strip()}"
+        )
 
 
 def apply_patch_queue(staged_sdk_root: Path, patches_dir: Path | None) -> tuple[PatchApplication, ...]:
@@ -516,23 +596,36 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
     if not staged_sdk_root.is_dir():
         raise FileNotFoundError(f"staged payload not found: {staged_sdk_root}")
 
+    tmp = provider_root.with_name(provider_root.name + ".promote-tmp")
+    backup = provider_root.with_name(provider_root.name + ".promote-backup")
+    if not provider_root.exists() and backup.exists():
+        # A previous promotion was interrupted between renaming the provider
+        # tree aside and renaming the new tree into place. Refuse to proceed
+        # (fail closed) rather than silently discarding that backup or
+        # guessing what state the repository is in; a maintainer must resolve
+        # it explicitly. Checked before any other work so a broken system
+        # state is never masked by an unrelated hash-verification failure.
+        raise IntakeSecurityError(
+            f"found leftover promotion backup {backup} with no provider tree at {provider_root}; "
+            f"a previous promotion was interrupted mid-swap. Restore it manually "
+            f"(e.g. `mv {backup} {provider_root}`) and confirm the tree is correct before retrying."
+        )
+
     verification = verify_artifact_hashes(staged_sdk_root, staged_sdk_root / "artifact-manifest.yaml")
     verification.raise_if_not_ok(label=f"staged payload at {staged_sdk_root}")
 
-    tmp = provider_root.with_name(provider_root.name + ".promote-tmp")
-    backup = provider_root.with_name(provider_root.name + ".promote-backup")
-    for scratch in (tmp, backup):
-        if scratch.exists():
-            shutil.rmtree(scratch)
+    if tmp.exists():
+        shutil.rmtree(tmp)
 
     shutil.copytree(staged_sdk_root, tmp)
     try:
         if provider_root.exists():
             provider_root.rename(backup)
         tmp.rename(provider_root)
-    except OSError:
-        # Roll back to the pre-promotion state; never leave the provider tree
-        # missing or half-written.
+    except BaseException:
+        # Roll back to the pre-promotion state on ANY interruption -- not just
+        # OSError, but also KeyboardInterrupt/SystemExit -- so a maintainer
+        # hitting Ctrl-C mid-swap can never leave the provider tree missing.
         if not provider_root.exists() and backup.exists():
             backup.rename(provider_root)
         raise

@@ -158,6 +158,17 @@ meets the read-only-access and no-credential-leakage requirements below. That
 step is outside what any automation in this public repository can perform or
 claim.
 
+**Known gap in the current `v5.2.23` baseline.** Running `verify-baseline`
+against the currently promoted tree does not pass: every `acfe` HAL/BSP
+archive's sha256 no longer matches the hash recorded in
+`modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`. History shows the `acfe`
+archives were rebuilt by a later PR (`ACfE/armclang bring-up`) after the
+manifest was last regenerated, and the manifest was never refreshed to match.
+`gcc` and `atfe` archives do match. This predates the staged workflow in this
+document; it is called out here rather than silently worked around, since
+correcting the promoted `v5.2.23` payload or its manifest is a release action
+outside the scope of introducing this tooling.
+
 ## Patch Hook
 
 `stage` applies an optional, ordered patch hook from

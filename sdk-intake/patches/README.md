@@ -36,6 +36,15 @@ reason: >                # required: why this patch exists
 upstream_ref: AMBIQ-1234 # optional: upstream ticket/PR/commit reference
 ```
 
+## What A Patch May Touch
+
+A patch may not touch anything under `lib/` (the prebuilt HAL/BSP archives)
+or `artifact-manifest.yaml`. Those are hash-verified output: allowing a patch
+to rewrite either would let a patch make a tampered archive verify against a
+manifest it also rewrote. `stage` rejects (fails closed) any patch whose
+`git apply --numstat` output touches either before it ever applies anything.
+Patches are for generated headers and system sources.
+
 ## Ordering And Failure
 
 - Patches apply in ascending filename order via `git apply --check` (dry run)

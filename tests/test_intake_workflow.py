@@ -582,3 +582,169 @@ def test_verify_promoted_baseline_raises_if_provider_tree_missing(fake_repo: Pat
 
     with pytest.raises(helper.IntakeVerificationError):
         helper.verify_promoted_baseline(train)
+
+
+# --------------------------------------------------------------------------
+# Hardening follow-ups from independent security review
+# --------------------------------------------------------------------------
+def test_verify_artifact_hashes_fails_closed_on_empty_manifest(tmp_path: Path, helper) -> None:
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text(yaml.safe_dump({"sdk": {"provider": "ambiqsuite"}}), encoding="utf-8")
+
+    result = helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+    # A manifest declaring no hal_artifacts/bsp_artifacts must never be
+    # reported as "ok" just because there was nothing to mismatch.
+    assert not result.ok
+    assert result.verified == ()
+
+
+def test_assert_safe_path_segment_rejects_traversal(helper) -> None:
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.assert_safe_path_segment("../escape", label="version")
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.assert_safe_path_segment("a/b", label="version")
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.assert_safe_path_segment("..", label="version")
+
+
+def test_assert_safe_path_segment_accepts_ordinary_version(helper) -> None:
+    assert helper.assert_safe_path_segment("stable-2026.06.18", label="version") == "stable-2026.06.18"
+
+
+def test_staging_root_rejects_path_traversal_in_version(fake_repo: Path, helper) -> None:
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.staging_root("stable", "../../../../modules/nsx-ambiqsuite")
+
+
+def test_stage_provider_payload_rejects_unsafe_version(fake_repo: Path, helper, monkeypatch) -> None:
+    train = _apollo2_train(helper)
+    monkeypatch.setattr(helper.bas, "provider_sdk_root", lambda t: fake_repo / "modules" / "nsx-ambiqsuite" / "sdk")
+    monkeypatch.setattr(helper.bas, "missing_artifact_libraries", lambda t, v: [])
+    monkeypatch.setattr(helper.bas, "built_artifact_toolchains", lambda t, v: ["gcc"])
+    called = []
+    monkeypatch.setattr(helper.bas, "promote_provider_payload", lambda *a, **k: called.append(True))
+
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.stage_provider_payload(train, "../escape", Path("/fake/sdk-root"), patches_dir=None)
+
+    assert called == []
+
+
+def test_load_patch_queue_rejects_patch_touching_lib(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    lib_patch = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "index e69de29..1111111 100644\n"
+        "Binary files a/lib/gcc/apollo510/libam_hal.a and b/lib/gcc/apollo510/libam_hal.a differ\n"
+    )
+    _write_patch(patches_dir, "001-tamper-lib", lib_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="lib/gcc/apollo510/libam_hal.a"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_patch_touching_manifest(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    manifest_patch = (
+        "diff --git a/artifact-manifest.yaml b/artifact-manifest.yaml\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/artifact-manifest.yaml\n"
+        "+++ b/artifact-manifest.yaml\n"
+        "@@ -1 +1 @@\n"
+        "-sha256: aaaa\n"
+        "+sha256: bbbb\n"
+    )
+    _write_patch(patches_dir, "001-tamper-manifest", manifest_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="artifact-manifest.yaml"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_allows_patch_touching_headers(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    header_patch = (
+        "diff --git a/CMSIS/AmbiqMicro/Include/apollo510.h b/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "+++ b/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define OLD 1\n"
+        "+#define NEW 1\n"
+    )
+    _write_patch(patches_dir, "001-fix-define", header_patch, owner="jane", reason="fix upstream define")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [m.slug for m in queue] == ["001-fix-define"]
+
+
+def test_promote_from_staging_recovers_backup_by_baseexception_not_just_oserror(tmp_path: Path, helper, monkeypatch) -> None:
+    monkeypatch.setattr(helper, "repo_root", lambda: tmp_path)
+    staged = tmp_path / "staged"
+    archive = staged / "lib" / "gcc" / "apollo2" / "libam_hal.a"
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(b"new-archive")
+    (staged / "artifact-manifest.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "parts": [
+                    {
+                        "logical_skew": "apollo2",
+                        "hal_artifacts": {
+                            "gcc": {
+                                "path": "gcc/lib/apollo2/libam_hal.a",
+                                "sha256": _sha256_bytes(b"new-archive"),
+                            }
+                        },
+                    }
+                ],
+                "boards": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = tmp_path / "provider"
+    provider.mkdir()
+    (provider / "keep.txt").write_text("original\n", encoding="utf-8")
+
+    original_rename = Path.rename
+
+    def failing_rename(self, target):
+        # Simulate the swap being interrupted (e.g. KeyboardInterrupt) right
+        # after the provider tree is renamed aside as a backup, but before the
+        # new tree is renamed into place.
+        if self == provider and Path(target) == provider.with_name(provider.name + ".promote-backup"):
+            original_rename(self, target)
+            raise KeyboardInterrupt()
+        return original_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", failing_rename)
+
+    with pytest.raises(KeyboardInterrupt):
+        helper.promote_from_staging(staged, provider, confirm=True)
+
+    # Rolled back: the original provider tree must be restored, not left
+    # missing, even though the failure was not an OSError.
+    assert (provider / "keep.txt").is_file()
+
+
+def test_promote_from_staging_refuses_to_run_over_leftover_backup(tmp_path: Path, helper, monkeypatch) -> None:
+    monkeypatch.setattr(helper, "repo_root", lambda: tmp_path)
+    provider = tmp_path / "provider"
+    backup = provider.with_name(provider.name + ".promote-backup")
+    backup.mkdir(parents=True)
+    (backup / "salvage-me.txt").write_text("important\n", encoding="utf-8")
+
+    staged = tmp_path / "staged"
+    staged.mkdir()
+
+    with pytest.raises(helper.IntakeSecurityError, match="leftover promotion backup"):
+        helper.promote_from_staging(staged, provider, confirm=True)
+
+    # Refusing to proceed must not touch the leftover backup.
+    assert (backup / "salvage-me.txt").is_file()
+    assert not provider.exists()
