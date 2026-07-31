@@ -4,6 +4,14 @@ This is the lightweight process for the first golden-baseline release.
 Automated staging, promotion, patch-series management, and containerized
 intake redesign are out of scope.
 
+For subsequent drops, `sdk-intake/intake_workflow.py` (see
+[`docs/intake-hardening.md`](intake-hardening.md)) provides an optional
+staged-promotion layer -- staging, a reviewable diff, ownership/hash
+verification, and an explicit atomic promotion step -- built on top of the
+same `build_ambiqsuite.py` promotion logic this process already uses. It does
+not change any step below on its own; a maintainer still drives promotion,
+review, and the tag/release steps explicitly.
+
 ## Prepare And Qualify
 
 1. Fetch `origin` and create a clean release branch from the latest

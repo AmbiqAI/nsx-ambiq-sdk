@@ -127,3 +127,25 @@ python -m pytest tests/test_cmake_contract.py -q
 - Apollo2 intentionally does not support `acfe` / `armclang` because AmbiqSuite
   never shipped armclang startup/linker support for it; the build skips that
   part/toolchain pair automatically.
+
+## Hardened Staged Promotion (Optional)
+
+`build_ambiqsuite.py --promote` / `--promote-only` still write directly into
+`modules/nsx-ambiqsuite/sdk/`, as above. `intake_workflow.py` is an optional
+maintainer layer on top of the same built artifacts that stages the curated
+payload into a scratch directory first, verifies artifact hashes and the
+generated-provider ownership boundary, supports an ordered patch hook for
+exceptional upstream fixes, and only promotes via an explicit, confirmed,
+atomic swap:
+
+```bash
+python sdk-intake/intake_workflow.py stage --train stable --version stable-2026.06.18 \
+  --ambiqsuite-repo /path/to/ambiqSuite --source-ref stable
+python sdk-intake/intake_workflow.py diff --train stable --version stable-2026.06.18
+python sdk-intake/intake_workflow.py promote --train stable \
+  --staged-dir sdk-intake/local/staging/stable/stable-2026.06.18/sdk --yes
+```
+
+See [`docs/intake-hardening.md`](../docs/intake-hardening.md) for the full
+workflow, security boundaries, and the golden-baseline hash verification path
+(`verify-baseline`).
