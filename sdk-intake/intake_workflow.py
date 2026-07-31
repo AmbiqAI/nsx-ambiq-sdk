@@ -248,7 +248,18 @@ def verify_generated_boundary(train: "bas.TrainSpec") -> OwnershipEntry:
             f"'{GENERATED_PROVIDER_ENTRY_ID}' must be generated=true, direct_edit=forbidden; "
             f"got generated={entry.generated}, direct_edit={entry.direct_edit!r}"
         )
-    provider_relative = bas.provider_sdk_root(train).resolve().relative_to(repo_root().resolve()).as_posix()
+    provider_root = bas.provider_sdk_root(train).resolve()
+    try:
+        provider_relative = provider_root.relative_to(repo_root().resolve()).as_posix()
+    except ValueError as error:
+        # provider_sdk_root(train) resolved outside repo_root() (e.g. a
+        # corrupted/misconfigured train.module_dir containing ".."). Fail
+        # closed with a clear IntakeSecurityError instead of an unhandled
+        # ValueError escaping this fail-closed boundary check.
+        raise IntakeSecurityError(
+            f"provider path for train {train.train_id!r} ({provider_root}) resolves outside the "
+            f"repository root {repo_root()}; refusing to promote"
+        ) from error
     declared_paths = {p.rstrip("/") for p in entry.paths}
     if provider_relative not in declared_paths:
         raise IntakeSecurityError(
@@ -286,10 +297,21 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
     for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
         for entry in manifest.get(section, []) or []:
             artifacts = entry.get(artifact_key) or {}
-            for _toolchain, info in artifacts.items():
-                source_relative = info["path"]
-                expected_sha256 = info["sha256"]
-                promoted_relative = manifest_path_to_promoted_relative(source_relative)
+            for toolchain, info in artifacts.items():
+                try:
+                    source_relative = info["path"]
+                    expected_sha256 = info["sha256"]
+                    promoted_relative = manifest_path_to_promoted_relative(source_relative)
+                except (KeyError, TypeError, AttributeError) as error:
+                    # A malformed manifest entry (missing/wrong-typed `path`
+                    # or `sha256`) must fail closed with an actionable
+                    # IntakeVerificationError, not an untyped KeyError/
+                    # TypeError escaping this verification boundary.
+                    raise IntakeVerificationError(
+                        f"malformed {artifact_key!r} entry for {section[:-1]} "
+                        f"{entry.get('logical_skew') or entry.get('nsx_board')!r} toolchain {toolchain!r} "
+                        f"in {manifest_path}: {error}"
+                    ) from error
                 target = sdk_root / promoted_relative
                 label = promoted_relative.as_posix()
                 if not target.is_file():
@@ -598,17 +620,28 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
 
     tmp = provider_root.with_name(provider_root.name + ".promote-tmp")
     backup = provider_root.with_name(provider_root.name + ".promote-backup")
-    if not provider_root.exists() and backup.exists():
-        # A previous promotion was interrupted between renaming the provider
-        # tree aside and renaming the new tree into place. Refuse to proceed
-        # (fail closed) rather than silently discarding that backup or
-        # guessing what state the repository is in; a maintainer must resolve
-        # it explicitly. Checked before any other work so a broken system
-        # state is never masked by an unrelated hash-verification failure.
+    if backup.exists():
+        # A previous promotion was interrupted somewhere in the rename swap:
+        # either between renaming the provider tree aside and renaming the
+        # new tree into place (provider_root now missing), or between
+        # completing the swap and removing the backup (both now present, and
+        # a plain rename below would otherwise fail later with an opaque
+        # "File exists" error). Either way, refuse to proceed (fail closed)
+        # rather than guess which state the repository is in; a maintainer
+        # must resolve it explicitly. Checked before any other work so a
+        # broken system state is never masked by an unrelated
+        # hash-verification failure.
+        if not provider_root.exists():
+            raise IntakeSecurityError(
+                f"found leftover promotion backup {backup} with no provider tree at {provider_root}; "
+                f"a previous promotion was interrupted mid-swap. Restore it manually "
+                f"(e.g. `mv {backup} {provider_root}`) and confirm the tree is correct before retrying."
+            )
         raise IntakeSecurityError(
-            f"found leftover promotion backup {backup} with no provider tree at {provider_root}; "
-            f"a previous promotion was interrupted mid-swap. Restore it manually "
-            f"(e.g. `mv {backup} {provider_root}`) and confirm the tree is correct before retrying."
+            f"found leftover promotion backup {backup} alongside an existing provider tree at "
+            f"{provider_root}; a previous promotion was interrupted after completing its swap but "
+            f"before cleaning up. Confirm {provider_root} is correct, then remove {backup} manually "
+            "before retrying."
         )
 
     verification = verify_artifact_hashes(staged_sdk_root, staged_sdk_root / "artifact-manifest.yaml")

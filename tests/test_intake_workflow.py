@@ -748,3 +748,55 @@ def test_promote_from_staging_refuses_to_run_over_leftover_backup(tmp_path: Path
     # Refusing to proceed must not touch the leftover backup.
     assert (backup / "salvage-me.txt").is_file()
     assert not provider.exists()
+
+
+def test_promote_from_staging_refuses_when_backup_and_provider_both_exist(tmp_path: Path, helper, monkeypatch) -> None:
+    monkeypatch.setattr(helper, "repo_root", lambda: tmp_path)
+    provider = tmp_path / "provider"
+    provider.mkdir()
+    (provider / "current.txt").write_text("current\n", encoding="utf-8")
+    backup = provider.with_name(provider.name + ".promote-backup")
+    backup.mkdir()
+    (backup / "stale.txt").write_text("stale\n", encoding="utf-8")
+
+    staged = tmp_path / "staged"
+    staged.mkdir()
+
+    with pytest.raises(helper.IntakeSecurityError, match="leftover promotion backup"):
+        helper.promote_from_staging(staged, provider, confirm=True)
+
+    # Refusing to proceed must not touch either the current provider tree or
+    # the stale backup; a maintainer resolves the ambiguity explicitly.
+    assert (provider / "current.txt").is_file()
+    assert (backup / "stale.txt").is_file()
+
+
+def test_verify_generated_boundary_raises_intake_error_for_escaping_provider_path(
+    fake_repo: Path, helper, monkeypatch
+) -> None:
+    train = _apollo2_train(helper)
+    outside = fake_repo.parent / "outside-repo"
+    monkeypatch.setattr(helper.bas, "provider_sdk_root", lambda t: outside)
+
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.verify_generated_boundary(train)
+
+
+def test_verify_artifact_hashes_raises_intake_error_for_malformed_entry(tmp_path: Path, helper) -> None:
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest = {
+        "parts": [
+            {
+                "logical_skew": "apollo510",
+                # Missing the required 'sha256' key -- malformed manifest.
+                "hal_artifacts": {"gcc": {"path": "gcc/lib/apollo510/libam_hal.a"}},
+            }
+        ],
+        "boards": [],
+    }
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="malformed"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
