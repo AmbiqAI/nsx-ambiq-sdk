@@ -40,6 +40,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
@@ -282,6 +283,16 @@ def manifest_path_to_promoted_relative(source_relative: str) -> Path:
     parts = Path(source_relative).parts
     if len(parts) < 3 or parts[1] != "lib":
         raise IntakeVerificationError(f"unexpected artifact manifest path shape: {source_relative!r}")
+    if ".." in parts or any(PurePosixPath(part).is_absolute() for part in parts):
+        # A manifest entry with a `..` (or an absolute-looking) segment could
+        # otherwise resolve outside `sdk_root` entirely, letting
+        # `verify_artifact_hashes` "verify" an attacker-controlled file
+        # elsewhere on disk instead of the real promoted artifact. Fail
+        # closed rather than silently following it.
+        raise IntakeVerificationError(
+            f"artifact manifest path {source_relative!r} contains an unsafe path segment; refusing to "
+            "resolve a path that could escape the SDK root"
+        )
     toolchain = parts[0]
     rest = parts[2:]
     return Path("lib") / toolchain / Path(*rest)
@@ -315,6 +326,19 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
                     ) from error
                 target = sdk_root / promoted_relative
                 label = promoted_relative.as_posix()
+                resolved_root = sdk_root.resolve()
+                resolved_target = target.resolve()
+                if resolved_target != resolved_root and resolved_root not in resolved_target.parents:
+                    # Defense in depth alongside the '..'/absolute-segment
+                    # rejection in `manifest_path_to_promoted_relative`: even
+                    # a syntactically clean manifest path could resolve
+                    # outside `sdk_root` via a symlink somewhere in the tree.
+                    # Never "verify" a file outside the tree this function
+                    # was asked to check.
+                    raise IntakeVerificationError(
+                        f"artifact manifest entry {label!r} in {manifest_path} resolves outside "
+                        f"{sdk_root}; refusing to verify a path escaping the SDK root"
+                    )
                 if not target.is_file():
                     missing.append(label)
                     continue
@@ -417,28 +441,52 @@ def _normalize_patch_target_path(raw: str, *, patch_path: Path) -> str:
 
 def _patch_target_paths(patch_path: Path) -> list[str]:
     """List the normalized, POSIX-relative paths a patch would touch, without
-    applying it, via `git apply --numstat`. Anchored on `patch_path.parent`
+    applying it, via `git apply --numstat -z`. Anchored on `patch_path.parent`
     (a stable location independent of the caller's own current working
     directory) with repository discovery disabled (see
     `_no_repo_discovery_env`), so this reports the same paths regardless of
-    where this tool is invoked from."""
+    where this tool is invoked from. `-z` (NUL-terminated, unquoted records)
+    is required, not optional: without it, Git C-quotes any path containing
+    a non-ASCII byte (e.g. `"lib/gcc/apollo\\303\\251/libam_hal.a"`), which
+    would never match `FORBIDDEN_PATCH_PATH_PREFIXES`/`_NAMES` even though
+    the literal path plainly does -- a silent, fail-open gap in the
+    forbidden-path check for any path outside plain ASCII."""
     anchor = patch_path.parent
     result = subprocess.run(
-        ["git", "-C", str(anchor), "apply", "--numstat", str(patch_path)],
+        ["git", "-C", str(anchor), "apply", "--numstat", "-z", str(patch_path)],
         capture_output=True,
-        text=True,
         env=_no_repo_discovery_env(anchor),
     )
     if result.returncode != 0:
         raise IntakeSecurityError(
-            f"could not enumerate paths touched by patch {patch_path.name!r}: {result.stderr.strip()}"
+            f"could not enumerate paths touched by patch {patch_path.name!r}: "
+            f"{result.stderr.decode('utf-8', errors='replace').strip()}"
         )
     paths: list[str] = []
-    for line in result.stdout.splitlines():
-        fields = line.split("\t")
-        if len(fields) == 3:
-            paths.append(_normalize_patch_target_path(fields[2], patch_path=patch_path))
+    for record in result.stdout.split(b"\0"):
+        if not record:
+            continue
+        fields = record.split(b"\t", 2)
+        if len(fields) != 3:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} produced an unparseable 'git apply --numstat -z' record; "
+                "refusing to apply a patch whose targets cannot be verified"
+            )
+        raw_path = fields[2].decode("utf-8", errors="replace")
+        paths.append(_normalize_patch_target_path(raw_path, patch_path=patch_path))
     return paths
+
+
+def _fold_path_for_comparison(value: str) -> str:
+    """Canonicalize a path for a forbidden-path membership test that must
+    hold regardless of filesystem case-sensitivity or Unicode
+    representation. The staged/promoted trees live on the developer's own
+    filesystem, which on macOS (APFS/HFS+) is case-insensitive and may
+    decompose Unicode (NFD) by default -- so a patch touching `LIB/...` or
+    `Artifact-Manifest.yaml`, or a path using a different but
+    canonically-equivalent Unicode form, resolves to the exact same
+    protected file even though a byte-exact comparison would miss it."""
+    return unicodedata.normalize("NFC", value).casefold()
 
 
 def _assert_patch_paths_allowed(patch_path: Path) -> None:
@@ -454,50 +502,187 @@ def _assert_patch_paths_allowed(patch_path: Path) -> None:
             f"patch {patch_path.name!r} reports zero target paths via 'git apply --numstat'; refusing "
             "to apply a patch whose targets cannot be verified"
         )
+    forbidden_names_folded = {_fold_path_for_comparison(name) for name in FORBIDDEN_PATCH_PATH_NAMES}
+    forbidden_prefixes_folded = tuple(_fold_path_for_comparison(p) for p in FORBIDDEN_PATCH_PATH_PREFIXES)
     for normalized in targets:
-        if normalized in FORBIDDEN_PATCH_PATH_NAMES or any(
-            normalized.startswith(prefix) for prefix in FORBIDDEN_PATCH_PATH_PREFIXES
-        ):
+        folded = _fold_path_for_comparison(normalized)
+        if folded in forbidden_names_folded or any(folded.startswith(prefix) for prefix in forbidden_prefixes_folded):
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} touches {normalized!r}, which the patch hook may not modify "
                 "(prebuilt archives and the artifact manifest are hash-verified output, not patch targets)"
             )
 
 
-# A rename/copy can move a forbidden path's content out from under the
-# destination-only view `_patch_target_paths` gets from `--numstat` (it only
-# reports the *new* name, e.g. a patch renaming `lib/foo.a` to `notes.md`
-# would show only `notes.md`), and mode/binary/non-regular-file changes are
-# never applicable to the plain-text generated headers/system sources this
-# patch hook exists for. Rather than trying to reason about every such case
-# safely, reject all of them outright: every patch this hook applies must be
-# an unambiguous add/modify/delete of a regular (100644) text file.
-_UNSUPPORTED_PATCH_FEATURES: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"^rename (?:from|to) ", re.MULTILINE), "a file rename"),
-    (re.compile(r"^copy (?:from|to) ", re.MULTILINE), "a file copy"),
-    (re.compile(r"^(?:old|new) mode \d+", re.MULTILINE), "a permission-only mode change"),
-    (
-        re.compile(r"^(?:new file mode|deleted file mode) (?!100644\b)\d+", re.MULTILINE),
-        "a non-regular-file mode (e.g. a symlink or submodule) on a created/deleted file",
-    ),
-    (
-        re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+ (?!100644\b)\d+", re.MULTILINE),
-        "a non-regular-file mode (e.g. a symlink or submodule) on a modified file",
-    ),
-    (re.compile(r"^GIT binary patch", re.MULTILINE), "binary content"),
-    (re.compile(r"^Binary files .* differ$", re.MULTILINE), "binary content"),
-)
+# `git apply --summary`/`--numstat` are Git's own authoritative parse of a
+# patch's shape (rename/copy/mode-change/create/delete/binary), which is far
+# more robust than pattern-matching the raw patch text: Git tolerates
+# whitespace and sign variations in mode lines (e.g. "new file mode  120000"
+# with two spaces, or a leading "+") that a hand-rolled regex can miss
+# entirely, silently letting a symlink through. Two gaps remain even so:
+#   * `--summary` says nothing at all about a symlink/submodule whose mode is
+#     *unchanged* (a plain in-place modification) -- the only place that
+#     mode appears is the `index <old>..<new> <mode>` line, which we still
+#     have to scan directly (see `_assert_no_index_only_mode_change`).
+#   * a patch can move a file's content to a different path just by writing
+#     different `--- a/OLD` / `+++ b/NEW` names, with none of the `rename
+#     from`/`rename to`/`rename old`/`rename new` keywords `--summary`
+#     recognizes -- `git apply` honors this exactly like a real rename (it
+#     reads from OLD, writes to NEW), so `--summary`'s silence here is not
+#     safety, and `_patch_target_paths` would only ever see the *new* name
+#     (the same destination-only blind spot that motivated this whole
+#     function). This must be checked directly too (see
+#     `_assert_no_ambiguous_path_change`).
+# Rather than trying to reason about every such case safely, reject all of
+# them outright: every patch this hook applies must be an unambiguous
+# add/modify/delete of a single, regular (100644) text file.
+_MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) ", re.MULTILINE)
+_INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)\s*$", re.MULTILINE)
+_OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
+_NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
+_REGULAR_FILE_MODE = 0o100644
 
 
 def _assert_patch_shape_supported(patch_path: Path) -> None:
-    text = patch_path.read_text(encoding="utf-8", errors="replace")
-    for pattern, description in _UNSUPPORTED_PATCH_FEATURES:
-        if pattern.search(text):
+    anchor = patch_path.parent
+    env = _no_repo_discovery_env(anchor)
+
+    numstat = subprocess.run(
+        ["git", "-C", str(anchor), "apply", "--numstat", "-z", str(patch_path)],
+        capture_output=True,
+        env=env,
+    )
+    if numstat.returncode != 0:
+        raise IntakeSecurityError(
+            f"could not enumerate the shape of patch {patch_path.name!r}: "
+            f"{numstat.stderr.decode('utf-8', errors='replace').strip()}"
+        )
+    for record in numstat.stdout.split(b"\0"):
+        if not record:
+            continue
+        fields = record.split(b"\t", 2)
+        if len(fields) != 3:
             raise IntakeSecurityError(
-                f"patch {patch_path.name!r} contains {description}, which this patch hook does not "
+                f"patch {patch_path.name!r} produced an unparseable 'git apply --numstat -z' record; "
+                "refusing to evaluate a patch whose shape cannot be determined unambiguously"
+            )
+        added, deleted, _raw_path = fields
+        if added == b"-" or deleted == b"-":
+            # Git's own numstat convention for a binary file: the
+            # added/deleted counts are literally "-" instead of a number.
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains binary content, which this patch hook does not "
                 "support; every patch must be a simple, unambiguous add/modify/delete of a regular "
-                "text file (renames, copies, mode changes, non-regular-file modes, and binary content "
-                "are all rejected fail-closed)"
+                "text file"
+            )
+
+    summary = subprocess.run(
+        ["git", "-C", str(anchor), "apply", "--summary", str(patch_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if summary.returncode != 0:
+        raise IntakeSecurityError(
+            f"could not enumerate the shape of patch {patch_path.name!r}: {summary.stderr.strip()}"
+        )
+    for line in summary.stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("rename "):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains a file rename ({stripped!r}), which this patch "
+                "hook does not support"
+            )
+        if stripped.startswith("copy "):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains a file copy ({stripped!r}), which this patch hook "
+                "does not support"
+            )
+        if stripped.startswith("mode change "):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains a permission-only mode change ({stripped!r}), "
+                "which this patch hook does not support"
+            )
+        mode_match = _MODE_CHANGE_LINE.match(stripped)
+        if mode_match and int(mode_match.group(2), 8) != _REGULAR_FILE_MODE:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains a non-regular-file mode ({stripped!r}; e.g. a "
+                "symlink or submodule), which this patch hook does not support"
+            )
+
+    _assert_no_index_only_mode_change(patch_path)
+    _assert_no_ambiguous_path_change(patch_path)
+
+
+def _assert_no_index_only_mode_change(patch_path: Path) -> None:
+    """A symlink or submodule modified *in place* (mode unchanged) produces
+    no `create mode`/`delete mode`/`mode change` line in `--summary` output
+    at all -- the mode only appears on the `index <old>..<new> <mode>` line,
+    which is silent (empty `--summary`) in exactly this case. Scan it
+    directly rather than trusting `--summary`'s silence to mean "regular
+    file"."""
+    text = patch_path.read_text(encoding="utf-8", errors="replace")
+    for match in _INDEX_LINE_MODE.finditer(text):
+        mode_token = match.group(1)
+        try:
+            mode_value = int(mode_token.lstrip("+"), 8)
+        except ValueError as error:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} has an unparseable mode {mode_token!r} on an 'index' line; "
+                "refusing to evaluate a patch whose file mode cannot be determined unambiguously"
+            ) from error
+        if mode_value != _REGULAR_FILE_MODE:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} touches a non-regular-file mode ({mode_token!r} on an "
+                "'index' line; e.g. a symlink or submodule), which this patch hook does not support"
+            )
+
+
+def _diff_header_path(raw: str, *, side: str, prefix: str, patch_path: Path) -> str | None:
+    """Extract the path from one `--- `/`+++ ` diff header line (dropping any
+    trailing tab-separated timestamp), or `None` for `/dev/null`. Fails
+    closed if the line doesn't have the expected `a/`/`b/` prefix this tool's
+    patches always use, rather than guessing at some other `-p` depth."""
+    value = raw.split("\t", 1)[0].strip()
+    if value == "/dev/null":
+        return None
+    if not value.startswith(prefix):
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} has an unrecognized {side} diff header path {raw!r} (expected "
+            f"a {prefix!r}-prefixed path or /dev/null); refusing to evaluate a patch whose file "
+            "identity cannot be determined unambiguously"
+        )
+    return value[len(prefix):]
+
+
+def _assert_no_ambiguous_path_change(patch_path: Path) -> None:
+    """A patch can move a file's content to a different path just by writing
+    different `--- a/OLD` / `+++ b/NEW` names -- no `rename from`/`rename
+    to` (or legacy `rename old`/`rename new`) keyword required at all. `git
+    apply` honors this exactly like a rename: it reads context from OLD and
+    writes the result to NEW. `--summary` says nothing about it (it is
+    silent unless a rename/copy keyword is present), and `--numstat` would
+    only ever report NEW -- the same destination-only blind spot that let a
+    patch move `lib/foo.a` to an allowed name evade the forbidden-path
+    check. Enumerate every old/new name pair directly and reject any patch
+    where they differ, regardless of how (or whether) the patch spells the
+    move."""
+    text = patch_path.read_text(encoding="utf-8", errors="replace")
+    old_headers = _OLD_FILE_HEADER.findall(text)
+    new_headers = _NEW_FILE_HEADER.findall(text)
+    if len(old_headers) != len(new_headers):
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} has mismatched '---'/'+++' header counts "
+            f"({len(old_headers)} vs {len(new_headers)}); refusing to evaluate a patch whose file "
+            "identity cannot be determined unambiguously"
+        )
+    for old_raw, new_raw in zip(old_headers, new_headers):
+        old_name = _diff_header_path(old_raw, side="old ('---')", prefix="a/", patch_path=patch_path)
+        new_name = _diff_header_path(new_raw, side="new ('+++')", prefix="b/", patch_path=patch_path)
+        if old_name is not None and new_name is not None and old_name != new_name:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} changes path from {old_name!r} to {new_name!r} within a "
+                "single diff entry, which this patch hook treats the same as an unsupported rename "
+                "(no rename keyword is required for 'git apply' to honor this as one)"
             )
 
 
@@ -616,7 +801,14 @@ def apply_patch_queue(staged_sdk_root: Path, patches_dir: Path | None) -> tuple[
     rehearsal_root = staged_sdk_root.parent / f"{staged_sdk_root.name}.patch-rehearsal"
     if rehearsal_root.exists():
         shutil.rmtree(rehearsal_root)
-    shutil.copytree(staged_sdk_root, rehearsal_root)
+    # symlinks=True: preserve any symlink in the staged tree as a symlink in
+    # the rehearsal copy instead of silently dereferencing it into a regular
+    # file/directory. Without this, `git apply` would happily write "beyond"
+    # a dereferenced copy where it refuses to write beyond a real symlink,
+    # so the rehearsal could pass while the real, symlink-containing tree
+    # fails mid-queue -- breaking the very guarantee this rehearsal exists
+    # to provide.
+    shutil.copytree(staged_sdk_root, rehearsal_root, symlinks=True)
     try:
         for metadata in queue:
             _git_apply(rehearsal_root, metadata.patch_path, owner=metadata.owner)
@@ -636,7 +828,15 @@ def apply_patch_queue(staged_sdk_root: Path, patches_dir: Path | None) -> tuple[
 def _tracked_files(root: Path) -> set[str]:
     if not root.is_dir():
         return set()
-    return {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
+    # A symlinked directory is not itself `is_file()`, and `rglob` does not
+    # recurse *into* a symlinked directory -- so a symlink used in place of a
+    # regular file/directory must be included explicitly here, or it (and
+    # anything it appears to contain) would be silently invisible to
+    # `compare_trees`, which is exactly the review gate a maintainer relies
+    # on to see everything a `promote` is about to write.
+    return {
+        path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file() or path.is_symlink()
+    }
 
 
 def _is_text(path: Path) -> bool:
@@ -727,6 +927,26 @@ def render_diff_report(diff: DiffResult) -> str:
 # --------------------------------------------------------------------------
 # Staging: generate the full curated payload into a scratch directory
 # --------------------------------------------------------------------------
+def _assert_no_symlinks(root: Path, *, label: str) -> None:
+    """Fail closed if `root` contains any symlink, anywhere. This tool does
+    not support promoting or diffing symlinks: `shutil.copytree` with the
+    default `symlinks=False` would dereference a symlink into a regular
+    file/directory containing whatever bytes its target holds -- including
+    host paths well outside the staged tree -- and silently materialize that
+    content into the committed provider tree. A symlinked directory is also
+    invisible to naive `rglob`-based tree walks, so it could otherwise slip
+    past review undetected even with `symlinks=True`. Every path this tool
+    ever writes into the repository must be a plain regular file or
+    directory."""
+    if not root.is_dir():
+        return
+    offenders = sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_symlink())
+    if offenders:
+        raise IntakeSecurityError(
+            f"{label} at {root} contains symlink(s), which this tool does not support: {offenders!r}"
+        )
+
+
 def stage_provider_payload(
     train: "bas.TrainSpec",
     version: str,
@@ -753,6 +973,7 @@ def stage_provider_payload(
         assert_within_repo(resolved_patches_dir, label="patches directory")
     patch_applications = apply_patch_queue(dest, resolved_patches_dir)
 
+    _assert_no_symlinks(dest, label="staged payload")
     verification = verify_artifact_hashes(dest, dest / "artifact-manifest.yaml")
     verification.raise_if_not_ok(label=f"staged artifact hashes for {train.train_id} {version}")
 
@@ -775,6 +996,7 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
     assert_within_repo(provider_root, label="promotion destination")
     if not staged_sdk_root.is_dir():
         raise FileNotFoundError(f"staged payload not found: {staged_sdk_root}")
+    _assert_no_symlinks(staged_sdk_root, label="staging source")
 
     tmp = provider_root.with_name(provider_root.name + ".promote-tmp")
     backup = provider_root.with_name(provider_root.name + ".promote-backup")
@@ -808,7 +1030,10 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
     if tmp.exists():
         shutil.rmtree(tmp)
 
-    shutil.copytree(staged_sdk_root, tmp)
+    # symlinks=True: defense in depth alongside the `_assert_no_symlinks`
+    # check above -- never silently dereference a symlink into a regular
+    # file/directory containing arbitrary host content.
+    shutil.copytree(staged_sdk_root, tmp, symlinks=True)
     try:
         if provider_root.exists():
             provider_root.rename(backup)

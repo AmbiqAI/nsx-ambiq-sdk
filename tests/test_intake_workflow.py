@@ -818,6 +818,212 @@ def test_load_patch_queue_accepts_plain_text_modify_of_regular_file(tmp_path: Pa
     assert [m.slug for m in queue] == ["001-fix-define"]
 
 
+def test_load_patch_queue_rejects_legacy_rename_old_new_spelling(tmp_path: Path, helper) -> None:
+    """Git's older `rename old`/`rename new` spelling (pre-dating the now
+    common `rename from`/`rename to`) must be caught by the same
+    `git apply --summary`-based rename detection, not just the modern
+    keywords."""
+    patches_dir = tmp_path / "patches"
+    rename_patch = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/notes.md\n"
+        "similarity index 100%\n"
+        "rename old lib/gcc/apollo510/libam_hal.a\n"
+        "rename new notes.md\n"
+    )
+    _write_patch(patches_dir, "001-legacy-rename", rename_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="rename"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_implicit_rename_without_any_rename_keyword(tmp_path: Path, helper) -> None:
+    """A "naked" path mismatch -- `diff --git a/OLD b/NEW` with differing
+    `---`/`+++` headers but *no* rename/copy keyword anywhere -- is honored
+    by `git apply` exactly like a rename (it reads OLD's content and writes
+    to NEW) but is invisible to both `git apply --summary` and
+    `--numstat` (which only ever reports NEW). This must still be rejected
+    via direct `---`/`+++` header-pair comparison, or a forbidden `lib/**`
+    archive could be smuggled out under an allowed name with no rename
+    keyword at all."""
+    patches_dir = tmp_path / "patches"
+    implicit_rename_patch = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/notes.md\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-SECRET-ARCHIVE\n"
+        "+SECRET-ARCHIVE-MOVED\n"
+    )
+    _write_patch(
+        patches_dir, "001-implicit-rename", implicit_rename_patch, owner="jane", reason="should be rejected"
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="changes path from"):
+        helper.load_patch_queue(patches_dir)
+
+
+@pytest.mark.parametrize("mode_field", ["120000", "+120000"])
+def test_load_patch_queue_rejects_new_symlink_with_whitespace_or_sign_tolerant_mode_line(
+    tmp_path: Path, helper, mode_field: str
+) -> None:
+    """Git's own mode-line parser (`strtoul`) tolerates extra whitespace and
+    a leading `+`/`-` sign; a hand-rolled regex requiring exactly one space
+    after `new file mode` does not, and so can be evaded by a mode line like
+    `new file mode  120000` (two spaces) or `new file mode +120000`. Shape
+    detection must come from `git apply --summary` (which uses Git's own
+    parser), not a fragile regex over the raw mode line."""
+    patches_dir = tmp_path / "patches"
+    symlink_patch = (
+        "diff --git a/include/link.h b/include/link.h\n"
+        f"new file mode  {mode_field}\n"
+        "index 0000000..abc1234\n"
+        "--- /dev/null\n"
+        "+++ b/include/link.h\n"
+        "@@ -0,0 +1 @@\n"
+        "+/etc/passwd\n"
+        "\\ No newline at end of file\n"
+    )
+    _write_patch(patches_dir, "001-symlink-whitespace", symlink_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+@pytest.mark.parametrize(
+    "forbidden_path",
+    ["LIB/gcc/apollo510/libam_hal.a", "Artifact-Manifest.yaml"],
+)
+def test_load_patch_queue_rejects_case_variant_of_forbidden_path(
+    tmp_path: Path, helper, forbidden_path: str
+) -> None:
+    """The staging/provider trees live on a case-insensitive filesystem
+    (e.g. default macOS APFS), so a byte-exact forbidden-path comparison can
+    be bypassed by a case variant (`LIB/...` or `Artifact-Manifest.yaml`)
+    that resolves to the exact same protected file on disk. The comparison
+    must fold both sides to a canonical case (and Unicode normal form)
+    before comparing."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        f"diff --git a/{forbidden_path} b/{forbidden_path}\n"
+        "index e69de29..1111111 100644\n"
+        f"--- a/{forbidden_path}\n"
+        f"+++ b/{forbidden_path}\n"
+        "@@ -0,0 +1 @@\n"
+        "+TAMPERED\n"
+    )
+    _write_patch(patches_dir, "001-case-variant", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="patch hook may not modify"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_forbidden_path_with_non_ascii_characters(tmp_path: Path, helper) -> None:
+    """`git apply --numstat` (without `-z`) C-quotes non-ASCII paths (e.g.
+    `"lib/gcc/apollo\\303\\251/libam_hal.a"`), which then never matches a
+    plain `lib/` prefix check even though the real, literal path is
+    forbidden. `-z` must be used so paths are reported as raw, unquoted
+    bytes."""
+    patches_dir = tmp_path / "patches"
+    forbidden_path = "lib/gcc/apollo\u00e9/libam_hal.a"
+    patch_text = (
+        f'diff --git "a/{forbidden_path}" "b/{forbidden_path}"\n'
+        "index e69de29..1111111 100644\n"
+        f'--- "a/{forbidden_path}"\n'
+        f'+++ "b/{forbidden_path}"\n'
+        "@@ -0,0 +1 @@\n"
+        "+TAMPERED\n"
+    )
+    _write_patch(patches_dir, "001-unicode-path", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="patch hook may not modify"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_tracked_files_reports_symlinked_entries(tmp_path: Path, helper) -> None:
+    """A symlinked directory is not itself `is_file()`, and `rglob` does not
+    recurse into a symlinked directory -- so unless symlinks are explicitly
+    included, they (and anything they appear to contain) are silently
+    invisible to `compare_trees`'s human-review diff, even though
+    `promote_from_staging` would otherwise write them (dereferenced) into
+    the committed tree."""
+    root = tmp_path / "root"
+    root.mkdir()
+    real_target = tmp_path / "outside_target"
+    real_target.write_text("secret\n", encoding="utf-8")
+    (root / "evil_link").symlink_to(real_target)
+
+    tracked = helper._tracked_files(root)
+
+    assert "evil_link" in tracked
+
+
+def test_assert_no_symlinks_rejects_file_symlink(tmp_path: Path, helper) -> None:
+    root = tmp_path / "staged"
+    root.mkdir()
+    outside_secret = tmp_path / "outside_secret.txt"
+    outside_secret.write_text("host secret\n", encoding="utf-8")
+    (root / "evil_link").symlink_to(outside_secret)
+
+    with pytest.raises(helper.IntakeSecurityError, match="symlink"):
+        helper._assert_no_symlinks(root, label="staged payload")
+
+
+def test_assert_no_symlinks_rejects_directory_symlink(tmp_path: Path, helper) -> None:
+    root = tmp_path / "staged"
+    root.mkdir()
+    real_dir = tmp_path / "real_dir_target"
+    real_dir.mkdir()
+    (real_dir / "secret.txt").write_text("dir secret\n", encoding="utf-8")
+    (root / "evil_dir_link").symlink_to(real_dir, target_is_directory=True)
+
+    with pytest.raises(helper.IntakeSecurityError, match="symlink"):
+        helper._assert_no_symlinks(root, label="staged payload")
+
+
+def test_assert_no_symlinks_accepts_tree_without_symlinks(tmp_path: Path, helper) -> None:
+    root = tmp_path / "staged"
+    (root / "sub").mkdir(parents=True)
+    (root / "sub" / "file.txt").write_text("ordinary\n", encoding="utf-8")
+
+    helper._assert_no_symlinks(root, label="staged payload")
+
+
+def test_promote_from_staging_rejects_symlinks_in_staged_tree(tmp_path: Path, helper, monkeypatch) -> None:
+    """`promote_from_staging` must refuse to `copytree` a staged tree
+    containing a symlink -- otherwise the default `shutil.copytree`
+    dereferences it into a regular file/directory holding whatever content
+    its target points at, materializing arbitrary host content into the
+    committed provider tree."""
+    fake_root = tmp_path / "fake-repo"
+    fake_root.mkdir()
+    monkeypatch.setattr(helper, "repo_root", lambda: fake_root)
+
+    staged = fake_root / "staged_sdk"
+    staged.mkdir()
+    (staged / "artifact-manifest.yaml").write_text("artifacts: []\n", encoding="utf-8")
+    outside_secret = tmp_path / "outside_secret.txt"
+    outside_secret.write_text("host secret\n", encoding="utf-8")
+    (staged / "evil_link").symlink_to(outside_secret)
+
+    provider_root = fake_root / "provider_sdk"
+
+    with pytest.raises(helper.IntakeSecurityError, match="symlink"):
+        helper.promote_from_staging(staged, provider_root, confirm=True)
+
+    assert not provider_root.exists()
+
+
+def test_manifest_path_to_promoted_relative_rejects_parent_traversal(helper) -> None:
+    with pytest.raises(helper.IntakeVerificationError, match="unsafe path segment"):
+        helper.manifest_path_to_promoted_relative("gcc/lib/../../../../etc/hosts")
+
+
+def test_manifest_path_to_promoted_relative_accepts_ordinary_path(helper) -> None:
+    resolved = helper.manifest_path_to_promoted_relative("gcc/lib/apollo510/libam_hal.a")
+
+    assert resolved == Path("lib/gcc/apollo510/libam_hal.a")
+
+
 def test_assert_patch_paths_allowed_fails_closed_on_zero_reported_paths(tmp_path: Path, helper, monkeypatch) -> None:
     """If `_patch_target_paths` ever reports zero paths for a patch (e.g. an
     empty patch file, or some future Git quirk), the forbidden-path check
