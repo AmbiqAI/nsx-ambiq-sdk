@@ -35,12 +35,13 @@ from __future__ import annotations
 import argparse
 import difflib
 import importlib.util
+import os
 import re
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -358,13 +359,75 @@ FORBIDDEN_PATCH_PATH_PREFIXES = ("lib/",)
 FORBIDDEN_PATCH_PATH_NAMES = ("artifact-manifest.yaml",)
 
 
+def _no_repo_discovery_env(anchor: Path) -> dict[str, str]:
+    """Environment for every `git apply`/`git apply --numstat` subprocess this
+    module runs, so Git's repository discovery can never walk up from
+    `anchor` into whatever repository happens to enclose it.
+
+    In production, the real staging tree (and the patches directory) always
+    live *inside* this repository (e.g.
+    `sdk-intake/local/staging/<train>/<version>/sdk`). When Git is invoked
+    from a directory nested inside a discovered work tree, it computes a
+    "prefix" (the path from that work tree's top level down to the invoked
+    directory) and -- per `apply.c`'s `use_patch()` -- silently drops every
+    hunk whose target path does not happen to start with that prefix. Since
+    every patch here is authored with paths relative to the tree it targets
+    (not relative to whatever repository contains that tree), this prefix
+    filtering would otherwise:
+      * make `git apply` "succeed" (exit 0) while leaving the real staged
+        tree byte-for-byte unchanged -- a silent no-op, not a failure
+        (`_git_apply`'s bug); and
+      * make `git apply --numstat` report zero touched paths for the exact
+        same patches, which would let a patch touching `lib/**` or
+        `artifact-manifest.yaml` sail straight through
+        `_assert_patch_paths_allowed` undetected (`_patch_target_paths`'s
+        bug) -- the two functions must resolve paths with identical
+        no-ambient-repository semantics, not just "the same root".
+    Setting `GIT_CEILING_DIRECTORIES` to `anchor`'s parent makes discovery
+    stop climbing there, so Git never finds any enclosing `.git` and treats
+    `anchor` as if it were not inside any repository at all -- the same,
+    unambiguous behavior regardless of the caller's own current working
+    directory or how deeply `anchor` happens to be nested under this repo's
+    root."""
+    resolved_parent = str(anchor.resolve().parent)
+    env = dict(os.environ)
+    existing = env.get("GIT_CEILING_DIRECTORIES")
+    env["GIT_CEILING_DIRECTORIES"] = f"{resolved_parent}{os.pathsep}{existing}" if existing else resolved_parent
+    return env
+
+
+def _normalize_patch_target_path(raw: str, *, patch_path: Path) -> str:
+    """Normalize one `git apply --numstat` path field to a safe, POSIX-style
+    relative path, or fail closed. An empty, absolute, or `..`-containing
+    path is indeterminate -- it cannot be checked against
+    `FORBIDDEN_PATCH_PATH_PREFIXES`/`FORBIDDEN_PATCH_PATH_NAMES` with any
+    confidence -- so it must be refused rather than silently ignored."""
+    candidate = raw.strip().replace("\\", "/")
+    while candidate.startswith("./"):
+        candidate = candidate[2:]
+    parts = PurePosixPath(candidate).parts if candidate else ()
+    if not candidate or candidate.startswith("/") or ".." in parts:
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} reports an unsafe or indeterminate target path {raw!r} via "
+            "'git apply --numstat'; refusing to evaluate a patch whose targets cannot be resolved "
+            "unambiguously"
+        )
+    return candidate
+
+
 def _patch_target_paths(patch_path: Path) -> list[str]:
-    """List the paths a patch would touch, without applying it, via
-    `git apply --numstat` (works standalone; no repository context needed)."""
+    """List the normalized, POSIX-relative paths a patch would touch, without
+    applying it, via `git apply --numstat`. Anchored on `patch_path.parent`
+    (a stable location independent of the caller's own current working
+    directory) with repository discovery disabled (see
+    `_no_repo_discovery_env`), so this reports the same paths regardless of
+    where this tool is invoked from."""
+    anchor = patch_path.parent
     result = subprocess.run(
-        ["git", "apply", "--numstat", str(patch_path)],
+        ["git", "-C", str(anchor), "apply", "--numstat", str(patch_path)],
         capture_output=True,
         text=True,
+        env=_no_repo_discovery_env(anchor),
     )
     if result.returncode != 0:
         raise IntakeSecurityError(
@@ -374,19 +437,67 @@ def _patch_target_paths(patch_path: Path) -> list[str]:
     for line in result.stdout.splitlines():
         fields = line.split("\t")
         if len(fields) == 3:
-            paths.append(fields[2])
+            paths.append(_normalize_patch_target_path(fields[2], patch_path=patch_path))
     return paths
 
 
 def _assert_patch_paths_allowed(patch_path: Path) -> None:
-    for target in _patch_target_paths(patch_path):
-        normalized = target.replace("\\", "/")
+    targets = _patch_target_paths(patch_path)
+    if not targets:
+        # A patch that touches nothing (or whose targets could not be
+        # enumerated) cannot be proven safe. Fail closed instead of treating
+        # "no reported paths" as "nothing forbidden was touched" -- that
+        # inference is exactly what silently let forbidden-path patches
+        # evade this check when `git apply --numstat` was run from a
+        # subdirectory (see `_no_repo_discovery_env`).
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} reports zero target paths via 'git apply --numstat'; refusing "
+            "to apply a patch whose targets cannot be verified"
+        )
+    for normalized in targets:
         if normalized in FORBIDDEN_PATCH_PATH_NAMES or any(
             normalized.startswith(prefix) for prefix in FORBIDDEN_PATCH_PATH_PREFIXES
         ):
             raise IntakeSecurityError(
-                f"patch {patch_path.name!r} touches {target!r}, which the patch hook may not modify "
+                f"patch {patch_path.name!r} touches {normalized!r}, which the patch hook may not modify "
                 "(prebuilt archives and the artifact manifest are hash-verified output, not patch targets)"
+            )
+
+
+# A rename/copy can move a forbidden path's content out from under the
+# destination-only view `_patch_target_paths` gets from `--numstat` (it only
+# reports the *new* name, e.g. a patch renaming `lib/foo.a` to `notes.md`
+# would show only `notes.md`), and mode/binary/non-regular-file changes are
+# never applicable to the plain-text generated headers/system sources this
+# patch hook exists for. Rather than trying to reason about every such case
+# safely, reject all of them outright: every patch this hook applies must be
+# an unambiguous add/modify/delete of a regular (100644) text file.
+_UNSUPPORTED_PATCH_FEATURES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^rename (?:from|to) ", re.MULTILINE), "a file rename"),
+    (re.compile(r"^copy (?:from|to) ", re.MULTILINE), "a file copy"),
+    (re.compile(r"^(?:old|new) mode \d+", re.MULTILINE), "a permission-only mode change"),
+    (
+        re.compile(r"^(?:new file mode|deleted file mode) (?!100644\b)\d+", re.MULTILINE),
+        "a non-regular-file mode (e.g. a symlink or submodule) on a created/deleted file",
+    ),
+    (
+        re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+ (?!100644\b)\d+", re.MULTILINE),
+        "a non-regular-file mode (e.g. a symlink or submodule) on a modified file",
+    ),
+    (re.compile(r"^GIT binary patch", re.MULTILINE), "binary content"),
+    (re.compile(r"^Binary files .* differ$", re.MULTILINE), "binary content"),
+)
+
+
+def _assert_patch_shape_supported(patch_path: Path) -> None:
+    text = patch_path.read_text(encoding="utf-8", errors="replace")
+    for pattern, description in _UNSUPPORTED_PATCH_FEATURES:
+        if pattern.search(text):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains {description}, which this patch hook does not "
+                "support; every patch must be a simple, unambiguous add/modify/delete of a regular "
+                "text file (renames, copies, mode changes, non-regular-file modes, and binary content "
+                "are all rejected fail-closed)"
             )
 
 
@@ -410,6 +521,7 @@ def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
                 "'owner' and 'reason' fields"
             )
         _assert_patch_paths_allowed(patch_path)
+        _assert_patch_shape_supported(patch_path)
         upstream_ref = data.get("upstream_ref")
         queue.append(
             PatchMetadata(
@@ -425,23 +537,35 @@ def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
 
 
 def _git_apply(target_root: Path, patch_path: Path, *, owner: str) -> None:
+    """Apply `patch_path` against `target_root` with unambiguous semantics:
+    repository discovery is disabled (see `_no_repo_discovery_env`) so this
+    behaves identically whether `target_root` sits at the top of some
+    repository or -- as it always does in production -- several directories
+    inside this one; `--verbose` is always passed so a skipped hunk is never
+    silent regardless of Git's default verbosity; and, because none of that
+    is a substitute for actually checking the result, a postcondition
+    verifies the patch's changes are now genuinely present in `target_root`
+    (not just that `git apply` exited 0)."""
+    env = _no_repo_discovery_env(target_root)
     check = subprocess.run(
-        ["git", "-C", str(target_root), "apply", "--check", str(patch_path)],
+        ["git", "-C", str(target_root), "apply", "--check", "--verbose", str(patch_path)],
         capture_output=True,
         text=True,
+        env=env,
     )
-    if check.returncode != 0 or "Skipped patch" in check.stderr:
+    if check.returncode != 0 or "Skipped patch" in check.stdout + check.stderr:
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) failed to reapply against the generated tree "
             f"-- upstream content likely drifted since the patch was written. "
             f"git apply --check stderr: {check.stderr.strip()}"
         )
     apply_result = subprocess.run(
-        ["git", "-C", str(target_root), "apply", str(patch_path)],
+        ["git", "-C", str(target_root), "apply", "--verbose", str(patch_path)],
         capture_output=True,
         text=True,
+        env=env,
     )
-    if apply_result.returncode != 0 or "Skipped patch" in apply_result.stderr:
+    if apply_result.returncode != 0 or "Skipped patch" in apply_result.stdout + apply_result.stderr:
         # `git apply` can exit 0 while printing "Skipped patch ..." and
         # leaving the tree unchanged (e.g. under path-exclusion rules).
         # Treat that the same as an outright failure: never report a patch as
@@ -449,6 +573,28 @@ def _git_apply(target_root: Path, patch_path: Path, *, owner: str) -> None:
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) did not apply cleanly despite passing --check: "
             f"{apply_result.stderr.strip()}"
+        )
+    # Postcondition: a patch that "applied cleanly" per the above must now be
+    # cleanly *reversible* against target_root -- i.e. its changes must
+    # actually be present in the tree. This is independent of parsing any
+    # particular stdout/stderr message (the exact wording/verbosity of which
+    # is a Git-version implementation detail): if the patch's changes were
+    # not actually written, reversing it will fail to apply, and that failure
+    # is what turns "git apply reported success" into "the patch actually
+    # took effect" -- catching any other way `git apply` might silently no-op
+    # (now or in a future Git version) rather than trusting the exit code and
+    # message text alone.
+    postcondition = subprocess.run(
+        ["git", "-C", str(target_root), "apply", "--check", "--reverse", "--verbose", str(patch_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if postcondition.returncode != 0 or "Skipped patch" in postcondition.stdout + postcondition.stderr:
+        raise IntakePatchError(
+            f"patch {patch_path.name!r} (owner={owner}) reported success but its changes could not be "
+            f"verified as present in {target_root} (reverse-apply postcondition check failed): "
+            f"{postcondition.stderr.strip()}"
         )
 
 
@@ -498,7 +644,19 @@ def _is_text(path: Path) -> bool:
 
 
 def compare_trees(staged_root: Path, promoted_root: Path) -> DiffResult:
-    """Read-only comparison; never writes to either tree."""
+    """Read-only comparison; never writes to either tree.
+
+    Both roots must exist as directories. `_tracked_files` treats a missing
+    directory the same as an empty one, which would otherwise make a
+    missing/mistyped `--staged-dir`/`--promoted-dir` (or a promoted tree that
+    was never staged) silently report "no differences" instead of the
+    indeterminate-input error it actually is -- exactly the report a reviewer
+    must not be able to mistake for "this payload is identical to what's
+    promoted"."""
+    if not staged_root.is_dir():
+        raise IntakeVerificationError(f"staged tree not found or not a directory: {staged_root}")
+    if not promoted_root.is_dir():
+        raise IntakeVerificationError(f"promoted tree not found or not a directory: {promoted_root}")
     staged_files = _tracked_files(staged_root)
     promoted_files = _tracked_files(promoted_root)
 

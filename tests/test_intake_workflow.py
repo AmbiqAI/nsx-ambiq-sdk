@@ -272,6 +272,39 @@ def test_compare_trees_does_not_write_to_either_tree(tmp_path: Path, helper) -> 
     assert (staged / "a.h").read_text(encoding="utf-8") == "b\n"
 
 
+def test_compare_trees_fails_closed_when_staged_root_missing(tmp_path: Path, helper) -> None:
+    promoted = tmp_path / "promoted"
+    promoted.mkdir()
+    (promoted / "a.h").write_text("a\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="staged tree not found"):
+        helper.compare_trees(tmp_path / "does-not-exist-staged", promoted)
+
+
+def test_compare_trees_fails_closed_when_promoted_root_missing(tmp_path: Path, helper) -> None:
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "a.h").write_text("a\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="promoted tree not found"):
+        helper.compare_trees(staged, tmp_path / "does-not-exist-promoted")
+
+
+def test_compare_trees_fails_closed_when_both_roots_missing(tmp_path: Path, helper) -> None:
+    with pytest.raises(helper.IntakeVerificationError, match="staged tree not found"):
+        helper.compare_trees(tmp_path / "missing-staged", tmp_path / "missing-promoted")
+
+
+def test_compare_trees_fails_closed_when_root_is_a_file_not_a_directory(tmp_path: Path, helper) -> None:
+    promoted = tmp_path / "promoted"
+    promoted.mkdir()
+    staged_file = tmp_path / "staged-is-a-file"
+    staged_file.write_text("not a directory\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="staged tree not found"):
+        helper.compare_trees(staged_file, promoted)
+
+
 # --------------------------------------------------------------------------
 # Staging orchestration (mocks build_ambiqsuite's heavy build/promote step)
 # --------------------------------------------------------------------------
@@ -487,6 +520,315 @@ def test_apply_patch_queue_fails_closed_on_reapplication_failure_without_partial
     assert (staged / "include" / "existing.h").read_text(encoding="utf-8") == "#define ONE 1\n"
     # The rehearsal scratch directory must not leak next to the staged tree.
     assert not (staged.parent / f"{staged.name}.patch-rehearsal").exists()
+
+
+def test_apply_patch_queue_actually_modifies_target_when_staging_is_nested_inside_a_real_repository(
+    tmp_path: Path, helper
+) -> None:
+    """Production-layout regression test for the `_git_apply` repository-
+    discovery bug: the real staging tree always lives several directories
+    inside this repository (e.g.
+    `sdk-intake/local/staging/<train>/<version>/sdk`). When Git discovers an
+    enclosing `.git` from a nested invocation directory, it computes a
+    "prefix" and silently drops every hunk whose path does not start with it
+    -- which for these patches (always written relative to the staged sdk
+    root) is every hunk, in every patch. `git apply` then exits 0 and prints
+    nothing without `--verbose`, so a naive check of only the return code
+    would treat this as success while the header is left completely
+    unmodified. This test fails against that bug and must pass against the
+    fix (`_no_repo_discovery_env` + the reverse-apply postcondition check in
+    `_git_apply`)."""
+    outer_repo = tmp_path / "outer-repo"
+    outer_repo.mkdir()
+    _init_git_dir(outer_repo)
+    (outer_repo / "README.md").write_text("placeholder\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=outer_repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=outer_repo, check=True)
+
+    # Mirror the real production layout: several directories of nesting
+    # between the repository root and the staged sdk root.
+    staged = outer_repo / "sdk-intake" / "local" / "staging" / "stable" / "test-version" / "sdk"
+    include_dir = staged / "CMSIS" / "AmbiqMicro" / "Include"
+    include_dir.mkdir(parents=True)
+    header = include_dir / "apollo510.h"
+    header.write_text("#define OLD_DEFINE 1\n", encoding="utf-8")
+
+    scratch_repo = tmp_path / "_scratch"
+    scratch_repo.mkdir()
+    _init_git_dir(scratch_repo)
+    patch_text = _git_diff_patch(
+        scratch_repo,
+        "CMSIS/AmbiqMicro/Include/apollo510.h",
+        before="#define OLD_DEFINE 1\n",
+        after="#define NEW_DEFINE 1\n",
+    )
+
+    patches_dir = tmp_path / "patches"
+    _write_patch(patches_dir, "001-fix-define", patch_text, owner="jane", reason="fix upstream define")
+
+    applications = helper.apply_patch_queue(staged, patches_dir)
+
+    assert [a.metadata.slug for a in applications] == ["001-fix-define"]
+    assert header.read_text(encoding="utf-8") == "#define NEW_DEFINE 1\n"
+
+
+def test_git_apply_raises_when_patch_context_cannot_be_found_even_nested_in_a_real_repository(
+    tmp_path: Path, helper
+) -> None:
+    """A patch whose context genuinely does not match the tree must still
+    fail loudly (never silently) when the target is nested inside a real
+    repository -- guards against the fix over-suppressing real failures."""
+    outer_repo = tmp_path / "outer-repo"
+    outer_repo.mkdir()
+    _init_git_dir(outer_repo)
+    (outer_repo / "README.md").write_text("placeholder\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=outer_repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=outer_repo, check=True)
+
+    target_root = outer_repo / "sdk-intake" / "local" / "staging" / "stable" / "test-version" / "sdk"
+    target_root.mkdir(parents=True)
+    (target_root / "foo.h").write_text("#define ACTUAL 1\n", encoding="utf-8")
+
+    non_matching_patch = tmp_path / "non-matching.patch"
+    non_matching_patch.write_text(
+        "diff --git a/foo.h b/foo.h\n"
+        "index 0000000..1111111 100644\n"
+        "--- a/foo.h\n"
+        "+++ b/foo.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define SOMETHING_ELSE 1\n"
+        "+#define REPLACED 1\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakePatchError):
+        helper._git_apply(target_root, non_matching_patch, owner="jane")
+    assert (target_root / "foo.h").read_text(encoding="utf-8") == "#define ACTUAL 1\n"
+
+
+# --------------------------------------------------------------------------
+# Patch hook: forbidden-path checks must hold regardless of invocation cwd
+# --------------------------------------------------------------------------
+def _make_committed_git_repo(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    _init_git_dir(path)
+    (path / ".keep").write_text("x\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=path, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=path, check=True)
+
+
+@pytest.mark.parametrize("invoke_from", ["repo_root", "nested_subdirectory"])
+def test_load_patch_queue_rejects_lib_path_regardless_of_invocation_cwd(
+    tmp_path: Path, helper, monkeypatch, invoke_from: str
+) -> None:
+    """Regression test for the `_patch_target_paths`/`_git_apply` root
+    mismatch: `git apply --numstat` silently reports zero touched paths when
+    run (with no explicit `-C`) from a directory nested inside a
+    repository, which would let a patch touching `lib/**` evade
+    `_assert_patch_paths_allowed` entirely when this tool happens to be
+    invoked from a subdirectory (e.g. `sdk-intake/`) of the enclosing repo."""
+    repo = tmp_path / "repo"
+    _make_committed_git_repo(repo)
+
+    patches_dir = repo / "sdk-intake" / "patches" / "stable"
+    lib_patch = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "index e69de29..1111111 100644\n"
+        "Binary files a/lib/gcc/apollo510/libam_hal.a and b/lib/gcc/apollo510/libam_hal.a differ\n"
+    )
+    _write_patch(patches_dir, "001-tamper-lib", lib_patch, owner="jane", reason="should be rejected")
+
+    if invoke_from == "repo_root":
+        cwd = repo
+    else:
+        cwd = repo / "sdk-intake" / "local"
+        cwd.mkdir(parents=True)
+    monkeypatch.chdir(cwd)
+
+    with pytest.raises(helper.IntakeSecurityError, match="lib/gcc/apollo510/libam_hal.a"):
+        helper.load_patch_queue(patches_dir)
+
+
+@pytest.mark.parametrize("invoke_from", ["repo_root", "nested_subdirectory"])
+def test_cli_verify_ownership_rejects_forbidden_patch_regardless_of_invocation_cwd(
+    fake_repo: Path, helper, monkeypatch, invoke_from: str
+) -> None:
+    """CLI-level counterpart of the above: `verify-ownership` must reject a
+    patch touching a forbidden `lib/**` path whether invoked from the
+    repository root or from a directory nested inside it."""
+    _make_committed_git_repo(fake_repo)
+    # `fake_repo`'s ownership manifest already declares
+    # `modules/nsx-ambiqsuite/sdk`, matching the real `stable` train's
+    # `module_dir`, so `verify_generated_boundary` passes without further
+    # setup.
+    patches_dir = fake_repo / "sdk-intake" / "patches" / "stable"
+    manifest_patch = (
+        "diff --git a/artifact-manifest.yaml b/artifact-manifest.yaml\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/artifact-manifest.yaml\n"
+        "+++ b/artifact-manifest.yaml\n"
+        "@@ -1 +1 @@\n"
+        "-sha256: aaaa\n"
+        "+sha256: bbbb\n"
+    )
+    _write_patch(patches_dir, "001-tamper-manifest", manifest_patch, owner="jane", reason="should be rejected")
+
+    if invoke_from == "repo_root":
+        cwd = fake_repo
+    else:
+        cwd = fake_repo / "sdk-intake" / "local"
+        cwd.mkdir(parents=True)
+    monkeypatch.chdir(cwd)
+
+    rc = helper.main(["verify-ownership", "--train", "stable", "--patches-dir", str(patches_dir)])
+
+    assert rc == 1
+
+
+# --------------------------------------------------------------------------
+# Patch hook: reject unsupported/ambiguous patch shapes fail-closed
+# --------------------------------------------------------------------------
+def test_load_patch_queue_rejects_rename(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    rename_patch = (
+        "diff --git a/include/old_name.h b/include/new_name.h\n"
+        "similarity index 100%\n"
+        "rename from include/old_name.h\n"
+        "rename to include/new_name.h\n"
+    )
+    _write_patch(patches_dir, "001-rename", rename_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="rename"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_rename_that_moves_forbidden_path_to_an_allowed_name(
+    tmp_path: Path, helper
+) -> None:
+    """A rename's `git apply --numstat` output reports only the destination
+    path, so a rename moving a forbidden `lib/**` archive to an
+    otherwise-allowed name must still be rejected -- via the unconditional
+    rename rejection, not the (blind, in this case) forbidden-path check."""
+    patches_dir = tmp_path / "patches"
+    rename_patch = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/notes.md\n"
+        "similarity index 100%\n"
+        "rename from lib/gcc/apollo510/libam_hal.a\n"
+        "rename to notes.md\n"
+    )
+    _write_patch(patches_dir, "001-rename-away", rename_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="rename"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_copy(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    copy_patch = (
+        "diff --git a/include/a.h b/include/b.h\n"
+        "similarity index 100%\n"
+        "copy from include/a.h\n"
+        "copy to include/b.h\n"
+    )
+    _write_patch(patches_dir, "001-copy", copy_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="copy"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_mode_only_change(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    mode_patch = "diff --git a/script.sh b/script.sh\nold mode 100644\nnew mode 100755\n"
+    _write_patch(patches_dir, "001-chmod", mode_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_new_symlink(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    symlink_patch = (
+        "diff --git a/include/link.h b/include/link.h\n"
+        "new file mode 120000\n"
+        "index 0000000..abc1234\n"
+        "--- /dev/null\n"
+        "+++ b/include/link.h\n"
+        "@@ -0,0 +1 @@\n"
+        "+/etc/passwd\n"
+        "\\ No newline at end of file\n"
+    )
+    _write_patch(patches_dir, "001-symlink", symlink_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_modified_symlink(tmp_path: Path, helper) -> None:
+    """A symlink modify has no `new file mode`/`rename`/`old mode` line at
+    all -- the symlink mode only appears on the `index` line -- so it must
+    be caught there too."""
+    patches_dir = tmp_path / "patches"
+    symlink_patch = (
+        "diff --git a/include/link.h b/include/link.h\n"
+        "index 1234567..abcdef0 120000\n"
+        "--- a/include/link.h\n"
+        "+++ b/include/link.h\n"
+        "@@ -1 +1 @@\n"
+        "-/etc/old\n"
+        "\\ No newline at end of file\n"
+        "+/etc/passwd\n"
+        "\\ No newline at end of file\n"
+    )
+    _write_patch(patches_dir, "001-symlink-modify", symlink_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_binary_content_outside_forbidden_paths(tmp_path: Path, helper) -> None:
+    patches_dir = tmp_path / "patches"
+    binary_patch = (
+        "diff --git a/include/blob.bin b/include/blob.bin\n"
+        "index e69de29..1111111 100644\n"
+        "Binary files a/include/blob.bin and b/include/blob.bin differ\n"
+    )
+    _write_patch(patches_dir, "001-binary", binary_patch, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="binary"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_accepts_plain_text_modify_of_regular_file(tmp_path: Path, helper) -> None:
+    """Non-regression: an ordinary text modify (the only shape this patch
+    hook is meant to support) must not be rejected by the new shape check."""
+    patches_dir = tmp_path / "patches"
+    header_patch = (
+        "diff --git a/CMSIS/AmbiqMicro/Include/apollo510.h b/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "+++ b/CMSIS/AmbiqMicro/Include/apollo510.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define OLD 1\n"
+        "+#define NEW 1\n"
+    )
+    _write_patch(patches_dir, "001-fix-define", header_patch, owner="jane", reason="fix upstream define")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [m.slug for m in queue] == ["001-fix-define"]
+
+
+def test_assert_patch_paths_allowed_fails_closed_on_zero_reported_paths(tmp_path: Path, helper, monkeypatch) -> None:
+    """If `_patch_target_paths` ever reports zero paths for a patch (e.g. an
+    empty patch file, or some future Git quirk), the forbidden-path check
+    must fail closed instead of silently treating "nothing reported" as
+    "nothing forbidden touched"."""
+    patch_path = tmp_path / "empty.patch"
+    patch_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(helper, "_patch_target_paths", lambda p: [])
+
+    with pytest.raises(helper.IntakeSecurityError, match="zero target paths"):
+        helper._assert_patch_paths_allowed(patch_path)
 
 
 # --------------------------------------------------------------------------
