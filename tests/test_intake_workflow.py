@@ -1341,6 +1341,195 @@ def test_load_patch_queue_accepts_legitimate_multi_file_patch(tmp_path: Path, he
     assert [m.slug for m in queue] == ["001-multi-file"]
 
 
+def test_load_patch_queue_rejects_uncorroborated_dev_null_deletion_of_forbidden_path(
+    tmp_path: Path, helper
+) -> None:
+    """A `--- a/lib/...` / `+++ /dev/null` pair with no `deleted file mode`
+    header for this entry is NOT a safe, unambiguous deletion: `git apply`
+    honors it as an ordinary rename onto a real file literally named
+    `dev/null` on disk (consuming the forbidden source's content), while
+    `git apply --numstat` only ever reports the destination name
+    (`dev/null`) -- never the forbidden `lib/...` source -- letting this
+    entirely evade `_assert_patch_paths_allowed`'s forbidden-path check.
+    Confirmed empirically against real `git apply` (git 2.50.1): applying
+    this exact patch text deletes the source file and creates a real file
+    named `dev/null` with the patched content, with `--numstat`/`--summary`
+    reporting nothing about the source path at all."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "index 1111111..2222222 100644\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ /dev/null\n"
+        "@@ -1 +1,2 @@\n"
+        " PROPRIETARY-ARCHIVE-BYTES\n"
+        "+INJECTED-BY-ATTACKER\n"
+    )
+    _write_patch(patches_dir, "001-devnull-launder", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="deleted file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_uncorroborated_dev_null_creation_reading_forbidden_content(
+    tmp_path: Path, helper
+) -> None:
+    """The mirror-image bypass: a `--- /dev/null` / `+++ b/allowed` pair with
+    no `new file mode` header for this entry is likewise not a safe,
+    unambiguous creation -- `git apply` will honor it as a rename *from* a
+    real file literally named `dev/null` (e.g. one created by a prior,
+    similarly-uncorroborated entry), completing a two-patch laundering
+    chain that moves a forbidden source's content into an allowed
+    destination while every gate reports only allowed touched paths."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/dev/null b/am_hal.h\n"
+        "index 1111111..2222222 100644\n"
+        "--- /dev/null\n"
+        "+++ b/am_hal.h\n"
+        "@@ -1,2 +1,2 @@\n"
+        " PROPRIETARY-ARCHIVE-BYTES\n"
+        "-INJECTED-BY-ATTACKER\n"
+        "+LAUNDERED-INTO-ALLOWED-PATH\n"
+    )
+    _write_patch(patches_dir, "001-devnull-launder-2", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="new file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_apply_patch_queue_does_not_launder_forbidden_archive_through_dev_null_chain(
+    tmp_path: Path, helper
+) -> None:
+    """End-to-end confirmation of the full two-patch laundering chain: even
+    if the header-scan guard were somehow skipped for one patch, the
+    forbidden `lib/**` archive's content must never actually reach an
+    allowed destination, because `load_patch_queue` (which every real call
+    path goes through before `apply_patch_queue`) must reject the very
+    first uncorroborated `/dev/null` entry."""
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    lib_dir = staged / "lib" / "gcc" / "apollo510"
+    lib_dir.mkdir(parents=True)
+    (lib_dir / "libam_hal.a").write_text("PROPRIETARY-ARCHIVE-BYTES\n", encoding="utf-8")
+
+    patches_dir = tmp_path / "patches"
+    patch_one = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "index 1111111..2222222 100644\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ /dev/null\n"
+        "@@ -1 +1,2 @@\n"
+        " PROPRIETARY-ARCHIVE-BYTES\n"
+        "+INJECTED-BY-ATTACKER\n"
+    )
+    patch_two = (
+        "diff --git a/dev/null b/am_hal.h\n"
+        "index 1111111..2222222 100644\n"
+        "--- /dev/null\n"
+        "+++ b/am_hal.h\n"
+        "@@ -1,2 +1,2 @@\n"
+        " PROPRIETARY-ARCHIVE-BYTES\n"
+        "-INJECTED-BY-ATTACKER\n"
+        "+LAUNDERED-INTO-ALLOWED-PATH\n"
+    )
+    _write_patch(patches_dir, "001-devnull-launder", patch_one, owner="jane", reason="should be rejected")
+    _write_patch(patches_dir, "002-devnull-launder", patch_two, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.apply_patch_queue(staged, patches_dir)
+
+    # The forbidden archive must still be present and untouched, and no
+    # laundered destination file must exist.
+    assert (lib_dir / "libam_hal.a").read_text(encoding="utf-8") == "PROPRIETARY-ARCHIVE-BYTES\n"
+    assert not (staged / "am_hal.h").exists()
+    assert not (staged / "dev" / "null").exists()
+
+
+def test_load_patch_queue_accepts_genuine_file_deletion_with_dev_null(tmp_path: Path, helper) -> None:
+    """Non-regression: a real, unambiguous file deletion (`deleted file
+    mode` header present, matching `git apply --summary`'s own report) must
+    still be accepted; the deleted path is reported by `--numstat` and thus
+    still subject to the ordinary forbidden-path check on its own merits
+    (not exercised by this test, which uses an allowed path)."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/include/old.h b/include/old.h\n"
+        "deleted file mode 100644\n"
+        "index 1111111..0000000\n"
+        "--- a/include/old.h\n"
+        "+++ /dev/null\n"
+        "@@ -1 +0,0 @@\n"
+        "-#define OLD 1\n"
+    )
+    _write_patch(patches_dir, "001-delete", patch_text, owner="jane", reason="remove stale header")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [m.slug for m in queue] == ["001-delete"]
+
+
+def test_load_patch_queue_accepts_genuine_file_creation_from_dev_null(tmp_path: Path, helper) -> None:
+    """Non-regression: a real, unambiguous file creation (`new file mode`
+    header present) must still be accepted."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/include/new.h b/include/new.h\n"
+        "new file mode 100644\n"
+        "index 0000000..1111111\n"
+        "--- /dev/null\n"
+        "+++ b/include/new.h\n"
+        "@@ -0,0 +1 @@\n"
+        "+#define NEW 1\n"
+    )
+    _write_patch(patches_dir, "001-create", patch_text, owner="jane", reason="add new header")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [m.slug for m in queue] == ["001-create"]
+
+
+def test_assert_no_index_only_mode_change_rejects_symlink_mode_with_trailing_garbage(
+    tmp_path: Path, helper
+) -> None:
+    """Git's `gitdiff_index()` locates the mode token after the '..' and
+    calls `strtoul()` on it, which stops at the first non-octal-digit
+    character and ignores anything after -- e.g. a trailing tab plus
+    arbitrary text. The old, end-of-line-anchored `_INDEX_LINE_MODE`
+    pattern missed this and treated the line as having no mode at all,
+    letting an in-place symlink-mode change past this guard (though
+    `_assert_no_symlinks` on the resulting tree remains a second layer)."""
+    patch_path = tmp_path / "index-mode-trailing-garbage.patch"
+    patch_path.write_text(
+        "diff --git a/x b/x\nindex 1111111..2222222 120000\tjunk\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old\n+new\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper._assert_no_index_only_mode_change(patch_path)
+
+
+def test_load_ownership_entries_rejects_non_string_id(tmp_path: Path, helper) -> None:
+    """An `id` that is not a string (e.g. a YAML list or mapping) must fail
+    closed with an actionable IntakeSecurityError inside the same
+    malformed-entry handling as every other shape check here, not an
+    untyped, uncaught `TypeError: unhashable type` escaping from the
+    `entries[entry.entry_id] = entry` dict insertion one line outside the
+    original `try` block."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(
+        root,
+        "entries:\n"
+        "  - id: [not, a, string]\n"
+        "    classification: bar\n"
+        "    direct_edit: forbidden\n",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
 def test_diff_header_path_returns_none_for_dev_null(tmp_path: Path, helper) -> None:
     result = helper._diff_header_path("/dev/null", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch")
 

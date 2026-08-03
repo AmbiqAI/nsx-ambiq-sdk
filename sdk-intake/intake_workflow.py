@@ -259,6 +259,9 @@ def load_ownership_entries(root: Path | None = None) -> dict[str, OwnershipEntry
                 f"mapping, got {type(raw).__name__}"
             )
         try:
+            entry_id = raw["id"]
+            if not isinstance(entry_id, str):
+                raise TypeError(f"'id' must be a string, got {type(entry_id).__name__}")
             paths = raw.get("paths", ())
             path_patterns = raw.get("path_patterns", ())
             if not isinstance(paths, (list, tuple)) or not isinstance(path_patterns, (list, tuple)):
@@ -268,7 +271,7 @@ def load_ownership_entries(root: Path | None = None) -> dict[str, OwnershipEntry
             ):
                 raise TypeError("'paths'/'path_patterns' entries must all be strings")
             entry = OwnershipEntry(
-                entry_id=raw["id"],
+                entry_id=entry_id,
                 classification=raw["classification"],
                 generated=bool(raw.get("generated", False)),
                 direct_edit=raw["direct_edit"],
@@ -612,7 +615,16 @@ def _assert_patch_paths_allowed(patch_path: Path) -> None:
 # them outright: every patch this hook applies must be an unambiguous
 # add/modify/delete of a single, regular (100644) text file.
 _MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) ", re.MULTILINE)
-_INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)\s*$", re.MULTILINE)
+# Deliberately not anchored to end-of-line ('\s*$') -- git's own
+# `gitdiff_index()` locates the first whitespace-delimited token after the
+# '..' and calls `strtoul()` on it, which stops at the first non-octal-digit
+# character and silently ignores anything after (e.g. a trailing tab plus
+# garbage). Anchoring this regex to end-of-line let a mode token followed by
+# trailing junk (e.g. "120000\tjunk") evade this scan entirely while git
+# still read the mode as 0o120000 -- so this pattern is intentionally at
+# least as permissive as git's own parser, matching the digits and ignoring
+# what (if anything) git would also ignore.
+_INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)", re.MULTILINE)
 _OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
 _NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
 _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
@@ -624,6 +636,22 @@ _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
 _HUNK_HEADER = re.compile(r"^@@ -", re.MULTILINE)
 _REGULAR_FILE_MODE = 0o100644
 _BARE_CR = re.compile(r"\r(?!\n)")
+# `_diff_header_path` returns `None` for a literal '/dev/null' header, which
+# `_assert_no_ambiguous_path_change` below only trusts as an unambiguous
+# creation (old side '/dev/null') or deletion (new side '/dev/null') when
+# corroborated by one of these entry-header lines. Without that
+# corroboration, `git apply` does NOT reliably treat '/dev/null' as "this
+# file doesn't exist" -- verified empirically: a '--- a/X' / '+++ /dev/null'
+# pair with no 'deleted file mode' header is honored by `git apply` as an
+# ordinary rename onto a real file literally named 'dev/null' on disk
+# (consuming X's content), and a subsequent '--- /dev/null' / '+++ b/Y' pair
+# (again with no 'new file mode' header) is honored as a rename *from* that
+# real 'dev/null' file's on-disk content into Y -- while both entries'
+# `--numstat` only ever reports the destination name ('dev/null' or 'Y'),
+# letting a two-patch pair completely launder a forbidden source's content
+# into an allowed path with every gate reporting only allowed touched paths.
+_NEW_FILE_MARKER = re.compile(r"^new file mode \d+\s*$", re.MULTILINE)
+_DELETED_FILE_MARKER = re.compile(r"^deleted file mode \d+\s*$", re.MULTILINE)
 
 
 def _read_patch_text_for_header_scan(patch_path: Path) -> str:
@@ -862,7 +890,29 @@ def _assert_no_ambiguous_path_change(
             continue
         old_name = _diff_header_path(old_headers[0], side="old ('---')", prefix="a/", patch_path=patch_path)
         new_name = _diff_header_path(new_headers[0], side="new ('+++')", prefix="b/", patch_path=patch_path)
-        if old_name is not None and new_name is not None and old_name != new_name:
+        if old_name is None or new_name is None:
+            # A literal '/dev/null' header is only trusted as an
+            # unambiguous creation/deletion when this entry's own header
+            # block corroborates it -- see the module-level comment on
+            # `_NEW_FILE_MARKER`/`_DELETED_FILE_MARKER` for the bypass
+            # this prevents.
+            if old_name is None and not _NEW_FILE_MARKER.search(header_region):
+                raise IntakeSecurityError(
+                    f"patch {patch_path.name!r} entry {index + 1} has an old ('---') diff header of "
+                    "'/dev/null' without a corresponding 'new file mode' header for this entry; "
+                    "refusing to evaluate a patch whose file identity cannot be determined "
+                    "unambiguously (a literal '/dev/null' header is only trusted here for a genuine, "
+                    "unambiguous file creation)"
+                )
+            if new_name is None and not _DELETED_FILE_MARKER.search(header_region):
+                raise IntakeSecurityError(
+                    f"patch {patch_path.name!r} entry {index + 1} has a new ('+++') diff header of "
+                    "'/dev/null' without a corresponding 'deleted file mode' header for this entry; "
+                    "refusing to evaluate a patch whose file identity cannot be determined "
+                    "unambiguously (a literal '/dev/null' header is only trusted here for a genuine, "
+                    "unambiguous file deletion)"
+                )
+        elif old_name != new_name:
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} changes path from {old_name!r} to {new_name!r} within a "
                 "single diff entry, which this patch hook treats the same as an unsupported rename "
