@@ -823,6 +823,41 @@ def test_git_apply_raises_when_patch_context_cannot_be_found_even_nested_in_a_re
     assert (target_root / "foo.h").read_text(encoding="utf-8") == "#define ACTUAL 1\n"
 
 
+def test_cli_git_apply_non_utf8_error_is_typed_without_traceback(
+    tmp_path: Path, helper, monkeypatch, capsys
+) -> None:
+    source_root = tmp_path / "AmbiqSuite"
+    (source_root / "mcu").mkdir(parents=True)
+    (source_root / "boards").mkdir()
+    target_root = tmp_path / "staged"
+    target_root.mkdir()
+    patch_path = tmp_path / "bad-path.patch"
+    patch_path.write_text("diff --git a/include/x.h b/include/x.h\n", encoding="utf-8")
+
+    def fake_run(command, **kwargs):
+        assert "text" not in kwargs
+        return subprocess.CompletedProcess(
+            command,
+            returncode=1,
+            stdout=b"",
+            stderr=b"error: include/non-utf8-\xff.h: No such file\n",
+        )
+
+    def fail_during_patch_application(*_args, **_kwargs):
+        helper._git_apply(target_root, patch_path, owner="jane")
+
+    monkeypatch.setattr(helper.subprocess, "run", fake_run)
+    monkeypatch.setattr(helper, "stage_provider_payload", fail_during_patch_application)
+
+    rc = helper.main(["stage", "--version", "test", "--source-root", str(source_root)])
+
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "error: patch 'bad-path.patch'" in captured.err
+    assert "include/non-utf8-\ufffd.h" in captured.err
+    assert "Traceback" not in captured.err
+
+
 # --------------------------------------------------------------------------
 # Patch hook: forbidden-path checks must hold regardless of invocation cwd
 # --------------------------------------------------------------------------
@@ -2467,3 +2502,32 @@ def test_verify_artifact_hashes_raises_intake_error_for_non_utf8_file(tmp_path: 
 
     with pytest.raises(helper.IntakeVerificationError, match="not valid UTF-8"):
         helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_cmd_stage_wraps_missing_source_configuration_as_intake_error(
+    helper, monkeypatch
+) -> None:
+    monkeypatch.delenv("AMBIQSUITE_REPO", raising=False)
+    args = helper.parse_args(["stage", "--version", "test"])
+
+    with pytest.raises(helper.IntakeError, match="could not resolve AmbiqSuite source") as raised:
+        helper._cmd_stage(args)
+
+    assert isinstance(raised.value.__cause__, ValueError)
+    assert "pass --source-root, --zip, or --ambiqsuite-repo" in str(raised.value)
+
+
+def test_cli_stage_reports_nonexistent_source_root_as_typed_error(
+    tmp_path: Path, helper, capsys
+) -> None:
+    missing_source = tmp_path / "missing-AmbiqSuite"
+
+    rc = helper.main(
+        ["stage", "--version", "test", "--source-root", str(missing_source)]
+    )
+
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "error: could not resolve AmbiqSuite source:" in captured.err
+    assert str(missing_source) in captured.err
+    assert "Traceback" not in captured.err

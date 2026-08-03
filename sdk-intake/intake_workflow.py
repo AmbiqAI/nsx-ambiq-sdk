@@ -765,12 +765,13 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
     summary = subprocess.run(
         ["git", "-C", str(anchor), "apply", "--summary", str(patch_path)],
         capture_output=True,
-        text=True,
         env=env,
     )
+    summary_stdout = summary.stdout.decode("utf-8", errors="replace")
+    summary_stderr = summary.stderr.decode("utf-8", errors="replace")
     if summary.returncode != 0:
         raise IntakeSecurityError(
-            f"could not enumerate the shape of patch {patch_path.name!r}: {summary.stderr.strip()}"
+            f"could not enumerate the shape of patch {patch_path.name!r}: {summary_stderr.strip()}"
         )
     # Deliberately split on '\n' only, not `str.splitlines()` -- the latter
     # also treats eight other Unicode/control characters as line boundaries
@@ -784,7 +785,7 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
     # neither of which matches `_MODE_CHANGE_LINE`, silently skipping both
     # the non-regular-file mode check and the numstat cross-check above for
     # that entry.
-    for line in summary.stdout.split("\n"):
+    for line in summary_stdout.split("\n"):
         stripped = line.strip()
         if stripped.startswith("rename "):
             raise IntakeSecurityError(
@@ -1076,29 +1077,31 @@ def _git_apply(target_root: Path, patch_path: Path, *, owner: str) -> None:
     check = subprocess.run(
         ["git", "-C", str(target_root), "apply", "--check", "--verbose", str(patch_path)],
         capture_output=True,
-        text=True,
         env=env,
     )
-    if check.returncode != 0 or "Skipped patch" in check.stdout + check.stderr:
+    check_stdout = check.stdout.decode("utf-8", errors="replace")
+    check_stderr = check.stderr.decode("utf-8", errors="replace")
+    if check.returncode != 0 or "Skipped patch" in check_stdout + check_stderr:
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) failed to reapply against the generated tree "
             f"-- upstream content likely drifted since the patch was written. "
-            f"git apply --check stderr: {check.stderr.strip()}"
+            f"git apply --check stderr: {check_stderr.strip()}"
         )
     apply_result = subprocess.run(
         ["git", "-C", str(target_root), "apply", "--verbose", str(patch_path)],
         capture_output=True,
-        text=True,
         env=env,
     )
-    if apply_result.returncode != 0 or "Skipped patch" in apply_result.stdout + apply_result.stderr:
+    apply_stdout = apply_result.stdout.decode("utf-8", errors="replace")
+    apply_stderr = apply_result.stderr.decode("utf-8", errors="replace")
+    if apply_result.returncode != 0 or "Skipped patch" in apply_stdout + apply_stderr:
         # `git apply` can exit 0 while printing "Skipped patch ..." and
         # leaving the tree unchanged (e.g. under path-exclusion rules).
         # Treat that the same as an outright failure: never report a patch as
         # applied when it was not, silently or otherwise.
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) did not apply cleanly despite passing --check: "
-            f"{apply_result.stderr.strip()}"
+            f"{apply_stderr.strip()}"
         )
     # Postcondition: a patch that "applied cleanly" per the above must now be
     # cleanly *reversible* against target_root -- i.e. its changes must
@@ -1113,14 +1116,15 @@ def _git_apply(target_root: Path, patch_path: Path, *, owner: str) -> None:
     postcondition = subprocess.run(
         ["git", "-C", str(target_root), "apply", "--check", "--reverse", "--verbose", str(patch_path)],
         capture_output=True,
-        text=True,
         env=env,
     )
-    if postcondition.returncode != 0 or "Skipped patch" in postcondition.stdout + postcondition.stderr:
+    postcondition_stdout = postcondition.stdout.decode("utf-8", errors="replace")
+    postcondition_stderr = postcondition.stderr.decode("utf-8", errors="replace")
+    if postcondition.returncode != 0 or "Skipped patch" in postcondition_stdout + postcondition_stderr:
         raise IntakePatchError(
             f"patch {patch_path.name!r} (owner={owner}) reported success but its changes could not be "
             f"verified as present in {target_root} (reverse-apply postcondition check failed): "
-            f"{postcondition.stderr.strip()}"
+            f"{postcondition_stderr.strip()}"
         )
 
 
@@ -1424,7 +1428,10 @@ def _resolve_train(train_id: str) -> "bas.TrainSpec":
 
 def _cmd_stage(args: argparse.Namespace) -> int:
     train = _resolve_train(args.train)
-    sdk_root, _kind, _ref, _commit = bas.resolve_source_root(args)
+    try:
+        sdk_root, _kind, _ref, _commit = bas.resolve_source_root(args)
+    except (ValueError, FileNotFoundError) as error:
+        raise IntakeError(f"could not resolve AmbiqSuite source: {error}") from error
     patches_dir = args.patches_dir
     result = stage_provider_payload(train, args.version, sdk_root, patches_dir=patches_dir)
     print(f"==> Staged {result.train_id} {result.version} at {bas.display_path(result.staged_root)}")

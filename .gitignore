@@ -26,3 +26,7 @@ __pycache__/
 # the build-staging output below is local-only.
 artifacts/ambiqsuite/stable/
 artifacts/ambiqsuite/r[0-9]*/
+
+# Interrupted atomic provider promotions (exact generated sibling names only).
+/modules/nsx-ambiqsuite/sdk.promote-tmp/
+/modules/nsx-ambiqsuite/sdk.promote-backup/
