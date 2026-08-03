@@ -1079,6 +1079,58 @@ def test_load_patch_queue_rejects_implicit_rename_without_any_rename_keyword(tmp
         helper.load_patch_queue(patches_dir)
 
 
+def test_load_patch_queue_rejects_implicit_rename_hidden_by_trailing_space_in_old_header(
+    tmp_path: Path, helper
+) -> None:
+    """Git's own '---'/'+++' header-name extraction (`name_terminate` in
+    `apply.c`) does NOT terminate a name at a plain space -- only at '\\t'
+    or '\\r' -- so `--- a/notes.md ` (note the trailing space) and
+    `+++ b/notes.md` (no trailing space) name two *different* files to
+    git: it reads the trailing-space name and writes the no-space name,
+    exactly like any other implicit rename. A prior version of
+    `_diff_header_path` used `.strip()`, which silently discarded that
+    trailing space, making the two names compare equal and letting this
+    rename evade the naked-rename guard entirely (this could not, in any
+    construction, reach an actually-forbidden path, since the space-suffixed
+    OLD name is still the literal string the forbidden-path check inspects
+    unchanged -- confirmed separately: the same construction against a
+    `lib/**` path is rejected earlier, by the forbidden-path check itself,
+    regardless of this fix). This is now rejected via direct header-pair
+    comparison, matching git's real name-termination semantics."""
+    patches_dir = tmp_path / "patches"
+    implicit_rename_patch = (
+        "diff --git a/notes.md b/notes.md\n"
+        "--- a/notes.md \n"
+        "+++ b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-old text\n"
+        "+new text\n"
+    )
+    _write_patch(
+        patches_dir,
+        "001-trailing-space-rename",
+        implicit_rename_patch,
+        owner="jane",
+        reason="should be rejected",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="changes path from"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_diff_header_path_does_not_strip_trailing_space_from_the_literal_path(
+    tmp_path: Path, helper
+) -> None:
+    """Direct unit coverage of the fix location: a trailing space is part of
+    the literal filename to git (terminated only at '\\t'/'\\r'), so it must
+    survive extraction rather than being silently stripped."""
+    result = helper._diff_header_path(
+        "a/x.h ", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch"
+    )
+
+    assert result == "x.h "
+
+
 def test_load_patch_queue_rejects_implicit_rename_hidden_by_counterfeit_headers_before_the_real_entry(
     tmp_path: Path, helper
 ) -> None:
@@ -1644,36 +1696,90 @@ def test_assert_no_index_only_mode_change_rejects_symlink_mode_with_non_hex_obje
         helper._assert_no_index_only_mode_change(patch_path)
 
 
-def test_load_patch_queue_rejects_symlink_creation_hidden_by_form_feed_in_path(
-    tmp_path: Path, helper
+@pytest.mark.parametrize(
+    "separator",
+    [
+        "\x0c",  # form feed -- the originally-reproduced bypass character
+        "\x0b",  # vertical tab
+        "\x1c",
+        "\x1d",
+        "\x1e",
+        "\x85",  # NEL
+        "\u2028",  # Unicode line separator
+        "\u2029",  # Unicode paragraph separator
+        "\r",  # plain CR
+        "\n",  # git's OWN record terminator for '--summary' -- the one
+        # character `split("\n")` (round 8's fix) cannot itself remove;
+        # closed instead by `_normalize_patch_target_path` refusing any
+        # numstat-reported path that isn't equal to its own `.strip()`,
+        # which runs unconditionally before the summary parser ever does
+    ],
+    ids=lambda s: f"U+{ord(s):04X}",
+)
+def test_load_patch_queue_rejects_symlink_creation_hidden_by_leading_separator_in_path(
+    tmp_path: Path, helper, separator: str
 ) -> None:
     """`str.splitlines()` treats nine characters as line boundaries,
     including '\\x0c' (form feed), '\\x1e', and '\\u2028' -- but Git's
     `git apply --summary` terminates every record with '\\n' only, and
     never C-quotes the reported path (confirmed empirically: a path
-    containing a form feed or other exotic separator prints raw). A
-    'create mode'/'delete mode' path that begins with one of those extra
-    separators used to split a single summary line into two unmatched
-    fragments (e.g. 'create mode 120000' and the rest of the path),
-    silently skipping both the non-regular-file mode check and this
-    round's numstat cross-check for that entry -- letting a brand-new
-    symlink (with no 'index' line for `_assert_no_index_only_mode_change`
-    to scan, since it is newly created rather than modified in place)
-    through undetected."""
+    containing any of these separators, including a real newline via a
+    C-quoted 'diff --git' header, prints raw). A 'create mode'/'delete
+    mode' path that begins with one of these separators used to split a
+    single summary line into two unmatched fragments (e.g. 'create mode
+    120000' and the rest of the path), silently skipping both the
+    non-regular-file mode check and the numstat cross-check for that
+    entry -- letting a brand-new symlink (with no 'index' line for
+    `_assert_no_index_only_mode_change` to scan, since it is newly
+    created rather than modified in place) through undetected. Every one
+    of these characters -- including '\\n' itself, which no amount of
+    line-splitting-function substitution can ever disambiguate in
+    '--summary' output -- is now refused up front as an unsafe/
+    indeterminate numstat target path, before the summary parser runs."""
     patches_dir = tmp_path / "patches"
-    patch_text = (
-        "diff --git a/\x0cevil b/\x0cevil\n"
-        "new file mode 120000\n"
-        "--- /dev/null\n"
-        "+++ b/\x0cevil\n"
-        "@@ -0,0 +1 @@\n"
-        "+/etc/passwd\n"
-        "\\ No newline at end of file\n"
-    )
-    _write_patch(patches_dir, "001-form-feed-symlink", patch_text, owner="jane", reason="should be rejected")
+    if separator == "\n":
+        # A literal '\n' inside the 'diff --git' line would corrupt the
+        # patch's own line structure, so it must be expressed via Git's
+        # C-quoted header form (`"a/...\n...\""`), which Git C-unquotes
+        # back to a real newline byte in `def_name`/the reported path.
+        patch_text = 'diff --git "a/\\nevil" "b/\\nevil"\nnew file mode 120000\n'
+    else:
+        patch_text = (
+            f"diff --git a/{separator}evil b/{separator}evil\n"
+            "new file mode 120000\n"
+            "--- /dev/null\n"
+            f"+++ b/{separator}evil\n"
+            "@@ -0,0 +1 @@\n"
+            "+/etc/passwd\n"
+            "\\ No newline at end of file\n"
+        )
+    _write_patch(patches_dir, "001-separator-symlink", patch_text, owner="jane", reason="should be rejected")
 
-    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+    # A raw CR in the path makes Git's own '--git-diff' header parser refuse
+    # the patch outright (a distinct, but equally fail-closed, error message)
+    # before this module's own whitespace check is ever reached; every other
+    # separator is caught by this module's `_normalize_patch_target_path`
+    # check.
+    expected_message = "could not enumerate paths" if separator == "\r" else "leading or trailing whitespace"
+    with pytest.raises(helper.IntakeSecurityError, match=expected_message):
         helper.load_patch_queue(patches_dir)
+
+
+@pytest.mark.parametrize("raw", ["\nevil", "evil\n", "\x0cevil", "evil ", " evil"])
+def test_normalize_patch_target_path_rejects_leading_or_trailing_whitespace(
+    tmp_path: Path, helper, raw: str
+) -> None:
+    """Direct unit coverage of the fix location: any numstat-reported path
+    that isn't equal to its own `.strip()` is refused outright, rather than
+    silently stripped -- because a leading/trailing whitespace-like
+    character (including '\\n' itself) is not unambiguously representable
+    in Git's unquoted, '\\n'-terminated 'git apply --summary' output."""
+    with pytest.raises(helper.IntakeSecurityError, match="leading or trailing whitespace"):
+        helper._normalize_patch_target_path(raw, patch_path=tmp_path / "x.patch")
+
+
+def test_normalize_patch_target_path_accepts_plain_relative_path(tmp_path: Path, helper) -> None:
+    assert helper._normalize_patch_target_path("lib/foo.a", patch_path=tmp_path / "x.patch") == "lib/foo.a"
 
 
 def test_diff_header_path_returns_none_for_dev_null(tmp_path: Path, helper) -> None:

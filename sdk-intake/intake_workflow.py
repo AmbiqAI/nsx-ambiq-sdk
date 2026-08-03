@@ -504,8 +504,29 @@ def _normalize_patch_target_path(raw: str, *, patch_path: Path) -> str:
     relative path, or fail closed. An empty, absolute, or `..`-containing
     path is indeterminate -- it cannot be checked against
     `FORBIDDEN_PATCH_PATH_PREFIXES`/`FORBIDDEN_PATCH_PATH_NAMES` with any
-    confidence -- so it must be refused rather than silently ignored."""
-    candidate = raw.strip().replace("\\", "/")
+    confidence -- so it must be refused rather than silently ignored.
+
+    A path with leading/trailing whitespace (in the broad sense Python's
+    `str.strip()` uses, which includes '\\n', '\\r', '\\v', '\\f', and
+    several other control/separator characters) is refused outright, not
+    merely stripped: `git apply --summary` terminates each record with
+    '\\n' ONLY and never quotes the reported path, so a target path that
+    begins or ends with one of these characters is not unambiguously
+    representable in that output -- a leading '\\n' silently splits a
+    single summary record into two fragments that this module's line-based
+    parser cannot recombine, letting a newly-created symlink or other
+    non-regular-file entry bypass both the mode check and the numstat
+    cross-check in `_assert_patch_shape_supported`. Refusing any such path
+    here, in the numstat parsing that runs first and unconditionally for
+    every patch, closes the gap before the summary parser ever runs."""
+    if raw != raw.strip():
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} reports a target path {raw!r} with leading or trailing "
+            "whitespace (including newline-like separators), which 'git apply --summary' cannot "
+            "report unambiguously; refusing to evaluate a patch whose targets cannot be verified "
+            "consistently across git's own outputs"
+        )
+    candidate = raw.replace("\\", "/")
     while candidate.startswith("./"):
         candidate = candidate[2:]
     parts = PurePosixPath(candidate).parts if candidate else ()
@@ -854,8 +875,24 @@ def _diff_header_path(raw: str, *, side: str, prefix: str, patch_path: Path) -> 
     """Extract the path from one `--- `/`+++ ` diff header line (dropping any
     trailing tab-separated timestamp), or `None` for `/dev/null`. Fails
     closed if the line doesn't have the expected `a/`/`b/` prefix this tool's
-    patches always use, rather than guessing at some other `-p` depth."""
-    value = raw.split("\t", 1)[0].strip()
+    patches always use, rather than guessing at some other `-p` depth.
+
+    Cuts the path at the first `\\t` or `\\r` only -- NOT at a plain space,
+    and not via a general `.strip()`. Git's own header-name extraction
+    (`name_terminate` in `apply.c`) terminates a `---`/`+++` name at `\\t` or
+    `\\r`, but a plain space does NOT terminate it there (unlike the `diff
+    --git a/X b/Y` line, which git splits on the literal ` b/` separator).
+    A prior version of this function used `.strip()`, which silently
+    dropped a trailing (or leading) space that git treats as part of the
+    literal filename -- e.g. `--- a/x.h ` / `+++ b/x.h` reads from and
+    deletes a file literally named `x.h ` (trailing space) and git treats
+    it as an implicit rename to `x.h`, while this function's old `.strip()`
+    saw `old == new == 'x.h'` and never flagged it as a rename at all. That
+    could not reach a forbidden path (the OLD name is exactly what this
+    function returns and what the forbidden-path check inspects, unchanged
+    from git's own view), but it was a genuine fail-open in the
+    ambiguous/naked-rename detection this function exists to support."""
+    value = re.split(r"[\t\r]", raw, maxsplit=1)[0]
     if value == "/dev/null":
         return None
     if not value.startswith(prefix):
