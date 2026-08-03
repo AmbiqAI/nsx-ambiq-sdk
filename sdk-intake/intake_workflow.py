@@ -614,7 +614,11 @@ def _assert_patch_paths_allowed(patch_path: Path) -> None:
 # Rather than trying to reason about every such case safely, reject all of
 # them outright: every patch this hook applies must be an unambiguous
 # add/modify/delete of a single, regular (100644) text file.
-_MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) ", re.MULTILINE)
+# Captures the path so `_assert_patch_shape_supported` can cross-check it
+# against `git apply --numstat`'s own reported target for this same entry
+# -- see the comment on that cross-check for the desynchronization it
+# prevents.
+_MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) (.+)$", re.MULTILINE)
 # Deliberately not anchored to end-of-line ('\s*$') -- git's own
 # `gitdiff_index()` locates the first whitespace-delimited token after the
 # '..' and calls `strtoul()` on it, which stops at the first non-octal-digit
@@ -624,7 +628,17 @@ _MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) ", re.MULTILINE)
 # still read the mode as 0o120000 -- so this pattern is intentionally at
 # least as permissive as git's own parser, matching the digits and ignoring
 # what (if anything) git would also ignore.
-_INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)", re.MULTILINE)
+# Also deliberately not requiring hex digits ('[0-9a-fA-F]+') on either side
+# of the '..' -- git's own `gitdiff_index()` performs no such validation: it
+# just does `strchr(line, '.')`, checks the following character is also
+# '.', and reads the mode token after the next space, with no non-empty or
+# hex-digit check on either object-id substring. A line like
+# "index ..2222222 120000" (or with junk hex, or an empty object id on
+# either side) is read by git exactly like a well-formed line -- as mode
+# 0o120000 -- while the old, hex-anchored pattern here matched nothing at
+# all for it, hiding the mode entirely. This pattern is intentionally at
+# least as permissive as git's own parser on the object-id side too.
+_INDEX_LINE_MODE = re.compile(r"^index \S*\.\.\S*\s+([+-]?\d+)", re.MULTILINE)
 _OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
 _NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
 _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
@@ -700,6 +714,7 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
         )
     entry_count = 0
     entry_has_content_change: list[bool] = []
+    numstat_paths: set[str] = set()
     for record in numstat.stdout.split(b"\0"):
         if not record:
             continue
@@ -720,6 +735,11 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
                 "text file"
             )
         entry_has_content_change.append(int(added) != 0 or int(deleted) != 0)
+        numstat_paths.add(
+            _normalize_patch_target_path(
+                _raw_path.decode("utf-8", errors="replace"), patch_path=patch_path
+            )
+        )
 
     summary = subprocess.run(
         ["git", "-C", str(anchor), "apply", "--summary", str(patch_path)],
@@ -749,11 +769,44 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
                 "which this patch hook does not support"
             )
         mode_match = _MODE_CHANGE_LINE.match(stripped)
-        if mode_match and int(mode_match.group(2), 8) != _REGULAR_FILE_MODE:
-            raise IntakeSecurityError(
-                f"patch {patch_path.name!r} contains a non-regular-file mode ({stripped!r}; e.g. a "
-                "symlink or submodule), which this patch hook does not support"
-            )
+        if mode_match:
+            # `--summary`'s "create mode"/"delete mode" path is Git's own
+            # authoritative report of which file this entry actually
+            # creates/deletes -- derived from `def_name` (the 'diff --git'
+            # line), not from the '---'/'+++' pair `--numstat` reports. The
+            # two normally agree, but when an entry's 'new file mode'/
+            # 'deleted file mode' extended-header line is placed *after*
+            # its '---'/'+++' pair (a syntactically valid but non-standard
+            # ordering no honest 'git diff'/'format-patch' ever produces),
+            # Git parses the '---'/'+++' pair first (setting old_name/
+            # new_name from whatever they literally say, which can be a
+            # decoy allowed-looking path or a literal '/dev/null'), and
+            # only overwrites old_name (for a delete) or new_name (for a
+            # create) from `def_name` afterwards -- so `--numstat`, which
+            # reports `new_name or old_name`, ends up reporting the decoy
+            # path while `--summary` reports the true one. Empirically
+            # confirmed against real 'git apply': this exact ordering makes
+            # 'git apply --numstat' report only an allowed-looking decoy
+            # path for an entry that 'git apply --summary'/`git apply`
+            # itself resolves against a forbidden path such as 'lib/**' or
+            # 'artifact-manifest.yaml' -- silently defeating
+            # `_assert_patch_paths_allowed`, which only ever inspects
+            # `--numstat`'s reported paths. Requiring the two authoritative
+            # reports to agree on every create/delete target closes this:
+            # any entry where they disagree is refused outright rather than
+            # trusting either one alone.
+            summary_path = _normalize_patch_target_path(mode_match.group(3), patch_path=patch_path)
+            if summary_path not in numstat_paths:
+                raise IntakeSecurityError(
+                    f"patch {patch_path.name!r} reports {stripped!r} via 'git apply --summary' but "
+                    f"{summary_path!r} is not among the target paths reported by 'git apply --numstat'; "
+                    "refusing to evaluate a patch whose file identity cannot be determined unambiguously"
+                )
+            if int(mode_match.group(2), 8) != _REGULAR_FILE_MODE:
+                raise IntakeSecurityError(
+                    f"patch {patch_path.name!r} contains a non-regular-file mode ({stripped!r}; e.g. a "
+                    "symlink or submodule), which this patch hook does not support"
+                )
 
     _assert_no_index_only_mode_change(patch_path)
     _assert_no_ambiguous_path_change(

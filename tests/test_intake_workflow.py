@@ -1530,6 +1530,120 @@ def test_load_ownership_entries_rejects_non_string_id(tmp_path: Path, helper) ->
         helper.load_ownership_entries(root)
 
 
+def test_load_patch_queue_rejects_deletion_where_summary_and_numstat_paths_disagree(
+    tmp_path: Path, helper
+) -> None:
+    """When an entry's 'deleted file mode' extended-header line is placed
+    *after* its '---'/'+++' pair (a syntactically valid but non-standard
+    ordering no honest 'git diff'/'format-patch' ever produces), Git parses
+    the '---'/'+++' pair first -- setting old_name/new_name from whatever
+    they literally say -- and only overwrites old_name from the 'diff
+    --git' line's own path afterwards. This makes 'git apply --numstat'
+    report a literal 'dev/null' path (from the uncorroborated-at-parse-time
+    '+++ /dev/null' line) while 'git apply --summary' correctly reports
+    the true deleted path (the forbidden 'lib/...' archive). Confirmed
+    empirically against real 'git apply' (git 2.50.1): this patch deletes
+    the real forbidden archive on disk while '--numstat' never once
+    reports its path, evading `_assert_patch_paths_allowed` entirely
+    (which only ever inspects '--numstat' output). Requiring `--summary`'s
+    and `--numstat`'s reported paths to agree for every create/delete
+    entry closes this."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ /dev/null\n"
+        "deleted file mode 100644\n"
+        "@@ -1 +0,0 @@\n"
+        "-PROPRIETARY-ARCHIVE-BYTES\n"
+    )
+    _write_patch(patches_dir, "001-devnull-order-launder", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not among the target paths"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_forbidden_deletion_disguised_behind_allowed_headers(
+    tmp_path: Path, helper
+) -> None:
+    """The general form of the same bypass, with no '/dev/null' involved at
+    all: the 'diff --git' line (and thus 'git apply --summary', which
+    resolves create/delete identity from it) names the real, forbidden
+    manifest path, while the '---'/'+++' pair -- placed before the
+    'deleted file mode' line -- names a completely different, allowed
+    decoy path. Because both header names agree with each other
+    ('allowed.h' == 'allowed.h'), `_assert_no_ambiguous_path_change`'s
+    rename check does not fire either; only cross-checking `--summary`'s
+    authoritative create/delete path against `--numstat`'s reported
+    target catches this."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/artifact-manifest.yaml b/artifact-manifest.yaml\n"
+        "--- a/allowed.h\n"
+        "+++ b/allowed.h\n"
+        "deleted file mode 100644\n"
+        "@@ -1 +0,0 @@\n"
+        "-hello\n"
+    )
+    _write_patch(patches_dir, "001-decoy-headers-launder", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not among the target paths"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_apply_patch_queue_does_not_delete_forbidden_archive_via_reordered_dev_null_header(
+    tmp_path: Path, helper
+) -> None:
+    """End-to-end confirmation that the forbidden archive's content never
+    actually reaches disk deletion via the reordered-header bypass, even
+    if the header-scan guard alone were somehow skipped: every real call
+    path goes through `load_patch_queue` before `apply_patch_queue`, which
+    must reject this patch outright."""
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    lib_dir = staged / "lib" / "gcc" / "apollo510"
+    lib_dir.mkdir(parents=True)
+    (lib_dir / "libam_hal.a").write_text("PROPRIETARY-ARCHIVE-BYTES\n", encoding="utf-8")
+
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/lib/gcc/apollo510/libam_hal.a\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ /dev/null\n"
+        "deleted file mode 100644\n"
+        "@@ -1 +0,0 @@\n"
+        "-PROPRIETARY-ARCHIVE-BYTES\n"
+    )
+    _write_patch(patches_dir, "001-devnull-order-launder", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError):
+        helper.apply_patch_queue(staged, patches_dir)
+
+    assert (lib_dir / "libam_hal.a").read_text(encoding="utf-8") == "PROPRIETARY-ARCHIVE-BYTES\n"
+
+
+def test_assert_no_index_only_mode_change_rejects_symlink_mode_with_non_hex_object_ids(
+    tmp_path: Path, helper
+) -> None:
+    """Git's own `gitdiff_index()` performs no hex-digit or non-empty
+    validation on the object-id substrings either side of the '..' -- it
+    only checks for a '.' followed by another '.', then reads the mode
+    token after the next space. A line like 'index ..2222222 120000' (an
+    empty object id on the old side) is read by git exactly like a
+    well-formed line -- mode 0o120000 -- while the old, hex-anchored
+    `_INDEX_LINE_MODE` pattern required one-or-more hex digits on both
+    sides and so matched nothing at all for it, hiding a real symlink-mode
+    in-place change from this guard entirely."""
+    patch_path = tmp_path / "index-mode-non-hex-object-id.patch"
+    patch_path.write_text(
+        "diff --git a/x b/x\nindex ..2222222 120000\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old\n+new\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper._assert_no_index_only_mode_change(patch_path)
+
+
 def test_diff_header_path_returns_none_for_dev_null(tmp_path: Path, helper) -> None:
     result = helper._diff_header_path("/dev/null", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch")
 
