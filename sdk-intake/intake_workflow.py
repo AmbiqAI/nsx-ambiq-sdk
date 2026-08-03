@@ -751,7 +751,19 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
         raise IntakeSecurityError(
             f"could not enumerate the shape of patch {patch_path.name!r}: {summary.stderr.strip()}"
         )
-    for line in summary.stdout.splitlines():
+    # Deliberately split on '\n' only, not `str.splitlines()` -- the latter
+    # also treats eight other Unicode/control characters as line boundaries
+    # (`\r`, `\v`, `\f`, `\x1c`-`\x1e`, `\x85`, `\u2028`, `\u2029`), none of
+    # which Git treats specially here: each `--summary` record is written
+    # with a plain `fprintf("... %s\n", name)` and the reported path is
+    # never C-quoted (confirmed empirically -- non-ASCII and even '"' print
+    # raw). A create/delete target path that begins with one of those eight
+    # characters would otherwise split a single summary line into two
+    # fragments -- e.g. "create mode 120000" and the rest of the path --
+    # neither of which matches `_MODE_CHANGE_LINE`, silently skipping both
+    # the non-regular-file mode check and the numstat cross-check above for
+    # that entry.
+    for line in summary.stdout.split("\n"):
         stripped = line.strip()
         if stripped.startswith("rename "):
             raise IntakeSecurityError(

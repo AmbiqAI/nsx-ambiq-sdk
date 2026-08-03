@@ -1644,6 +1644,38 @@ def test_assert_no_index_only_mode_change_rejects_symlink_mode_with_non_hex_obje
         helper._assert_no_index_only_mode_change(patch_path)
 
 
+def test_load_patch_queue_rejects_symlink_creation_hidden_by_form_feed_in_path(
+    tmp_path: Path, helper
+) -> None:
+    """`str.splitlines()` treats nine characters as line boundaries,
+    including '\\x0c' (form feed), '\\x1e', and '\\u2028' -- but Git's
+    `git apply --summary` terminates every record with '\\n' only, and
+    never C-quotes the reported path (confirmed empirically: a path
+    containing a form feed or other exotic separator prints raw). A
+    'create mode'/'delete mode' path that begins with one of those extra
+    separators used to split a single summary line into two unmatched
+    fragments (e.g. 'create mode 120000' and the rest of the path),
+    silently skipping both the non-regular-file mode check and this
+    round's numstat cross-check for that entry -- letting a brand-new
+    symlink (with no 'index' line for `_assert_no_index_only_mode_change`
+    to scan, since it is newly created rather than modified in place)
+    through undetected."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/\x0cevil b/\x0cevil\n"
+        "new file mode 120000\n"
+        "--- /dev/null\n"
+        "+++ b/\x0cevil\n"
+        "@@ -0,0 +1 @@\n"
+        "+/etc/passwd\n"
+        "\\ No newline at end of file\n"
+    )
+    _write_patch(patches_dir, "001-form-feed-symlink", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="non-regular-file mode"):
+        helper.load_patch_queue(patches_dir)
+
+
 def test_diff_header_path_returns_none_for_dev_null(tmp_path: Path, helper) -> None:
     result = helper._diff_header_path("/dev/null", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch")
 
