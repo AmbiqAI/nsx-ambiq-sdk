@@ -1166,6 +1166,136 @@ def test_diff_header_path_does_not_strip_trailing_space_from_the_literal_path(
     assert result == "x.h "
 
 
+def test_load_patch_queue_rejects_orphaned_new_mode_line_with_no_paired_old_mode(
+    tmp_path: Path, helper
+) -> None:
+    """Git's `--summary` only ever emits a "mode change ..." line when a
+    patch entry has *both* an `old mode` and a `new mode` extended-header
+    line (`show_mode_change()` in apply.c requires both `old_mode` and
+    `new_mode` to be non-zero). A patch supplying only a `new mode <mode>`
+    line -- paired with an ordinary content hunk, not a create/delete --
+    produces a fully empty `--summary` for that entry: confirmed
+    empirically against real git that such a patch applies cleanly and
+    silently flips the target file's permission bits (0o644 -> 0o755) with
+    no `--summary` line reporting it at all, and `--numstat` reports only
+    the ordinary added/deleted line counts. This must be rejected via a
+    direct raw-text scan for standalone `old mode`/`new mode` lines."""
+    patches_dir = tmp_path / "patches"
+    orphaned_new_mode_patch = (
+        "diff --git a/script.sh b/script.sh\n"
+        "index e69de29..0000000\n"
+        "new mode 100755\n"
+        "--- a/script.sh\n"
+        "+++ b/script.sh\n"
+        "@@ -1,3 +1,4 @@\n"
+        " line1\n"
+        " line2\n"
+        " line3\n"
+        "+line4\n"
+    )
+    _write_patch(
+        patches_dir, "001-orphaned-new-mode", orphaned_new_mode_patch, owner="jane", reason="should be rejected"
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_orphaned_old_mode_line_with_no_paired_new_mode(
+    tmp_path: Path, helper
+) -> None:
+    """Symmetric case to the orphaned-`new-mode` test above: a lone
+    `old mode` line (no paired `new mode`) is equally unable to produce a
+    `--summary` "mode change" line, and must be rejected the same way."""
+    patches_dir = tmp_path / "patches"
+    orphaned_old_mode_patch = (
+        "diff --git a/script.sh b/script.sh\n"
+        "index e69de29..0000000\n"
+        "old mode 100755\n"
+        "--- a/script.sh\n"
+        "+++ b/script.sh\n"
+        "@@ -1,3 +1,4 @@\n"
+        " line1\n"
+        " line2\n"
+        " line3\n"
+        "+line4\n"
+    )
+    _write_patch(
+        patches_dir, "001-orphaned-old-mode", orphaned_old_mode_patch, owner="jane", reason="should be rejected"
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="mode"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_assert_no_index_only_mode_change_rejects_index_line_missing_the_object_id_separator(
+    tmp_path: Path, helper
+) -> None:
+    """Direct unit coverage of `_assert_no_index_only_mode_change`'s new
+    defense-in-depth check: git's `gitdiff_index()` parser locates the '..'
+    object-id separator via an unbounded `strchr()` call that is not itself
+    clamped to the current line, meaning its notion of "this line" for an
+    `index` header can, in principle, diverge from what a per-line regex
+    sees. `_INDEX_LINE_MODE` (the mode-value extractor) can only fire on an
+    `index` line that literally contains '..' on that same line; failing
+    open (silently treating a line lacking '..' as if it carried no mode
+    information at all, rather than as ambiguous) would let a mode value
+    that Git associates with such an entry evade this scan entirely. Any
+    'index ' line without '..' must be refused outright. Exercised directly
+    against the function (rather than through the full
+    `load_patch_queue` pipeline) because this specific malformed shape is
+    -- separately and correctly -- also caught further upstream by the
+    entry-count cross-check once `git apply --numstat` is involved, which
+    would otherwise mask whether this function's own check does anything."""
+    patch_path = tmp_path / "malformed-index.patch"
+    patch_path.write_text(
+        "diff --git a/link1 b/link1\n"
+        "index deadbeef\n"
+        "120000\n"
+        "--- a/link1\n"
+        "+++ b/link1\n"
+        "@@ -1 +1 @@\n"
+        "-target.txt\n"
+        "\\ No newline at end of file\n"
+        "+other.txt\n"
+        "\\ No newline at end of file\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="index"):
+        helper._assert_no_index_only_mode_change(patch_path)
+
+
+def test_summary_mode_change_line_extraction_preserves_trailing_whitespace_in_path(
+    tmp_path: Path, helper
+) -> None:
+    """Direct unit coverage of the fix location: the round-7 numstat/summary
+    cross-check (in `_assert_patch_shape_supported`) previously extracted
+    the summary-reported create/delete path from a fully-`.strip()`ed
+    line, silently discarding any leading/trailing whitespace that was
+    part of the path itself -- masking a genuine disagreement between what
+    `--summary` and `--numstat` each report for the same entry (the very
+    class of divergence that cross-check exists to catch). `--summary`
+    writes each record with a single leading space (`fprintf(" %s mode
+    ..."`); the fix strips only that one leading space (`line.lstrip(" ")`)
+    rather than fully `.strip()`ing the line, so any trailing whitespace
+    that is genuinely part of the reported path survives into the
+    extracted path used for the cross-check and for
+    `_normalize_patch_target_path`'s own whitespace rejection."""
+    line = " delete mode 100644 target.h \n"
+    match = helper._MODE_CHANGE_LINE.match(line.split("\n")[0].lstrip(" "))
+
+    assert match is not None
+    assert match.group(3) == "target.h "
+
+    # And the previously-used `.strip()` would have silently discarded that
+    # same trailing space, hiding the disagreement -- confirming this is a
+    # real behavioral difference, not merely a style change.
+    stripped_match = helper._MODE_CHANGE_LINE.match(line.strip())
+    assert stripped_match is not None
+    assert stripped_match.group(3) == "target.h"
+
+
 def test_load_patch_queue_rejects_implicit_rename_hidden_by_counterfeit_headers_before_the_real_entry(
     tmp_path: Path, helper
 ) -> None:

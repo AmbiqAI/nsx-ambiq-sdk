@@ -660,6 +660,40 @@ _MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) (.+)$", re.MULTILIN
 # all for it, hiding the mode entirely. This pattern is intentionally at
 # least as permissive as git's own parser on the object-id side too.
 _INDEX_LINE_MODE = re.compile(r"^index \S*\.\.\S*\s+([+-]?\d+)", re.MULTILINE)
+# Defense in depth for the same `gitdiff_index()` behavior described above:
+# git's initial `strchr(line, '.')` lookup for the '..' separator is NOT
+# itself bounded by end-of-line -- only the second (mode-token) lookup is
+# clamped to '\n'. Confirmed empirically against real 'git apply': an
+# "index " line that does not itself contain '..' can still have its mode
+# read by git from content that logically continues past what a per-line
+# regex sees, silently defeating `_INDEX_LINE_MODE` above (which requires
+# '..' literally on the same line to match at all) -- letting an in-place
+# symlink/submodule mode change through with no visible mode at all to this
+# scan. Rather than trying to reconstruct git's exact cross-line lookahead
+# (fragile and its own source of desync bugs, per rounds 6-9's history),
+# fail closed outright: every line beginning "index " must contain '..' on
+# that same line, or the patch is refused as having an indeterminate index
+# line shape.
+_INDEX_LINE_ANY = re.compile(r"^index .*$", re.MULTILINE)
+# Git's own parser for a mode-only change requires *both* `old mode` and
+# `new mode` extended-header lines to be present before it will emit a
+# `--summary` "mode change ..." line at all (`show_mode_change()` in
+# apply.c bails out unless both `old_mode` and `new_mode` are non-zero).
+# A patch supplying a `new mode <mode>` line with NO corresponding
+# `old mode` line (paired with an ordinary content hunk, not a `new file
+# mode`/`deleted file mode` create/delete) produces a fully empty
+# `--summary` for that entry -- git still applies the new mode to the
+# resulting file, but nothing in `--summary` output reports it, and this
+# entry has an `index <old>..<new>` line with NO trailing mode token
+# (since the mode is carried on the separate `old mode`/`new mode` lines
+# instead), so `_INDEX_LINE_MODE` above finds nothing either. Confirmed
+# empirically: such a patch is accepted by every existing check, applies
+# cleanly, and silently flips a file executable (0o100644 -> 0o100755)
+# with no record of it in this tool's own diff/review report. Scan the
+# raw patch text directly for standalone `old mode`/`new mode` lines and
+# require every one to carry the plain regular-file mode, exactly as
+# `_assert_no_index_only_mode_change` already does for `index` lines.
+_STANDALONE_MODE_LINE = re.compile(r"^(?:old|new) mode ([+-]?\d+)", re.MULTILINE)
 _OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
 _NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
 _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
@@ -786,7 +820,21 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
     # the non-regular-file mode check and the numstat cross-check above for
     # that entry.
     for line in summary_stdout.split("\n"):
-        stripped = line.strip()
+        # Deliberately `lstrip(" ")` (removing only the single leading space
+        # every `--summary` record has), NOT a full `.strip()`. A full
+        # `.strip()` here would also remove a trailing whitespace character
+        # that is part of the path itself -- confirmed empirically: for at
+        # least one entry shape, `--summary` can report a create/delete path
+        # with meaningfully different leading/trailing whitespace than
+        # `--numstat` reports for the very same entry, and full-line
+        # `.strip()` silently equalizes that disagreement into false
+        # agreement BEFORE the numstat cross-check below ever runs,
+        # defeating the very purpose of that cross-check for such an entry.
+        # Preserving the path's real trailing content here means the
+        # cross-check (and `_normalize_patch_target_path`'s own
+        # leading/trailing-whitespace rejection) sees Git's actual reported
+        # bytes, not a Python-side-only approximation of them.
+        stripped = line.lstrip(" ")
         if stripped.startswith("rename "):
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} contains a file rename ({stripped!r}), which this patch "
@@ -854,8 +902,20 @@ def _assert_no_index_only_mode_change(patch_path: Path) -> None:
     at all -- the mode only appears on the `index <old>..<new> <mode>` line,
     which is silent (empty `--summary`) in exactly this case. Scan it
     directly rather than trusting `--summary`'s silence to mean "regular
-    file"."""
+    file". Also scans for two related raw-text-only shapes `--summary` can
+    likewise stay silent about: an "index " line whose '..' separator is not
+    on the same physical line (see `_INDEX_LINE_ANY`'s comment), and a
+    standalone `old mode`/`new mode` line unpaired with its counterpart (see
+    `_STANDALONE_MODE_LINE`'s comment) -- both refused outright rather than
+    silently passed."""
     text = _read_patch_text_for_header_scan(patch_path)
+    for line_match in _INDEX_LINE_ANY.finditer(text):
+        if ".." not in line_match.group(0):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} has an 'index' line ({line_match.group(0)!r}) with an "
+                "indeterminate shape (no '..' object-id separator on the same line); refusing to "
+                "evaluate a patch whose file mode cannot be determined unambiguously"
+            )
     for match in _INDEX_LINE_MODE.finditer(text):
         mode_token = match.group(1)
         try:
@@ -869,6 +929,22 @@ def _assert_no_index_only_mode_change(patch_path: Path) -> None:
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} touches a non-regular-file mode ({mode_token!r} on an "
                 "'index' line; e.g. a symlink or submodule), which this patch hook does not support"
+            )
+    for mode_match in _STANDALONE_MODE_LINE.finditer(text):
+        mode_token = mode_match.group(1)
+        try:
+            mode_value = int(mode_token.lstrip("+"), 8)
+        except ValueError as error:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} has an unparseable mode {mode_token!r} on an 'old mode'/"
+                "'new mode' line; refusing to evaluate a patch whose file mode cannot be determined "
+                "unambiguously"
+            ) from error
+        if mode_value != _REGULAR_FILE_MODE:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} contains a non-regular-file mode ({mode_token!r} on an "
+                "'old mode'/'new mode' line; e.g. a symlink or submodule, or an executable-bit change "
+                "with no paired counterpart line), which this patch hook does not support"
             )
 
 
