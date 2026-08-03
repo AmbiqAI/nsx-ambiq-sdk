@@ -18,6 +18,8 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - `versioning.md` defines distribution, API-version, and immutable-tag policy.
 - `source-ownership.md` defines generated, upstream-derived, and NSX-owned paths.
 - `release-process.md` is the concise manual release checklist.
+- `acfe-artifact-manifest-forensics.md` records the `v5.2.23` ACfE archive /
+  artifact-manifest mismatch, its root cause, and the `5.2.24` correction.
 
 ## Internal Reviews
 

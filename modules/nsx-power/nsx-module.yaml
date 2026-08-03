@@ -2,7 +2,7 @@ schema_version: 1
 module:
   name: nsx-power
   type: backend_specific
-  version: "5.2.23"
+  version: "5.2.24"
 support:
   ambiqsuite: true
   zephyr: false

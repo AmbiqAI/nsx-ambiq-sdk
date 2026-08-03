@@ -2,6 +2,28 @@
 
 All notable distribution changes are recorded here.
 
+## 5.2.24 - 2026-08-03
+
+- Corrects the promoted artifact manifest, which recorded superseded `sha256`
+  values for 22 of the 23 `acfe` (armclang) HAL/BSP archives shipped in
+  `5.2.23`. The archives themselves were always correct; only their recorded
+  provenance was stale.
+- **No promoted archive bytes change.** The binary payload of `5.2.24` is
+  identical to `5.2.23`, still built from AmbiqSuite snapshot
+  `stable-2026.06.18`, source ref `stable`, source commit
+  `caaf5af86087881647f56c70646c748d40c86e23`.
+- Records `acfe` ABI provenance (`-fshort-wchar -fshort-enums`) in the artifact
+  manifest, and emits ABI-affecting flags from
+  `sdk-intake/build_ambiqsuite.py` so future intakes keep recording them.
+- Adds `tests/test_artifact_baseline.py`, which verifies the real committed
+  payload against the real committed manifest in CI. This is the check that was
+  missing when the drift was introduced; it fails on the `5.2.23` tree.
+- Documents the full investigation, per-artifact hashes, root-cause commit,
+  ownership, and impact in `docs/acfe-artifact-manifest-forensics.md`.
+- `5.2.23` remains published and immutable. Its tag, release, and commit
+  `2eba24ad776096784764cbe91c8176b434dd3bdf` are unchanged; this correction is
+  published as a new distribution version per `docs/versioning.md`.
+
 ## 5.2.23 - 2026-07-28
 
 - Establishes the first immutable tagged golden baseline for `nsx-ambiq-sdk`.

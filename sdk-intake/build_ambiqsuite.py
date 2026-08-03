@@ -230,6 +230,15 @@ ACFE_ABI_FLAGS = (
     "-fshort-enums",
 )
 
+# Per-toolchain ABI-affecting flags recorded in the generated artifact manifest.
+# These change the emitted archives' ARM build attributes, so two archives built
+# from the same source with different values here are not interchangeable. They
+# are manifest-visible provenance, not just build detail: a consumer comparing
+# archives or hashes needs to know which ABI a payload was built for.
+TOOLCHAIN_ABI_CFLAGS: dict[str, tuple[str, ...]] = {
+    "acfe": ACFE_ABI_FLAGS,
+}
+
 RELEASE_CFLAGS = (
     "-g0",
 )
@@ -1115,6 +1124,9 @@ def write_manifest(
             ])
             if not debug_symbols:
                 lines.append("      release_cflags: '-g0'")
+            abi_cflags = TOOLCHAIN_ABI_CFLAGS.get(name)
+            if abi_cflags:
+                lines.append(f"      abi_cflags: {yaml_quote(' '.join(abi_cflags))}")
     lines.extend(["", "parts:"])
     for part in train.parts:
         lines.extend([
