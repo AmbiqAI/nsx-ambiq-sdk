@@ -303,12 +303,31 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
     if not manifest_path.is_file():
         raise IntakeVerificationError(f"artifact manifest not found: {manifest_path}")
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(manifest, dict):
+        raise IntakeVerificationError(
+            f"artifact manifest {manifest_path} must be a mapping at its top level, got {type(manifest).__name__}"
+        )
     verified: list[str] = []
     mismatched: list[str] = []
     missing: list[str] = []
     for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
         for entry in manifest.get(section, []) or []:
-            artifacts = entry.get(artifact_key) or {}
+            # Every container-shape access below (`entry.get`, `.items()`) is
+            # wrapped so a malformed manifest (e.g. a section containing a
+            # bare string, or an artifacts value that isn't a mapping) fails
+            # closed with an actionable IntakeVerificationError instead of an
+            # untyped AttributeError/TypeError escaping this verification
+            # boundary uncaught.
+            try:
+                if not isinstance(entry, dict):
+                    raise TypeError(f"{section[:-1]} entry must be a mapping, got {type(entry).__name__}")
+                artifacts = entry.get(artifact_key) or {}
+                if not isinstance(artifacts, dict):
+                    raise TypeError(f"{artifact_key!r} must be a mapping, got {type(artifacts).__name__}")
+            except (KeyError, TypeError, AttributeError) as error:
+                raise IntakeVerificationError(
+                    f"malformed {section[:-1]} entry in {manifest_path}: {error}"
+                ) from error
             for toolchain, info in artifacts.items():
                 try:
                     source_relative = info["path"]
@@ -539,6 +558,8 @@ _MODE_CHANGE_LINE = re.compile(r"^(create|delete) mode (\d+) ", re.MULTILINE)
 _INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)\s*$", re.MULTILINE)
 _OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
 _NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
+_DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
+_HUNK_HEADER = re.compile(r"^@@ ", re.MULTILINE)
 _REGULAR_FILE_MODE = 0o100644
 
 
@@ -556,9 +577,11 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
             f"could not enumerate the shape of patch {patch_path.name!r}: "
             f"{numstat.stderr.decode('utf-8', errors='replace').strip()}"
         )
+    entry_count = 0
     for record in numstat.stdout.split(b"\0"):
         if not record:
             continue
+        entry_count += 1
         fields = record.split(b"\t", 2)
         if len(fields) != 3:
             raise IntakeSecurityError(
@@ -610,7 +633,7 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
             )
 
     _assert_no_index_only_mode_change(patch_path)
-    _assert_no_ambiguous_path_change(patch_path)
+    _assert_no_ambiguous_path_change(patch_path, expected_entry_count=entry_count)
 
 
 def _assert_no_index_only_mode_change(patch_path: Path) -> None:
@@ -654,7 +677,7 @@ def _diff_header_path(raw: str, *, side: str, prefix: str, patch_path: Path) -> 
     return value[len(prefix):]
 
 
-def _assert_no_ambiguous_path_change(patch_path: Path) -> None:
+def _assert_no_ambiguous_path_change(patch_path: Path, *, expected_entry_count: int) -> None:
     """A patch can move a file's content to a different path just by writing
     different `--- a/OLD` / `+++ b/NEW` names -- no `rename from`/`rename
     to` (or legacy `rename old`/`rename new`) keyword required at all. `git
@@ -663,21 +686,62 @@ def _assert_no_ambiguous_path_change(patch_path: Path) -> None:
     silent unless a rename/copy keyword is present), and `--numstat` would
     only ever report NEW -- the same destination-only blind spot that let a
     patch move `lib/foo.a` to an allowed name evade the forbidden-path
-    check. Enumerate every old/new name pair directly and reject any patch
-    where they differ, regardless of how (or whether) the patch spells the
-    move."""
+    check.
+
+    A naive whole-file regex scan for '---'/'+++' lines is itself bypassable:
+    text outside any real diff entry (a commit-message preamble before the
+    first 'diff --git' line, or trailing commentary after a file's last
+    hunk) can contain counterfeit '---'/'+++'-looking lines that Git's own
+    parser ignores but a positional pairing (e.g. zip()) would not -- shifting
+    every real pair into spurious agreement while the actual ambiguous rename
+    slides through. Git only ever honors a '---'/'+++' pair as part of the
+    single extended-header block that immediately follows a 'diff --git'
+    line and precedes that entry's first '@@' hunk header, so old/new names
+    are extracted from exactly (and only) that bounded region for each
+    entry, anchored on the same 'diff --git' lines Git itself uses to open a
+    new file entry. Any text elsewhere in the file (before the first entry,
+    inside a hunk body, or trailing after it) is never inspected here, just
+    as Git itself never inspects it for this purpose. The number of entries
+    found this way is cross-checked against `git apply --numstat -z`'s own
+    entry count (computed by the caller) as a further guard against a
+    structurally malformed patch."""
     text = patch_path.read_text(encoding="utf-8", errors="replace")
-    old_headers = _OLD_FILE_HEADER.findall(text)
-    new_headers = _NEW_FILE_HEADER.findall(text)
-    if len(old_headers) != len(new_headers):
+    entry_starts = list(_DIFF_GIT_HEADER.finditer(text))
+    if len(entry_starts) != expected_entry_count:
         raise IntakeSecurityError(
-            f"patch {patch_path.name!r} has mismatched '---'/'+++' header counts "
-            f"({len(old_headers)} vs {len(new_headers)}); refusing to evaluate a patch whose file "
-            "identity cannot be determined unambiguously"
+            f"patch {patch_path.name!r} has {len(entry_starts)} 'diff --git' header(s) but "
+            f"{expected_entry_count} entr(y/ies) reported by 'git apply --numstat -z'; refusing to "
+            "evaluate a patch whose file entries cannot be counted unambiguously"
         )
-    for old_raw, new_raw in zip(old_headers, new_headers):
-        old_name = _diff_header_path(old_raw, side="old ('---')", prefix="a/", patch_path=patch_path)
-        new_name = _diff_header_path(new_raw, side="new ('+++')", prefix="b/", patch_path=patch_path)
+    for index, match in enumerate(entry_starts):
+        block_start = match.end()
+        block_end = entry_starts[index + 1].start() if index + 1 < len(entry_starts) else len(text)
+        block = text[block_start:block_end]
+        hunk_match = _HUNK_HEADER.search(block)
+        header_region = block[: hunk_match.start()] if hunk_match else block
+
+        old_headers = _OLD_FILE_HEADER.findall(header_region)
+        new_headers = _NEW_FILE_HEADER.findall(header_region)
+        if len(old_headers) > 1 or len(new_headers) > 1:
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} entry {index + 1} has more than one '---'/'+++' header "
+                "before its first hunk; refusing to evaluate a patch whose file identity cannot be "
+                "determined unambiguously"
+            )
+        if bool(old_headers) != bool(new_headers):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} entry {index + 1} has a '---' header without a matching "
+                "'+++' header (or vice versa); refusing to evaluate a patch whose file identity cannot "
+                "be determined unambiguously"
+            )
+        if not old_headers:
+            # No content hunk for this entry at all (e.g. a genuinely empty
+            # file addition/deletion) -- nothing to compare, and the shape
+            # (mode/rename/copy) of this entry was already authoritatively
+            # checked via `--summary`/`--numstat` above.
+            continue
+        old_name = _diff_header_path(old_headers[0], side="old ('---')", prefix="a/", patch_path=patch_path)
+        new_name = _diff_header_path(new_headers[0], side="new ('+++')", prefix="b/", patch_path=patch_path)
         if old_name is not None and new_name is not None and old_name != new_name:
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} changes path from {old_name!r} to {new_name!r} within a "
@@ -857,6 +921,14 @@ def compare_trees(staged_root: Path, promoted_root: Path) -> DiffResult:
         raise IntakeVerificationError(f"staged tree not found or not a directory: {staged_root}")
     if not promoted_root.is_dir():
         raise IntakeVerificationError(f"promoted tree not found or not a directory: {promoted_root}")
+    # `_tracked_files` (deliberately) reports symlinks so a symlinked payload
+    # is never invisible to this diff -- but a symlink (dangling, or
+    # pointing outside either tree) is not otherwise supported anywhere in
+    # this tool, and `bas.sha256` below would raise a raw, unhandled OSError
+    # for one instead of the clear, actionable message the rest of this
+    # function gives for every other indeterminate-input case.
+    _assert_no_symlinks(staged_root, label="staged tree")
+    _assert_no_symlinks(promoted_root, label="promoted tree")
     staged_files = _tracked_files(staged_root)
     promoted_files = _tracked_files(promoted_root)
 

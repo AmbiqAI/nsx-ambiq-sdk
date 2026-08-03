@@ -305,6 +305,37 @@ def test_compare_trees_fails_closed_when_root_is_a_file_not_a_directory(tmp_path
         helper.compare_trees(staged_file, promoted)
 
 
+def test_compare_trees_rejects_symlink_in_staged_tree_instead_of_crashing(tmp_path: Path, helper) -> None:
+    """`_tracked_files` deliberately reports symlinks (so a symlinked
+    payload is never invisible to this diff), but `compare_trees` must
+    still refuse a tree containing one with a clear, actionable error
+    instead of letting a dangling (or otherwise unsupported) symlink raise
+    a raw, unhandled OSError out of `bas.sha256`."""
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "f.txt").write_text("hi\n", encoding="utf-8")
+    (staged / "dangling").symlink_to(staged / "does-not-exist")
+    promoted = tmp_path / "promoted"
+    promoted.mkdir()
+    (promoted / "f.txt").write_text("hi\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeSecurityError, match="symlink"):
+        helper.compare_trees(staged, promoted)
+
+
+def test_compare_trees_rejects_symlink_in_promoted_tree_instead_of_crashing(tmp_path: Path, helper) -> None:
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "f.txt").write_text("hi\n", encoding="utf-8")
+    promoted = tmp_path / "promoted"
+    promoted.mkdir()
+    (promoted / "f.txt").write_text("hi\n", encoding="utf-8")
+    (promoted / "dangling").symlink_to(promoted / "does-not-exist")
+
+    with pytest.raises(helper.IntakeSecurityError, match="symlink"):
+        helper.compare_trees(staged, promoted)
+
+
 # --------------------------------------------------------------------------
 # Staging orchestration (mocks build_ambiqsuite's heavy build/promote step)
 # --------------------------------------------------------------------------
@@ -862,6 +893,131 @@ def test_load_patch_queue_rejects_implicit_rename_without_any_rename_keyword(tmp
         helper.load_patch_queue(patches_dir)
 
 
+def test_load_patch_queue_rejects_implicit_rename_hidden_by_counterfeit_headers_before_the_real_entry(
+    tmp_path: Path, helper
+) -> None:
+    """A whole-file, unanchored scan for `---`/`+++` lines is itself
+    bypassable: a counterfeit `--- a/notes.md` line placed in a
+    commit-message preamble *before* the real `diff --git` line -- text Git
+    itself never treats as a diff header -- would positionally pair with
+    the real entry's headers and make an actual ambiguous rename look
+    balanced. Detection must be anchored on the `diff --git` line that
+    actually opens each entry, ignoring anything before the first one."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "Subject: [PATCH] benign-looking header tweak\n"
+        "\n"
+        "This commit message region is skipped by git apply.\n"
+        "--- a/notes.md\n"
+        "(this line prevents the pair above from parsing as a traditional header)\n"
+        "\n"
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/notes.md\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-SECRET-ARCHIVE\n"
+        "+SECRET-ARCHIVE-MOVED\n"
+    )
+    _write_patch(patches_dir, "001-preamble-injection", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="changes path from"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_implicit_rename_hidden_by_counterfeit_headers_after_the_hunk(
+    tmp_path: Path, helper
+) -> None:
+    """The same unanchored-scan bypass, using a trailing counterfeit
+    `+++ b/OLD_PATH` line placed *after* the real entry's hunk -- text Git
+    also never treats as a diff header, since a file's extended header
+    region ends at its first `@@` line. Detection must stop scanning each
+    entry's headers at its first hunk marker."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/lib/gcc/apollo510/libam_hal.a b/notes.md\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-SECRET-ARCHIVE\n"
+        "+SECRET-ARCHIVE-MOVED\n"
+        "\n"
+        "trailing commentary ignored by git apply:\n"
+        "+++ b/lib/gcc/apollo510/libam_hal.a\n"
+    )
+    _write_patch(patches_dir, "001-trailing-injection", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="changes path from"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_accepts_legitimate_multi_file_patch(tmp_path: Path, helper) -> None:
+    """Non-regression: the `diff --git`-anchored, numstat-cross-checked scan
+    in `_assert_no_ambiguous_path_change` must still accept an ordinary
+    patch touching more than one file in a single `.patch`."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/include/a.h b/include/a.h\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/include/a.h\n"
+        "+++ b/include/a.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define A 1\n"
+        "+#define A 2\n"
+        "diff --git a/include/b.h b/include/b.h\n"
+        "index e69de29..2222222 100644\n"
+        "--- a/include/b.h\n"
+        "+++ b/include/b.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define B 1\n"
+        "+#define B 2\n"
+    )
+    _write_patch(patches_dir, "001-multi-file", patch_text, owner="jane", reason="fix two defines")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [m.slug for m in queue] == ["001-multi-file"]
+
+
+def test_diff_header_path_returns_none_for_dev_null(tmp_path: Path, helper) -> None:
+    result = helper._diff_header_path("/dev/null", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch")
+
+    assert result is None
+
+
+def test_diff_header_path_rejects_unrecognized_prefix(tmp_path: Path, helper) -> None:
+    """A `---`/`+++` header line whose path isn't `/dev/null` and doesn't
+    have the `a/`/`b/` prefix this tool's own generated patches always use
+    (e.g. a patch authored with a different `-p` depth) must fail closed
+    rather than silently guessing at the intended path."""
+    with pytest.raises(helper.IntakeSecurityError, match="unrecognized"):
+        helper._diff_header_path(
+            "some/path/without/prefix.h", side="old ('---')", prefix="a/", patch_path=tmp_path / "x.patch"
+        )
+
+
+def test_assert_no_ambiguous_path_change_rejects_mismatched_diff_git_and_numstat_counts(
+    tmp_path: Path, helper
+) -> None:
+    """If the number of `diff --git` header lines doesn't match the number
+    of entries `git apply --numstat -z` itself reports, the patch's shape
+    cannot be trusted -- fail closed rather than silently scanning whatever
+    `diff --git` lines happen to be present."""
+    patch_path = tmp_path / "mismatched.patch"
+    patch_path.write_text(
+        "diff --git a/include/a.h b/include/a.h\n"
+        "index e69de29..1111111 100644\n"
+        "--- a/include/a.h\n"
+        "+++ b/include/a.h\n"
+        "@@ -1 +1 @@\n"
+        "-#define A 1\n"
+        "+#define A 2\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="diff --git"):
+        helper._assert_no_ambiguous_path_change(patch_path, expected_entry_count=2)
+
+
 @pytest.mark.parametrize("mode_field", ["120000", "+120000"])
 def test_load_patch_queue_rejects_new_symlink_with_whitespace_or_sign_tolerant_mode_line(
     tmp_path: Path, helper, mode_field: str
@@ -1022,6 +1178,45 @@ def test_manifest_path_to_promoted_relative_accepts_ordinary_path(helper) -> Non
     resolved = helper.manifest_path_to_promoted_relative("gcc/lib/apollo510/libam_hal.a")
 
     assert resolved == Path("lib/gcc/apollo510/libam_hal.a")
+
+
+def test_verify_artifact_hashes_rejects_manifest_entry_escaping_sdk_root_via_symlink(
+    tmp_path: Path, helper
+) -> None:
+    """Defense in depth alongside `manifest_path_to_promoted_relative`'s
+    `..`/absolute-segment rejection: even a syntactically clean manifest
+    `path` could resolve outside `sdk_root` if a symlink sits somewhere on
+    the way there (e.g. `lib/gcc` itself replaced with a symlink pointing
+    outside the tree). `verify_artifact_hashes` must resolve the target and
+    reject it if it escapes the resolved root, rather than "verifying" an
+    attacker-controlled file elsewhere on disk."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "apollo510").mkdir()
+    (outside / "apollo510" / "libam_hal.a").write_bytes(b"attacker-controlled-content")
+
+    lib_dir = sdk_root / "lib"
+    lib_dir.mkdir()
+    (lib_dir / "gcc").symlink_to(outside, target_is_directory=True)
+
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest = {
+        "parts": [
+            {
+                "logical_skew": "apollo510",
+                "hal_artifacts": {
+                    "gcc": {"path": "gcc/lib/apollo510/libam_hal.a", "sha256": "0" * 64},
+                },
+            }
+        ],
+        "boards": [],
+    }
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="escaping the SDK root"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
 
 
 def test_assert_patch_paths_allowed_fails_closed_on_zero_reported_paths(tmp_path: Path, helper, monkeypatch) -> None:
@@ -1345,6 +1540,51 @@ def test_verify_artifact_hashes_raises_intake_error_for_malformed_entry(tmp_path
         "boards": [],
     }
     manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="malformed"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_when_top_level_is_not_a_mapping(
+    tmp_path: Path, helper
+) -> None:
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text("- just\n- a\n- list\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="mapping"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_when_artifacts_value_is_not_a_mapping(
+    tmp_path: Path, helper
+) -> None:
+    """`entry.get(artifact_key)` being a list (instead of the expected
+    toolchain->info mapping) must fail closed with an actionable
+    `IntakeVerificationError`, not an untyped `AttributeError` escaping from
+    `.items()`."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest = {
+        "parts": [{"logical_skew": "apollo510", "hal_artifacts": ["not", "a", "mapping"]}],
+        "boards": [],
+    }
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="malformed"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_when_entry_is_not_a_mapping(tmp_path: Path, helper) -> None:
+    """A `parts`/`boards` entry that is a bare scalar (instead of a mapping)
+    must fail closed with an actionable `IntakeVerificationError`, not an
+    untyped `AttributeError` escaping from `entry.get(...)`."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text('parts:\n  - "just-a-string"\nboards: []\n', encoding="utf-8")
 
     with pytest.raises(helper.IntakeVerificationError, match="malformed"):
         helper.verify_artifact_hashes(sdk_root, manifest_path)
