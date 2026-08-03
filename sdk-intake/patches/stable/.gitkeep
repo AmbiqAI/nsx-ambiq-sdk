@@ -1,0 +1,3 @@
+# Intentionally empty. Placeholder so the `stable` train's patch directory
+# exists for `sdk-intake/intake_workflow.py stage --train stable`. See
+# ../README.md for the patch + ownership-sidecar format.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 
@@ -362,6 +363,30 @@ def test_raw_sdk_drop_staging_is_ignored_by_local_ingest_gitignore(repo_root: Pa
     assert ".sdk-intake-work/" not in gitignore
     assert "*" in local_gitignore
     assert "!README.md" in local_gitignore
+
+
+def test_interrupted_provider_promotion_trees_are_narrowly_ignored(repo_root: Path) -> None:
+    generated = (
+        "modules/nsx-ambiqsuite/sdk.promote-tmp/",
+        "modules/nsx-ambiqsuite/sdk.promote-backup/",
+    )
+    near_misses = (
+        "modules/nsx-ambiqsuite/sdk.promote-tmp-unrelated/",
+        "modules/nsx-other/sdk.promote-backup/",
+    )
+
+    for relative_path in generated:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "check-ignore", "--quiet", relative_path],
+            check=False,
+        )
+        assert result.returncode == 0, relative_path
+    for relative_path in near_misses:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "check-ignore", "--quiet", relative_path],
+            check=False,
+        )
+        assert result.returncode == 1, relative_path
 
 
 def test_sdk_intake_helper_is_source_controlled(repo_root: Path) -> None:

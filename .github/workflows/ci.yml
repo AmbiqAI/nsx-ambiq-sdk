@@ -39,5 +39,5 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py
+          uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py sdk-intake/intake_workflow.py
           uv run --group ci python -m pytest

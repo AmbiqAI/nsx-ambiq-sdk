@@ -729,54 +729,63 @@ def copy_matching_files(
         copy_file(source, destination, banner_version=banner_version)
 
 
-def promote_part_headers(train: TrainSpec, version: str, sdk_root: Path, part: PartBuild) -> None:
+def promote_part_headers(
+    train: TrainSpec, version: str, sdk_root: Path, part: PartBuild, *, destination_root: Path | None = None
+) -> None:
     ensure_hal_generated_sources(sdk_root, part)
     hal_base = hal_build_base(sdk_root, part)
     ensure_hal_pin_header(hal_base, sdk_root)
     ensure_generated_makefile(hal_base / "gcc" / "Makefile", hal_base)
-    destination = provider_sdk_root(train) / "mcu" / part.name
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    destination = root / "mcu" / part.name
     shutil.rmtree(destination, ignore_errors=True)
     copy_matching_files(sdk_root / "mcu" / part.name, destination, PROMOTED_FILE_SUFFIXES, banner_version=version)
 
 
-def promote_board_headers(train: TrainSpec, version: str, sdk_root: Path, board: BoardBuild) -> None:
+def promote_board_headers(
+    train: TrainSpec, version: str, sdk_root: Path, board: BoardBuild, *, destination_root: Path | None = None
+) -> None:
     bsp_dir = sdk_root / "boards" / board.name / "bsp"
     ensure_bsp_pins(sdk_root, bsp_dir)
     ensure_generated_makefile(bsp_dir / "gcc" / "Makefile", bsp_dir)
-    destination = provider_sdk_root(train) / "boards" / board.name / "bsp"
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    destination = root / "boards" / board.name / "bsp"
     shutil.rmtree(destination, ignore_errors=True)
     copy_matching_files(bsp_dir, destination, PROMOTED_FILE_SUFFIXES, banner_version=version)
 
 
-def promote_vendor_headers(train: TrainSpec, version: str, sdk_root: Path) -> None:
+def promote_vendor_headers(
+    train: TrainSpec, version: str, sdk_root: Path, *, destination_root: Path | None = None
+) -> None:
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
     copy_matching_files(
         sdk_root / "CMSIS" / "AmbiqMicro" / "Include",
-        provider_sdk_root(train) / "CMSIS" / "AmbiqMicro" / "Include",
+        root / "CMSIS" / "AmbiqMicro" / "Include",
         PROMOTED_FILE_SUFFIXES,
         banner_version=version,
     )
     copy_matching_files(
         sdk_root / "devices",
-        provider_sdk_root(train) / "devices",
+        root / "devices",
         PROMOTED_DEVICE_SUFFIXES,
         banner_version=version,
     )
     copy_matching_files(
         sdk_root / "utils",
-        provider_sdk_root(train) / "utils",
+        root / "utils",
         PROMOTED_FILE_SUFFIXES,
         banner_version=version,
     )
-    am_util_id_header = provider_sdk_root(train) / "utils" / "am_util_id.h"
+    am_util_id_header = root / "utils" / "am_util_id.h"
     if am_util_id_header.is_file():
         am_util_id_header.unlink()
-    am_util_header = provider_sdk_root(train) / "utils" / "am_util.h"
+    am_util_header = root / "utils" / "am_util.h"
     if am_util_header.is_file():
         am_util_header.write_text(
             am_util_header.read_text(encoding="utf-8").replace('#include "am_util_id.h"\n', ""),
             encoding="utf-8",
         )
-    am_util_multi_boot_private = provider_sdk_root(train) / "utils" / "am_util_multi_boot_private.h"
+    am_util_multi_boot_private = root / "utils" / "am_util_multi_boot_private.h"
     if am_util_multi_boot_private.is_file():
         am_util_multi_boot_private.write_text(
             am_util_multi_boot_private.read_text(encoding="utf-8").replace('#include "am_util_multi_boot_secure.h"\n', ""),
@@ -784,18 +793,19 @@ def promote_vendor_headers(train: TrainSpec, version: str, sdk_root: Path) -> No
         )
     copy_file(
         sdk_root / "mcu" / "am_sdk_version.h",
-        provider_sdk_root(train) / "mcu" / "am_sdk_version.h",
+        root / "mcu" / "am_sdk_version.h",
         banner_version=version,
     )
 
 
-def scrub_promoted_headers(train: TrainSpec) -> None:
-    include_root = provider_sdk_root(train) / "CMSIS" / "AmbiqMicro" / "Include"
+def scrub_promoted_headers(train: TrainSpec, *, destination_root: Path | None = None) -> None:
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    include_root = root / "CMSIS" / "AmbiqMicro" / "Include"
     for name in train.omitted_part_headers:
         path = include_root / name
         if path.is_file():
             path.unlink()
-    devices_root = provider_sdk_root(train) / "devices"
+    devices_root = root / "devices"
     for name in train.omitted_device_headers:
         path = devices_root / name
         if path.is_file():
@@ -804,7 +814,7 @@ def scrub_promoted_headers(train: TrainSpec) -> None:
         if source_path.is_file():
             source_path.unlink()
     for board_name in train.display_bsp_headers:
-        board_header = provider_sdk_root(train) / "boards" / board_name / "bsp" / "am_bsp.h"
+        board_header = root / "boards" / board_name / "bsp" / "am_bsp.h"
         if not board_header.is_file():
             continue
         board_text = board_header.read_text(encoding="utf-8")
@@ -819,10 +829,13 @@ def scrub_promoted_headers(train: TrainSpec) -> None:
         board_header.write_text(board_text, encoding="utf-8")
 
 
-def promote_system_sources(train: TrainSpec, version: str, sdk_root: Path) -> None:
+def promote_system_sources(
+    train: TrainSpec, version: str, sdk_root: Path, *, destination_root: Path | None = None
+) -> None:
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
     source_root = sdk_root / "CMSIS" / "AmbiqMicro" / "Source"
-    destination_root = provider_sdk_root(train) / "CMSIS" / "AmbiqMicro" / "Source"
-    destination_root.mkdir(parents=True, exist_ok=True)
+    destination_dir = root / "CMSIS" / "AmbiqMicro" / "Source"
+    destination_dir.mkdir(parents=True, exist_ok=True)
     for part in train.parts:
         target_name = part.system_source or f"system_{part.name}.c"
         source = source_root / target_name
@@ -831,27 +844,31 @@ def promote_system_sources(train: TrainSpec, version: str, sdk_root: Path) -> No
             text = donor.read_text(encoding="utf-8")
             for old, new in part.system_synth_subs:
                 text = text.replace(old, new)
-            (destination_root / target_name).write_text(normalize_banner_placeholders(text, version), encoding="utf-8")
+            (destination_dir / target_name).write_text(normalize_banner_placeholders(text, version), encoding="utf-8")
         else:
-            copy_file(source, destination_root / source.name, banner_version=version)
+            copy_file(source, destination_dir / source.name, banner_version=version)
 
 
-def promote_utility_sources(train: TrainSpec, version: str, sdk_root: Path) -> None:
+def promote_utility_sources(
+    train: TrainSpec, version: str, sdk_root: Path, *, destination_root: Path | None = None
+) -> None:
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
     for source_name in PROMOTED_UTILITY_SOURCES:
         copy_file(
             sdk_root / "utils" / source_name,
-            provider_sdk_root(train) / "src" / source_name,
+            root / "src" / source_name,
             banner_version=version,
         )
 
 
-def promote_license_docs(train: TrainSpec, sdk_root: Path) -> None:
-    shutil.copytree(sdk_root / "docs" / "licenses", provider_sdk_root(train) / "docs" / "licenses")
-    license_pdf = provider_sdk_root(train) / "docs" / "licenses" / "LICENSE.pdf"
-    license_rtf = provider_sdk_root(train) / "docs" / "licenses" / "LICENSE.rtf"
+def promote_license_docs(train: TrainSpec, sdk_root: Path, *, destination_root: Path | None = None) -> None:
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    shutil.copytree(sdk_root / "docs" / "licenses", root / "docs" / "licenses")
+    license_pdf = root / "docs" / "licenses" / "LICENSE.pdf"
+    license_rtf = root / "docs" / "licenses" / "LICENSE.rtf"
     if license_pdf.is_file() and license_rtf.is_file():
         license_pdf.unlink()
-    filelist = provider_sdk_root(train) / "docs" / "licenses" / "filelist.txt"
+    filelist = root / "docs" / "licenses" / "filelist.txt"
     if filelist.is_file():
         lines = filelist.read_text(encoding="utf-8").splitlines()
         filelist.write_text("\n".join(line for line in lines if line != "LICENSE.pdf") + "\n", encoding="utf-8")
@@ -899,9 +916,12 @@ def missing_artifact_libraries(train: TrainSpec, version: str) -> list[str]:
     return missing
 
 
-def promote_artifact_libraries(train: TrainSpec, version: str) -> None:
+def promote_artifact_libraries(
+    train: TrainSpec, version: str, *, destination_root: Path | None = None
+) -> None:
     source_root = artifact_root(train, version)
-    destination_root = provider_sdk_root(train) / "lib"
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    lib_destination_root = root / "lib"
     toolchains = built_artifact_toolchains(train, version)
     if not toolchains:
         raise FileNotFoundError(f"no built artifacts found under {source_root}")
@@ -912,26 +932,35 @@ def promote_artifact_libraries(train: TrainSpec, version: str) -> None:
         raise FileNotFoundError(
             f"incomplete artifact set under {display_path(source_root)}; missing: " + ", ".join(missing)
         )
-    shutil.rmtree(destination_root, ignore_errors=True)
+    shutil.rmtree(lib_destination_root, ignore_errors=True)
     for name in toolchains:
         for source_rel, dest_rel in artifact_library_specs(train, name):
-            copy_file(source_root / name / source_rel, destination_root / name / dest_rel)
+            copy_file(source_root / name / source_rel, lib_destination_root / name / dest_rel)
 
 
-def promote_provider_payload(train: TrainSpec, version: str, sdk_root: Path) -> None:
-    shutil.rmtree(provider_sdk_root(train), ignore_errors=True)
-    provider_sdk_root(train).mkdir(parents=True, exist_ok=True)
-    promote_vendor_headers(train, version, sdk_root)
-    promote_system_sources(train, version, sdk_root)
-    promote_utility_sources(train, version, sdk_root)
-    promote_license_docs(train, sdk_root)
+def promote_provider_payload(
+    train: TrainSpec, version: str, sdk_root: Path, *, destination_root: Path | None = None
+) -> None:
+    """Promote the full curated payload for `train`/`version` into
+    `destination_root` (default: the train's committed provider path,
+    `provider_sdk_root(train)`). Passing an explicit `destination_root` lets
+    callers stage a full promotion into a scratch directory without touching
+    the real provider tree, which is required for the staged intake workflow
+    in `sdk-intake/intake_workflow.py`."""
+    root = destination_root if destination_root is not None else provider_sdk_root(train)
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+    promote_vendor_headers(train, version, sdk_root, destination_root=root)
+    promote_system_sources(train, version, sdk_root, destination_root=root)
+    promote_utility_sources(train, version, sdk_root, destination_root=root)
+    promote_license_docs(train, sdk_root, destination_root=root)
     for part in train.parts:
-        promote_part_headers(train, version, sdk_root, part)
+        promote_part_headers(train, version, sdk_root, part, destination_root=root)
     for board in train.boards:
-        promote_board_headers(train, version, sdk_root, board)
-    scrub_promoted_headers(train)
-    promote_artifact_libraries(train, version)
-    copy_file(artifact_root(train, version) / "manifest.yaml", provider_sdk_root(train) / "artifact-manifest.yaml")
+        promote_board_headers(train, version, sdk_root, board, destination_root=root)
+    scrub_promoted_headers(train, destination_root=root)
+    promote_artifact_libraries(train, version, destination_root=root)
+    copy_file(artifact_root(train, version) / "manifest.yaml", root / "artifact-manifest.yaml")
 
 
 def build_hal(sdk_root: Path, profile: ToolchainProfile, part: PartBuild, train: TrainSpec, version: str, *, verbose: bool, clang_fpu: str) -> None:
