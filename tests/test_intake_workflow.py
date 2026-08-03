@@ -202,6 +202,70 @@ def test_load_ownership_entries_rejects_paths_value_not_a_list(tmp_path: Path, h
         helper.load_ownership_entries(root)
 
 
+def test_load_ownership_entries_rejects_paths_element_not_a_string(tmp_path: Path, helper) -> None:
+    """`paths`/`path_patterns` passing the container-shape (list) check is
+    not enough: a non-string element (e.g. an int, from a manifest typo
+    like `paths: [5]`) would otherwise reach `verify_generated_boundary`'s
+    `p.rstrip("/")` uncaught, raising a raw AttributeError instead of this
+    module's own IntakeSecurityError."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(
+        root,
+        "entries:\n"
+        "  - id: foo\n"
+        "    classification: bar\n"
+        "    direct_edit: forbidden\n"
+        "    paths:\n"
+        "      - 5\n",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_rejects_path_patterns_element_not_a_string(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(
+        root,
+        "entries:\n"
+        "  - id: foo\n"
+        "    classification: bar\n"
+        "    direct_edit: forbidden\n"
+        "    path_patterns:\n"
+        "      - true\n",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_raises_intake_error_for_invalid_yaml(tmp_path: Path, helper) -> None:
+    """Malformed YAML syntax must surface as this module's own
+    IntakeSecurityError (exit code 2, `error: ...` message), not an
+    uncaught `yaml.YAMLError` traceback escaping `main()`'s `except
+    IntakeError` handler."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(root, "entries: [unterminated\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not valid YAML"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_raises_intake_error_for_non_utf8_file(tmp_path: Path, helper) -> None:
+    """Malformed encoding must surface as this module's own
+    IntakeSecurityError, not an uncaught `UnicodeDecodeError` traceback."""
+    root = tmp_path / "repo"
+    ownership_dir = root / "release"
+    ownership_dir.mkdir(parents=True)
+    (ownership_dir / "source-ownership.yaml").write_bytes(b"entries: [\xff\xfe]\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not valid UTF-8"):
+        helper.load_ownership_entries(root)
+
+
 def test_load_ownership_entries_accepts_well_formed_manifest(tmp_path: Path, helper) -> None:
     root = tmp_path / "repo"
     root.mkdir()
@@ -570,6 +634,33 @@ def test_load_patch_queue_rejects_sidecar_that_is_not_a_mapping(tmp_path: Path, 
     (patches_dir / "001-bad.yaml").write_text("- just\n- a\n- list\n", encoding="utf-8")
 
     with pytest.raises(helper.IntakeSecurityError, match="mapping"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_raises_intake_error_for_invalid_sidecar_yaml(tmp_path: Path, helper) -> None:
+    """Malformed YAML syntax in a patch's `.yaml` sidecar must surface as
+    this module's own `IntakeSecurityError`, not an uncaught
+    `yaml.YAMLError` traceback escaping `main()`'s `except IntakeError`
+    handler."""
+    patches_dir = tmp_path / "patches"
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-bad.patch").write_text("diff --git a/x b/x\n", encoding="utf-8")
+    (patches_dir / "001-bad.yaml").write_text("owner: [unterminated\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not valid YAML"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_raises_intake_error_for_non_utf8_sidecar(tmp_path: Path, helper) -> None:
+    """Malformed encoding in a patch's `.yaml` sidecar must surface as this
+    module's own `IntakeSecurityError`, not an uncaught
+    `UnicodeDecodeError` traceback."""
+    patches_dir = tmp_path / "patches"
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-bad.patch").write_text("diff --git a/x b/x\n", encoding="utf-8")
+    (patches_dir / "001-bad.yaml").write_bytes(b"owner: [\xff\xfe]\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="not valid UTF-8"):
         helper.load_patch_queue(patches_dir)
 
 
@@ -1108,6 +1199,118 @@ def test_assert_no_ambiguous_path_change_accepts_no_header_pair_when_no_content_
     helper._assert_no_ambiguous_path_change(
         patch_path, expected_entry_count=1, entry_has_content_change=[False]
     )
+
+
+def test_load_patch_queue_rejects_implicit_rename_hidden_by_bare_carriage_return_desync(
+    tmp_path: Path, helper
+) -> None:
+    """Git splits patch lines on '\\n' only (see git's `linelen()`); a bare
+    '\\r' (a CR not immediately followed by '\\n') is just an ordinary byte
+    to git, never a line boundary. Before this fix, the header-scan read
+    the patch with Python's universal-newlines `read_text()`, which
+    silently translates such a bare CR into '\\n' -- letting this decoy
+    'index' line's embedded '\\r'-joined '---'/'+++' pair (plus a
+    hunk-marker-lookalike truncator) look like a benign, self-consistent
+    entry, while git itself never sees that pair at all and instead honors
+    the real, later '--- a/lib/...' / '+++ b/allowed.h' pair as an
+    unchecked rename that deletes a forbidden `lib/**` archive. Confirmed
+    against real `git apply` (not just this scan) via `apply_patch_queue`
+    below."""
+    patches_dir = tmp_path / "patches"
+    patch_bytes = (
+        b"diff --git a/allowed.h b/allowed.h\n"
+        b"index 1111111..2222222 100644"
+        b"\r--- a/allowed.h\r+++ b/allowed.h\r@@ -x\n"
+        b"--- a/lib/gcc/apollo510/libprotected.a\n"
+        b"+++ b/allowed.h\n"
+        b"@@ -1 +1 @@\n"
+        b"-SECRET-ARCHIVE\n"
+        b"+new\n"
+    )
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-cr-desync.patch").write_bytes(patch_bytes)
+    sidecar = {"owner": "jane", "reason": "should be rejected"}
+    (patches_dir / "001-cr-desync.yaml").write_text(yaml.safe_dump(sidecar), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeSecurityError, match="carriage return"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_apply_patch_queue_does_not_apply_bare_carriage_return_desync_rename(tmp_path: Path, helper) -> None:
+    """End-to-end confirmation of the same bypass: even if the header-scan
+    guard were somehow skipped, the staged tree must never actually lose
+    the forbidden `lib/**` file to this patch, because `load_patch_queue`
+    (which every real call path goes through before `apply_patch_queue`)
+    must reject it first."""
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "allowed.h").write_text("old\n", encoding="utf-8")
+    lib_dir = staged / "lib" / "gcc" / "apollo510"
+    lib_dir.mkdir(parents=True)
+    (lib_dir / "libprotected.a").write_text("SECRET-ARCHIVE\n", encoding="utf-8")
+
+    patches_dir = tmp_path / "patches"
+    patch_bytes = (
+        b"diff --git a/allowed.h b/allowed.h\n"
+        b"index 1111111..2222222 100644"
+        b"\r--- a/allowed.h\r+++ b/allowed.h\r@@ -x\n"
+        b"--- a/lib/gcc/apollo510/libprotected.a\n"
+        b"+++ b/allowed.h\n"
+        b"@@ -1 +1 @@\n"
+        b"-SECRET-ARCHIVE\n"
+        b"+new\n"
+    )
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-cr-desync.patch").write_bytes(patch_bytes)
+    sidecar = {"owner": "jane", "reason": "should be rejected"}
+    (patches_dir / "001-cr-desync.yaml").write_text(yaml.safe_dump(sidecar), encoding="utf-8")
+
+    with pytest.raises(helper.IntakeSecurityError, match="carriage return"):
+        helper.apply_patch_queue(staged, patches_dir)
+
+    # The forbidden archive must still be present and untouched.
+    assert (lib_dir / "libprotected.a").read_text(encoding="utf-8") == "SECRET-ARCHIVE\n"
+
+
+def test_assert_no_index_only_mode_change_rejects_bare_carriage_return(tmp_path: Path, helper) -> None:
+    """The same bare-CR desynchronization risk applies to the mode-only-change
+    scan: a decoy 'index' line joined by a bare '\\r' could otherwise hide a
+    symlink/submodule mode from `_INDEX_LINE_MODE` while git's own parser
+    reads a different mode from what it treats as a single logical line."""
+    patch_path = tmp_path / "cr-desync-mode.patch"
+    patch_path.write_bytes(
+        b"diff --git a/x b/x\nindex 1111111..2222222 100644\r--- a/x\r+++ b/x\r@@ -x\n"
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="carriage return"):
+        helper._assert_no_index_only_mode_change(patch_path)
+
+
+def test_load_patch_queue_accepts_patch_with_crlf_line_endings(tmp_path: Path, helper) -> None:
+    """Non-regression: an ordinary patch using CRLF ('\\r\\n', not a bare
+    '\\r') line endings throughout -- as e.g. a Windows-authored patch might
+    use -- must still be accepted normally. Every '\\r' here is immediately
+    followed by '\\n', so it is not the desynchronization case rejected
+    above, and the header/mode scans already tolerate a trailing '\\r'
+    before end-of-line via `.strip()` / `\\s*$`."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/include/a.h b/include/a.h\r\n"
+        "index e69de29..1111111 100644\r\n"
+        "--- a/include/a.h\r\n"
+        "+++ b/include/a.h\r\n"
+        "@@ -1 +1 @@\r\n"
+        "-#define A 1\r\n"
+        "+#define A 2\r\n"
+    )
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-crlf.patch").write_bytes(patch_text.encode("utf-8"))
+    sidecar = {"owner": "jane", "reason": "CRLF patch"}
+    (patches_dir / "001-crlf.yaml").write_text(yaml.safe_dump(sidecar), encoding="utf-8")
+
+    queue = helper.load_patch_queue(patches_dir)
+
+    assert [p.slug for p in queue] == ["001-crlf"]
 
 
 def test_load_patch_queue_accepts_legitimate_multi_file_patch(tmp_path: Path, helper) -> None:
@@ -1795,4 +1998,31 @@ def test_verify_artifact_hashes_raises_intake_error_when_section_value_is_a_stri
     manifest_path.write_text('parts: "not-a-list"\nboards: []\n', encoding="utf-8")
 
     with pytest.raises(helper.IntakeVerificationError, match="must be a list"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_for_invalid_yaml(tmp_path: Path, helper) -> None:
+    """Malformed YAML syntax in `artifact-manifest.yaml` must surface as
+    this module's own `IntakeVerificationError`, not an uncaught
+    `yaml.YAMLError` traceback escaping `main()`'s `except IntakeError`
+    handler."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text("parts: [unterminated\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="not valid YAML"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_for_non_utf8_file(tmp_path: Path, helper) -> None:
+    """Malformed encoding in `artifact-manifest.yaml` must surface as this
+    module's own `IntakeVerificationError`, not an uncaught
+    `UnicodeDecodeError` traceback."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_bytes(b"parts: [\xff\xfe]\n")
+
+    with pytest.raises(helper.IntakeVerificationError, match="not valid UTF-8"):
         helper.verify_artifact_hashes(sdk_root, manifest_path)

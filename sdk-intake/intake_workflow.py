@@ -86,6 +86,28 @@ class IntakePatchError(IntakeError):
     """A patch hook failed to validate or reapply."""
 
 
+def _load_yaml_document(path: Path, *, error_cls: type[IntakeError]) -> object:
+    """Read and parse a YAML file, translating decode/parse failures into
+    this module's own exception hierarchy.
+
+    Without this, a non-UTF-8 file raises an uncaught `UnicodeDecodeError`
+    and a malformed YAML document raises an uncaught `yaml.YAMLError`, both
+    escaping `main()`'s `except IntakeError` handler as raw tracebacks
+    (exit code 1, no `error: ...` message) instead of being reported the
+    same way as every other input-validation failure this tool guards
+    against (exit code 2). This is a robustness/UX fix, not a security
+    fix -- both failure modes already fail closed (the tool crashes rather
+    than proceeding on unparseable input)."""
+    try:
+        raw_text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as error:
+        raise error_cls(f"{path} is not valid UTF-8: {error}") from error
+    try:
+        return yaml.safe_load(raw_text)
+    except yaml.YAMLError as error:
+        raise error_cls(f"{path} is not valid YAML: {error}") from error
+
+
 # --------------------------------------------------------------------------
 # Typed models
 # --------------------------------------------------------------------------
@@ -217,7 +239,7 @@ def load_ownership_entries(root: Path | None = None) -> dict[str, OwnershipEntry
     manifest_path = (root or repo_root()) / OWNERSHIP_MANIFEST_RELATIVE
     if not manifest_path.is_file():
         raise IntakeSecurityError(f"source-ownership manifest not found: {manifest_path}")
-    data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    data = _load_yaml_document(manifest_path, error_cls=IntakeSecurityError) or {}
     if not isinstance(data, dict):
         raise IntakeSecurityError(
             f"source-ownership manifest {manifest_path} must be a mapping at its top level, got "
@@ -241,6 +263,10 @@ def load_ownership_entries(root: Path | None = None) -> dict[str, OwnershipEntry
             path_patterns = raw.get("path_patterns", ())
             if not isinstance(paths, (list, tuple)) or not isinstance(path_patterns, (list, tuple)):
                 raise TypeError("'paths'/'path_patterns' must be a list")
+            if not all(isinstance(p, str) for p in paths) or not all(
+                isinstance(p, str) for p in path_patterns
+            ):
+                raise TypeError("'paths'/'path_patterns' entries must all be strings")
             entry = OwnershipEntry(
                 entry_id=raw["id"],
                 classification=raw["classification"],
@@ -327,7 +353,7 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
     manifest_path = manifest_path or (sdk_root / "artifact-manifest.yaml")
     if not manifest_path.is_file():
         raise IntakeVerificationError(f"artifact manifest not found: {manifest_path}")
-    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    manifest = _load_yaml_document(manifest_path, error_cls=IntakeVerificationError) or {}
     if not isinstance(manifest, dict):
         raise IntakeVerificationError(
             f"artifact manifest {manifest_path} must be a mapping at its top level, got {type(manifest).__name__}"
@@ -597,6 +623,37 @@ _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
 # region *before* the real '---'/'+++' pair, hiding it from inspection.
 _HUNK_HEADER = re.compile(r"^@@ -", re.MULTILINE)
 _REGULAR_FILE_MODE = 0o100644
+_BARE_CR = re.compile(r"\r(?!\n)")
+
+
+def _read_patch_text_for_header_scan(patch_path: Path) -> str:
+    """Read patch text using git-identical line-splitting semantics, for use
+    by `_assert_no_index_only_mode_change` and `_assert_no_ambiguous_path_change`.
+
+    `Path.read_text()` opens in universal-newlines mode, which silently
+    translates a bare '\\r' (a CR not followed by '\\n') into '\\n'. Git
+    splits patch lines on '\\n' only (see `linelen()`); a bare CR is just an
+    ordinary byte to git, never a line boundary. If this scan translated it
+    to '\\n' the way `read_text()` does, an attacker could hide a decoy
+    '---'/'+++' header pair (plus a hunk-header-lookalike truncator) inside
+    what git treats as a single logical '`index ...`' line: this scan would
+    stop at the decoy pair while git itself honors a different, later
+    '---'/'+++' pair as the real (and, in that case, unchecked) rename --
+    defeating the very guard this function exists to provide. Reading the
+    raw bytes and decoding without newline translation makes this scan see
+    exactly the same line boundaries git does. As defense in depth, any
+    bare CR is rejected outright below: legitimate patches this tool
+    generates or accepts never contain one, and tolerating it only ever
+    reopens this desynchronization risk.
+    """
+    text = patch_path.read_bytes().decode("utf-8", errors="replace")
+    if _BARE_CR.search(text):
+        raise IntakeSecurityError(
+            f"patch {patch_path.name!r} contains a bare carriage return (a '\\r' not immediately "
+            "followed by '\\n'); refusing to evaluate a patch whose line boundaries cannot be "
+            "determined identically to 'git apply'"
+        )
+    return text
 
 
 def _assert_patch_shape_supported(patch_path: Path) -> None:
@@ -683,7 +740,7 @@ def _assert_no_index_only_mode_change(patch_path: Path) -> None:
     which is silent (empty `--summary`) in exactly this case. Scan it
     directly rather than trusting `--summary`'s silence to mean "regular
     file"."""
-    text = patch_path.read_text(encoding="utf-8", errors="replace")
+    text = _read_patch_text_for_header_scan(patch_path)
     for match in _INDEX_LINE_MODE.finditer(text):
         mode_token = match.group(1)
         try:
@@ -753,8 +810,13 @@ def _assert_no_ambiguous_path_change(
     as a truly empty file add/delete) -- an entry with real line changes
     but no discoverable header pair is refused rather than silently
     skipped, since that combination is not producible by an honest patch
-    and would otherwise indicate the header-scan region was fooled."""
-    text = patch_path.read_text(encoding="utf-8", errors="replace")
+    and would otherwise indicate the header-scan region was fooled.
+
+    The patch text is read with `_read_patch_text_for_header_scan`, which
+    preserves git's own line-splitting semantics (splits on '\\n' only,
+    never translating a bare '\\r') -- see that helper's docstring for the
+    desynchronization bypass this prevents."""
+    text = _read_patch_text_for_header_scan(patch_path)
     entry_starts = list(_DIFF_GIT_HEADER.finditer(text))
     if len(entry_starts) != expected_entry_count:
         raise IntakeSecurityError(
@@ -819,7 +881,7 @@ def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
                 f"patch {patch_path.name!r} has no ownership sidecar {metadata_path.name!r}; "
                 "every patch must declare an owner and reason before it can be applied"
             )
-        data = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+        data = _load_yaml_document(metadata_path, error_cls=IntakeSecurityError) or {}
         if not isinstance(data, dict):
             raise IntakeSecurityError(
                 f"patch {patch_path.name!r} sidecar {metadata_path.name!r} must be a mapping at its "
