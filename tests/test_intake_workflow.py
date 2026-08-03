@@ -141,6 +141,88 @@ def test_verify_generated_boundary_requires_manifest_entry(fake_repo: Path, help
         helper.verify_generated_boundary(train)
 
 
+def _write_ownership_manifest(root: Path, content: str) -> None:
+    ownership_dir = root / "release"
+    ownership_dir.mkdir(parents=True, exist_ok=True)
+    (ownership_dir / "source-ownership.yaml").write_text(content, encoding="utf-8")
+
+
+def test_load_ownership_entries_rejects_top_level_not_a_mapping(tmp_path: Path, helper) -> None:
+    """A source-ownership manifest whose top level is a list (or any other
+    non-mapping) must fail closed with an actionable IntakeSecurityError,
+    not an untyped AttributeError escaping from `data.get(...)`."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(root, "- just\n- a\n- list\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="mapping"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_rejects_entries_value_not_a_list(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(root, "entries: 5\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="must be a list"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_rejects_entry_not_a_mapping(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(root, "entries:\n  - just-a-string\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_rejects_entry_missing_required_field(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(root, "entries:\n  - id: foo\n    classification: bar\n")
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_rejects_paths_value_not_a_list(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(
+        root,
+        "entries:\n"
+        "  - id: foo\n"
+        "    classification: bar\n"
+        "    direct_edit: forbidden\n"
+        "    paths: not-a-list\n",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="malformed entry"):
+        helper.load_ownership_entries(root)
+
+
+def test_load_ownership_entries_accepts_well_formed_manifest(tmp_path: Path, helper) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_ownership_manifest(
+        root,
+        "entries:\n"
+        "  - id: foo\n"
+        "    classification: bar\n"
+        "    direct_edit: forbidden\n"
+        "    generated: true\n"
+        "    paths:\n"
+        "      - some/path\n",
+    )
+
+    entries = helper.load_ownership_entries(root)
+
+    assert entries["foo"].generated is True
+    assert entries["foo"].direct_edit == "forbidden"
+    assert entries["foo"].paths == ("some/path",)
+
+
 # --------------------------------------------------------------------------
 # Artifact hash verification
 # --------------------------------------------------------------------------
@@ -475,6 +557,19 @@ def test_load_patch_queue_requires_non_empty_owner_and_reason(tmp_path: Path, he
     _write_patch(patches_dir, "001-bad", "diff --git a/x b/x\n", owner="", reason="something")
 
     with pytest.raises(helper.IntakeSecurityError):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_load_patch_queue_rejects_sidecar_that_is_not_a_mapping(tmp_path: Path, helper) -> None:
+    """A `.yaml` sidecar whose top level is a list (or any other
+    non-mapping) must fail closed with an actionable IntakeSecurityError,
+    not an untyped AttributeError escaping from `data.get(...)`."""
+    patches_dir = tmp_path / "patches"
+    patches_dir.mkdir(parents=True)
+    (patches_dir / "001-bad.patch").write_text("diff --git a/x b/x\n", encoding="utf-8")
+    (patches_dir / "001-bad.yaml").write_text("- just\n- a\n- list\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeSecurityError, match="mapping"):
         helper.load_patch_queue(patches_dir)
 
 
@@ -950,6 +1045,71 @@ def test_load_patch_queue_rejects_implicit_rename_hidden_by_counterfeit_headers_
         helper.load_patch_queue(patches_dir)
 
 
+def test_load_patch_queue_rejects_implicit_rename_hidden_by_fake_hunk_marker_lookalike(
+    tmp_path: Path, helper
+) -> None:
+    """A line beginning `@@ ` that is not actually a valid Git hunk header
+    (e.g. `@@ not a real hunk`) must not be mistaken for one when bounding
+    the header-scan region -- doing so previously let such a line falsely
+    truncate the scan *before* the real `---`/`+++` pair, hiding an
+    ambiguous rename from detection entirely."""
+    patches_dir = tmp_path / "patches"
+    patch_text = (
+        "diff --git a/notes.md b/notes.md\n"
+        "@@ not a real hunk header, just decoy text\n"
+        "--- a/lib/gcc/apollo510/libam_hal.a\n"
+        "+++ b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-SECRET-ARCHIVE\n"
+        "+SECRET-ARCHIVE-MOVED\n"
+    )
+    _write_patch(patches_dir, "001-fake-hunk-marker", patch_text, owner="jane", reason="should be rejected")
+
+    with pytest.raises(helper.IntakeSecurityError, match="changes path from"):
+        helper.load_patch_queue(patches_dir)
+
+
+def test_assert_no_ambiguous_path_change_rejects_content_change_with_no_header_pair(
+    tmp_path: Path, helper
+) -> None:
+    """Defense in depth: an entry that reports nonzero added/deleted lines
+    via `git apply --numstat` but for which no `---`/`+++` header pair could
+    be found in its bounded header-scan region must fail closed rather than
+    be silently treated as a no-content entry (e.g. a genuinely empty file
+    add/delete), since that combination cannot arise from an honest
+    patch."""
+    patch_path = tmp_path / "no-header-but-content.patch"
+    patch_path.write_text(
+        "diff --git a/notes.md b/notes.md\n"
+        "@@ -1 +1 @@\n"
+        "-old line\n"
+        "+new line\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(helper.IntakeSecurityError, match="no '---'/'\\+\\+\\+' header pair"):
+        helper._assert_no_ambiguous_path_change(
+            patch_path, expected_entry_count=1, entry_has_content_change=[True]
+        )
+
+
+def test_assert_no_ambiguous_path_change_accepts_no_header_pair_when_no_content_change(
+    tmp_path: Path, helper
+) -> None:
+    """Non-regression: an entry that genuinely has no `---`/`+++` header pair
+    (e.g. a mode-only change already vetted by `--summary`) and reports no
+    added/deleted content lines must still be accepted."""
+    patch_path = tmp_path / "mode-only.patch"
+    patch_path.write_text(
+        "diff --git a/script.sh b/script.sh\nold mode 100644\nnew mode 100755\n",
+        encoding="utf-8",
+    )
+
+    helper._assert_no_ambiguous_path_change(
+        patch_path, expected_entry_count=1, entry_has_content_change=[False]
+    )
+
+
 def test_load_patch_queue_accepts_legitimate_multi_file_patch(tmp_path: Path, helper) -> None:
     """Non-regression: the `diff --git`-anchored, numstat-cross-checked scan
     in `_assert_no_ambiguous_path_change` must still accept an ordinary
@@ -1015,7 +1175,9 @@ def test_assert_no_ambiguous_path_change_rejects_mismatched_diff_git_and_numstat
     )
 
     with pytest.raises(helper.IntakeSecurityError, match="diff --git"):
-        helper._assert_no_ambiguous_path_change(patch_path, expected_entry_count=2)
+        helper._assert_no_ambiguous_path_change(
+            patch_path, expected_entry_count=2, entry_has_content_change=[True]
+        )
 
 
 @pytest.mark.parametrize("mode_field", ["120000", "+120000"])
@@ -1242,6 +1404,21 @@ def test_promote_from_staging_requires_explicit_confirmation(tmp_path: Path, hel
     with pytest.raises(helper.IntakeSecurityError):
         helper.promote_from_staging(staged, provider, confirm=False)
     assert not provider.exists()
+
+
+def test_promote_from_staging_fails_closed_with_intake_error_when_staged_root_missing(
+    tmp_path: Path, helper, monkeypatch
+) -> None:
+    """A missing staged payload directory must be reported as an actionable
+    `IntakeVerificationError`, not an untyped `FileNotFoundError` escaping
+    this fail-closed boundary uncaught."""
+    monkeypatch.setattr(helper, "repo_root", lambda: tmp_path)
+    staged = tmp_path / "does-not-exist"
+    provider = tmp_path / "provider"
+    provider.mkdir()
+
+    with pytest.raises(helper.IntakeVerificationError, match="staged payload not found"):
+        helper.promote_from_staging(staged, provider, confirm=True)
 
 
 def test_promote_from_staging_swaps_directories(tmp_path: Path, helper, monkeypatch) -> None:
@@ -1587,4 +1764,35 @@ def test_verify_artifact_hashes_raises_intake_error_when_entry_is_not_a_mapping(
     manifest_path.write_text('parts:\n  - "just-a-string"\nboards: []\n', encoding="utf-8")
 
     with pytest.raises(helper.IntakeVerificationError, match="malformed"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_when_section_value_is_not_a_list(
+    tmp_path: Path, helper
+) -> None:
+    """A `parts`/`boards` section whose value is a scalar or mapping instead
+    of a list (e.g. `parts: 5` or `parts: "oops"`) must fail closed with an
+    actionable `IntakeVerificationError` before ever attempting to iterate
+    it, not an untyped `TypeError`/`AttributeError` escaping the `for entry
+    in ...` loop (a bare string is otherwise silently iterable character by
+    character in Python, which would produce a confusing downstream
+    error)."""
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text("parts: 5\nboards: []\n", encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="must be a list"):
+        helper.verify_artifact_hashes(sdk_root, manifest_path)
+
+
+def test_verify_artifact_hashes_raises_intake_error_when_section_value_is_a_string(
+    tmp_path: Path, helper
+) -> None:
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    manifest_path = sdk_root / "artifact-manifest.yaml"
+    manifest_path.write_text('parts: "not-a-list"\nboards: []\n', encoding="utf-8")
+
+    with pytest.raises(helper.IntakeVerificationError, match="must be a list"):
         helper.verify_artifact_hashes(sdk_root, manifest_path)

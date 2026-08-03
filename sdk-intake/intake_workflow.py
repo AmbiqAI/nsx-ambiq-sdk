@@ -218,16 +218,41 @@ def load_ownership_entries(root: Path | None = None) -> dict[str, OwnershipEntry
     if not manifest_path.is_file():
         raise IntakeSecurityError(f"source-ownership manifest not found: {manifest_path}")
     data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
-    entries: dict[str, OwnershipEntry] = {}
-    for raw in data.get("entries", []):
-        entry = OwnershipEntry(
-            entry_id=raw["id"],
-            classification=raw["classification"],
-            generated=bool(raw.get("generated", False)),
-            direct_edit=raw["direct_edit"],
-            paths=tuple(raw.get("paths", ())),
-            path_patterns=tuple(raw.get("path_patterns", ())),
+    if not isinstance(data, dict):
+        raise IntakeSecurityError(
+            f"source-ownership manifest {manifest_path} must be a mapping at its top level, got "
+            f"{type(data).__name__}"
         )
+    raw_entries = data.get("entries", []) or []
+    if not isinstance(raw_entries, list):
+        raise IntakeSecurityError(
+            f"source-ownership manifest {manifest_path} 'entries' must be a list, got "
+            f"{type(raw_entries).__name__}"
+        )
+    entries: dict[str, OwnershipEntry] = {}
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            raise IntakeSecurityError(
+                f"source-ownership manifest {manifest_path} contains a malformed entry: expected a "
+                f"mapping, got {type(raw).__name__}"
+            )
+        try:
+            paths = raw.get("paths", ())
+            path_patterns = raw.get("path_patterns", ())
+            if not isinstance(paths, (list, tuple)) or not isinstance(path_patterns, (list, tuple)):
+                raise TypeError("'paths'/'path_patterns' must be a list")
+            entry = OwnershipEntry(
+                entry_id=raw["id"],
+                classification=raw["classification"],
+                generated=bool(raw.get("generated", False)),
+                direct_edit=raw["direct_edit"],
+                paths=tuple(paths),
+                path_patterns=tuple(path_patterns),
+            )
+        except (KeyError, TypeError, AttributeError) as error:
+            raise IntakeSecurityError(
+                f"source-ownership manifest {manifest_path} contains a malformed entry: {error}"
+            ) from error
         entries[entry.entry_id] = entry
     return entries
 
@@ -311,7 +336,13 @@ def verify_artifact_hashes(sdk_root: Path, manifest_path: Path | None = None) ->
     mismatched: list[str] = []
     missing: list[str] = []
     for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
-        for entry in manifest.get(section, []) or []:
+        section_value = manifest.get(section, []) or []
+        if not isinstance(section_value, list):
+            raise IntakeVerificationError(
+                f"artifact manifest {manifest_path} section {section!r} must be a list, got "
+                f"{type(section_value).__name__}"
+            )
+        for entry in section_value:
             # Every container-shape access below (`entry.get`, `.items()`) is
             # wrapped so a malformed manifest (e.g. a section containing a
             # bare string, or an artifacts value that isn't a mapping) fails
@@ -559,7 +590,12 @@ _INDEX_LINE_MODE = re.compile(r"^index [0-9a-fA-F]+\.\.[0-9a-fA-F]+\s+([+-]?\d+)
 _OLD_FILE_HEADER = re.compile(r"^--- (.+)$", re.MULTILINE)
 _NEW_FILE_HEADER = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
 _DIFF_GIT_HEADER = re.compile(r"^diff --git .*$", re.MULTILINE)
-_HUNK_HEADER = re.compile(r"^@@ ", re.MULTILINE)
+# Anchored on git's actual hunk-start syntax ("@@ -old_range +new_range @@"),
+# not merely any line beginning "@@ " -- a line like "@@ not a real hunk"
+# matches the latter but is not a hunk header to Git at all, and using the
+# looser pattern here let such a line falsely truncate the header-scan
+# region *before* the real '---'/'+++' pair, hiding it from inspection.
+_HUNK_HEADER = re.compile(r"^@@ -", re.MULTILINE)
 _REGULAR_FILE_MODE = 0o100644
 
 
@@ -578,6 +614,7 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
             f"{numstat.stderr.decode('utf-8', errors='replace').strip()}"
         )
     entry_count = 0
+    entry_has_content_change: list[bool] = []
     for record in numstat.stdout.split(b"\0"):
         if not record:
             continue
@@ -597,6 +634,7 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
                 "support; every patch must be a simple, unambiguous add/modify/delete of a regular "
                 "text file"
             )
+        entry_has_content_change.append(int(added) != 0 or int(deleted) != 0)
 
     summary = subprocess.run(
         ["git", "-C", str(anchor), "apply", "--summary", str(patch_path)],
@@ -633,7 +671,9 @@ def _assert_patch_shape_supported(patch_path: Path) -> None:
             )
 
     _assert_no_index_only_mode_change(patch_path)
-    _assert_no_ambiguous_path_change(patch_path, expected_entry_count=entry_count)
+    _assert_no_ambiguous_path_change(
+        patch_path, expected_entry_count=entry_count, entry_has_content_change=entry_has_content_change
+    )
 
 
 def _assert_no_index_only_mode_change(patch_path: Path) -> None:
@@ -677,7 +717,9 @@ def _diff_header_path(raw: str, *, side: str, prefix: str, patch_path: Path) -> 
     return value[len(prefix):]
 
 
-def _assert_no_ambiguous_path_change(patch_path: Path, *, expected_entry_count: int) -> None:
+def _assert_no_ambiguous_path_change(
+    patch_path: Path, *, expected_entry_count: int, entry_has_content_change: list[bool]
+) -> None:
     """A patch can move a file's content to a different path just by writing
     different `--- a/OLD` / `+++ b/NEW` names -- no `rename from`/`rename
     to` (or legacy `rename old`/`rename new`) keyword required at all. `git
@@ -704,7 +746,14 @@ def _assert_no_ambiguous_path_change(patch_path: Path, *, expected_entry_count: 
     as Git itself never inspects it for this purpose. The number of entries
     found this way is cross-checked against `git apply --numstat -z`'s own
     entry count (computed by the caller) as a further guard against a
-    structurally malformed patch."""
+    structurally malformed patch. As additional defense in depth, an entry
+    that reports no '---'/'+++' header pair at all is only accepted when
+    `git apply --numstat`'s own added/deleted line counts for that same
+    entry are both zero (i.e. the entry genuinely has no content hunk, such
+    as a truly empty file add/delete) -- an entry with real line changes
+    but no discoverable header pair is refused rather than silently
+    skipped, since that combination is not producible by an honest patch
+    and would otherwise indicate the header-scan region was fooled."""
     text = patch_path.read_text(encoding="utf-8", errors="replace")
     entry_starts = list(_DIFF_GIT_HEADER.finditer(text))
     if len(entry_starts) != expected_entry_count:
@@ -738,7 +787,16 @@ def _assert_no_ambiguous_path_change(patch_path: Path, *, expected_entry_count: 
             # No content hunk for this entry at all (e.g. a genuinely empty
             # file addition/deletion) -- nothing to compare, and the shape
             # (mode/rename/copy) of this entry was already authoritatively
-            # checked via `--summary`/`--numstat` above.
+            # checked via `--summary`/`--numstat` above. Only accept this
+            # when numstat itself reported no content change for this
+            # entry; a nonzero line count with no discoverable header pair
+            # means the header-scan region cannot be trusted here.
+            if entry_has_content_change[index]:
+                raise IntakeSecurityError(
+                    f"patch {patch_path.name!r} entry {index + 1} reports added/deleted content lines "
+                    "but no '---'/'+++' header pair could be found before its first hunk; refusing to "
+                    "evaluate a patch whose file identity cannot be determined unambiguously"
+                )
             continue
         old_name = _diff_header_path(old_headers[0], side="old ('---')", prefix="a/", patch_path=patch_path)
         new_name = _diff_header_path(new_headers[0], side="new ('+++')", prefix="b/", patch_path=patch_path)
@@ -762,6 +820,11 @@ def load_patch_queue(patches_dir: Path) -> list[PatchMetadata]:
                 "every patch must declare an owner and reason before it can be applied"
             )
         data = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(data, dict):
+            raise IntakeSecurityError(
+                f"patch {patch_path.name!r} sidecar {metadata_path.name!r} must be a mapping at its "
+                f"top level, got {type(data).__name__}"
+            )
         owner = str(data.get("owner") or "").strip()
         reason = str(data.get("reason") or "").strip()
         if not owner or not reason:
@@ -1067,7 +1130,7 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
     assert_within_repo(staged_sdk_root, label="staging source")
     assert_within_repo(provider_root, label="promotion destination")
     if not staged_sdk_root.is_dir():
-        raise FileNotFoundError(f"staged payload not found: {staged_sdk_root}")
+        raise IntakeVerificationError(f"staged payload not found: {staged_sdk_root}")
     _assert_no_symlinks(staged_sdk_root, label="staging source")
 
     tmp = provider_root.with_name(provider_root.name + ".promote-tmp")
