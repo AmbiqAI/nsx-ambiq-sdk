@@ -12,7 +12,7 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 This is the exact promoted source identity recorded by
 `sdk/artifact-manifest.yaml`; it is not represented as an official numbered
-AmbiqSuite release. The NSX distribution and module version is `5.2.23`.
+AmbiqSuite release. The NSX distribution and module version is `5.2.24`.
 
 ## Package Contents
 

@@ -8,7 +8,7 @@ It is not a full AmbiqSuite mirror. Optional middleware and examples such as Fre
 
 ## Current Coverage
 
-The distribution and every manifest under `modules/` use version `5.2.23`.
+The distribution and every manifest under `modules/` use version `5.2.24`.
 This distribution maps to one promoted AmbiqSuite payload: snapshot
 `stable-2026.06.18`, ref `stable`, commit
 `caaf5af86087881647f56c70646c748d40c86e23`. The repository does not identify
@@ -24,8 +24,9 @@ are selected by the public `armclang` toolchain family.
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 Release provenance and qualification are recorded in
-[`release/nsx-ambiq-sdk-5.2.23.yaml`](release/nsx-ambiq-sdk-5.2.23.yaml) and
-[`release/qualification-5.2.23.md`](release/qualification-5.2.23.md).
+[`release/nsx-ambiq-sdk-5.2.24.yaml`](release/nsx-ambiq-sdk-5.2.24.yaml) and
+[`release/qualification-5.2.24.md`](release/qualification-5.2.24.md).
+The superseded `5.2.23` records are kept alongside them.
 
 ## Using The Modules
 

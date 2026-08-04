@@ -4,7 +4,7 @@ module:
   name: nsx-ble
   type: backend_specific
   category: sdk_component
-  version: "5.2.23"
+  version: "5.2.24"
 
 support:
   ambiqsuite: true

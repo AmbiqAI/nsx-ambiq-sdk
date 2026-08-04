@@ -75,7 +75,7 @@ def test_write_manifest_uses_portable_tool_names(repo_root: Path, tmp_path: Path
     assert "arm-none-eabi-gcc" in text
 
 
-def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
+def test_only_part_keeps_full_train_for_promotion(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
     helper = load_build_ambiqsuite(repo_root)
     sdk_root = tmp_path / "sdk"
     sdk_root.mkdir()
@@ -99,8 +99,12 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
     monkeypatch.setattr(helper, "resolve_source_root", lambda args: (sdk_root, "git_ref", "stable", "deadbeef"))
     monkeypatch.setattr(helper, "selected_toolchains", lambda train, values: ["gcc"])
     monkeypatch.setattr(helper, "optional_toolchain_profile", lambda args, name: None)
-    # Empty artifact root (no manifest.yaml) so promote-only takes the write path.
-    monkeypatch.setattr(helper, "artifact_root", lambda train, version: tmp_path / "artifacts")
+    # promote-only reuses the manifest written by the original full build; it
+    # refuses to run without one, so provide it.
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n", encoding="utf-8")
+    monkeypatch.setattr(helper, "artifact_root", lambda train, version: artifacts)
     # The full train's artifact set is treated as already complete on disk so the
     # promotion guard passes without depending on locally-built (gitignored) trees.
     monkeypatch.setattr(helper, "missing_artifact_libraries", lambda train, version: [])
@@ -125,8 +129,48 @@ def test_only_part_keeps_full_train_for_manifest_and_promotion(repo_root: Path, 
     full_train = helper.TRAINS["stable"]
     expected_parts = [part.name for part in full_train.parts]
     expected_boards = [board.name for board in full_train.boards]
-    assert calls["manifest"] == [(expected_parts, expected_boards)]
+    assert calls["manifest"] == []
     assert calls["promote"] == [(expected_parts, expected_boards)]
+
+
+def test_promote_only_without_a_manifest_fails_closed(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
+    """Synthesizing a manifest here would mint provenance for archives this run
+    never built: `write_manifest` hashes whatever bytes are on disk and stamps
+    them with the source identity passed on the command line."""
+    helper = load_build_ambiqsuite(repo_root)
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    wrote: list[str] = []
+    promoted: list[str] = []
+
+    monkeypatch.setattr(
+        helper,
+        "parse_args",
+        lambda: argparse.Namespace(
+            train="stable",
+            only_part=[],
+            version="stable-2026.06.17",
+            toolchain=[],
+            promote=False,
+            promote_only=True,
+            fpu=None,
+            debug_symbols=False,
+            verbose=False,
+        ),
+    )
+    monkeypatch.setattr(helper, "resolve_source_root", lambda args: (sdk_root, "git_ref", "stable", "deadbeef"))
+    monkeypatch.setattr(helper, "selected_toolchains", lambda train, values: ["gcc"])
+    monkeypatch.setattr(helper, "optional_toolchain_profile", lambda args, name: None)
+    # Artifact root with archives but no manifest.yaml to reuse.
+    monkeypatch.setattr(helper, "artifact_root", lambda train, version: tmp_path / "artifacts")
+    monkeypatch.setattr(helper, "missing_artifact_libraries", lambda train, version: [])
+    monkeypatch.setattr(helper, "built_artifact_toolchains", lambda train, version: ["gcc"])
+    monkeypatch.setattr(helper, "write_manifest", lambda *args, **kwargs: wrote.append("wrote"))
+    monkeypatch.setattr(helper, "promote_provider_payload", lambda *args, **kwargs: promoted.append("promoted"))
+
+    assert helper.main() == 2
+    assert wrote == []
+    assert promoted == []
 
 
 def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, monkeypatch) -> None:
@@ -263,3 +307,61 @@ def test_default_extract_dir_derives_from_zip_stem(repo_root: Path) -> None:
     extract_dir = helper.default_extract_dir(Path("/drops/AmbiqSuite_R5.2.0.zip"))
     assert extract_dir.name == "AmbiqSuite_R5.2.0"
     assert "None" not in extract_dir.name
+
+
+def _generated_manifest(entries: list[tuple[str, str]]) -> str:
+    """Render the fragment of a generated artifact manifest that
+    `scan_manifest_artifacts` reads, in the exact shape `write_manifest` emits."""
+    lines = ["parts:"]
+    for path, digest in entries:
+        lines += ["  - logical_skew: apollo510", "    hal_artifacts:", "      gcc:",
+                  f"        path: {path}", f"        sha256: {digest}"]
+    return "\n".join(lines) + "\n"
+
+
+def test_promoted_payload_must_match_the_manifest_promoted_with_it(repo_root: Path, tmp_path: Path) -> None:
+    """The check whose absence let v5.2.23 ship archives and a manifest that
+    described different bytes."""
+    helper = load_build_ambiqsuite(repo_root)
+    root = tmp_path / "sdk"
+    archive = root / "lib" / "gcc" / "apollo510" / "libam_hal.a"
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(b"archive-contents")
+    digest = helper.sha256(archive)
+    manifest = root / "artifact-manifest.yaml"
+
+    manifest.write_text(_generated_manifest([("gcc/lib/apollo510/libam_hal.a", digest)]), encoding="utf-8")
+    assert helper.verify_promoted_manifest_agreement(root) == []
+
+    manifest.write_text(_generated_manifest([("gcc/lib/apollo510/libam_hal.a", "0" * 64)]), encoding="utf-8")
+    assert helper.verify_promoted_manifest_agreement(root) == ["lib/gcc/apollo510/libam_hal.a (sha256 mismatch)"]
+
+    archive.unlink()
+    assert helper.verify_promoted_manifest_agreement(root) == ["lib/gcc/apollo510/libam_hal.a (missing)"]
+
+
+def test_promoted_payload_verification_fails_closed_on_degenerate_manifests(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    root = tmp_path / "sdk"
+    root.mkdir()
+    manifest = root / "artifact-manifest.yaml"
+
+    assert helper.verify_promoted_manifest_agreement(root)[0].startswith("<missing")
+
+    manifest.write_text("parts: []\n", encoding="utf-8")
+    assert helper.verify_promoted_manifest_agreement(root) == [
+        "<manifest declares no hal_artifacts/bsp_artifacts entries>"
+    ]
+
+    manifest.write_text(_generated_manifest([("gcc/lib/../../../etc/passwd", "0" * 64)]), encoding="utf-8")
+    assert "unexpected manifest path shape" in helper.verify_promoted_manifest_agreement(root)[0]
+
+    manifest.write_text("        path: gcc/lib/apollo510/libam_hal.a\n        note: nope\n", encoding="utf-8")
+    with pytest.raises(helper.ArtifactManifestMismatch, match="no sha256"):
+        helper.verify_promoted_manifest_agreement(root)
+
+    manifest.write_text("        sha256: " + "0" * 64 + "\n", encoding="utf-8")
+    with pytest.raises(helper.ArtifactManifestMismatch, match="unpaired"):
+        helper.verify_promoted_manifest_agreement(root)

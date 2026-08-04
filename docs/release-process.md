@@ -21,7 +21,10 @@ review, and the tag/release steps explicitly.
 3. Compare the release and provider provenance with
    `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`, including the exact
    source ref, commit, snapshot identity, toolchain status, and artifact
-   hashes.
+   hashes. `tests/test_artifact_baseline.py` mechanizes the hash half of this
+   step and runs in CI; confirm it passes rather than relying on a manual
+   read-through. `python sdk-intake/intake_workflow.py verify-baseline --train
+   stable` is the equivalent standalone command.
 4. Review generated/vendor and NSX-owned changes according to
    `docs/source-ownership.md`. Do not hand-edit generated provider output.
 5. Update the changelog and qualification report. Keep descriptor-only,
@@ -45,12 +48,12 @@ review, and the tag/release steps explicitly.
 
 1. Merge only after release approval, then resolve the release commit with
    `git rev-parse HEAD`.
-2. Create annotated tag `v5.2.23` at that exact commit only after explicit
-   approval. Never move or replace the tag.
-3. Verify the tag target with `git rev-list -n 1 v5.2.23`; this is the
+2. Create annotated tag `v<version>` at that exact commit only after explicit
+   approval. Never move or replace a published tag.
+3. Verify the tag target with `git rev-list -n 1 v<version>`; this is the
    resolution mechanism for the release manifest's pre-tag commit field.
-4. Publish the GitHub release from that tag with title
-   `nsx-ambiq-sdk 5.2.23 — AmbiqSuite stable-2026.06.18`.
+4. Publish the GitHub release from that tag with the title recorded in
+   `release/nsx-ambiq-sdk-<version>.yaml`.
 5. Attach only approved release material and verify no credentials or raw
    proprietary AmbiqSuite source are present.
 

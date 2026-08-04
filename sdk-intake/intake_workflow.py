@@ -15,7 +15,7 @@ intake reviewable and fail-closed:
                    and compare against its artifact manifest.
   verify-baseline  same hash verification, defaulted at the currently
                    promoted tree -- the reproducible integrity check for an
-                   already-published golden baseline (e.g. v5.2.23). This
+                   already-published golden baseline (e.g. v5.2.24). This
                    does not rebuild anything and requires no proprietary
                    source; it only proves the committed archives still match
                    the hashes recorded when they were built.
@@ -438,8 +438,9 @@ def verify_promoted_baseline(train: "bas.TrainSpec") -> HashVerificationResult:
     """Read-only verification that the already-committed provider payload's
     HAL/BSP archives still match the hashes recorded in its own
     artifact-manifest.yaml. This is the reproducible check for a published
-    golden baseline (e.g. v5.2.23): it proves integrity of what is already in
-    the repository. It does not and cannot prove the archives were built from
+    golden baseline (e.g. v5.2.24): it proves integrity of what is already in
+    the repository. Note that v5.2.23 does not pass this check; see
+    docs/acfe-artifact-manifest-forensics.md. It does not and cannot prove the archives were built from
     the claimed upstream commit -- that requires access to the proprietary
     AmbiqSuite source at the exact recorded commit plus the exact licensed
     toolchains, which is a manual/internal step outside this repository and

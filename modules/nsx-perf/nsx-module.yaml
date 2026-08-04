@@ -3,7 +3,7 @@ schema_version: 1
 module:
   name: nsx-perf
   type: runtime
-  version: "5.2.23"
+  version: "5.2.24"
 
 support:
   ambiqsuite: true

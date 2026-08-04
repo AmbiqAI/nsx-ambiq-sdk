@@ -10,9 +10,9 @@ hook, and an explicit atomic promotion step around the existing promotion
 logic.
 
 This document is for maintainers preparing a new AmbiqSuite drop or auditing
-the current one. It does not change anything about the promoted `5.2.23`
-payload; running these commands read-only (`diff`, `verify-hashes`,
-`verify-baseline`, `verify-ownership`) is always safe.
+the current one. It does not change anything about the promoted payload;
+running these commands read-only (`diff`, `verify-hashes`, `verify-baseline`,
+`verify-ownership`) is always safe.
 
 ## Why Staging Instead Of Direct Promotion
 
@@ -140,7 +140,7 @@ python sdk-intake/intake_workflow.py verify-hashes \
 
 `verify-baseline` is the same check, defaulted at the currently promoted
 tree — the reproducible integrity check for an already-published golden
-baseline such as `v5.2.23`:
+baseline such as `v5.2.24`:
 
 ```sh
 python sdk-intake/intake_workflow.py verify-baseline --train stable
@@ -158,16 +158,21 @@ meets the read-only-access and no-credential-leakage requirements below. That
 step is outside what any automation in this public repository can perform or
 claim.
 
-**Known gap in the current `v5.2.23` baseline.** Running `verify-baseline`
-against the currently promoted tree does not pass: every `acfe` HAL/BSP
-archive's sha256 no longer matches the hash recorded in
-`modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`. History shows the `acfe`
-archives were rebuilt by a later PR (`ACfE/armclang bring-up`) after the
-manifest was last regenerated, and the manifest was never refreshed to match.
-`gcc` and `atfe` archives do match. This predates the staged workflow in this
-document; it is called out here rather than silently worked around, since
-correcting the promoted `v5.2.23` payload or its manifest is a release action
-outside the scope of introducing this tooling.
+**Resolved: the `v5.2.23` `acfe` manifest gap.** `verify-baseline` did not pass
+against `v5.2.23`: 22 of its 23 `acfe` HAL/BSP archives had a sha256 that no
+longer matched `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`. The archives
+were correct; the manifest still described the pre-ABI-fix archives replaced by
+`ddb88640e61660edc65ebc956b65dcbd6804d2e6`. `gcc` and `atfe` were never
+affected.
+
+`v5.2.23` stays published and immutable. The manifest is corrected in
+distribution version `5.2.24`, which republishes the identical binary payload.
+`verify-baseline` passes from `5.2.24` onward, and
+`tests/test_artifact_baseline.py` now runs the same check in CI so the payload
+and its manifest can never diverge silently again. The full investigation —
+per-artifact hashes, root cause, ownership, impact, and the remediation
+decision — is recorded in
+[`acfe-artifact-manifest-forensics.md`](acfe-artifact-manifest-forensics.md).
 
 ## Patch Hook
 
