@@ -1,6 +1,8 @@
 # Qualification: nsx-ambiq-sdk 5.2.24
 
 Date: 2026-08-03
+Status: prepared for release. Not tagged or published; publication requires
+explicit approval per `docs/release-process.md`.
 
 ## Decision
 
@@ -28,6 +30,8 @@ byte-identical to the archive published in `5.2.23`.
 | `acfe` ABI provenance recorded (`abi_cflags`) | `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml` |
 | ABI-affecting flags now emitted into generated manifests | `sdk-intake/build_ambiqsuite.py` |
 | Committed-payload hash verification added to CI | `tests/test_artifact_baseline.py` |
+| Promotion path verifies manifest/archive agreement and `--promote-only` fails closed | `sdk-intake/build_ambiqsuite.py` |
+| BLE DIS default firmware revision bumped and pinned to the distribution version | `modules/nsx-ble/src/ns_ble.c`, `modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c` |
 | Forensic record of the defect | `docs/acfe-artifact-manifest-forensics.md` |
 
 The defect, its root cause in `ddb88640e61660edc65ebc956b65dcbd6804d2e6`, the
@@ -38,7 +42,7 @@ full per-artifact hash table, ownership, and impact are recorded in
 
 | Layer | Status | Evidence and scope |
 | --- | --- | --- |
-| Repository CI | Passed | `uv sync --group ci`; pre-commit; intake-helper `py_compile`; full pytest. |
+| Repository CI | Passed locally; confirm on the release commit | `uv sync --group ci`; pre-commit; intake-helper `py_compile`; full pytest. Must be green on the exact commit that is tagged. |
 | Static/contracts | Passed | Manifest, repository-shape, toolchain, intake, public API, and CMake contract tests. |
 | Descriptor configure | Passed | CMake contract tests validate staged SoC/board descriptors and required artifact paths. |
 | Promoted artifacts | **Verified in CI** | `tests/test_artifact_baseline.py` recomputes sha256 for all 73 declared HAL/BSP archives against the committed manifest and rejects undeclared archives. Equivalent to `intake_workflow.py verify-baseline --train stable`. |
@@ -80,14 +84,6 @@ Unchanged from `5.2.23`:
   present.
 - Optional-module support remains limited to each module's declared
   compatibility and evidence.
-
-## Known Deviations
-
-- The BLE Device Information Service default firmware-revision string still
-  reads `5.2.23`. It is an overridable runtime default rather than release or
-  provenance metadata, and one of its two copies is third-party Cordio source
-  declared `direct_edit: restricted`. Recorded under `known_deviations` in
-  `release/nsx-ambiq-sdk-5.2.24.yaml` and tracked as follow-up work.
 
 ## Reproduction Boundary
 

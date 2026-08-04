@@ -947,6 +947,70 @@ def promote_artifact_libraries(
             copy_file(source_root / name / source_rel, lib_destination_root / name / dest_rel)
 
 
+class ArtifactManifestMismatch(RuntimeError):
+    """A promoted payload does not match the artifact manifest promoted with it."""
+
+
+def scan_manifest_artifacts(text: str) -> list[tuple[str, str]]:
+    """Extract (path, sha256) pairs from a generated artifact manifest.
+
+    Deliberately does not use PyYAML: `build_ambiqsuite.py` is run standalone
+    during intake and must not acquire a runtime dependency the promotion path
+    would fail-open without. The manifest is emitted by `write_manifest` with a
+    fixed shape, so any deviation from that shape is treated as corruption and
+    fails closed rather than being silently skipped."""
+    pairs: list[tuple[str, str]] = []
+    lines = text.splitlines()
+    seen_path = seen_sha = 0
+    for index, line in enumerate(lines):
+        if line.startswith("        path: "):
+            seen_path += 1
+            following = lines[index + 1] if index + 1 < len(lines) else ""
+            if not following.startswith("        sha256: "):
+                raise ArtifactManifestMismatch(
+                    f"artifact manifest line {index + 1} declares a path with no sha256 on the next line: {line!r}"
+                )
+            pairs.append((line[len("        path: "):].strip(), following[len("        sha256: "):].strip()))
+        elif line.startswith("        sha256: "):
+            seen_sha += 1
+    if seen_path != seen_sha or seen_path != len(pairs):
+        raise ArtifactManifestMismatch(
+            f"artifact manifest has unpaired path/sha256 entries (paths={seen_path}, hashes={seen_sha})"
+        )
+    return pairs
+
+
+def verify_promoted_manifest_agreement(root: Path) -> list[str]:
+    """Recompute sha256 for every archive the promoted manifest declares and
+    return the labels that do not agree.
+
+    This is the check whose absence let a payload ship with archives and a
+    manifest that described different bytes: `promote_provider_payload` copies
+    both, but nothing confirmed the manifest it copied actually describes the
+    archives it copied alongside it."""
+    manifest_path = root / "artifact-manifest.yaml"
+    if not manifest_path.is_file():
+        return [f"<missing {display_path(manifest_path)}>"]
+    offenders: list[str] = []
+    checked = 0
+    for source_relative, expected in scan_manifest_artifacts(manifest_path.read_text(encoding="utf-8")):
+        parts = Path(source_relative).parts
+        if len(parts) < 3 or parts[1] != "lib" or ".." in parts:
+            offenders.append(f"{source_relative} (unexpected manifest path shape)")
+            continue
+        target = root / "lib" / parts[0] / Path(*parts[2:])
+        label = f"lib/{parts[0]}/{Path(*parts[2:]).as_posix()}"
+        if not target.is_file():
+            offenders.append(f"{label} (missing)")
+            continue
+        checked += 1
+        if sha256(target) != expected:
+            offenders.append(f"{label} (sha256 mismatch)")
+    if not checked and not offenders:
+        offenders.append("<manifest declares no hal_artifacts/bsp_artifacts entries>")
+    return offenders
+
+
 def promote_provider_payload(
     train: TrainSpec, version: str, sdk_root: Path, *, destination_root: Path | None = None
 ) -> None:
@@ -970,6 +1034,12 @@ def promote_provider_payload(
     scrub_promoted_headers(train, destination_root=root)
     promote_artifact_libraries(train, version, destination_root=root)
     copy_file(artifact_root(train, version) / "manifest.yaml", root / "artifact-manifest.yaml")
+    offenders = verify_promoted_manifest_agreement(root)
+    if offenders:
+        raise ArtifactManifestMismatch(
+            f"promoted payload at {display_path(root)} does not match the manifest promoted with it: "
+            + ", ".join(offenders)
+        )
 
 
 def build_hal(sdk_root: Path, profile: ToolchainProfile, part: PartBuild, train: TrainSpec, version: str, *, verbose: bool, clang_fpu: str) -> None:
@@ -1316,16 +1386,28 @@ def main() -> int:
                 )
                 return 2
         if args.promote_only:
-            # Reuse the manifest written by the original full build when present: a
-            # promote-only run may not have ATFE/ACFE roots configured, so its
-            # resolved profiles can be empty and regenerating would drop per-
-            # toolchain compiler/archive metadata from the published manifest.
+            # Reuse the manifest written by the original full build: a promote-only
+            # run may not have ATFE/ACFE roots configured, so its resolved profiles
+            # can be empty and regenerating would drop per-toolchain compiler/archive
+            # metadata from the published manifest.
+            #
+            # If there is no manifest to reuse, fail closed. Synthesizing one here
+            # would mint provenance for archives this run never built: `write_manifest`
+            # hashes whatever bytes are on disk and stamps them with the source
+            # identity passed on the command line, so a promote-only run could
+            # publish arbitrary archives under an arbitrary source commit and every
+            # downstream self-consistency check would pass.
             manifest_path = artifact_root(full_train, version) / "manifest.yaml"
-            if manifest_path.is_file():
-                print(f"==> Reusing {manifest_path}", flush=True)
-            else:
-                write_manifest(full_train, version, sdk_root, profiles, source_kind=source_kind, source_ref=source_ref, source_commit=source_commit, debug_symbols=args.debug_symbols)
-                print(f"==> Wrote {manifest_path}", flush=True)
+            if not manifest_path.is_file():
+                print(
+                    f"error: refusing to promote {full_train.train_id} {version}: --promote-only found no "
+                    f"{display_path(manifest_path)} to reuse. Generating one now would record provenance for "
+                    f"artifacts this run did not build; rerun the build so the manifest is written alongside "
+                    f"the archives it describes.",
+                    file=sys.stderr,
+                )
+                return 2
+            print(f"==> Reusing {manifest_path}", flush=True)
         promote_provider_payload(full_train, version, sdk_root)
         print(f"==> Promoted curated payload to {provider_sdk_root(full_train)}", flush=True)
     return 0
@@ -1334,6 +1416,9 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
+    except ArtifactManifestMismatch as error:
+        print(f"error: {error}", file=sys.stderr)
+        raise SystemExit(2) from error
     except subprocess.CalledProcessError as error:
         print(f"error: command failed with exit code {error.returncode}: {' '.join(error.cmd)}", file=sys.stderr)
         raise SystemExit(error.returncode)

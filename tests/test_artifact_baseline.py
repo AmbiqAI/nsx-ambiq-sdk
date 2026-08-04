@@ -26,6 +26,19 @@ import yaml
 SDK_REL = Path("modules") / "nsx-ambiqsuite" / "sdk"
 MANIFEST_REL = SDK_REL / "artifact-manifest.yaml"
 
+# The published inventory of the golden baseline. Pinned deliberately: without
+# it, deleting an archive *and* its manifest row keeps every consistency check
+# green while silently dropping a supported board from the distribution. These
+# numbers change only when an intake intentionally adds or removes coverage.
+EXPECTED_ARTIFACT_COUNTS = {"gcc": 25, "atfe": 25, "acfe": 23}
+EXPECTED_TOTAL_ARTIFACTS = 73
+
+# `acfe` archives must be built for the NSX/heliaRT ABI (wchar_t = 2,
+# smallest-container enums). Hardcoded here rather than read from
+# build_ambiqsuite.py so that deleting or emptying TOOLCHAIN_ABI_CFLAGS makes
+# this test fail instead of passing vacuously.
+REQUIRED_ABI_CFLAGS = {"acfe": "-fshort-wchar -fshort-enums"}
+
 
 def _load_intake_workflow(repo_root: Path):
     module_path = repo_root / "sdk-intake" / "intake_workflow.py"
@@ -117,12 +130,24 @@ def test_no_promoted_archive_is_undeclared(repo_root: Path) -> None:
     assert on_disk - declared == set()
 
 
-def test_toolchains_declaring_abi_cflags_record_them(repo_root: Path) -> None:
+def test_toolchains_requiring_abi_cflags_record_them(repo_root: Path) -> None:
     """ABI-affecting flags are provenance, not build trivia.
 
     The `acfe` archives shipped in `v5.2.23` differ from their predecessors only
     because of `-fshort-wchar -fshort-enums`; recording that in the manifest is
     what makes two same-source archives distinguishable to a consumer.
+    """
+    toolchains = _manifest(repo_root)["build"]["toolchains"]
+    for name, expected in REQUIRED_ABI_CFLAGS.items():
+        assert toolchains[name]["status"] == "built", name
+        assert toolchains[name].get("abi_cflags") == expected, name
+
+
+def test_generator_emits_the_required_abi_cflags(repo_root: Path) -> None:
+    """The manifest value must come from the generator, not from a hand edit.
+
+    Checked separately from the manifest assertion above so that removing the
+    generator mapping fails loudly instead of making the requirement vacuous.
     """
     helper_spec = importlib.util.spec_from_file_location(
         "nsx_build_ambiqsuite_baseline", repo_root / "sdk-intake" / "build_ambiqsuite.py"
@@ -132,14 +157,69 @@ def test_toolchains_declaring_abi_cflags_record_them(repo_root: Path) -> None:
     sys.modules[helper_spec.name] = bas
     helper_spec.loader.exec_module(bas)
 
-    toolchains = _manifest(repo_root)["build"]["toolchains"]
-    for name, expected_flags in bas.TOOLCHAIN_ABI_CFLAGS.items():
-        if toolchains.get(name, {}).get("status") != "built":
-            continue
-        assert toolchains[name].get("abi_cflags") == " ".join(expected_flags), name
+    for name, expected in REQUIRED_ABI_CFLAGS.items():
+        assert " ".join(bas.TOOLCHAIN_ABI_CFLAGS[name]) == expected, name
 
 
-@pytest.mark.parametrize("toolchain", ["gcc", "atfe", "acfe"])
-def test_each_declared_toolchain_has_artifacts(repo_root: Path, toolchain: str) -> None:
+@pytest.mark.parametrize("toolchain", sorted(EXPECTED_ARTIFACT_COUNTS))
+def test_declared_artifact_inventory_is_complete(repo_root: Path, toolchain: str) -> None:
+    """Pin the inventory so coverage cannot shrink silently."""
     rows = [row for row in _declared_artifacts(repo_root) if row[1] == toolchain]
-    assert rows, f"no artifacts declared for toolchain {toolchain}"
+    assert len(rows) == EXPECTED_ARTIFACT_COUNTS[toolchain]
+
+
+def test_total_declared_artifact_count_is_pinned(repo_root: Path) -> None:
+    rows = _declared_artifacts(repo_root)
+    assert len(rows) == EXPECTED_TOTAL_ARTIFACTS
+    assert len({(identifier, toolchain) for identifier, toolchain, _, _ in rows}) == EXPECTED_TOTAL_ARTIFACTS
+
+
+def test_every_part_and_board_declares_at_least_one_archive(repo_root: Path) -> None:
+    manifest = _manifest(repo_root)
+    skews = {entry["logical_skew"] for entry in manifest["parts"]}
+    for entry in manifest["parts"]:
+        assert entry.get("hal_artifacts"), entry["logical_skew"]
+    for entry in manifest["boards"]:
+        assert entry.get("bsp_artifacts"), entry["nsx_board"]
+        assert entry["logical_skew"] in skews, entry["nsx_board"]
+
+
+def test_ble_dis_firmware_revision_tracks_the_distribution_version(repo_root: Path) -> None:
+    """The BLE Device Information Service default advertises the distribution
+    version over the air. It silently stayed at the previous version through a
+    release once already; pin it so a version bump cannot forget it."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - Python 3.10
+        import tomli as tomllib
+
+    version = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    sources = {
+        "modules/nsx-ble/src/ns_ble.c": 2,
+        "modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c": 1,
+    }
+    for relative, occurrences in sources.items():
+        text = (repo_root / relative).read_text(encoding="utf-8")
+        assert text.count(f'"{version}"') == occurrences, relative
+
+    dis = (repo_root / "modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c").read_text(
+        encoding="utf-8"
+    )
+    declared_length = int(dis.split("DIS_DEFAULT_FW_REV_LEN")[1].split("\n")[0].strip())
+    assert declared_length == len(version), "DIS_DEFAULT_FW_REV_LEN must match the advertised string length"
+
+
+def test_no_promoted_archive_path_traverses_a_symlink(repo_root: Path) -> None:
+    """A symlinked archive or directory would let the hash checks above verify a
+    file outside the committed payload."""
+    lib_root = repo_root / SDK_REL / "lib"
+    offenders = [
+        path.relative_to(repo_root).as_posix()
+        for path in lib_root.rglob("*")
+        if path.is_symlink()
+    ]
+    assert offenders == []
+    for _, _, manifest_path, _ in _declared_artifacts(repo_root):
+        parts = Path(manifest_path).parts
+        promoted = lib_root / parts[0] / Path(*parts[2:])
+        assert promoted.is_file() and not promoted.is_symlink(), manifest_path

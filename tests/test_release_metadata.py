@@ -7,6 +7,7 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib
 
+import pytest
 import yaml
 
 
@@ -179,6 +180,54 @@ def test_known_deviations_are_explicit_and_point_at_real_paths(repo_root: Path) 
         assert deviation["description"].strip()
         for path in deviation["paths"]:
             assert (repo_root / path).exists(), path
+
+
+def test_archives_introduced_in_matches_git_history(repo_root: Path) -> None:
+    """Verify the release manifest's per-train attribution against git.
+
+    The first draft of this manifest attributed the `atfe` archives to the wrong
+    commit by copying the `gcc` block. Recording provenance that nobody checks is
+    how the defect this release corrects happened in the first place, so the
+    claim is verified rather than trusted.
+
+    Skipped when the checkout has no usable history (for example a shallow CI
+    clone), since the property is about history, not the worktree.
+    """
+    import subprocess
+
+    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    sdk_rel = Path("modules") / "nsx-ambiqsuite" / "sdk"
+
+    probe = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--is-shallow-repository"],
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode != 0 or probe.stdout.strip() != "false":
+        pytest.skip("git history unavailable or shallow")
+
+    declared = {train["manifest_key"]: train for train in release["payload_provenance"]["toolchain_trains"]}
+    for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
+        for entry in artifact.get(section) or []:
+            for toolchain, info in (entry.get(artifact_key) or {}).items():
+                parts = Path(info["path"]).parts
+                promoted = sdk_rel / "lib" / parts[0] / Path(*parts[2:])
+                result = subprocess.run(
+                    ["git", "-C", str(repo_root), "log", "-1", "--format=%H", "HEAD", "--", promoted.as_posix()],
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode != 0 or not result.stdout.strip():
+                    pytest.skip("git history unavailable for promoted archives")
+                introducing = result.stdout.strip()
+                assert introducing in declared[toolchain]["archives_introduced_in"], (
+                    f"{promoted.as_posix()} was last changed by {introducing}, which is not listed under "
+                    f"payload_provenance.toolchain_trains[{toolchain}].archives_introduced_in"
+                )
+
+    for train in declared.values():
+        assert train["archives_introduced_in"], train["manifest_key"]
 
 
 def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) -> None:

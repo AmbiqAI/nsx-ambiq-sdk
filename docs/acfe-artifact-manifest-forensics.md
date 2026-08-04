@@ -1,7 +1,7 @@
 # Forensics: ACfE Archive / Artifact-Manifest Mismatch In `v5.2.23`
 
-Status: closed by distribution version `5.2.24`.
-Investigated: 2026-08-03. Scope: `modules/nsx-ambiqsuite/sdk`.
+Status: correction prepared in distribution version `5.2.24`; not yet tagged or
+released. Investigated: 2026-08-03. Scope: `modules/nsx-ambiqsuite/sdk`.
 
 `v5.2.23` shipped **correct** `acfe` (armclang) HAL/BSP archives with a **stale**
 artifact manifest. 22 of the 23 `acfe` entries in
@@ -24,7 +24,7 @@ The correction is published as a new distribution version, per
 | Functional impact | None. The shipped archives are the correct, ABI-fixed, link-smoke-validated builds |
 | Integrity impact | High. The manifest is the payload's provenance record and it was wrong; `verify-baseline` fails against `v5.2.23`, which is indistinguishable from tampering |
 | Archive bytes changed by the fix | None |
-| Fixed in | `5.2.24` (manifest correction only) |
+| Corrected in | `5.2.24` (manifest correction only; pending review, tag, and release) |
 
 ## Established Facts
 
@@ -50,12 +50,12 @@ published, not introduced afterwards.
 
 | Commit | PR | Date | `acfe` manifest state |
 | --- | --- | --- | --- |
-| `56a72f0` | — | — | 20/20 match |
+| `56a72f08b34e9315f8c58a9defb784329e789678` | — | 2026-06-19 | 20/20 match |
 | `1a919aee0f24adb17fa6345fc15a874d1e3a4c29` | #18 | 2026-06-22 | 20/20 match — last full manifest regeneration (`generated_at: 2026-06-22`) |
 | `74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29` | #19 | 2026-06-23 | 22/22 match (AT110 added) |
-| `d95067c` | #21 | 2026-06-26 | 22/22 match |
+| `d95067c3f632a0446a74591d815a82c59df36606` | #21 | 2026-06-25 | 22/22 match |
 | **`ddb88640e61660edc65ebc956b65dcbd6804d2e6`** | **#22** | **2026-06-26** | **0/22 match — defect introduced** |
-| `ed60f26f4bdaa885d6a279a20a6e94aa23cd3655` | — | 2026-06-27 | 1/23 match (display shield added with a correct hash) |
+| `ed60f26f4bdaa885d6a279a20a6e94aa23cd3655` | — | 2026-07-03 | 1/23 match (display shield added with a correct hash) |
 | `2eba24ad776096784764cbe91c8176b434dd3bdf` | #48 | 2026-07-28 | 1/23 match — **tagged and released as `v5.2.23`** |
 | `1c6d1512670ae61943d08adeab3eb5591f1689ec` | #49 | 2026-08-03 | 1/23 match — verifier added, gap documented |
 
@@ -88,7 +88,37 @@ discarded ones. The 23rd entry, `apollo4p_evb_disp_shield_rev2`, was added later
 by `ed60f26f4bdaa885d6a279a20a6e94aa23cd3655` together with its own correct hash,
 which is why exactly one `acfe` entry always matched.
 
-### 4. Why nothing caught it
+### 4. Archive determinism, and why the three trains behave differently
+
+Reading archive-byte history across trains is only meaningful once you know how
+each `ar` behaves, so this was measured rather than assumed:
+
+| Train | Archiver | Member timestamps | Byte change means |
+| --- | --- | --- | --- |
+| `gcc` | `arm-none-eabi-ar` | real (non-deterministic) | may be only metadata churn |
+| `atfe` | `llvm-ar` | zeroed (deterministic) | object code changed |
+| `acfe` | `armar` | zeroed (deterministic) | object code changed |
+
+Two consequences matter here.
+
+First, the `acfe` rebuild in `ddb8864` is a genuine object-code change, not
+archive churn: all 55 object members of `lib/acfe/apollo510/libam_hal.a` differ
+across that commit, and `armar` writes zeroed timestamps, so nothing else could
+account for it.
+
+Second, an apparent anomaly in the `atfe` train is benign. 22 of the 25 shipped
+`atfe` archives have been byte-identical since
+`56a72f08b34e9315f8c58a9defb784329e789678` (2026-06-19), which predates the
+`caaf5af86087881647f56c70646c748d40c86e23` regeneration in
+`1a919aee0f24adb17fa6345fc15a874d1e3a4c29` that the manifest attributes them to.
+That looks like a stale train until the `gcc` side is examined: across the same
+commit, `lib/gcc/apollo510/libam_hal.a` differs in exactly 392 bytes, every one
+of them inside `ar` member headers (timestamp `1781743097` → `1782156433`), and
+all 55 object members are byte-identical. The upstream delta therefore changed no
+object code, so a deterministic `llvm-ar` rebuild legitimately reproduces the
+same bytes. `atfe` provenance is sound; only the `acfe` records were wrong.
+
+### 5. Why nothing caught it
 
 - No test compared the real committed payload against the real committed
   manifest. `tests/test_intake_workflow.py` exercises `verify_artifact_hashes`
@@ -107,7 +137,7 @@ which is why exactly one `acfe` entry always matched.
   sdk-intake/build_ambiqsuite.py`. Both `ddb8864` and `ed60f26` edited that tree
   surgically instead of republishing it. The policy existed; nothing enforced it.
 
-### 5. Ownership
+### 6. Ownership
 
 | | |
 | --- | --- |
@@ -197,9 +227,13 @@ distribution version."*
    scalars corrected to the archives actually shipped, plus `abi_cflags` on the
    `acfe` toolchain block. **No archive bytes change.** The binary payload of
    `5.2.24` is identical to `5.2.23`.
-2. **`sdk-intake/build_ambiqsuite.py`** — `TOOLCHAIN_ABI_CFLAGS` is emitted into
-   generated manifests, so ABI-affecting flags stay recorded provenance across
-   future intakes rather than being invisible build detail.
+2. **`sdk-intake/build_ambiqsuite.py`** — three changes that close the promotion
+   path itself: `TOOLCHAIN_ABI_CFLAGS` is emitted into generated manifests so
+   ABI-affecting flags stay recorded provenance; `promote_provider_payload`
+   verifies that the manifest it promotes describes the archives it promoted,
+   which is the check whose absence let this ship; and `--promote-only` now
+   fails closed when there is no manifest to reuse instead of synthesizing one
+   that would mint provenance for archives it never built.
 3. **`tests/test_artifact_baseline.py`** — the missing guard. It runs the shipped
    verifier over the real promoted payload, independently re-derives the same
    property without importing the verifier, and rejects any committed archive the
@@ -219,6 +253,45 @@ git show ddb8864:modules/nsx-ambiqsuite/sdk/lib/acfe/apollo510/libam_hal.a | sha
 # and the whole payload now verifies
 python sdk-intake/intake_workflow.py verify-baseline --train stable
 ```
+
+### Editing a generated tree, deliberately and once
+
+`release/source-ownership.yaml` declares `modules/nsx-ambiqsuite/sdk` as
+generated with `direct_edit: forbidden` and `update_mechanism:
+sdk-intake/build_ambiqsuite.py`. This correction edits a file in that tree, so
+the exception is recorded rather than assumed.
+
+Regenerating the payload was rejected because it cannot produce this outcome. It
+requires the proprietary AmbiqSuite tree at
+`caaf5af86087881647f56c70646c748d40c86e23` plus licensed ArmClang, ATfE, and GCC
+toolchains, and — as measured above — a `gcc` rebuild changes archive bytes even
+when no object code changes. Regenerating to fix 22 metadata scalars would
+therefore replace validated binaries with fresh ones and discard the existing
+qualification evidence, which is a strictly worse outcome than correcting the
+metadata.
+
+A generic "rewrite the manifest to match whatever bytes are present" tool was
+also rejected: that is precisely what an attacker substituting archives would
+run, and shipping it would convert a tamper-detection mechanism into a
+tamper-laundering one. No such command exists in this repository, and
+`intake_workflow.py` continues to refuse patches touching `lib/` or
+`artifact-manifest.yaml`.
+
+What constrains this edit instead:
+
+- Only 22 `sha256` scalars and one `abi_cflags` line changed. No archive byte,
+  header, or source file in the generated tree was touched.
+- Every replacement value was derived mechanically from the committed archives
+  and independently cross-checked against the git blob introduced by `ddb8864`,
+  so each one is reproducible with `git show ddb8864:<path> | shasum -a 256`.
+- The correction only moves the manifest toward archives whose correctness is
+  independently established by their ARM build attributes and by the ArmClang
+  link smoke recorded for `v5.2.23`.
+- `promote_provider_payload` now verifies that the manifest it promotes actually
+  describes the archives it promoted, and `--promote-only` fails closed rather
+  than minting a manifest for archives it did not build — so the next intake
+  regenerates this file through the sanctioned mechanism and the hand edit is
+  not load-bearing.
 
 ### Reproduction boundary
 
@@ -241,9 +314,13 @@ that source.
 - Route future payload changes through `sdk-intake/intake_workflow.py`
   `stage` → `diff` → `promote` so archives and manifest are always republished
   together, instead of editing the generated tree in place.
-- The BLE Device Information Service default firmware-revision string still
-  reads `5.2.23` in `modules/nsx-ble/src/ns_ble.c` and in third-party
-  `svc_dis.c`. It is an overridable runtime default rather than release
-  metadata, and one copy is `direct_edit: restricted` third-party source, so it
-  is intentionally out of scope here and recorded under `known_deviations` in
-  `release/nsx-ambiq-sdk-5.2.24.yaml`.
+- The manifest remains self-referential: it records hashes of the archives
+  beside it, so an actor who replaces both still verifies clean. Binding the
+  payload to an external root of trust — a signature or attestation produced on
+  the internal build infrastructure — is the remaining gap, and is out of scope
+  for a provenance correction.
+- The BLE Device Information Service default firmware-revision string tracked
+  the distribution version by hand and silently stayed at the previous version
+  through a release. It is bumped here and pinned by
+  `tests/test_artifact_baseline.py`, including the
+  `DIS_DEFAULT_FW_REV_LEN` length constant.

@@ -43,6 +43,17 @@ payload_provenance:
     acfe ABI-flag provenance changed.
   binary_payload_identical_to: "5.2.23"
   artifact_manifest_generated_at: 2026-06-22
+  archive_determinism:
+    gcc: non_deterministic_ar_headers
+    atfe: deterministic
+    acfe: deterministic
+  determinism_note: >-
+    gcc archives are produced by arm-none-eabi-ar in non-deterministic mode, so
+    their bytes change on every rebuild even when no object code changes. atfe
+    (llvm-ar) and acfe (armar) archives carry zeroed member timestamps, so their
+    bytes change only when object code changes. Comparing archive bytes across
+    commits therefore means different things per train; see
+    docs/acfe-artifact-manifest-forensics.md.
   toolchain_trains:
     - manifest_key: gcc
       cmake_family: gcc
@@ -56,9 +67,18 @@ payload_provenance:
       cmake_family: atfe
       built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
       archives_introduced_in:
-        - 1a919aee0f24adb17fa6345fc15a874d1e3a4c29
+        - 56a72f08b34e9315f8c58a9defb784329e789678
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+      byte_stability_note: >-
+        22 of these 25 archives have been byte-identical since
+        56a72f08b34e9315f8c58a9defb784329e789678, which predates the
+        caaf5af86087881647f56c70646c748d40c86e23 regeneration in
+        1a919aee0f24adb17fa6345fc15a874d1e3a4c29. That is expected rather than
+        stale: llvm-ar is deterministic, and the corresponding gcc archives
+        rebuilt in 1a919aee differ only in ar member timestamps, with every
+        object member byte-identical, so the upstream delta changed no object
+        code.
       manifest_hashes_correct_in_5_2_23: true
     - manifest_key: acfe
       cmake_family: armclang
@@ -70,6 +90,11 @@ payload_provenance:
       archives_introduced_in:
         - ddb88640e61660edc65ebc956b65dcbd6804d2e6
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+      byte_stability_note: >-
+        All 55 object members of a sampled acfe HAL archive differ across
+        ddb88640e61660edc65ebc956b65dcbd6804d2e6, and armar emits zeroed member
+        timestamps, so that commit is a genuine object-code rebuild rather than
+        archive-metadata churn.
       manifest_hashes_correct_in_5_2_23: false
       correction: >-
         22 acfe sha256 records in the artifact manifest still described the
@@ -135,20 +160,6 @@ exclusions:
       - atomiq110
     boards:
       - atomiq110_fpga_turbo
-
-known_deviations:
-  - id: ble-dis-firmware-revision-default
-    paths:
-      - modules/nsx-ble/src/ns_ble.c
-      - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
-    description: >-
-      The BLE Device Information Service default firmware-revision string still
-      reads 5.2.23. It is an overridable runtime default rather than release or
-      provenance metadata, one of the two copies lives in third-party Cordio
-      source declared direct_edit restricted, and docs/versioning.md scopes the
-      distribution version to the root package and the manifests under modules/.
-      Deliberately left unchanged so this provenance correction does not edit
-      third-party BLE source; tracked as follow-up work.
 
 release_evidence:
   - CHANGELOG.md
