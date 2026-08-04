@@ -140,7 +140,7 @@ python sdk-intake/intake_workflow.py verify-hashes \
 
 `verify-baseline` is the same check, defaulted at the currently promoted
 tree — the reproducible integrity check for an already-published golden
-baseline such as `v5.2.23`:
+baseline such as `v5.2.24`:
 
 ```sh
 python sdk-intake/intake_workflow.py verify-baseline --train stable
