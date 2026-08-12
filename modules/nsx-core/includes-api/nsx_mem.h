@@ -108,6 +108,18 @@
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
   #define NSX_MEM__SEC_FAST_CODE   ".dtcm_text"
 
+/* ------ Atomiq110 (Cortex-M55 + Ethos-U85, TCM + 4 MB shared SRAM) ------
+ * Board startup/linker provide .shared (init from MRAM), .sram_bss (NOLOAD,
+ * zeroed at boot) and a .dtcm_text code overlay (no ITCM on this part). */
+#elif defined(AM_PART_ATOMIQ110)
+  #define NSX_MEM__HAS_SRAM        1
+  #define NSX_MEM__HAS_SRAM_BSS    1
+  #define NSX_MEM__HAS_FAST_CODE   1
+  #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets TCM here */
+  #define NSX_MEM__SEC_SRAM        ".shared"
+  #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
+  #define NSX_MEM__SEC_FAST_CODE   ".dtcm_text"
+
 /* ------ Apollo4P / Apollo4L (Cortex-M4F, TCM + 1 MB SRAM) ------ */
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
   #define NSX_MEM__HAS_SRAM        1

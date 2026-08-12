@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 

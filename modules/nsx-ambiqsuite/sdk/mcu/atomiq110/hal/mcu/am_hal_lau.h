@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -238,10 +238,10 @@ typedef struct
 
 //
 //! LAU actual surface information.
-//! TODO:  if the struct only contains the actual stride bytes,
+//! TODO： if the struct only contains the actual stride bytes,
 //!        consider simplifying to just return the stride bytes instead of a struct.
-//!        if maybe add more fields that inclue the width/height/bpp, tile stride, buffer size,
-//!        alignment in the future, then keep the struct as is.
+//!        if maybe add more fields that inclue the width/height/bpp、tile stride、buffer size、alignmen
+//!        in the future,then keep the struct as is.
 //! Reports the final framebuffer stride used by the HAL.
 //! If bAutoStride is true, ui32StrideBytes is the HAL-computed stride.
 //! If bAutoStride is false, ui32StrideBytes is the validated caller-provided stride.

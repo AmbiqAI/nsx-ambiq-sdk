@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSPLL_H
@@ -54,7 +54,6 @@ extern "C"
 #define AM_HAL_SYSPLL_FPFD_FREQ_MAX_MHZ         (50U)
 #define AM_HAL_SYSPLL_POST_DIV_MIN              (1U)
 #define AM_HAL_SYSPLL_POST_DIV_MAX              (32U)
-#define AM_HAL_SYSPLL_PHASE_DIV_MAX             (64U)
 #define AM_HAL_SYSPLL_SA_DIV_MIN                (2U)
 #define AM_HAL_SYSPLL_SA_DIV_MAX                (128U)
 
@@ -85,18 +84,6 @@ typedef enum
     AM_HAL_SYSPLL_EN_DISABLE    = MCUCTRL_SYSPLLCTL_SYSPLLEN_DISABLE,
     AM_HAL_SYSPLL_EN_ENABLE     = MCUCTRL_SYSPLLCTL_SYSPLLEN_ENABLE,
 } am_hal_syspll_en_e;
-
-// ****************************************************************************
-//
-//! @enum am_hal_mempll_foutphaseen_e
-//! @brief MEMPLL Phase output enable
-//
-// ****************************************************************************
-typedef enum
-{
-    AM_HAL_MEMPLL_FOUTPHASEEN_DISABLE    = MCUCTRL_MEMPLLCTL_PHASEFOUT2PHEN_DISABLE,
-    AM_HAL_MEMPLL_FOUTPHASEEN_ENABLE     = MCUCTRL_MEMPLLCTL_PHASEFOUT2PHEN_ENABLE,
-} am_hal_mempll_foutphaseen_e;
 
 // ****************************************************************************
 //
@@ -431,15 +418,14 @@ extern uint32_t am_hal_syspll_bypass_set(void *pHandle, bool bBypass);
 //! @param ui32Div   - divider value.
 //!
 //! This function configures the output divider for the system PLL.
-//! This function returns AM_HAL_STATUS_INVALID_OPERATION for MEMPLL.
+//!
+//! Note: For MEMPLL, ui32OutID is not used.
 //!
 //! @return status   - generic or interface specific status.
-//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured
-//!            successfully.
+//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured succesfully.
 //!         - AM_HAL_STATUS_INVALID_HANDLE: Invalid pHandle.
 //!         - AM_HAL_STATUS_INVALID_ARG: Invalid ui32OutId or ui32Div.
 //!         - AM_HAL_STATUS_OUT_OF_RANGE: ui32Div out of range.
-//!         - AM_HAL_STATUS_INVALID_OPERATION: Invalid operation for MEMPLL.
 //
 //*****************************************************************************
 extern uint32_t am_hal_syspll_output_config(void *pHandle, uint32_t ui32OutId, uint32_t ui32Div);

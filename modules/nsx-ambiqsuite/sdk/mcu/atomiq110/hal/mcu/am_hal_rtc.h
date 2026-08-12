@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RTC_H
@@ -364,31 +364,13 @@ extern uint32_t am_hal_rtc_interrupt_status_get(bool bEnabledOnly,
 //!     AM_HAL_RTC_OSC_LFRC
 //!     AM_HAL_RTC_OSC_XT
 //!
-// #### INTERNAL BEGIN ####
-// TODO: confirm the delay time
-//! @note After starting the XTAL, a 2 second warm-up delay is required.
-// #### INTERNAL END ####
+//! @note After selection of the RTC oscillator, a 2 second delay occurs before
+//! the new setting is reflected in status. Therefore the CLKGEN.STATUS.OMODE
+//! bit will not reflect the new status until after the 2s wait period.
+//!
+//
 //*****************************************************************************
 extern void am_hal_rtc_osc_select(uint32_t ui32OSC);
-
-//*****************************************************************************
-//
-//! @brief Returns the clock source selected for the RTC.
-//!
-//! This function returns the RTC oscillator selection from
-//! CLKGEN.OCTRL.RTCOSEL.
-//!
-//! @param pui32OSC - pointer to variable for query result. It will be
-//!                   written to one of the following:
-//!                   - AM_HAL_RTC_OSC_LFRC
-//!                   - AM_HAL_RTC_OSC_XT
-//!
-//! @note This reflects the configured selection in CLKGEN.OCTRL.RTCOSEL
-//!
-//! @return AM_HAL_STATUS_SUCCESS or relevant HAL error code.
-//
-//*****************************************************************************
-extern uint32_t am_hal_rtc_osc_get(uint32_t *pui32OSC);
 
 //*****************************************************************************
 //

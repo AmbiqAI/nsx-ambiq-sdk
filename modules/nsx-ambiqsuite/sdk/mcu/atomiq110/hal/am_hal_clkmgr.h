@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKMGR_H
@@ -39,21 +39,6 @@ extern "C"
 //!       - AM_HAL_MCUCTRL_CONTROL_EXTCLK32K_DISABLE
 //
 // #define AM_HAL_CLKMGR_MANAGE_XTAL_LS
-
-//
-//! Use the PLLVCO / MEMPLL / SYS_CLK0..4 / XTAL_HS / XTAL_LS / EXTREF_CLK state-machine
-//! implementation for config, request, and release instead of the legacy
-//! scoreboarding path. When non-zero, am_hal_clkmgr_clock_{config,request,release}
-//! calls am_hal_clkmgr_sm_st_trigger_* directly; legacy
-//! am_hal_clkmgr_{config,request,release}_{PLLVCO,MEMPLL} and
-//! am_hal_clkmgr_{config,request,release}_SYS_CLK and
-//! am_hal_clkmgr_{request,release}_{XTAL_HS,XTAL_LS,EXTREF_CLK} are not compiled.
-//! Define to 1 in the build or before including this header. When undefined,
-//! defaults to 0 (legacy).
-//
-#ifndef AM_HAL_CLKMGR_USE_STATE_MACHINE
-#define AM_HAL_CLKMGR_USE_STATE_MACHINE     0
-#endif
 
 //
 //! Default Clock Manager Configuration
@@ -369,12 +354,6 @@ extern uint32_t am_hal_clkmgr_initialize(void);
 //! @param psClockConfig - [Optional] clock config structure to be used to
 //!                        configure the clock specified. set to NULL if
 //!                        auto-generation is desired.
-//!
-//! @note Only one execution context may configure a given clock at any time.
-//!       Concurrent calls to am_hal_clkmgr_clock_config() for the same
-//!       eClockId from multiple threads or ISRs results in undefined behavior.
-//!       The application must serialize all clock configuration for that
-//!       clock ID.
 //!
 //! @return status - Status for the operation, as defined in am_hal_status_e
 //
