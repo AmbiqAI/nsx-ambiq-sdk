@@ -2,5 +2,6 @@
 
 ## Unreleased
 
-- Initial `nsx-npu` module: Ethos-U85 core-driver vendoring, NSX init/deinit
-  and interrupt glue, and NPU performance-mode helpers for Atomiq110.
+- Initial `nsx-npu` module: Atomiq110 power-domain, IRQ, and performance-mode
+  glue on top of `nsx-ethos-u-driver` (pristine upstream Ethos-U85 core
+  driver), plus NSX init/deinit helpers.

@@ -9,8 +9,8 @@
 #include "nsx_npu.h"
 
 #include "am_mcu_apollo.h"
-#include "ethosu_driver.h"
 #include "nsx_core.h"
+#include "nsx_ethos_u.h"
 
 //*****************************************************************************
 //
@@ -24,7 +24,6 @@
 #define NSX_NPU_REG_BASE (0x400E0000UL)
 
 static struct ethosu_driver g_nsx_npu_driver;
-static struct ethosu_driver *g_nsx_npu_irq_driver = NULL;
 static bool g_nsx_npu_initialized = false;
 
 //*****************************************************************************
@@ -35,10 +34,7 @@ static bool g_nsx_npu_initialized = false;
 
 void am_npu_isr(void)
 {
-    if (g_nsx_npu_irq_driver != NULL)
-    {
-        ethosu_irq_handler(g_nsx_npu_irq_driver);
-    }
+    nsx_ethos_u_irq();
 }
 
 //*****************************************************************************
@@ -47,6 +43,8 @@ void am_npu_isr(void)
 //
 //*****************************************************************************
 
+// nsx-npu owns NPU power-domain sequencing exclusively: nsx-ethos-u-driver
+// never touches am_hal_pwrctrl.
 uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
 {
     if (g_nsx_npu_initialized)
@@ -55,17 +53,21 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
     }
 
     //
-    // Power on the NPU domain. Tolerate a failed handshake: FPGA images keep
-    // the NPU always-on and do not model the power-status ack (the AmbiqSuite
-    // npu_resnet example behaves the same way).
+    // Power on the NPU domain. Tolerate a failed handshake only if
+    // cfg->tolerate_power_ack is set (FPGA/pre-silicon targets); otherwise
+    // fail init here rather than bus-fault later on the register block.
     //
-    (void)am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_NPU);
+    if ((am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS) &&
+        ((cfg == NULL) || !cfg->tolerate_power_ack))
+    {
+        return NSX_STATUS_INIT_FAILED;
+    }
 
     //
-    // Initialize the Ethos-U core driver. Secure=0/privileged=1 matches the
+    // Initialize the Ethos-U core driver. Secure/privileged=1 matches the
     // AmbiqSuite Atomiq110 NPU examples.
     //
-    if (ethosu_init(&g_nsx_npu_driver, (void *)NSX_NPU_REG_BASE, NULL, 0, 0, 1) != 0)
+    if (nsx_ethos_u_init(&g_nsx_npu_driver, (void *)NSX_NPU_REG_BASE, NPU_IRQn) != 0)
     {
         (void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU);
         return NSX_STATUS_INIT_FAILED;
@@ -74,7 +76,6 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
     //
     // Route the NPU interrupt to the driver and enable it.
     //
-    g_nsx_npu_irq_driver = &g_nsx_npu_driver;
     NVIC_SetPriority(NPU_IRQn, AM_IRQ_PRIORITY_DEFAULT);
     NVIC_ClearPendingIRQ(NPU_IRQn);
     NVIC_EnableIRQ(NPU_IRQn);
@@ -93,7 +94,6 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
         }
         if (am_hal_pwrctrl_npu_mode_select(mode) != AM_HAL_STATUS_SUCCESS)
         {
-            g_nsx_npu_irq_driver = NULL;
             NVIC_DisableIRQ(NPU_IRQn);
             ethosu_deinit(&g_nsx_npu_driver);
             (void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU);
@@ -113,7 +113,6 @@ uint32_t nsx_npu_deinit(void)
     }
 
     NVIC_DisableIRQ(NPU_IRQn);
-    g_nsx_npu_irq_driver = NULL;
     ethosu_deinit(&g_nsx_npu_driver);
 
     if (am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)

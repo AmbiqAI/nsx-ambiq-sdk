@@ -11,7 +11,7 @@ the user to configure the build to match their system configuration.
 
 One such requirement is to define the target CPU, normally by setting
 `CMAKE_SYSTEM_PROCESSOR`. **Note** that when using the toolchain files provided
-in [core_platform](https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-core-platform),
+in [core_platform](https://git.mlplatform.org/ml/ethos-u/ethos-u-core-platform.git),
 the variable `TARGET_CPU` must be used instead of `CMAKE_SYSTEM_PROCESSOR`.
 
 Target CPU is specified on the form "cortex-m<nr><features>", for example:
@@ -31,7 +31,7 @@ $ cmake -B build  \
 $ cmake --build build
 ```
 
-or when using toolchain files from [core_platform](https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-core-platform)
+or when using toolchain files from [core_platform](https://git.mlplatform.org/ml/ethos-u/ethos-u-core-platform.git)
 
 ```[bash]
 $ cmake -B build  \
@@ -40,11 +40,6 @@ $ cmake -B build  \
     -DETHOSU_TARGET_NPU_CONFIG=ethos-u<nr>-<macs>
 $ cmake --build build
 ```
-## Compiler flags used
-
-The Arm Ethos-U core driver component adds the -Werror flag in addition
-to the compiler flags specified in the toolchain file, or options passed
-on the command line.
 
 ## Driver APIs
 
@@ -133,45 +128,28 @@ configuration by specializing the device part at compile time.
 
 ## Data caching
 
-For running the driver on Arm CPUs which are configured with data cache, certain
-caution must be taken to ensure cache coherency. The driver expects that cache
-clean/flush has been done by the user application before being invoked. The
-driver does provide a deprecated weakly linked function `ethosu_flush_dcache`
-that could be overriden, causing the driver to cache flush/clean base pointers
-before each inference.
-
-The driver also exposes a weakly linked symbol for cache invalidation called
-`ethosu_invalidate_dcache`, that must be overriden when the data cache is used.
-After an inference completes on the NPU, the driver will call this function to
-invalidate the data cache, to ensure cache coherency.
-
-Make sure that any base pointers used for flush/invalidation is aligned to the
-cache line size of your CPU, typically 32 bytes. Due to the uncertainty of
-tensor alignment, the driver only flushes/invalidates on base pointer level.
-
-A simple example implementation for the weak functions, using CMSIS primitives
-could look like below:
+For running the driver on Arm CPUs which are configured with data cache, the
+cache maintenance functions in the driver are exported with weakly linked
+symbols that should be overridden. An example implementation using the CMSIS
+primitives found in cachel1_armv7.h could be as below:
 
 ```[C++]
 extern "C" {
-void ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr)
-{
-    for (int i = 0; i < num_base_addr; i++)
-        SCB_CleanDCache_by_Addr((uint32_t *)(uintptr_t)base_addr[i], base_addr_size[i]);
+void ethosu_flush_dcache(uint32_t *p, size_t bytes) {
+    if (p)
+        SCB_CleanDCache_by_Addr(p, bytes);
+    else
+        SCB_CleanDCache();
 }
 
-void ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr)
-{
-    for (int i = 0; i < num_base_addr; i++)
-        SCB_InvalidateDCache_by_Addr((uint32_t *)(uintptr_t)base_addr[i], base_addr_size[i]);
+void ethosu_invalidate_dcache(uint32_t *p, size_t bytes) {
+    if (p)
+        SCB_InvalidateDCache_by_Addr(p, bytes);
+    else
+        SCB_InvalidateDCache();
 }
-} // extern "C"
+}
 ```
-
-The NPU contain memory attributes that should be set to match the settings used
-in the MPU configuration for the memories used. See `NPU_MEM_ATTR_[0-3]` for
-Ethos-U85 and the `AXI_LIMIT[0-3]_MEM_TYPE` for Ethos-U55/Ethos-U65 in
-corresponding `src/ethosu_config_uX5.h` files.
 
 ## Mutex and semaphores
 
@@ -296,10 +274,12 @@ Signed-off-by: Foo Bar foo.bar@example.org
 The contributions will be code reviewed by Arm before they can be accepted into
 the repository.
 
-In order to submit a contribution, submit a merge request to the
-[core_driver](https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-core-driver)
-repository. To do this you will need to sign-up at [gitlab.arm.com](https://gitlab.arm.com)
-and add your SSH key under your settings.
+In order to submit a contribution push your patch to
+`ssh://<GITHUB_USER_ID>@review.mlplatform.org:29418/ml/ethos-u/ethos-u-core-driver`.
+To do this you will need to sign-in to
+[review.mlplatform.org](https://review.mlplatform.org) using a GitHub account
+and add your SSH key under your settings. If there is a problem adding the SSH
+key make sure there is a valid email address in the Email Addresses field.
 
 ## Security
 

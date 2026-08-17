@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright 2019-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+ * SPDX-FileCopyrightText: Copyright 2019-2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the License); you may
@@ -38,8 +38,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
-// #include <stdio.h>
-// #include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /******************************************************************************
  * Defines
@@ -53,63 +53,7 @@
 #define DRIVER_ACTION_LENGTH_32_BIT_WORD 1
 #define ETHOSU_FOURCC ('1' << 24 | 'P' << 16 | 'O' << 8 | 'C') // "Custom Operator Payload 1"
 
-#define SCRATCH_BASE_ADDR_INDEX 1
 #define FAST_MEMORY_BASE_ADDR_INDEX 2
-
-// Ambiq Code
-// Replace the weak semaphore implementations with a static pool version
-
-struct ethosu_semaphore_t { volatile uint8_t count; };
-
-#define ETHOSU_MAX_SEMAPHORES 10
-static struct ethosu_semaphore_t sem_pool[ETHOSU_MAX_SEMAPHORES];
-static uint8_t sem_in_use[ETHOSU_MAX_SEMAPHORES];
-
-void *ethosu_semaphore_create(void)
-{
-    for (unsigned i = 0; i < ETHOSU_MAX_SEMAPHORES; ++i) {
-        if (!sem_in_use[i]) {
-            sem_in_use[i] = 1;
-            sem_pool[i].count = 0;
-            return &sem_pool[i];
-        }
-    }
-    return NULL; // caller already checks for NULL
-}
-
-void ethosu_semaphore_destroy(void *sem)
-{
-    if (!sem) return;
-    for (unsigned i = 0; i < ETHOSU_MAX_SEMAPHORES; ++i) {
-        if (&sem_pool[i] == sem) {
-            sem_in_use[i] = 0;
-            sem_pool[i].count = 0;
-            return;
-        }
-    }
-}
-
-int ethosu_semaphore_take(void *sem, uint64_t timeout)
-{
-    (void)timeout;  // keep signature; implement if you need timeouts
-    struct ethosu_semaphore_t *s = (struct ethosu_semaphore_t *)sem;
-    while (s->count == 0) 
-    {
-        __WFE();
-    }
-    s->count--;
-    return 0;
-}
-
-int ethosu_semaphore_give(void *sem)
-{
-    struct ethosu_semaphore_t *s = (struct ethosu_semaphore_t *)sem;
-    s->count++;
-    __SEV();
-    return 0;
-}
-// End of Ambiq Code
-
 
 /******************************************************************************
  * Types
@@ -182,52 +126,23 @@ static struct ethosu_driver *registered_drivers = NULL;
  ******************************************************************************/
 
 /*
- * Flush/clean the data cache
+ * Flush/clean the data cache by address and size. Passing NULL as p argument
+ * expects the whole cache to be flushed.
  */
-void __attribute__((weak))
-ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr)
+void __attribute__((weak)) ethosu_flush_dcache(uint32_t *p, size_t bytes)
 {
-    /*
-     * for (int i = 0; i < num_base_addr; i++)
-     * {
-     *     // Check alignment to cache line size
-     *     if (base_addr[i] & MASK_32_BYTE_ALIGN) != 0)
-     *     {
-     *         LOG_ERR("Base addr %d: 0x%" PRIx64 "not aligned to 32 bytes", i, base_addr[i]);
-     *         return;
-     *     }
-     *     flush_dcache((uint32_t *)(uintptr_t)base_addr[i], base_addr_size[i]);
-     * }
-     */
-    UNUSED(base_addr);
-    UNUSED(base_addr_size);
-    UNUSED(num_base_addr);
+    UNUSED(p);
+    UNUSED(bytes);
 }
 
 /*
- * Invalidate the data cache
+ * Invalidate the data cache by address and size. Passing NULL as p argument
+ * expects the whole cache to be invalidated.
  */
-void __attribute__((weak))
-ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr)
+void __attribute__((weak)) ethosu_invalidate_dcache(uint32_t *p, size_t bytes)
 {
-    /*
-     * On 32bit systems, to avoid sign expansion, each base_addr must be cast
-     * like this ((uint32_t *)(uintptr_t)base_addr[idx])
-     *
-     * for (int i = 0; i < num_base_addr; i++)
-     * {
-     *     // Check alignment to cache line size
-     *     if (base_addr[i] & MASK_32_BYTE_ALIGN) != 0)
-     *     {
-     *         LOG_ERR("Base addr %d: 0x%" PRIx64 "not aligned to 32 bytes", i, base_addr[i]);
-     *         return;
-     *     }
-     *     invalidate_dcache((uint32_t *)(uintptr_t)base_addr[i], base_addr_size[i]);
-     * }
-     */
-    UNUSED(base_addr);
-    UNUSED(base_addr_size);
-    UNUSED(num_base_addr);
+    UNUSED(p);
+    UNUSED(bytes);
 }
 
 /******************************************************************************
@@ -238,10 +153,10 @@ ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size
  * definitions and implement true thread-safety (in application layer).
  ******************************************************************************/
 
-// struct ethosu_semaphore_t
-// {
-//     uint8_t count;
-// };
+struct ethosu_semaphore_t
+{
+    uint8_t count;
+};
 
 static void *ethosu_mutex;
 static void *ethosu_semaphore;
@@ -269,55 +184,51 @@ int __attribute__((weak)) ethosu_mutex_unlock(void *mutex)
     return 0;
 }
 
-// // Baremetal implementation of creating a semaphore
-// void *__attribute__((weak)) ethosu_semaphore_create(void)
-// {
-//     struct ethosu_semaphore_t *sem = malloc(sizeof(*sem));
-//     if (sem != NULL)
-//     {
-//         sem->count = 0;
-//     }
-//     return sem;
-// }
+// Baremetal implementation of creating a semaphore
+void *__attribute__((weak)) ethosu_semaphore_create(void)
+{
+    struct ethosu_semaphore_t *sem = malloc(sizeof(*sem));
+    if (sem != NULL)
+    {
+        sem->count = 0;
+    }
+    return sem;
+}
 
-// void __attribute__((weak)) ethosu_semaphore_destroy(void *sem)
-// {
-//     free((struct ethosu_semaphore_t *)sem);
-// }
-
-// +// static pool, no malloc/free
-// void *__attribute__((weak)) ethosu_semaphore_create(void) { /* impl from pool as above */ }
-// void __attribute__((weak)) ethosu_semaphore_destroy(void *sem) { /* mark free in pool */ }
+void __attribute__((weak)) ethosu_semaphore_destroy(void *sem)
+{
+    free((struct ethosu_semaphore_t *)sem);
+}
 
 // Baremetal simulation of waiting/sleeping for and then taking a semaphore using intrisics
-// int __attribute__((weak)) ethosu_semaphore_take(void *sem, uint64_t timeout)
-// {
-//     UNUSED(timeout);
-//     // Baremetal pseudo-example on how to trigger a timeout:
-//     // if (timeout != ETHOSU_SEMAPHORE_WAIT_FOREVER) {
-//     //     setup_a_timer_to_call_SEV_after_time(timeout);
-//     // }
-//     struct ethosu_semaphore_t *s = sem;
-//     while (s->count == 0)
-//     {
-//         __WFE();
-//         // Baremetal pseudo-example check if timeout triggered:
-//         // if (SEV_timer_triggered()) {
-//         //     return -1;
-//         // }
-//     }
-//     s->count--;
-//     return 0;
-// }
+int __attribute__((weak)) ethosu_semaphore_take(void *sem, uint64_t timeout)
+{
+    UNUSED(timeout);
+    // Baremetal pseudo-example on how to trigger a timeout:
+    // if (timeout != ETHOSU_SEMAPHORE_WAIT_FOREVER) {
+    //     setup_a_timer_to_call_SEV_after_time(timeout);
+    // }
+    struct ethosu_semaphore_t *s = sem;
+    while (s->count == 0)
+    {
+        __WFE();
+        // Baremetal pseudo-example check if timeout triggered:
+        // if (SEV_timer_triggered()) {
+        //     return -1;
+        // }
+    }
+    s->count--;
+    return 0;
+}
 
-// // Baremetal simulation of giving a semaphore and waking up processes using intrinsics
-// int __attribute__((weak)) ethosu_semaphore_give(void *sem)
-// {
-//     struct ethosu_semaphore_t *s = sem;
-//     s->count++;
-//     __SEV();
-//     return 0;
-// }
+// Baremetal simulation of giving a semaphore and waking up processes using intrinsics
+int __attribute__((weak)) ethosu_semaphore_give(void *sem)
+{
+    struct ethosu_semaphore_t *s = sem;
+    s->count++;
+    __SEV();
+    return 0;
+}
 
 /******************************************************************************
  * Weak functions - Inference begin/end callbacks
@@ -335,11 +246,6 @@ void __attribute__((weak)) ethosu_inference_end(struct ethosu_driver *drv, void 
     UNUSED(drv);
 }
 
-bool __attribute__((weak)) ethosu_pmu_auto_config_enabled(void)
-{
-    return true;
-}
-
 /******************************************************************************
  * Static functions
  ******************************************************************************/
@@ -352,7 +258,7 @@ static void ethosu_register_driver(struct ethosu_driver *drv)
 
     ethosu_semaphore_give(ethosu_semaphore);
 
-    LOG_INFO("New NPU driver registered (handle: 0x%08x, NPU: 0x%08x)", (unsigned)(uintptr_t)drv, (unsigned)(uintptr_t)drv->dev.reg);
+    LOG_INFO("New NPU driver registered (handle: 0x%p, NPU: 0x%p)", drv, drv->dev.reg);
 }
 
 static int ethosu_deregister_driver(struct ethosu_driver *drv)
@@ -369,7 +275,7 @@ static int ethosu_deregister_driver(struct ethosu_driver *drv)
         if (curr == drv)
         {
             *prev = curr->next;
-            LOG_INFO("NPU driver handle 0x%08x deregistered.", (unsigned)(uintptr_t)drv);
+            LOG_INFO("NPU driver handle %p deregistered.", drv);
             ethosu_semaphore_take(ethosu_semaphore, ETHOSU_SEMAPHORE_WAIT_FOREVER);
             break;
         }
@@ -382,7 +288,7 @@ static int ethosu_deregister_driver(struct ethosu_driver *drv)
 
     if (curr == NULL)
     {
-        LOG_ERR("No NPU driver handle registered at address 0x%08x.", (unsigned)(uintptr_t)drv);
+        LOG_ERR("No NPU driver handle registered at address %p.", drv);
         return -1;
     }
 
@@ -408,17 +314,18 @@ static int handle_optimizer_config(struct ethosu_driver *drv, struct opt_cfg_s c
 
 static int handle_command_stream(struct ethosu_driver *drv, const uint8_t *cmd_stream, const int cms_length)
 {
-    uint32_t cms_bytes = cms_length * BYTES_IN_32_BITS;
+    uint32_t cms_bytes       = cms_length * BYTES_IN_32_BITS;
+    ptrdiff_t cmd_stream_ptr = (ptrdiff_t)cmd_stream;
 
-    LOG_INFO("handle_command_stream: cmd_stream=0x%08x, cms_length %d", (unsigned)(uintptr_t)cmd_stream, cms_length);
+    LOG_INFO("handle_command_stream: cmd_stream=%p, cms_length %d", cmd_stream, cms_length);
 
     if (0 != ((ptrdiff_t)cmd_stream & MASK_16_BYTE_ALIGN))
     {
-        LOG_ERR("Command stream addr 0x%08x not aligned to 16 bytes", (unsigned)(uintptr_t)cmd_stream);
+        LOG_ERR("Command stream addr %p not aligned to 16 bytes", cmd_stream);
         return -1;
     }
 
-    // Verify minimum 16 byte alignment for base address'
+    // Verify 16 byte alignment for base address'
     for (int i = 0; i < drv->job.num_base_addr; i++)
     {
         if (0 != (drv->job.base_addr[i] & MASK_16_BYTE_ALIGN))
@@ -428,8 +335,23 @@ static int handle_command_stream(struct ethosu_driver *drv, const uint8_t *cmd_s
         }
     }
 
-    // Flush/clean the data cache
-    ethosu_flush_dcache(drv->job.base_addr, drv->job.base_addr_size, drv->job.num_base_addr);
+    // Flush the cache if available on CPU.
+    // The upcasting to uin32_t* is ok since the pointer never is dereferenced.
+    // The base_addr_size is null if invoking from prior to invoke_V2, in that case
+    // the whole cache is being flushed.
+
+    if (drv->job.base_addr_size != NULL)
+    {
+        ethosu_flush_dcache((uint32_t *)cmd_stream_ptr, cms_bytes);
+        for (int i = 0; i < drv->job.num_base_addr; i++)
+        {
+            ethosu_flush_dcache((uint32_t *)(uintptr_t)drv->job.base_addr[i], drv->job.base_addr_size[i]);
+        }
+    }
+    else
+    {
+        ethosu_flush_dcache(NULL, 0);
+    }
 
     // Request power gating disabled during inference run
     if (ethosu_request_power(drv))
@@ -454,6 +376,8 @@ static int handle_command_stream(struct ethosu_driver *drv, const uint8_t *cmd_s
  ******************************************************************************/
 void __attribute__((weak)) ethosu_irq_handler(struct ethosu_driver *drv)
 {
+    LOG_DEBUG("Got interrupt from Ethos-U");
+
     // Prevent race condition where interrupt triggered after a timeout waiting
     // for semaphore, but before NPU is reset.
     if (drv->job.result == ETHOSU_JOB_RESULT_TIMEOUT)
@@ -477,10 +401,10 @@ int ethosu_init(struct ethosu_driver *drv,
                 uint32_t secure_enable,
                 uint32_t privilege_enable)
 {
-    LOG_INFO("Initializing NPU: base_address=0x%08x, fast_memory=0x%08x, fast_memory_size=%zu, secure=%" PRIu32
+    LOG_INFO("Initializing NPU: base_address=%p, fast_memory=%p, fast_memory_size=%zu, secure=%" PRIu32
              ", privileged=%" PRIu32,
-             (unsigned)(uintptr_t)base_address,
-             (unsigned)(uintptr_t)fast_memory,
+             base_address,
+             fast_memory,
              fast_memory_size,
              secure_enable,
              privilege_enable);
@@ -533,7 +457,6 @@ void ethosu_deinit(struct ethosu_driver *drv)
 {
     ethosu_deregister_driver(drv);
     ethosu_semaphore_destroy(drv->semaphore);
-    ethosu_dev_deinit(&drv->dev);
 }
 
 int ethosu_soft_reset(struct ethosu_driver *drv)
@@ -638,18 +561,8 @@ int ethosu_wait(struct ethosu_driver *drv, bool block)
             }
         }
 
-        // Invalidate cache
-        ethosu_invalidate_dcache(drv->job.base_addr, drv->job.base_addr_size, drv->job.num_base_addr);
-
         // Inference done callback - always called even in case of timeout
         ethosu_inference_end(drv, drv->job.user_arg);
-
-#ifdef ENABLE_U85_PMU
-        if (ethosu_pmu_auto_config_enabled())
-        {
-            ethosu_dev_pmu_dump(&drv->dev);
-        }
-#endif
 
         // Release power gating disabled requirement
         ethosu_release_power(drv);
@@ -674,6 +587,19 @@ int ethosu_wait(struct ethosu_driver *drv, bool block)
         }
         else
         {
+            // Invalidate cache
+            if (drv->job.base_addr_size != NULL)
+            {
+                for (int i = 0; i < drv->job.num_base_addr; i++)
+                {
+                    ethosu_invalidate_dcache((uint32_t *)(uintptr_t)drv->job.base_addr[i], drv->job.base_addr_size[i]);
+                }
+            }
+            else
+            {
+                ethosu_invalidate_dcache(NULL, 0);
+            }
+
             LOG_DEBUG("Inference finished successfully...");
             ret = 0;
         }
@@ -701,9 +627,6 @@ int ethosu_invoke_async(struct ethosu_driver *drv,
                         const int num_base_addr,
                         void *user_arg)
 {
-    assert(custom_data_ptr != NULL);
-    assert(base_addr != NULL);
-    assert(base_addr_size != NULL);
 
     const struct cop_data_s *data_ptr = custom_data_ptr;
     const struct cop_data_s *data_end = (struct cop_data_s *)((ptrdiff_t)custom_data_ptr + custom_data_size);
@@ -740,9 +663,10 @@ int ethosu_invoke_async(struct ethosu_driver *drv,
     data_ptr++;
 
     // Adjust base address to fast memory area
-    if (drv->fast_memory != 0 && num_base_addr > FAST_MEMORY_BASE_ADDR_INDEX)
+    if (drv->fast_memory != 0 && num_base_addr >= FAST_MEMORY_BASE_ADDR_INDEX)
     {
-        if (base_addr_size[FAST_MEMORY_BASE_ADDR_INDEX] > drv->fast_memory_size)
+
+        if (base_addr_size != NULL && base_addr_size[FAST_MEMORY_BASE_ADDR_INDEX] > drv->fast_memory_size)
         {
             LOG_ERR("Fast memory area too small. fast_memory_size=%zu, base_addr_size=%zu",
                     drv->fast_memory_size,
@@ -806,8 +730,6 @@ int ethosu_invoke_v3(struct ethosu_driver *drv,
                      const int num_base_addr,
                      void *user_arg)
 {
-    int count = 0;
-    
     if (ethosu_invoke_async(
             drv, custom_data_ptr, custom_data_size, base_addr, base_addr_size, num_base_addr, user_arg) < 0)
     {
@@ -832,7 +754,7 @@ struct ethosu_driver *ethosu_reserve_driver(void)
         if (!drv->reserved)
         {
             drv->reserved = true;
-            LOG_DEBUG("NPU driver handle 0x%08x reserved", (unsigned)(uintptr_t)drv);
+            LOG_DEBUG("NPU driver handle %p reserved", drv);
             break;
         }
         drv = drv->next;
@@ -865,7 +787,7 @@ void ethosu_release_driver(struct ethosu_driver *drv)
         }
 
         drv->reserved = false;
-        LOG_DEBUG("NPU driver handle 0x%08x released", (unsigned)(uintptr_t)drv);
+        LOG_DEBUG("NPU driver handle %p released", drv);
         ethosu_semaphore_give(ethosu_semaphore);
     }
     ethosu_mutex_unlock(ethosu_mutex);

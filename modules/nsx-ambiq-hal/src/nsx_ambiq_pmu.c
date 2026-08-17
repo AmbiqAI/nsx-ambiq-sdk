@@ -43,7 +43,7 @@ static uint32_t nsx_ambiq_pmu_init_atomiq110(am_util_pmu_config_t *cfg)
     }
 
     // Enable Trace
-    DCB->DEMCR |= DCB_DEMCR_MON_EN_Msk;
+    DCB->DEMCR |= DCB_DEMCR_TRCENA_Msk | DCB_DEMCR_MON_EN_Msk;
 
     // Enable Low Overhead Loops
     SCB->CCR |= SCB_CCR_LOB_Msk;

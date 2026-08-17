@@ -21,7 +21,7 @@
 
 #include "ethosu_device.h"
 #include "ethosu_driver.h"
-#include "ethosu85_interface.h"
+#include "ethosu_interface.h"
 #include "ethosu_log.h"
 #include "pmu_ethosu.h"
 

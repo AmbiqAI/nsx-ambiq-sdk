@@ -7,10 +7,10 @@ support:
   ambiqsuite: true
   zephyr: false
 summary: >-
-  Arm Ethos-U85 NPU driver module for Atomiq targets. Wraps the vendored
-  ethos-u-core-driver with NSX-style init/deinit, interrupt glue, and
-  power-mode helpers so TFLM runtimes can dispatch Vela-compiled command
-  streams to the NPU.
+  Atomiq110 glue for the Arm Ethos-U85 NPU: power-domain sequencing, IRQ
+  wiring, and performance-mode selection on top of the pristine upstream
+  driver (nsx-ethos-u-driver) so TFLM runtimes can dispatch Vela-compiled
+  command streams to the NPU.
 capabilities:
   - npu
   - ethos_u
@@ -35,6 +35,7 @@ depends:
   required:
     - nsx-core
     - nsx-soc-hal
+    - nsx-ethos-u-driver
   optional: []
 compatibility:
   boards:

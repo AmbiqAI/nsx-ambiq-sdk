@@ -108,9 +108,11 @@
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
   #define NSX_MEM__SEC_FAST_CODE   ".dtcm_text"
 
-/* ------ Atomiq110 (Cortex-M55 + Ethos-U85, TCM + 4 MB shared SRAM) ------
+/* ------ Atomiq110 (Cortex-M55 + Ethos-U85, TCM + 3 MB shared SRAM) ------
  * Board startup/linker provide .shared (init from MRAM), .sram_bss (NOLOAD,
- * zeroed at boot) and a .dtcm_text code overlay (no ITCM on this part). */
+ * zeroed at boot) and an .itcm_text code overlay. Atomiq110 has 256 KB of
+ * MCU_ITCM at 0x0, unlike Apollo510L/Apollo330P above, so fast code targets
+ * ITCM rather than a DTCM overlay. */
 #elif defined(AM_PART_ATOMIQ110)
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    1
@@ -118,7 +120,7 @@
   #define NSX_MEM__HAS_FAST_BSS    0  /* .bss already targets TCM here */
   #define NSX_MEM__SEC_SRAM        ".shared"
   #define NSX_MEM__SEC_SRAM_BSS    ".sram_bss"
-  #define NSX_MEM__SEC_FAST_CODE   ".dtcm_text"
+  #define NSX_MEM__SEC_FAST_CODE   ".itcm_text"
 
 /* ------ Apollo4P / Apollo4L (Cortex-M4F, TCM + 1 MB SRAM) ------ */
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
@@ -299,7 +301,8 @@
 /* ---- Internal family groupings (do not use directly) ---- */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
   #define NSX_CACHE_FAMILY_AP5_ 1
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
   #define NSX_CACHE_FAMILY_AP4_ 1
@@ -360,7 +363,8 @@ uint32_t nsx_cache_sync_shared_data(void);
   defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4) || \
     defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
   #define NSX_HAS_CACHE 1
 #else
   #define NSX_HAS_CACHE 0

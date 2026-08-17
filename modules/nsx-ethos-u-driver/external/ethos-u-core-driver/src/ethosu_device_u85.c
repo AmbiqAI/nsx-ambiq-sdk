@@ -1,6 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright 2019-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
- * SPDX-FileCopyrightText: Copyright 2025 Alif Semiconductor
+ * SPDX-FileCopyrightText: Copyright 2019-2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the License); you may
@@ -24,12 +23,6 @@
 #include "ethosu_config_u85.h"
 #include "ethosu_device.h"
 #include "ethosu_log.h"
-#ifdef ENABLE_U85_PMU
-#include "ethosu_driver.h"
-#include "pmu_ethosu.h"
-#endif
-
-#include "am_mcu_apollo.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -57,106 +50,14 @@
  * Functions
  ******************************************************************************/
 
-#ifdef ENABLE_U85_PMU
-static void ethosu_dev_pmu_configure_inference_counters(struct ethosu_device *dev)
-{
-    struct ethosu_driver *drv = (struct ethosu_driver *)dev;
-    const uint32_t evcnt_mask = ETHOSU_PMU_CNT1_Msk | ETHOSU_PMU_CNT2_Msk | ETHOSU_PMU_CNT3_Msk | ETHOSU_PMU_CNT4_Msk |
-                                ETHOSU_PMU_CNT5_Msk | ETHOSU_PMU_CNT6_Msk | ETHOSU_PMU_CNT7_Msk | ETHOSU_PMU_CNT8_Msk;
-    const uint32_t all_mask = evcnt_mask | ETHOSU_PMU_CCNT_Msk;
-
-    ETHOSU_PMU_Enable(drv);
-    ETHOSU_PMU_CNTR_Disable(drv, all_mask);
-
-    /* One event per PMU counter; U85 names: MAC stalled by weight decode = MAC_STALLED_BY_W, second AXI = EXT1. */
-    ETHOSU_PMU_Set_EVTYPER(drv, 0, ETHOSU_PMU_NPU_ACTIVE);
-    ETHOSU_PMU_Set_EVTYPER(drv, 1, ETHOSU_PMU_NPU_IDLE);
-    ETHOSU_PMU_Set_EVTYPER(drv, 2, ETHOSU_PMU_MAC_ACTIVE);
-    ETHOSU_PMU_Set_EVTYPER(drv, 3, ETHOSU_PMU_MAC_STALLED_BY_W);
-    ETHOSU_PMU_Set_EVTYPER(drv, 4, ETHOSU_PMU_MAC_STALLED_BY_ACC);
-    ETHOSU_PMU_Set_EVTYPER(drv, 5, ETHOSU_PMU_CC_STALLED_ON_BLOCKDEP);
-    ETHOSU_PMU_Set_EVTYPER(drv, 6, ETHOSU_PMU_EXT1_RD_TRAN_REQ_STALLED);
-    ETHOSU_PMU_Set_EVTYPER(drv, 7, ETHOSU_PMU_WD_STALLED);
-
-    ETHOSU_PMU_EVCNTR_ALL_Reset(drv);
-    ETHOSU_PMU_CYCCNT_Reset(drv);
-    ETHOSU_PMU_CNTR_Enable(drv, all_mask);
-}
-
-void ethosu_dev_pmu_dump(struct ethosu_device *dev)
-{
-    struct ethosu_driver *drv = (struct ethosu_driver *)dev;
-    static const char *const evt_names[] = {
-        "ETHOSU_PMU_NPU_ACTIVE",
-        "ETHOSU_PMU_NPU_IDLE",
-        "ETHOSU_PMU_MAC_ACTIVE",
-        "ETHOSU_PMU_MAC_STALLED_BY_WD",
-        "ETHOSU_PMU_MAC_STALLED_BY_ACC",
-        "ETHOSU_PMU_CC_STALLED_ON_BLOCKDEP",
-        "ETHOSU_PMU_AXI1_RD_TRAN_REQ_STALLED",
-        "ETHOSU_PMU_WD_STALLED",
-    };
-
-    uint32_t ovs = ETHOSU_PMU_Get_CNTR_OVS(drv);
-    if (ovs != 0)
-    {
-        LOG_INFO("Ethos-U85 PMU counter overflow flags: 0x%08" PRIx32, ovs);
-    }
-
-    for (uint32_t i = 0; i < ETHOSU_PMU_NCOUNTERS; i++)
-    {
-        LOG_INFO("Ethos-U85 PMU %s (PMEVCNTR%u): %" PRIu32, evt_names[i], i, ETHOSU_PMU_Get_EVCNTR(drv, i));
-    }
-
-    LOG_INFO("Ethos-U85 PMU ETHOSU_PMU_CYCLE / CCNT (PMCCNTR): %" PRIu64, ETHOSU_PMU_Get_CCNTR(drv));
-}
-#endif
-
 uint64_t __attribute__((weak)) ethosu_address_remap(uint64_t address, int index)
 {
     (void)(index);
     return address;
 }
 
-unsigned int __attribute__((weak)) ethosu_config_select(uint64_t address, int index)
-{
-    (void)(address);
-    assert(index >= -1 && index <= 7);
-    switch (index)
-    {
-    case -1:
-        return NPU_QCONFIG;
-    default:
-    case 0:
-        return NPU_REGIONCFG_0;
-    case 1:
-        return NPU_REGIONCFG_1;
-    case 2:
-        return NPU_REGIONCFG_2;
-    case 3:
-        return NPU_REGIONCFG_3;
-    case 4:
-        return NPU_REGIONCFG_4;
-    case 5:
-        return NPU_REGIONCFG_5;
-    case 6:
-        return NPU_REGIONCFG_6;
-    case 7:
-        return NPU_REGIONCFG_7;
-    }
-}
-
 bool ethosu_dev_init(struct ethosu_device *dev, void *base_address, uint32_t secure_enable, uint32_t privilege_enable)
 {
-
-    //
-    // Power on the NPU via atomiq110 HAL PWRCTRL.
-    //
-    if (am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)
-    {
-        LOG_ERR("Ethos U85 NPU failed to power on!\n");
-    }
-
     dev->reg        = (volatile struct NPU_REG *)base_address;
     dev->secure     = secure_enable;
     dev->privileged = privilege_enable;
@@ -176,18 +77,9 @@ bool ethosu_dev_init(struct ethosu_device *dev, void *base_address, uint32_t sec
     return true;
 }
 
-void ethosu_dev_deinit(struct ethosu_device *dev)
-{
-    (void)dev;
-
-    if (am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)
-    {
-        LOG_ERR("Ethos U85 NPU failed to power off!\n");
-    }
-}
-
 enum ethosu_error_codes ethosu_dev_axi_init(struct ethosu_device *dev)
 {
+    struct regioncfg_r rcfg = {0};
     struct axi_sram_r axi_s = {0};
     struct axi_ext_r axi_e  = {0};
 
@@ -198,6 +90,20 @@ enum ethosu_error_codes ethosu_dev_axi_init(struct ethosu_device *dev)
     dev->reg->MEM_ATTR[1].word = NPU_MEM_ATTR_1;
     dev->reg->MEM_ATTR[2].word = NPU_MEM_ATTR_2;
     dev->reg->MEM_ATTR[3].word = NPU_MEM_ATTR_3;
+
+    // Set MEM_ATTR entry for command stream
+    dev->reg->QCONFIG.word = NPU_QCONFIG;
+
+    // Set MEM_ATTR entries to use for regions 0-7
+    rcfg.region0             = NPU_REGIONCFG_0;
+    rcfg.region1             = NPU_REGIONCFG_1;
+    rcfg.region2             = NPU_REGIONCFG_2;
+    rcfg.region3             = NPU_REGIONCFG_3;
+    rcfg.region4             = NPU_REGIONCFG_4;
+    rcfg.region5             = NPU_REGIONCFG_5;
+    rcfg.region6             = NPU_REGIONCFG_6;
+    rcfg.region7             = NPU_REGIONCFG_7;
+    dev->reg->REGIONCFG.word = rcfg.word;
 
     // Set AXI limits on SRAM AXI interfaces
     axi_s.max_outstanding_read_m1  = AXI_LIMIT_SRAM_MAX_OUTSTANDING_READ_M1 - 1;
@@ -223,15 +129,13 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
     assert(num_base_addr <= NPU_REG_BASEP_ARRLEN);
 
     struct cmd_r cmd;
-    struct regioncfg_r rcfg = {0};
-    uint64_t qbase          = ethosu_address_remap((uintptr_t)cmd_stream_ptr, -1);
+    uint64_t qbase = ethosu_address_remap((uintptr_t)cmd_stream_ptr, -1);
     assert(qbase <= ADDRESS_MASK);
-    LOG_DEBUG("QBASE=0x%016llx, QSIZE=%" PRIu32 ", cmd_stream_ptr=0x%08x", qbase, cms_length, (unsigned)(uintptr_t)cmd_stream_ptr);
+    LOG_DEBUG("QBASE=0x%016llx, QSIZE=%" PRIu32 ", cmd_stream_ptr=%p", qbase, cms_length, cmd_stream_ptr);
 
     dev->reg->QBASE.word[0] = qbase & 0xffffffff;
     dev->reg->QBASE.word[1] = qbase >> 32;
     dev->reg->QSIZE.word    = cms_length;
-    dev->reg->QCONFIG.word  = ethosu_config_select(qbase, -1);
 
     for (int i = 0; i < num_base_addr; i++)
     {
@@ -240,28 +144,17 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
         LOG_DEBUG("BASEP%d=0x%016llx", i, addr);
         dev->reg->BASEP[i].word[0] = addr & 0xffffffff;
         dev->reg->BASEP[i].word[1] = addr >> 32;
-        rcfg.word |= ethosu_config_select(addr, i) << (i * 2);
     }
 
-    dev->reg->REGIONCFG.word = rcfg.word;
-
-#ifdef ENABLE_U85_PMU
-    if (ethosu_pmu_auto_config_enabled())
-    {
-        ethosu_dev_pmu_configure_inference_counters(dev);
-    }
-#endif
-
-    // Start the command stream
     cmd.word                        = dev->reg->CMD.word & NPU_CMD_PWR_CLK_MASK;
-    cmd.transition_to_running_state = 1;    
+    cmd.transition_to_running_state = 1;
+
     dev->reg->CMD.word = cmd.word;
     LOG_DEBUG("CMD=0x%08" PRIx32, cmd.word);
 }
 
 void ethosu_dev_print_err_status(struct ethosu_device *dev)
 {
-    (void)dev;
     LOG_ERR("NPU status=0x%08" PRIx32 ", qread=%" PRIu32 ", cmd_end_reached=%u",
             dev->reg->STATUS.word,
             dev->reg->QREAD.word,

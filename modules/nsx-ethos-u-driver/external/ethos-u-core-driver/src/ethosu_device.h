@@ -40,11 +40,6 @@ extern "C" {
 bool ethosu_dev_init(struct ethosu_device *dev, void *base_address, uint32_t secure_enable, uint32_t privilege_enable);
 
 /**
- * Deinitialize the device.
- */
-void ethosu_dev_deinit(struct ethosu_device *dev);
-
-/**
  * Initialize AXI settings for device.
  */
 enum ethosu_error_codes ethosu_dev_axi_init(struct ethosu_device *dev);
@@ -65,13 +60,6 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
                                    uint32_t cms_length,
                                    const uint64_t *base_addr,
                                    int num_base_addr);
-
-#ifdef ENABLE_U85_PMU
-/**
- * Print Ethos-U85 PMU event counters and cycle counter to the log (call after inference completes).
- */
-void ethosu_dev_pmu_dump(struct ethosu_device *dev);
-#endif
 
 /**
  * Print information on NPU error status

@@ -85,7 +85,9 @@ static void nsx_power_disable_periph(am_hal_pwrctrl_periph_e peripheral) {
 void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
 
     //
-    // Disable the XTAL (select LFRC for the RTC and turn the XTAL off).
+    // Switch the RTC off the XTAL to LFRC. Despite the name, this does not
+    // power down the XTAL itself (confirmed via disassembly) — only the
+    // RTC's clock source changes.
     //
     if (!pCfg->need_xtal) {
         am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
@@ -186,15 +188,10 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
         // am_hal_spotmgr_profile_t.PROFILE_b.COLLAPSESTMANDSTMP. This is
         // intentionally a no-op on this target.
     }
-    #define ELP_ON                              1
     am_hal_pwrctrl_pwrmodctl_cpdlp_t sDefaultCpdlpConfig =
     {
          .eRlpConfig = AM_HAL_PWRCTRL_RLP_ON,
-         #if ELP_ON
-            .eElpConfig = AM_HAL_PWRCTRL_ELP_ON,
-         #else
-            .eElpConfig = AM_HAL_PWRCTRL_ELP_RET,
-         #endif
+         .eElpConfig = AM_HAL_PWRCTRL_ELP_ON,
          .eClpConfig = AM_HAL_PWRCTRL_CLP_ON
     };
 
@@ -303,6 +300,10 @@ void nsx_power_disable_nvm(void) {
 }
 
 void nsx_power_disable_caches(void) {
+    // Clean dirty D-cache lines before disabling it; the disable below
+    // doesn't write them back on its own, and this part enables D-cache
+    // by default.
+    SCB_CleanInvalidateDCache();
     SCB->ICIALLU = 0;          // Invalidate entire I-cache
     __DSB();
     __ISB();

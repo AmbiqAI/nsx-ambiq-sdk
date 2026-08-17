@@ -1,6 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright 2019-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
- * SPDX-FileCopyrightText: Copyright 2025 Alif Semiconductor
+ * SPDX-FileCopyrightText: Copyright 2019-2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the License); you may
@@ -37,9 +36,9 @@ extern "C" {
  * Defines
  ******************************************************************************/
 
-#define ETHOSU_DRIVER_VERSION_MAJOR 1 ///< Driver major version
-#define ETHOSU_DRIVER_VERSION_MINOR 0 ///< Driver minor version
-#define ETHOSU_DRIVER_VERSION_PATCH 0 ///< Driver patch version
+#define ETHOSU_DRIVER_VERSION_MAJOR 0  ///< Driver major version
+#define ETHOSU_DRIVER_VERSION_MINOR 16 ///< Driver minor version
+#define ETHOSU_DRIVER_VERSION_PATCH 0  ///< Driver patch version
 
 #define ETHOSU_SEMAPHORE_WAIT_FOREVER (UINT64_MAX)
 
@@ -114,26 +113,26 @@ enum ethosu_request_clients
 void ethosu_irq_handler(struct ethosu_driver *drv);
 
 /**
- * Flush/clean the data cache
+ * Flush/clean the data cache by address and size. Passing NULL as p argument
+ * expects the whole cache to be flushed.
  *
- * Addresses passed to this function must be aligned to cache line size.
+ * Addresses passed to this function must be 16 byte aligned.
  *
- * @param base_addr         Array of 32 byte aligned base addresses
- * @param base_addr_size    Array with size per each base addr entry
- * @param num_base_addr     Number of base addr entries
+ * @param p         16 byte aligned address
+ * @param bytes     Size of memory block in bytes
  */
-void ethosu_flush_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr);
+void ethosu_flush_dcache(uint32_t *p, size_t bytes);
 
 /**
- * Invalidate the data cache
+ * Invalidate the data cache by address and size. Passing NULL as p argument
+ * expects the whole cache to be invalidated.
  *
- * Addresses passed to this function must be aligned to cache line size.
+ * Addresses passed to this function must be 16 byte aligned.
  *
- * @param base_addr         Array of 32 byte aligned base addresses
- * @param base_addr_size    Array with size per each base addr entry
- * @param num_base_addr     Number of base addr entries
+ * @param p         16 byte aligned address
+ * @param bytes     Size in bytes
  */
-void ethosu_invalidate_dcache(const uint64_t *base_addr, const size_t *base_addr_size, int num_base_addr);
+void ethosu_invalidate_dcache(uint32_t *p, size_t bytes);
 
 /**
  * Minimal mutex implementation for baremetal applications. See
@@ -215,15 +214,6 @@ void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg);
 void ethosu_inference_end(struct ethosu_driver *drv, void *user_arg);
 
 /**
- * Weak hook controlling the driver's built-in U85 PMU auto-configuration
- * (ENABLE_U85_PMU). Returns true by default. Override to return false when
- * the application programs the PMU itself (e.g. from
- * ethosu_inference_begin()), so the driver does not clobber the event
- * configuration or dump counters after the inference.
- */
-bool ethosu_pmu_auto_config_enabled(void);
-
-/**
  * Remapping command stream and base pointer addresses.
  *
  * @param address   Address to be remapped.
@@ -232,18 +222,6 @@ bool ethosu_pmu_auto_config_enabled(void);
  * @return Remapped address
  */
 uint64_t ethosu_address_remap(uint64_t address, int index);
-
-/**
- * Select configuration for region access.
- *
- * Default implementation uses NPU_QCONFIG and NPU_REGIONCFG_n defines.
- *
- * @param address   Address of region.
- * @param index     -1 command stream, 0-n base address index
- *
- * @return Configuration to use
- */
-unsigned int ethosu_config_select(uint64_t address, int index);
 
 /******************************************************************************
  * Prototypes

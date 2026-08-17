@@ -74,6 +74,16 @@ typedef struct {
     nsx_npu_perf_mode_e perf_mode; ///< Requested NPU performance mode.
     bool skip_perf_mode;           ///< Skip performance-mode programming
                                    ///< (e.g. FPGA/pre-silicon targets).
+    bool tolerate_power_ack;       ///< Tolerate a failed NPU power-domain
+                                   ///< enable handshake instead of failing
+                                   ///< init. FPGA images keep the NPU
+                                   ///< always-on and do not model the
+                                   ///< power-status ack; set this for
+                                   ///< FPGA/pre-silicon targets only. On
+                                   ///< silicon, leave false so a genuine
+                                   ///< power-up failure returns
+                                   ///< `NSX_STATUS_INIT_FAILED` instead of
+                                   ///< proceeding to a bus fault.
 } nsx_npu_config_t;
 
 /**
