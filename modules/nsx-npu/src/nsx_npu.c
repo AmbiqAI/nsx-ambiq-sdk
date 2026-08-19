@@ -95,6 +95,9 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
         if (am_hal_pwrctrl_npu_mode_select(mode) != AM_HAL_STATUS_SUCCESS)
         {
             NVIC_DisableIRQ(NPU_IRQn);
+            __DSB();
+            __ISB();
+            nsx_ethos_u_deinit();
             ethosu_deinit(&g_nsx_npu_driver);
             (void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU);
             return NSX_STATUS_INIT_FAILED;
@@ -113,14 +116,22 @@ uint32_t nsx_npu_deinit(void)
     }
 
     NVIC_DisableIRQ(NPU_IRQn);
+    __DSB();
+    __ISB();
+
+    // The IRQ is masked and any already-pended interrupt cannot reach the
+    // handler once the driver handle below is cleared. From this point on
+    // the module is deinitialized regardless of what PWRCTRL reports, so
+    // clear state before the power-disable call rather than after it.
+    nsx_ethos_u_deinit();
     ethosu_deinit(&g_nsx_npu_driver);
+    g_nsx_npu_initialized = false;
 
     if (am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)
     {
         return NSX_STATUS_FAILURE;
     }
 
-    g_nsx_npu_initialized = false;
     return NSX_STATUS_SUCCESS;
 }
 

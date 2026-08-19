@@ -46,3 +46,7 @@ void nsx_ethos_u_irq(void) {
         ethosu_irq_handler(g_nsx_ethos_u_drv);
     }
 }
+
+void nsx_ethos_u_deinit(void) {
+    g_nsx_ethos_u_drv = NULL;
+}

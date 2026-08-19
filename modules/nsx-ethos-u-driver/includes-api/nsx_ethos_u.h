@@ -93,6 +93,18 @@ int nsx_ethos_u_init(struct ethosu_driver *drv,
  */
 void nsx_ethos_u_irq(void);
 
+/**
+ * Clear the stashed driver handle used by `nsx_ethos_u_irq()`.
+ *
+ * Callers must invoke this after masking the NPU interrupt at the NVIC
+ * (and after a `__DSB()`/`__ISB()` to guarantee the mask has taken
+ * effect) and before tearing down/freeing the driver handle passed to
+ * `nsx_ethos_u_init()`. This closes the window where an already-pended
+ * IRQ could otherwise fire `ethosu_irq_handler()` against a handle that
+ * is being (or has been) torn down.
+ */
+void nsx_ethos_u_deinit(void);
+
 #ifdef __cplusplus
 }
 #endif

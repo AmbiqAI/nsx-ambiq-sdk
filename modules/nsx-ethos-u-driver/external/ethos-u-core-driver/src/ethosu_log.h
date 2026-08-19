@@ -52,7 +52,7 @@
 #endif
 
 // Log formatting
-#define LOG(f, ...) LOG_COMMON(stdout, f, ##__VA__ARGS__)
+#define LOG(f, ...) LOG_COMMON(stdout, f, ##__VA_ARGS__)
 
 #if ETHOSU_LOG_SEVERITY >= ETHOSU_LOG_ERR
 #define LOG_ERR(f, ...)                                                                                                \

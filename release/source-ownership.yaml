@@ -37,6 +37,14 @@ entries:
     direct_edit: restricted
     update_expectation: Follow the pinned version record and upstream license for each copy.
 
+  - id: upstream-ethos-u-driver-copy
+    classification: upstream-or-third-party
+    path_patterns:
+      - modules/nsx-ethos-u-driver/external/**
+    generated: false
+    direct_edit: restricted
+    update_expectation: Follow the pinned upstream ethos-u-core-driver revision; keep the Arm source pristine and express any Ambiq-specific behavior as weak overrides/config outside this tree.
+
   - id: nsx-module-integration
     classification: nsx-owned
     path_patterns:
