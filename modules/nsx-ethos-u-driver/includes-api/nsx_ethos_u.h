@@ -71,9 +71,9 @@ void nsx_ethos_u_set_probe(nsx_ethos_u_probe_fn fn);
  *
  * @param drv       Caller-allocated driver handle (zero-initialised).
  * @param npu_base  NPU register base address (board-specific).
- * @param irq_num   NVIC IRQ number for the NPU (board-specific). Used
- *                  only for documentation and runtime checks; the
- *                  board must still wire the vector entry to
+ * @param irq_num   NVIC IRQ number for the NPU (board-specific).
+ *                  Informational only — this function does not use it;
+ *                  the board must still wire the vector entry to
  *                  `nsx_ethos_u_irq()` (or `ethosu_irq_handler()`).
  * @return 0 on success, otherwise the negative error code from
  *         `ethosu_init()`.

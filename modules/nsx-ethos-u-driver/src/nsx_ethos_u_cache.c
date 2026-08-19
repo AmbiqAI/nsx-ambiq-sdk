@@ -6,7 +6,7 @@
  * core driver. These replace the weak no-op defaults shipped by
  * upstream; see ethos-u-core-driver/README.md ("Data caching").
  *
- * Both addresses are required by the upstream contract to be 32-byte
+ * Both addresses are required by the upstream contract to be 16-byte
  * aligned. Applications are still strongly encouraged to perform
  * their own IFM flush before invoking inference rather than relying
  * on `ethosu_flush_dcache`, which upstream documents as deprecated.

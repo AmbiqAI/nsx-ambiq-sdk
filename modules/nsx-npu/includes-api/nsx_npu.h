@@ -90,9 +90,10 @@ typedef struct {
  * @brief Power on the Ethos-U85, initialize the core driver, and enable the
  * NPU interrupt.
  *
- * Registers the module-owned `am_npu_isr` -> `ethosu_irq_handler` glue and
- * leaves the driver ready for `ethosu_invoke`-style dispatch (directly or via
- * a TFLM ethos-u custom op kernel).
+ * Registers the module-owned `am_npu_isr` -> `nsx_ethos_u_irq()` ->
+ * `ethosu_irq_handler` glue and leaves the driver ready for
+ * `ethosu_invoke`-style dispatch (directly or via a TFLM ethos-u custom op
+ * kernel).
  *
  * @param cfg NPU configuration. NULL selects high performance mode.
  * @return `NSX_STATUS_SUCCESS` on success, otherwise an NSX status code.

@@ -62,6 +62,13 @@ set(NSX_ETHOSU_NPU_CONFIG "ethos-u85-256" CACHE STRING
 option(NSX_ETHOSU_BUILD_PMU
     "Build the Ethos-U PMU helper TU from upstream" ON)
 
+# Upstream's ethosu_log.h defaults ETHOSU_LOG_ENABLE to 1, which pulls
+# fprintf(stdout/stderr, ...) into the driver -- unwanted stdio/semi-hosting
+# pressure on bare-metal builds. Default it off; consumers that want
+# upstream logging can turn this on.
+option(NSX_ETHOSU_LOG_ENABLE
+    "Enable upstream ethos-u-core-driver LOG()/fprintf-based logging" OFF)
+
 # Parse the family (u55 / u65 / u85) from the config string. Used both to
 # pick the device backend source and to set per-family compile defines that
 # upstream's headers gate on.
@@ -159,6 +166,8 @@ target_compile_definitions(nsx_ethos_u_driver PUBLIC
     ${NSX_ETHOSU_DEVICE_DEFINE}
     NSX_HAS_NPU=1
     NSX_ETHOSU_NPU_FAMILY_${NSX_ETHOSU_FAMILY}=1
+    $<$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>:ETHOSU_LOG_ENABLE=1>
+    $<$<NOT:$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>>:ETHOSU_LOG_ENABLE=0>
     # Upstream consumes this string (quoted) in its config header to gate
     # NPU-specific code paths. Keep it on the PUBLIC interface so apps that
     # include `ethosu_driver.h` directly see the same value.
