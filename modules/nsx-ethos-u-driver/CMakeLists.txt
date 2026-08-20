@@ -166,8 +166,6 @@ target_compile_definitions(nsx_ethos_u_driver PUBLIC
     ${NSX_ETHOSU_DEVICE_DEFINE}
     NSX_HAS_NPU=1
     NSX_ETHOSU_NPU_FAMILY_${NSX_ETHOSU_FAMILY}=1
-    $<$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>:ETHOSU_LOG_ENABLE=1>
-    $<$<NOT:$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>>:ETHOSU_LOG_ENABLE=0>
     # Upstream consumes this string (quoted) in its config header to gate
     # NPU-specific code paths. Keep it on the PUBLIC interface so apps that
     # include `ethosu_driver.h` directly see the same value.
@@ -175,9 +173,14 @@ target_compile_definitions(nsx_ethos_u_driver PUBLIC
 )
 
 # `ETHOS_U_NPU_CONFIG_ID` is the form used by some upstream headers without
-# the leading "ethos-" prefix; harmless to expose both.
+# the leading "ethos-" prefix; harmless to expose both. `ETHOSU_LOG_ENABLE`
+# is also PRIVATE: it only gates `ethosu_log.h`, which is reachable solely
+# via the vendor src/ include dir added PRIVATE above, not part of the
+# public interface.
 target_compile_definitions(nsx_ethos_u_driver PRIVATE
     ETHOSU_TARGET_NPU=${NSX_ETHOSU_FAMILY_NUM}
+    $<$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>:ETHOSU_LOG_ENABLE=1>
+    $<$<NOT:$<BOOL:${NSX_ETHOSU_LOG_ENABLE}>>:ETHOSU_LOG_ENABLE=0>
 )
 
 target_include_directories(nsx_ethos_u_driver PUBLIC
