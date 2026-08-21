@@ -29,7 +29,9 @@ and NPU support: `nsx-cmsis-core`, `nsx-cmsis-startup`, `nsx-soc-hal`,
 `nsx-core`, `nsx-interrupt`, `nsx-timer`, `nsx-gpio`, `nsx-perf`, `nsx-uart`,
 `nsx-power` (Atomiq110-specific backend; see
 `modules/nsx-power/src/atomiq110`), and `nsx-npu` (Ethos-U85 NPU glue on top
-of `nsx-ethos-u-driver`; see `modules/nsx-npu`). The following are
+of `nsx-ethos-u-driver`, an external module resolved from
+AmbiqAI/nsx-ethos-u-driver by the neuralspotx registry; see
+`modules/nsx-npu`). The following are
 intentionally **not** enabled for `atomiq110` yet (follow-up as the FPGA /
 silicon exposes them): `nsx-i2c` and `nsx-spi` (basic buses), `nsx-freertos`
 (RTOS port facts are ready), `nsx-psram` (external MSPI memory not present on
