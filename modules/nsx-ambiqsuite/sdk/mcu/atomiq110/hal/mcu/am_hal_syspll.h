@@ -422,7 +422,7 @@ extern uint32_t am_hal_syspll_bypass_set(void *pHandle, bool bBypass);
 //! Note: For MEMPLL, ui32OutID is not used.
 //!
 //! @return status   - generic or interface specific status.
-//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured succesfully.
+//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured successfully.
 //!         - AM_HAL_STATUS_INVALID_HANDLE: Invalid pHandle.
 //!         - AM_HAL_STATUS_INVALID_ARG: Invalid ui32OutId or ui32Div.
 //!         - AM_HAL_STATUS_OUT_OF_RANGE: ui32Div out of range.
