@@ -162,8 +162,21 @@ def test_manifest_dependency_blocks_are_lists(manifests: dict[Path, dict]) -> No
         assert isinstance(depends.get("optional"), list), path
 
 
+# Required dependencies that live outside this repo and are materialized by
+# the neuralspotx registry at workspace-assembly time (registry.lock.yaml in
+# AmbiqAI/neuralspotx). depends.required means "modules I need", not "modules
+# in this repo"; keep this list tight so typos still fail the test.
+REGISTRY_RESOLVED_DEPENDENCIES = {
+    "nsx-ethos-u-driver",  # AmbiqAI/nsx-ethos-u-driver (Ethos-U core driver)
+}
+
+
 def test_required_manifest_dependencies_resolve(manifests: dict[Path, dict]) -> None:
     known_names = {manifest_name(manifest) for manifest in manifests.values()}
+    # If an external module ever moves back in-repo, its allowlist entry is
+    # stale -- fail loudly instead of shadowing the in-repo manifest.
+    assert REGISTRY_RESOLVED_DEPENDENCIES.isdisjoint(known_names)
+    known_names |= REGISTRY_RESOLVED_DEPENDENCIES
     unresolved = []
     for path, manifest in manifests.items():
         for dependency in manifest["depends"].get("required", []):
