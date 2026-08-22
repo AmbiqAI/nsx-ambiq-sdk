@@ -34,21 +34,24 @@
  * DEVPWRSTATUS0/DEVPWRSTATUS1, with PWRSTOTP and PWRSTCRYPTO both landing in
  * DEVPWRSTATUS0.  Rather than gate on a part macro in here, the including
  * file may pre-define the two accessors below; the Apollo510 spelling is the
- * default:
+ * default, and an atomiq110-class (split-bank) part overrides it at the
+ * include site like so:
  *
  *   #define NSX_PWRCTRL_PWRSTOTP    (PWRCTRL->DEVPWRSTATUS0_b.PWRSTOTP)
  *   #define NSX_PWRCTRL_PWRSTCRYPTO (PWRCTRL->DEVPWRSTATUS0_b.PWRSTCRYPTO)
  *   #include "../nsx_system_platform_apollo5.inc"
  *
  * (Overriding at the include site, rather than #if-ing on a part define in
- * here, keeps the register-bank fact next to the part it describes and avoids
- * depending on a HAL part macro that atomiq110's SoC facts do not inject.)
+ * here, keeps the register-bank fact next to the part it describes and keeps
+ * this shared body closed to per-part fan-out. Note atomiq110's SoC facts
+ * inject PART_atomiq110 but deliberately no AM_PART_* HAL gate, so an
+ * AM_PART_ATOMIQ110 #if in here would silently evaluate false.)
  */
 
 #include "nsx_system.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
-#include "am_util.h"
+#include "am_util.h" /* also used by the includers' nsx_platform_debug_init() */
 
 #include "am_hal_spotmgr.h"
 #include "am_hal_dcu.h"
