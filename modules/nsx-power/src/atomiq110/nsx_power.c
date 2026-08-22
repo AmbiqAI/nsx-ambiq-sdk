@@ -222,7 +222,6 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
 
     nsx_power_platform_shutdown_peripherals(pCfg);
 
-    // Configure power mode
     //
     // TODO(#53): unexplained 10 ms busy-wait inherited from FPGA bring-up,
     // paid on every boot. Suspected to mask power-domain settling after the
@@ -231,6 +230,8 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     // https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/53.
     //
     nsx_delay_us(10000);
+
+    // Configure power mode
     NSX_TRY(nsx_power_set_performance_mode(pCfg->perf_mode), "Set CPU Perf mode failed.");
 
     if (pCfg->need_tempco) {
