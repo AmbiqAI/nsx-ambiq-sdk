@@ -1,0 +1,48 @@
+schema_version: 1
+module:
+  name: nsx-npu
+  type: backend_specific
+  version: "5.2.24"
+support:
+  ambiqsuite: true
+  zephyr: false
+summary: >-
+  Atomiq110 glue for the Arm Ethos-U85 NPU: power-domain sequencing, IRQ
+  wiring, and performance-mode selection on top of the pristine upstream
+  driver (nsx-ethos-u-driver) so TFLM runtimes can dispatch Vela-compiled
+  command streams to the NPU.
+capabilities:
+  - npu
+  - ethos_u
+  - inference_acceleration
+use_cases:
+  - Ethos-U85 NPU inference offload
+  - Vela-compiled TFLite model execution
+  - NPU power and performance mode control
+agent_keywords:
+  - npu
+  - ethos
+  - ethos-u
+  - ethos-u85
+  - vela
+  - accelerator
+build:
+  cmake:
+    package: nsx_npu
+    targets:
+      - nsx::npu
+depends:
+  required:
+    - nsx-core
+    - nsx-soc-hal
+    - nsx-ethos-u-driver
+  optional: []
+compatibility:
+  boards:
+    - atomiq110_fpga_turbo
+  socs:
+    - atomiq110
+  toolchains:
+    - arm-none-eabi-gcc
+    - armclang
+    - atfe

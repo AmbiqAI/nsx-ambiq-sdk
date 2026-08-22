@@ -596,6 +596,53 @@ def test_runtime_modules_configure_through_soc_hal_contract(repo_root: Path, tmp
         assert result.returncode == 0, result.stdout
 
 
+def test_atomiq110_npu_modules_configure_through_soc_hal_contract(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    # atomiq110 is the only board wiring nsx-npu (Ethos-U85 glue) and the
+    # nsx-power atomiq110 arch-dir backend; nothing previously exercised this
+    # combination in CI.
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    modules = (
+        "nsx-core",
+        "nsx-interrupt",
+        "nsx-timer",
+        "nsx-power",
+        "nsx-npu",
+    )
+    # nsx-ethos-u-driver is an external module resolved by the neuralspotx
+    # registry (AmbiqAI/nsx-ethos-u-driver @ nsx-ethos-u-driver-v0.1.1); stub
+    # its exported target so this configure-only test exercises the
+    # nsx_require_target seam nsx-npu uses. Same technique as the
+    # nsx::freertos_config stubs below.
+    result = configure_contract_project(
+        repo_root, tmp_path, "atomiq110_fpga_turbo", "gcc", modules,
+        prelude=(
+            "add_library(nsx_ethos_u_driver INTERFACE)",
+            "add_library(nsx::ethos_u_driver ALIAS nsx_ethos_u_driver)",
+        ),
+    )
+    assert result.returncode == 0, result.stdout
+
+
+def test_atomiq110_npu_requires_ethos_u_driver_target(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    # Without a provider for nsx::ethos_u_driver (normally materialized by
+    # the neuralspotx registry from AmbiqAI/nsx-ethos-u-driver), nsx-npu must
+    # fail fast at its nsx_require_target guard rather than at link time.
+    if shutil.which("cmake") is None:
+        raise AssertionError("cmake is required for NSX CMake contract tests")
+
+    result = configure_contract_project(
+        repo_root, tmp_path, "atomiq110_fpga_turbo", "gcc", ("nsx-core", "nsx-npu")
+    )
+    assert result.returncode != 0
+    assert "nsx::ethos_u_driver must be defined before nsx-npu is added." in result.stdout
+
+
 def test_power_apollo4_requires_timer_target(repo_root: Path, tmp_path: Path) -> None:
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")

@@ -25,7 +25,8 @@ uint32_t nsx_cache_enable(void)
     return 0;
 #elif defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
     uint32_t status = am_hal_cachectrl_icache_enable();
     if (status != 0) {
         return status;
@@ -46,7 +47,8 @@ void nsx_cache_disable(void)
     am_hal_cachectrl_disable();
 #elif defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
     am_hal_cachectrl_dcache_disable();
     am_hal_cachectrl_icache_disable();
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
@@ -73,7 +75,8 @@ uint32_t nsx_cache_publish_writes(void)
     /* Make prior CPU writes visible to other bus masters (device -> host). */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
     return am_hal_cachectrl_dcache_clean(NULL);
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
     /* DAXI flush drains (and invalidates) the deep write buffer. */
@@ -97,7 +100,8 @@ uint32_t nsx_cache_invalidate_observed_data(void)
      */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
     return am_hal_cachectrl_dcache_invalidate(NULL, false);
 #else
     return NSX_CACHE_UNSUPPORTED;
@@ -109,7 +113,8 @@ uint32_t nsx_cache_sync_shared_data(void)
     /* Conservative bidirectional sync point for a shared buffer. */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
     /* Clean + invalidate: publish writes and drop stale lines in one step. */
     return am_hal_cachectrl_dcache_invalidate(NULL, true);
 #elif defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4)
@@ -130,7 +135,8 @@ uint32_t nsx_cache_sync_shared_data(void)
  */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || \
     defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || \
-    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P) || \
+    defined(AM_PART_ATOMIQ110)
   #define NSX_CACHE_IMPL_PUBLISH_     1
   #define NSX_CACHE_IMPL_INVALIDATE_  1
   #define NSX_CACHE_IMPL_SYNC_        1

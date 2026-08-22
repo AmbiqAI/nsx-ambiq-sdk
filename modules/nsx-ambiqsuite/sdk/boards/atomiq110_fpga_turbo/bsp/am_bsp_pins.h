@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -788,7 +788,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_CE0;
 // MSPI1_CE1 pin: MSPI1 chip select 1
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_CE1               43
+#define AM_BSP_GPIO_MSPI1_CE1               49
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_CE1;
 
 //*****************************************************************************
@@ -852,7 +852,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_RST;
 // MSPI2_CE0 pin: MSPI2 chip select 0
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_CE0               158
+#define AM_BSP_GPIO_MSPI2_CE0               134
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_CE0;
 
 //*****************************************************************************
@@ -860,7 +860,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_CE0;
 // MSPI2_CE1 pin: MSPI2 chip select 1
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_CE1               157
+#define AM_BSP_GPIO_MSPI2_CE1               133
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_CE1;
 
 //*****************************************************************************
