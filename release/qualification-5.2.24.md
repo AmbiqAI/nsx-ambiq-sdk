@@ -13,25 +13,16 @@ that describes it correctly.
 `5.2.23` remains published and immutable. Its tag, release, and commit
 `2eba24ad776096784764cbe91c8176b434dd3bdf` are not moved, deleted, or rewritten.
 
-The provider input is unchanged for the qualified scope: snapshot
-`stable-2026.06.18`, ref `stable`, commit
-`caaf5af86087881647f56c70646c748d40c86e23`. The one exception is `atomiq110`
-(already excluded from the qualified scope below): its HAL/BSP archives were
-regenerated from the `npu-drop-2026.07.09` payload in
-`960624ee18afd9fbf5db957371c92c828bf6a721`, so their manifest `sha256` records
-changed alongside the acfe corrections described below. As in `5.2.23`, this
-is not blanket board-level hardware qualification and not vendor SDK release
+The provider input is unchanged: snapshot `stable-2026.06.18`, ref `stable`,
+commit `caaf5af86087881647f56c70646c748d40c86e23`. As in `5.2.23`, this is not
+blanket board-level hardware qualification and not vendor SDK release
 qualification. SWS AmbiqSuite remains the source of truth for HAL/BSP
 implementation and silicon qualification.
 
 ## What Changed From 5.2.23
 
-**No promoted archive bytes changed for the qualified scope.** Every HAL/BSP
-archive for the qualified SoCs/boards listed below is byte-identical to the
-archive published in `5.2.23`. `atomiq110` (experimental, excluded from the
-qualified scope) is the one exception: its `gcc`/`atfe`/`acfe` HAL and BSP
-archives were regenerated from the `npu-drop-2026.07.09` payload and their
-bytes and manifest `sha256` records changed accordingly.
+**No promoted archive bytes changed.** Every HAL/BSP archive in `5.2.24` is
+byte-identical to the archive published in `5.2.23`.
 
 | Change | Path |
 | --- | --- |
@@ -41,7 +32,6 @@ bytes and manifest `sha256` records changed accordingly.
 | Committed-payload hash verification added to CI | `tests/test_artifact_baseline.py` |
 | Promotion path verifies manifest/archive agreement and `--promote-only` fails closed | `sdk-intake/build_ambiqsuite.py` |
 | BLE DIS default firmware revision bumped and pinned to the distribution version | `modules/nsx-ble/src/ns_ble.c`, `modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c` |
-| `atomiq110` HAL/BSP archives regenerated from `npu-drop-2026.07.09` (experimental; not part of the qualified scope) | `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml` |
 | Forensic record of the defect | `docs/acfe-artifact-manifest-forensics.md` |
 
 The defect, its root cause in `ddb88640e61660edc65ebc956b65dcbd6804d2e6`, the
