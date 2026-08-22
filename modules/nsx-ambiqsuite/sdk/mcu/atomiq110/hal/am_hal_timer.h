@@ -26,9 +26,6 @@ extern "C"
 {
 #endif
 
-// #### INTERNAL BEGIN ####
-// FIXME - Should the Number of Timers be defined elsewhere?
-// #### INTERNAL END ####
 #undef AM_REG_NUM_TIMERS
 #define AM_REG_NUM_TIMERS       16
 
@@ -135,20 +132,11 @@ am_hal_timer_clock_e;
 //*****************************************************************************
 typedef enum
 {
-// #### INTERNAL BEGIN ####
-//  AM_HAL_TIMER_FN_CONTINUOUS      = TIMER_CTRL0_TMR0FN_CONTINUOUS,
-// #### INTERNAL END ####
     AM_HAL_TIMER_FN_EDGE            = TIMER_CTRL0_TMR0FN_EDGE,
     AM_HAL_TIMER_FN_UPCOUNT         = TIMER_CTRL0_TMR0FN_UPCOUNT,
     AM_HAL_TIMER_FN_PWM             = TIMER_CTRL0_TMR0FN_PWM,
-// #### INTERNAL BEGIN ####
-//  AM_HAL_TIMER_FN_DOWNCOUNT       = TIMER_CTRL0_TMR0FN_DOWNCOUNT,
-// #### INTERNAL END ####
     AM_HAL_TIMER_FN_SINGLEPATTERN   = TIMER_CTRL0_TMR0FN_SINGLEPATTERN,
     AM_HAL_TIMER_FN_REPEATPATTERN   = TIMER_CTRL0_TMR0FN_REPEATPATTERN,
-// #### INTERNAL BEGIN ####
-//  AM_HAL_TIMER_FN_EVENTTIMER      = TIMER_CTRL0_TMR0FN_EVENTTIMER,
-// #### INTERNAL END ####
 }
 am_hal_timer_function_e;
 

@@ -127,6 +127,94 @@ generated. It can be run standalone:
 python sdk-intake/intake_workflow.py verify-ownership --train stable
 ```
 
+## INTERNAL Engineering-Content Sanitizer
+
+A raw engineering drop fences internal notes — commented-out enums, `#if 0`
+experiments, ticket chatter — between `#### INTERNAL BEGIN/END ####` markers
+that upstream's release tooling strips before
+publishing. `stage` scans the staged payload for those markers and ratchets the
+result against [`sdk-intake/internal-marker-baseline.yaml`](../sdk-intake/internal-marker-baseline.yaml),
+which records what each historical file is still allowed to carry. Any increase,
+or any marker in a file with no entry, fails the stage. The same check runs
+standalone and in `tests/test_internal_markers.py`:
+
+```sh
+python sdk-intake/intake_workflow.py verify-internal-markers
+python sdk-intake/internal_markers.py scan --root modules/nsx-ambiqsuite/sdk \
+  --path-prefix modules/nsx-ambiqsuite/sdk
+```
+
+Sanitize a drop *at intake*, while it is still staged:
+
+```sh
+python sdk-intake/internal_markers.py scrub --root <staged tree>          # dry run
+python sdk-intake/internal_markers.py scrub --root <staged tree> --write
+python sdk-intake/internal_markers.py update-baseline                     # after the scrub lands
+```
+
+The scrub only ever deletes marker lines, INTERNAL blocks whose body has no live
+tokens, `#if 0 … #endif` regions inside an INTERNAL block, and blank lines left
+at a deletion seam. An INTERNAL block that still holds live declarations keeps
+its body verbatim and loses only its fence — a live declaration fenced inside an
+INTERNAL block is part of the ABI the drop's prebuilt archives were compiled
+against, so removing it post-hoc would desynchronize headers from `libam_hal.a`.
+That is why this is an intake-time gate rather than a cleanup pass on a shipped
+payload.
+
+A kept block keeps its `BEGIN`/`END` fence as well as its body. Dropping the
+fence would be worse than cosmetic: the retained content is still
+vendor-internal, and an unfenced remnant is invisible to `scan`, so the ratchet
+would lose sight of it permanently. Keeping the fence means the retained lines
+stay counted in the baseline, stay reviewable at the next intake, and make the
+scrub idempotent — running it again over a scrubbed tree changes nothing, which
+is what `tests/test_internal_markers.py` asserts against the promoted tree.
+
+Because counting marker lines cannot see fence *shape* — deleting half of a
+`BEGIN`/`END` pair makes the count go *down*, which a ratchet reads as an
+improvement — the baseline carries a second list, `unparseable_fences`. It
+records files whose fences the block parser refuses (orphan or nested markers, a
+marker sharing a line with live code, a non-UTF-8 payload). A newly unparseable
+file fails the stage even when its marker count is within budget.
+
+### Scope Boundary: Board BSPs Are Not In This Scrub
+
+The scrub landed for `modules/nsx-ambiqsuite/sdk/mcu/atomiq110` only. Board BSP
+headers — notably
+`modules/nsx-ambiqsuite/sdk/boards/atomiq110_fpga_turbo/bsp/am_bsp.h` — keep
+their markers and are **baselined, not scrubbed**. That is deliberate rather
+than an oversight: BSP headers are the interface every board example compiles
+against, the BSP sources and their prebuilt `libam_bsp.a` were built from the
+drop as shipped, and BSP internal blocks in practice fence pin tables and
+peripheral instance maps whose "dead" lines are far more often live than in the
+HAL headers. Scrubbing them is a separate change with its own build-and-link
+verification, and it happens at the board tree's *next* intake.
+
+### The Legacy Baseline Is A Collapse-Over-Time Plan
+
+The baseline records roughly 2.3k marker lines across ~330 files. That is not a
+target to be driven to zero in one pass, and it is not an accepted permanent
+state: it is a snapshot of what already shipped. Every one of those files landed
+alongside prebuilt archives compiled from it, so a post-hoc scrub of any of them
+risks exactly the header/binary desynchronization this gate exists to prevent.
+The plan is therefore incremental and mechanical: **each tree is scrubbed at its
+own next intake**, while the drop is still staged and before its archives are
+promoted, and the baseline is regenerated as part of that intake. The number
+collapses tree by tree as SoC payloads are refreshed. What the ratchet
+guarantees in the meantime is the direction of travel — the count can only go
+down.
+
+### The Baseline Is Review-Gated, Not Tool-Gated
+
+`update-baseline` is self-service by design: anyone can regenerate the file, and
+nothing in the tooling prevents an entry's count from being raised. That is not
+a hole in the gate — it is where the gate hands off. The control is the **diff**.
+Raising a count, or adding a file to `unparseable_fences`, is a visible line in a
+pull request that a reviewer has to approve, with the offending `path:line`
+output right there in the failing check that prompted it. The tool's job is to
+make new internal content *impossible to land silently*; deciding whether a
+specific increase is justified is a human review decision, and forcing it
+through a reviewed diff is the strongest form that decision can take.
+
 ## Artifact Hash Verification And The Golden Baseline
 
 `verify-hashes` recomputes sha256 for every HAL/BSP archive under any SDK tree

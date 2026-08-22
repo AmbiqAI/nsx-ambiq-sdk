@@ -63,10 +63,6 @@ extern "C"
 //!      0 = Do not assist VDDC.
 //!      1 = Activate LDOs in parallel when disabling SIMOBUCK.
 //!  Default: 1
-// #### INTERNAL BEGIN ####
-// A2SD-2248 AM_HAL_PWRCTRL_LDOS_FOR_VDDC. This option is dependent on
-// AM_HAL_PWRCTL_SET_CORELDO_MEMLDO_IN_PARALLEL.
-// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_LDOS_FOR_VDDC                    0
@@ -79,9 +75,6 @@ extern "C"
 //! Option to connect MCU core to VDDC_LV for increased power efficiency. Ambiq
 //! recommends this option be enabled for all new applications
 //
-// #### INTERNAL BEGIN ####
-// See FB-350 for discussion and detail concerning this option.
-// #### INTERNAL END ####
 //
 //! Default: 1 for RevC
 //*****************************************************************************
@@ -411,10 +404,6 @@ typedef enum
 #if AM_HAL_TEMPCO_LP
     AM_HAL_PWRCTRL_CONTROL_TEMPCO_GETMEASTEMP,  // TempCo, return the measured temperature
 #endif // AM_HAL_TEMPCO_LP
-#if 0
-    AM_HAL_PWRCTRL_CONTROL_DEEPERSLEEP_ENABLE,  // Enable mcu to go to Deeper-sleep
-    AM_HAL_PWRCTRL_CONTROL_DEEPERSLEEP_DISABLE, // Select mcu to go to Deep-sleep
-#endif
 // #### INTERNAL END ####
 } am_hal_pwrctrl_control_e;
 
@@ -545,11 +534,6 @@ typedef struct
 
     uint32_t ui32MAINPTR;                   // 10
     uint32_t ui32SBLOTA;                    // 18 Atomiq110
-// #### INTERNAL BEGIN ####
-//  uint32_t ui32resvd14;                   // 14
-//  uint32_t ui32SBLOTA;                    // 18 Atomiq110
-//  uint32_t ui32resvd1C;                   // 1C
-// #### INTERNAL END ####
 
     uint32_t ui32SOCID0;                    // 20 OTP
     uint32_t ui32SOCID1;                    // 24 OTP
@@ -560,29 +544,9 @@ typedef struct
     uint32_t ui32SOCID6;                    // 38 OTP
     uint32_t ui32SOCID7;                    // 3C OTP
 
-// #### INTERNAL BEGIN ####
-//  uint32_t ui32PATCH_TRACKER0;            // 40
-//  uint32_t ui32PATCH_TRACKER1;            // 44
-//  uint32_t ui32PATCH_TRACKER2;            // 48
-//  uint32_t ui32PATCH_TRACKER3;            // 4C
-//  uint32_t ui32SBR_SDCERT_ADDR;           // 50
-//  uint32_t ui32resvd54;                   // 54
-//  uint32_t ui32SBR_IPT_ADDR;              // 58
-//  uint32_t ui32SBR_OPT_ADDR;              // 5C
-//  uint32_t ui32TRIM_SBR_OTP;              // 60 Atomiq110
-// #### INTERNAL END ####
     uint32_t ui32TEMP_CAL_ATE;              // 00
     uint32_t ui32TEMP_CAL_MEASURED;         // 04
     uint32_t ui32TEMP_CAL_ADC_OFFSET;       // 08
-// #### INTERNAL BEGIN ####
-//  uint32_t ui32CHIPSUBREV;                // 0C Atomiq110
-//  uint32_t ui32TRIM_REV;                  // 10
-//  uint32_t ui32FT1_GDR1;                  // 14 Atomiq110
-//  uint32_t ui32FT2_GDR1;                  // 18 Atomiq110
-//  uint32_t ui32LVT_TRIMCODE;              // 1C Atomiq110
-//  uint32_t ui32EHVT_TRIMCODE;             // 20 Atomiq110
-//  uint32_t ui32AUDADC_BINNING;            // 24
-// #### INTERNAL END ####
     uint32_t ui32ADC_GAIN_ERR;              // 28
     uint32_t ui32ADC_OFFSET_ERR;            // 2C
 

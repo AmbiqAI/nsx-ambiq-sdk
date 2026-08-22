@@ -194,9 +194,6 @@ extern "C"
 // #include "hal/am_hal_adc.h"
 // #include "hal/am_hal_audadc.h"
 #include "hal/am_hal_dcu.h"
-// #### INTERNAL BEGIN ####
-// #include "hal/am_hal_gpdma.h"
-// #### INTERNAL END ####
 #include "hal/am_hal_gpio.h"
 // #include "hal/am_hal_i2s.h"
 #include "hal/am_hal_info.h"
@@ -208,10 +205,6 @@ extern "C"
 #include "hal/am_hal_queue.h"
 #include "hal/am_hal_security.h"
 #include "hal/am_hal_stimer.h"
-// #### INTERNAL BEGIN ####
-//#include "hal/am_hal_shmem.h"
-//#include "hal/am_hal_system.h"
-// #### INTERNAL END ####
 #include "hal/am_hal_timer.h"
 #if defined(AM_PART_ATOMIQ110_USB_DUMMY_TYPE)
 // TODO: (Will be remove) Use local USB_Type until CMSIS atomiq110 USB_Type is updated to latest.

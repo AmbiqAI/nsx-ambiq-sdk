@@ -82,12 +82,6 @@
 #define AM_REG_INFO0_BASEADDR           0x42000000
 #define AM_REG_INFO1_BASEADDR           0x42002000
 
-// #### INTERNAL BEGIN ####
-// Note: AM_REG_OTP_INFOn_BASEADDR are defined in am_mcu_atomiq110_otpinfo(n).h.
-//#define AM_REG_OTP_INFO0_BASEADDR       0x42004000
-//#define AM_REG_OTP_INFO1_BASEADDR       0x42006000
-//#define AM_REG_OTP_INFOC_BASEADDR       0x400C2000
-// #### INTERNAL END ####
 //
 // INFO sizes
 //
@@ -103,10 +97,6 @@
 // ****************************************************************************
 // XSPI aperture address ranges
 // ****************************************************************************
-// #### INTERNAL BEGIN ####
-// Information about the XSPI aperatures comes from the Confluence page Carrera
-// Specifications (Carrera)->CPU Subsystem, Oct 2025.
-// #### INTERNAL END ####
 //
 // Please note that the END_ADDR as used here is actually the (end address + 1).
 //

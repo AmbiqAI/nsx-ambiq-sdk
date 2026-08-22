@@ -238,9 +238,6 @@ typedef struct
    am_image_opt3_t  opt3;
 } am_image_opt_info_t;
 
-// #### INTERNAL BEGIN ####
-// #### INTERNAL END ####
-
 //
 //! Maximum number of OTAs
 //

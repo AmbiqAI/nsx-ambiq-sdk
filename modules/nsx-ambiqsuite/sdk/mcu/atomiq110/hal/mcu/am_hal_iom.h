@@ -301,9 +301,6 @@ typedef struct
     //!     AM_HAL_IOM_STATUS_XFER_COMPLETE
     //!     AM_HAL_IOM_STATUS_DMAERR
     //
-// #### INTERNAL BEGIN ####
-    // TODO FIXME - Does this make sense to keep if we are just using CQ for all DMA?
-// #### INTERNAL END ####
     uint32_t ui32DmaStat;
 
     uint32_t ui32MaxTransactions;

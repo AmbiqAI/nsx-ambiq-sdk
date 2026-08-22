@@ -124,11 +124,6 @@ extern "C"
 //! This constant is relevant to the am_hal_stimer_compare_delta_set() function.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-// FALC-585: Need to ensure delta is >= 4
-// setting of compare takes 2 cycles. Moreover interrupt itself is delayed by 1
-// So minimum value that can be supported is 4
-// #### INTERNAL END ####
 #define AM_HAL_STIMER_MIN_DELTA         4
 //! @}
 
