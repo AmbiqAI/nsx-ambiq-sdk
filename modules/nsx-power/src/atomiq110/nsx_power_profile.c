@@ -5,20 +5,13 @@
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
-#include "nsx_core.h"
-#include "nsx_power.h"
-
-typedef struct {
-    volatile uint32_t *addr;
-    const char *name;
-    const char *description;
-} nsx_power_profile_reg_t;
+#include "nsx_power_internal.h"
 
 // NOTE: Atomiq110's PWRCTRL splits DEVPWREN/DEVPWRSTATUS into two 32-bit
 // banks (DEVPWREN0/1, DEVPWRSTATUS0/1) instead of Apollo5's single
-// DEVPWREN/DEVPWRSTATUS registers, and there is no CLKGEN peripheral (no
-// CLOCKEN2STAT/CLOCKEN3STAT equivalent) — clock status is reported
-// through CLKGEN->CLOCKENSTAT only.
+// DEVPWREN/DEVPWRSTATUS registers, and CLKGEN has no CLOCKEN2STAT/
+// CLOCKEN3STAT equivalents — clock status is reported through
+// CLKGEN->CLOCKENSTAT only.
 static const nsx_power_profile_reg_t s_nsx_power_profile_regs[] = {
     {&PWRCTRL->MCUPERFREQ, "PWRCTRL.MCUPERFREQ", "MCU performance frequency."},
     {&PWRCTRL->DEVPWREN0, "PWRCTRL.DEVPWREN0", "Peripheral power enable mask, bank 0."},
@@ -55,52 +48,7 @@ static const nsx_power_profile_reg_t s_nsx_power_profile_regs[] = {
     {&TIMER->INTSTAT, "TIMER.INTSTAT", "Timer interrupt status."},
 };
 
-static void nsx_power_profile_print_json(uint32_t snapshot_index) {
-    size_t count = sizeof(s_nsx_power_profile_regs) / sizeof(s_nsx_power_profile_regs[0]);
-
-    nsx_printf("{\n");
-    nsx_printf("  \"snapshotIndex\": %lu,\n", (unsigned long)snapshot_index);
-    nsx_printf("  \"registers\": [\n");
-
-    for (size_t index = 0; index < count; ++index) {
-        const nsx_power_profile_reg_t *reg = &s_nsx_power_profile_regs[index];
-        const char *comma = (index + 1u < count) ? "," : "";
-
-        nsx_printf("    {\"name\": \"%s\", \"value\": \"0x%08lX\", \"description\": \"%s\"}%s\n",
-            reg->name,
-            (unsigned long)(*reg->addr),
-            reg->description,
-            comma);
-    }
-
-    nsx_printf("  ]\n");
-    nsx_printf("}\n");
-}
-
-static void nsx_power_profile_print_csv(void) {
-    size_t count = sizeof(s_nsx_power_profile_regs) / sizeof(s_nsx_power_profile_regs[0]);
-
-    nsx_printf("REGNAME,VALUE,DESCRIPTION\n");
-    for (size_t index = 0; index < count; ++index) {
-        const nsx_power_profile_reg_t *reg = &s_nsx_power_profile_regs[index];
-        nsx_printf("%s,0x%08lX,%s\n",
-            reg->name,
-            (unsigned long)(*reg->addr),
-            reg->description);
-        nsx_delay_us(1000);
-    }
-}
-
-uint32_t nsx_power_profile_platform_dump(
-    uint32_t snapshot_index,
-    nsx_power_profile_format_t format) {
-    (void)snapshot_index;
-
-    if (format == NSX_POWER_PROFILE_FORMAT_CSV) {
-        nsx_power_profile_print_csv();
-        return NSX_STATUS_SUCCESS;
-    }
-
-    nsx_power_profile_print_json(snapshot_index);
-    return NSX_STATUS_SUCCESS;
+const nsx_power_profile_reg_t *nsx_power_profile_platform_regs(size_t *count) {
+    *count = sizeof(s_nsx_power_profile_regs) / sizeof(s_nsx_power_profile_regs[0]);
+    return s_nsx_power_profile_regs;
 }
