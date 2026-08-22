@@ -3,7 +3,9 @@ nsx_require_target(nsx::soc_hal nsx-core)
 # apollo330P reuses the Apollo5-class core sources (apollo510 arch dir).
 # atomiq110 is close to but not register-compatible with Apollo510 (split
 # DEVPWRSTATUS0/1, its own TPIU clock-select field), so it gets its own
-# arch dir instead of aliasing apollo510.
+# arch dir instead of aliasing apollo510. The register-compatible bulk of
+# the Apollo5-class backend is shared via src/nsx_system_platform_apollo5.inc;
+# the arch dirs hold only the deltas (accessor overrides, debug_init).
 nsx_select_soc_arch_dir(NSX_CORE_ARCH_DIR
     APOLLO5 apollo510
     ATOMIQ atomiq110

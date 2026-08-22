@@ -6,133 +6,29 @@
  * "turbo" board, atomiq110_fpga_turbo). Implements the platform-specific
  * helpers called by nsx_system.c.
  *
- * This is a dedicated file rather than a shared branch inside the
- * Apollo5-family apollo510/nsx_system_platform.c: atomiq110 is close to but
- * not register-compatible with Apollo510 (see the DCU-unlock and TPIU
- * sections below), so keeping it separate avoids part-agnostic aliasing
- * inside code that's otherwise specific to shipping Apollo5 boards.
+ * atomiq110 is close to but not register-compatible with Apollo510, so it
+ * keeps its own arch dir. The parts that ARE identical — the DCU unlock
+ * critical section and the hw-init / perf-mode helpers — are not duplicated
+ * here: they come from the shared Apollo5-class body
+ * ../nsx_system_platform_apollo5.inc (which also supplies the common
+ * #includes), parameterized by the register aliases below. That keeps the
+ * delicate crypto/OTP unlock handshake in exactly one place.
+ *
+ * What remains below is what is genuinely atomiq110-specific:
+ * nsx_platform_spot_mgr_profile() (no-op here) and nsx_platform_debug_init()
+ * (its own TPIU clock-select field plus the CRM_TPIUCLKCFG bus-fault
+ * workaround).
  */
 
-#include "nsx_system.h"
-#include "am_bsp.h"
-#include "am_mcu_apollo.h"
-#include "am_util.h"
+/* atomiq110 splits the single Apollo510-style DEVPWRSTATUS register into
+ * DEVPWRSTATUS0/DEVPWRSTATUS1; PWRSTOTP/PWRSTCRYPTO live in DEVPWRSTATUS0.
+ * This is the only functional delta from the Apollo510 realization of the
+ * shared body, so it is expressed as an accessor override at the include
+ * site rather than a part #if inside the shared file. */
+#define NSX_PWRCTRL_PWRSTOTP    (PWRCTRL->DEVPWRSTATUS0_b.PWRSTOTP)
+#define NSX_PWRCTRL_PWRSTCRYPTO (PWRCTRL->DEVPWRSTATUS0_b.PWRSTCRYPTO)
 
-#include "am_hal_spotmgr.h"
-#include "am_hal_dcu.h"
-
-/* ===================================================================
- * DCU unlock
- *
- * The Secure Bootloader (SBL) locks the DCU before transferring control
- * to user code.  Re-enabling SWO/ITM requires temporarily powering up
- * OTP and Crypto, calling am_hal_dcu_update(), then shutting them down.
- * =================================================================== */
-
-#define NSX_DCU_SWO_MASK (                                            \
-    AM_HAL_DCU_CPUTRC_DWT_SWO | AM_HAL_DCU_CPUDBG_NON_INVASIVE |       \
-    AM_HAL_DCU_CPUDBG_S_NON_INVASIVE | AM_HAL_DCU_CPUTRC_PERFCNT |     \
-    AM_HAL_DCU_SWD | AM_HAL_DCU_TRACE)
-
-static uint32_t nsx_platform_dcu_unlock_swo(void) {
-    uint32_t ui32dcuVal;
-    int32_t  i32RetValue = 0;
-    bool     bOffCryptoOnExit = false;
-    bool     bOffOtpOnExit = false;
-
-    // The crypto/OTP power-up handshake (and the HAL's internal HFRC clock
-    // request for crypto) must run uninterrupted.  An ISR that touches the
-    // clock manager or a power domain mid-sequence can wedge the crypto core,
-    // which on this secure part shows up as a hang inside
-    // am_hal_pwrctrl_periph_enable(CRYPTO).  Match the proven neuralSPOT
-    // sequence: do the whole thing in a critical section, only power up
-    // domains that are currently off, and let the HAL do the idle-wait.
-    AM_CRITICAL_BEGIN;
-
-    // atomiq110 splits the single Apollo510-style DEVPWRSTATUS register into
-    // DEVPWRSTATUS0/DEVPWRSTATUS1; PWRSTOTP/PWRSTCRYPTO live in DEVPWRSTATUS0.
-    if (PWRCTRL->DEVPWRSTATUS0_b.PWRSTOTP == 0) {
-        bOffOtpOnExit = true;
-        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
-    }
-
-    if (PWRCTRL->DEVPWRSTATUS0_b.PWRSTCRYPTO == 0) {
-        bOffCryptoOnExit = true;
-        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
-    }
-
-    if ((PWRCTRL->DEVPWRSTATUS0_b.PWRSTCRYPTO == 1) &&
-        (CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE == 1)) {
-        am_hal_dcu_get(&ui32dcuVal);
-        if (((ui32dcuVal & NSX_DCU_SWO_MASK) != NSX_DCU_SWO_MASK) &&
-            (am_hal_dcu_update(true, NSX_DCU_SWO_MASK) != AM_HAL_STATUS_SUCCESS)) {
-            i32RetValue = -1;
-        }
-    } else {
-        i32RetValue = -1;
-    }
-
-    if (bOffCryptoOnExit) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
-    }
-    if (bOffOtpOnExit) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-    }
-
-    AM_CRITICAL_END;
-
-    return (uint32_t)(i32RetValue == 0 ? 0 : 1);
-}
-
-/* ===================================================================
- * nsx_platform_hw_init — full BSP low-power init
- * =================================================================== */
-
-uint32_t nsx_platform_hw_init(void) {
-    am_bsp_low_power_init();
-    return 0;
-}
-
-/* ===================================================================
- * nsx_platform_minimal_hw_init — fast startup, no BSP delay
- *
- * Subset of am_hal_pwrctrl_low_power_init() needed for:
- *   - CPDLP (cache power domain)
- *   - SpotManager init
- *   - FPU
- * =================================================================== */
-
-uint32_t nsx_platform_minimal_hw_init(void) {
-    /* CPDLP: enable cache power domain so icache/dcache enable won't fail.
-     * am_hal_pwrctrl_low_power_init() does this internally. */
-    am_hal_pwrctrl_pwrmodctl_cpdlp_t cpdlp = {
-        .eRlpConfig = AM_HAL_PWRCTRL_RLP_ON,
-        .eElpConfig = AM_HAL_PWRCTRL_ELP_ON,
-        .eClpConfig = AM_HAL_PWRCTRL_CLP_ON
-    };
-    am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
-
-    /* SpotManager must be initialized before profile_set */
-    am_hal_spotmgr_init();
-
-    /* FPU */
-    am_hal_sysctrl_fpu_enable();
-    am_hal_sysctrl_fpu_stacking_enable(true);
-
-    return 0;
-}
-
-/* ===================================================================
- * nsx_platform_set_perf_mode
- * =================================================================== */
-
-uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
-    if (mode == NSX_PERF_HIGH || mode == NSX_PERF_MEDIUM) {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
-    } else {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
-}
+#include "../nsx_system_platform_apollo5.inc"
 
 /* ===================================================================
  * nsx_platform_spot_mgr_profile
