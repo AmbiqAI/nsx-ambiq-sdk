@@ -138,13 +138,6 @@ typedef struct am_hal_rtc_time_struct
     uint32_t ui32Minute;
     uint32_t ui32Second;
     uint32_t ui32Hundredths;
-// #### INTERNAL BEGIN ####
-    // ERR028 - Century Bit toggles when CEB == 1
-    //          and ui32Year == 99 and hence
-    //          cannot handle ui32Year rollover
-    //          from 99 -> 00
-    //uint32_t ui32CenturyEnable;
-// #### INTERNAL END ####
 }
 am_hal_rtc_time_t;
 

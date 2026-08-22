@@ -27,14 +27,6 @@ extern "C"
 {
 #endif
 
-// #### INTERNAL BEGIN ####
-// Confirmed with DV, that below 5 mux are unused for now,
-//(PLLMFREF, PLLSFREF, SECUREWDT, WDT SRAM)
-// FREF selection should be done from MCU_CTRL.xxxPLLCTL instead for now.
-//#define AM_HAL_CRM_ENABLE_PLLCLKCFG
-//#define AM_HAL_CRM_ENABLE_WDTCLKCFG
-//#define AM_HAL_CRM_ENABLE_SSRAMCLKCFG
-// #### INTERNAL END ####
 //=============================================================================
 // CRM block - Clock domain ID enumeration definitions
 //=============================================================================
@@ -88,18 +80,8 @@ typedef enum
 //=============================================================================
 // CLKCFG mux block - Clock domain ID enumeration definitions
 //=============================================================================
-// #### INTERNAL BEGIN ####
-// For now we are only exposing those instance with clock select for clock
-// source switching.
-// #### INTERNAL END ####
 typedef enum
 {
-    // #### INTERNAL BEGIN ####
-    // CLKSEL is marked unused for this register in reggen spec
-    // AM_HAL_CRM_CLKCFG_MUX_ID_APBDMAAPB,
-    // TODO: remove DISPAXI and GFX as AXI is no longer selectable
-    // TODO: remove GFXCORE as it is going to be controlled by MCU_CTRL
-    // #### INTERNAL END ####
     AM_HAL_CRM_CLKCFG_MUX_ID_DISPAXI,
     AM_HAL_CRM_CLKCFG_MUX_ID_GFXAXI,
     AM_HAL_CRM_CLKCFG_MUX_ID_GFXCORE,

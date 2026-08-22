@@ -309,36 +309,22 @@ files:
   modules/nsx-ambiqsuite/sdk/mcu/apollo510L/regs/am_reg_base_addresses.h: 8
   modules/nsx-ambiqsuite/sdk/mcu/apollo510L/regs/am_reg_jedec.h: 2
   modules/nsx-ambiqsuite/sdk/mcu/apollo510L/regs/am_reg_macros.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/am_mcu_apollo.h: 6
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/am_mcu_apollo.h: 2
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_clkmgr.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_crm_private.h: 8
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_crm_private.h: 2
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_dcu.h: 8
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_dme.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_global.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_gpio.h: 6
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_gpio.h: 2
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_info.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_mmu.h: 30
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_pin.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_pwrctrl.h: 18
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_pwrctrl.h: 8
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_security.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_stimer.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_timer.h: 8
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_bootrom_helper.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h: 8
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h: 6
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card_host.h: 8
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_clkgen.h: 14
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_iom.h: 4
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_rtc.h: 4
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_clkgen.h: 4
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_iom.h: 2
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_rtc.h: 2
   modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_sdhc_private.h: 4
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_secure_ota.h: 12
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_mcu_atomiq110_otpinfo0.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_mcu_atomiq110_otpinfo1.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_mcu_atomiq110_otpinfoc.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_mcu_atomiq110_rraminfo0.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_mcu_atomiq110_rraminfo1.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_base_addresses.h: 4
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_jedec.h: 2
-  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_macros.h: 2
+  modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_secure_ota.h: 10
   modules/nsx-ambiqsuite/sdk/src/am_util_stdio.c: 2
   modules/nsx-ambiqsuite/sdk/utils/am_util.h: 2
   modules/nsx-ambiqsuite/sdk/utils/am_util_draw_2d1bpp.h: 2

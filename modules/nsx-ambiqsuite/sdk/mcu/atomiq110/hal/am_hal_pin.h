@@ -23,24 +23,6 @@
 //
 //*****************************************************************************
 
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-// IMPORTANT: This is a generated file!!
-//
-// To update pin definitions:
-//     Modify the pathnames appropriately in the following script,
-//     ambiqsuite/scripts/atomiq11x/generate_funcsel.py
-// then run the script:
-//   CD mcu/atomiq110
-//   ../../scripts/atomiq11x/generate_funcsel.py
-//
-// Note: The generate_funcsel.py script contains hard-coded relative paths
-//       that must be modified for the system it's being run on.
-//
-//*****************************************************************************
-// #### INTERNAL END ####
-
 #ifndef AM_HAL_PIN_H
 #define AM_HAL_PIN_H
 

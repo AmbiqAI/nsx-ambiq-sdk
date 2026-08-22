@@ -244,12 +244,6 @@ typedef union
 //
 //! @brief MMU initialization.
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param ppHandle               - returns the handle for the module.
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -260,14 +254,6 @@ extern uint32_t am_hal_mmu_initialize(void **ppHandle);
 //
 //! @brief MMU power control.
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle      - Handle as returned from am_hal_mmu_initialize()
-//! @param ePowerState  - Description here
-//! @param bRetainState - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -280,12 +266,6 @@ extern uint32_t am_hal_mmu_powercontrol(void *pHandle,
 //
 //! @brief Performs required deinitialization tasks
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle      - Handle as returned from am_hal_mmu_initialize()
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -296,14 +276,6 @@ extern uint32_t am_hal_mmu_deinit(void *pHandle);
 //
 //! @brief MMU control function
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param eControlRequest - Description here
-//! @param pArgs           - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -314,13 +286,6 @@ extern uint32_t am_hal_mmu_control(void *pHandle, am_hal_mmu_request_e eControlR
 //
 //! @brief MMU configuration function
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param psConfig        - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -331,13 +296,6 @@ extern uint32_t am_hal_mmu_config(void *pHandle, const am_hal_mmu_config_t *psCo
 //
 //! @brief Returns the current MMU configuration.
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param psConfig        - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -348,12 +306,6 @@ extern uint32_t am_hal_mmu_config_get(void *pHandle, am_hal_mmu_config_t *psConf
 //
 //! @brief Enable the MMU
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -364,12 +316,6 @@ extern uint32_t am_hal_mmu_enable(void *pHandle);
 //
 //! @brief Disable the MMU
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -386,9 +332,6 @@ extern uint32_t am_hal_mmu_disable(void *pHandle);
 //! @param ui32VAoffset    - The VA Offset value.
 //! @param bCacheClean     - Do a cache clean operation (typically set to true).
 //!
-// #### INTERNAL BEGIN ####
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -402,13 +345,6 @@ extern uint32_t am_hal_mmu_context_set(void *pHandle,
 //
 //! @brief MMU context get function, returns the current context.
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param ui32PID         - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -419,13 +355,6 @@ extern uint32_t am_hal_mmu_context_get(void *pHandle, uint32_t *pui32PID, uint32
 //
 //! @brief Return most recent performance parameters
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param psPerformance   - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -436,14 +365,6 @@ extern uint32_t am_hal_mmu_performance_get(void *pHandle, am_hal_mmu_perfor_t *p
 //
 //! @brief Return current TLB
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle         - Handle as returned from am_hal_mmu_initialize()
-//! @param sTLBentry       - Ptr to an array of TLB entry structures. The array
-//!                          must be sized at least AM_HAL_MMU_MAXTLBENTRIES.
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -464,9 +385,6 @@ extern uint32_t am_hal_mmu_TLB_get(void *pHandle,
 //! @param bValid           - True if the page table entries are to be
 //!                           initialized as valid.
 //!
-// #### INTERNAL BEGIN ####
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -481,13 +399,6 @@ extern uint32_t am_hal_mmu_PT_setup(void *pHandle,
 //
 //! @brief Return a page table
 //!
-// #### INTERNAL BEGIN ####
-// TODO Complete the following descriptions:
-//! @param pHandle          - Handle as returned from am_hal_mmu_initialize()
-//! @param pui32PT          - Description here
-//!
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //
@@ -505,9 +416,6 @@ extern uint32_t am_hal_mmu_PT_get(void *pHandle, uint32_t *pui32PT);
 //!                           that the given VA will reference.
 //! @param pui32VAoffset    - Pointer to the variable to receive the computed value.
 //!
-// #### INTERNAL BEGIN ####
-//! TODO Full function description here
-// #### INTERNAL END ####
 //!
 //! @return Standard HAL status code.
 //

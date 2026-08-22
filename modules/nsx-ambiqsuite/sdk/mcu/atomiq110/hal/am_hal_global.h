@@ -72,11 +72,6 @@ extern "C"
 //
 //*****************************************************************************
 #define STATIC_ASSERT(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
-// #### INTERNAL BEGIN ####
-// Another solution.
-//#define STATIC_ASSERT(condition) typedef char pstatic_assert##__LINE__[ (condition) ? 1 : -1];
-//STATIC_ASSERT(sizeof(struct trim_regs_s) == (21 * 4))
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

@@ -28,9 +28,6 @@ extern "C"
 
 //
 //! Maximum number of GPIOs on this device.
-// #### INTERNAL BEGIN ####
-// Note - some of these may be "virtual" GPIOs.
-// #### INTERNAL END ####
 //
 #define AM_HAL_GPIO_MAX_PADS        AM_HAL_PIN_TOTAL_GPIOS
 #define AM_HAL_GPIO_NUMWORDS        ((AM_HAL_GPIO_MAX_PADS + 31) / 32)
@@ -881,37 +878,6 @@ typedef struct
 
 //*****************************************************************************
 //
-// #### INTERNAL BEGIN ####
-//! @brief Toggle interrupt direction.
-//!
-//! Macro for toggling the GPIO interrupt direction as a workaround for the
-//! Apollo4 GPIO dual-edge interrupt issue.
-//! This macro is intended to be used in an ISR to facilitate catching both
-//! edges of a signal.
-//!
-//! @param n - The GPIO number to be written.
-//!
-//! Notes:
-//! - This macro assumes that the eIntDir configuration parameter has
-//!   previously been configured to one of either:
-//!   AM_HAL_GPIO_PIN_INTDIR_LO2HI or
-//!   AM_HAL_GPIO_PIN_INTDIR_HI2LO.
-//! - For expediency, on exit this macro leaves PADKEY set. It is suggested
-//!   that PADKEY be cleared by the caller (i.e. GPIO->PADKEY = 0).
-//!
-// Reference FAL-818, FAL-488, HSP20-213, HSP20-196.
-//
-//! The following notes were removed after setting of PADKEY was brought in.
-//! - Before invoking this macro, the following statement must be executed
-//!   at least 1 time before its first usage.
-//! - It is further suggested that when the macro is no longer needed that
-//!   PADKEY be set to zero.
-//! - Any intervening call to am_hal_gpio_pinconfig() will clear PADKEY.
-//! - Example usage:
-//!     GPIO->PADKEY = GPIO_PADKEY_PADKEY_Key;
-//!     am_hal_gpio_intdir_toggle(pinnum);
-//!     GPIO->PADKEY = 0;
-// #### INTERNAL END ####
 //*****************************************************************************
 #define am_hal_gpio_intdir_toggle(n)                                            \
     if ( 1 )                                                                    \

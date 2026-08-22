@@ -50,19 +50,6 @@ extern "C"
                                       offsetof(periph##0_Type, reg)     +   \
                                       (n * (periph##1_BASE - periph##0_BASE)) )
 
-// #### INTERNAL BEGIN ####
-#if 0 // Not yet tested.
-//
-// AM_CMREGn()
-// This macro reads and returns the value of the register of the indicated
-// peripheral module number using CMSIS register specifiers.
-//
-#define AM_CMREGn(periph, n, reg)                               \
-        (*((volatile uint32_t *)(                               \
-            ( periph##0_BASE + offsetof(periph##0_Type,reg) +   \
-              (n * (periph##1_BASE - periph##0_BASE)) ) )))
-#endif
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 // Bitfield macros.

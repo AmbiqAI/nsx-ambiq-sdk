@@ -10,12 +10,15 @@ import pytest
 ATOMIQ110_TREE = Path("modules") / "nsx-ambiqsuite" / "sdk" / "mcu" / "atomiq110"
 ATOMIQ110_PREFIX = ATOMIQ110_TREE.as_posix()
 
-# The atomiq110 tree is baselined here exactly as the vendor drop shipped it.
-# The sanitizer lands first, on its own, so that the scrub commit that follows
-# is machine-verifiable at its own revision: check it out, run the tool over
-# this revision's tree, and the output is that commit's tree. The tree-specific
-# ratchet assertions arrive with the scrub, since there is nothing scrubbed to
-# assert about yet.
+# Ratchet constant. The atomiq110 payload was scrubbed of vendor
+# `#### INTERNAL ####` engineering content at intake (issue #52). It does not go
+# to zero: a block that still holds live declarations keeps its body *and* its
+# fence, because a live declaration fenced inside an INTERNAL block is part of
+# the ABI the drop's prebuilt archives were compiled against, and an unfenced
+# remnant would drop out of `scan` and out of this ratchet forever. This is the
+# exact number of fence lines the scrub retained; it may go down (a future
+# intake removes the declaration upstream), never up.
+ATOMIQ110_RETAINED_MARKERS = 66
 
 INTERNAL_BLOCK_SAMPLE = """\
 #ifndef SAMPLE_H
@@ -136,6 +139,26 @@ def workflow(repo_root: Path):
     return load_module(repo_root, "intake_workflow.py", "test_internal_markers_workflow")
 
 
+# --------------------------------------------------------------------------
+# Repo-wide ratchet
+# --------------------------------------------------------------------------
+def test_atomiq110_markers_do_not_exceed_the_retained_fence_count(repo_root: Path, markers) -> None:
+    hits = markers.scan_tree(repo_root / ATOMIQ110_TREE, path_prefix=ATOMIQ110_PREFIX)
+    assert len(hits) <= ATOMIQ110_RETAINED_MARKERS, "\n".join(hit.render() for hit in hits)
+
+
+def test_every_atomiq110_marker_is_a_retained_kept_block_fence(repo_root: Path, markers) -> None:
+    """The scrub removed every dead block outright, so every marker still in the
+    tree must belong to a balanced block that the scrub deliberately kept --
+    never an orphan, never a block that is dead but was missed."""
+    retained = 0
+    for path in markers.iter_scannable_files(repo_root / ATOMIQ110_TREE):
+        result = markers.scrub_text(markers.read_source(path), label=path.as_posix())
+        assert result.removed_blocks == (), f"{path}: dead INTERNAL block survived the scrub"
+        retained += 2 * len(result.kept_blocks)
+    assert retained == ATOMIQ110_RETAINED_MARKERS
+
+
 def test_repo_wide_markers_do_not_exceed_recorded_baseline(repo_root: Path, markers) -> None:
     counts = markers.marker_counts(markers.scan_tree(repo_root))
     comparison = markers.compare_to_baseline(counts, markers.load_baseline())
@@ -151,6 +174,17 @@ def test_baseline_never_over_allows(repo_root: Path, markers) -> None:
     counts = markers.marker_counts(markers.scan_tree(repo_root))
     comparison = markers.compare_to_baseline(counts, markers.load_baseline())
     assert comparison.stale == ()
+
+
+def test_baseline_pins_the_scrubbed_tree_to_its_retained_fences(repo_root: Path, markers) -> None:
+    baseline = markers.load_baseline()
+    scrubbed = {
+        path: count for path, count in baseline.items()
+        if any(path.startswith(prefix) for prefix in markers.SCRUBBED_TREE_PREFIXES)
+    }
+    assert sum(scrubbed.values()) == ATOMIQ110_RETAINED_MARKERS
+    # Fences come in pairs; an odd entry would mean an orphan got baselined.
+    assert [path for path, count in scrubbed.items() if count % 2] == []
 
 
 def test_unparseable_fence_exemptions_are_exact(repo_root: Path, markers) -> None:
@@ -441,6 +475,12 @@ def test_scrub_reproduces_its_output_byte_for_byte(tmp_path: Path, markers) -> N
     assert markers.scrub_tree(tree, write=False) == {}
 
 
+def test_scrub_of_the_promoted_atomiq110_tree_is_a_no_op(repo_root: Path, markers) -> None:
+    """The committed tree is the scrubber's own fixed point, so a future intake
+    re-running the sanitizer cannot churn the payload."""
+    assert markers.scrub_tree(repo_root / ATOMIQ110_TREE, write=False) == {}
+
+
 # --------------------------------------------------------------------------
 # Scan and intake gate
 # --------------------------------------------------------------------------
@@ -456,6 +496,18 @@ def test_scan_flags_a_reinjected_marker(tmp_path: Path, markers) -> None:
     comparison = markers.compare_to_baseline(markers.marker_counts(hits), markers.load_baseline())
     assert not comparison.ok
     assert comparison.regressions[0][1:] == (2, 0)
+
+
+def test_scan_flags_growth_in_an_already_baselined_file(tmp_path: Path, markers) -> None:
+    """The retained atomiq110 fences are pinned, not merely tolerated: adding a
+    block back to a scrubbed file is still a regression."""
+    header = tmp_path / "hal" / "am_hal_dcu.h"
+    header.parent.mkdir(parents=True)
+    header.write_text("// #### INTERNAL BEGIN ####\n// note\n// #### INTERNAL END ####\n" * 9, encoding="utf-8")
+    counts = markers.marker_counts(markers.scan_tree(tmp_path, path_prefix=ATOMIQ110_PREFIX))
+    comparison = markers.compare_to_baseline(counts, markers.load_baseline())
+    assert not comparison.ok
+    assert comparison.regressions[0] == (f"{ATOMIQ110_PREFIX}/hal/am_hal_dcu.h", 18, 8)
 
 
 def test_staging_gate_rejects_new_internal_content(tmp_path: Path, workflow) -> None:
