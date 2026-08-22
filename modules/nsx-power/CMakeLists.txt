@@ -63,6 +63,14 @@ install(DIRECTORY
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src
 )
+# The arch subtree references the shared profile printer + module-private
+# header at src/ top level; ship them alongside so the installed src tree
+# stays self-contained (nsx-power is the only module installing src/).
+install(FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_profile.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_internal.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src
+)
 
 install(TARGETS
     nsx_power
