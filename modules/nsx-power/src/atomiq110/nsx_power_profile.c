@@ -9,9 +9,9 @@
 
 // NOTE: Atomiq110's PWRCTRL splits DEVPWREN/DEVPWRSTATUS into two 32-bit
 // banks (DEVPWREN0/1, DEVPWRSTATUS0/1) instead of Apollo5's single
-// DEVPWREN/DEVPWRSTATUS registers, and there is no CLKGEN peripheral (no
-// CLOCKEN2STAT/CLOCKEN3STAT equivalent) — clock status is reported
-// through CLKGEN->CLOCKENSTAT only.
+// DEVPWREN/DEVPWRSTATUS registers, and CLKGEN has no CLOCKEN2STAT/
+// CLOCKEN3STAT equivalents — clock status is reported through
+// CLKGEN->CLOCKENSTAT only.
 static const nsx_power_profile_reg_t s_nsx_power_profile_regs[] = {
     {&PWRCTRL->MCUPERFREQ, "PWRCTRL.MCUPERFREQ", "MCU performance frequency."},
     {&PWRCTRL->DEVPWREN0, "PWRCTRL.DEVPWREN0", "Peripheral power enable mask, bank 0."},
