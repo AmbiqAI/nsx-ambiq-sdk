@@ -49,6 +49,12 @@ target_include_directories(nsx_power PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src/${NSX_POWER_ARCH_DIR}>
 )
 
+# Module-private headers (nsx_power_internal.h) shared by the common sources
+# and the per-arch sources.
+target_include_directories(nsx_power PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/src
+)
+
 install(DIRECTORY
     ${CMAKE_CURRENT_LIST_DIR}/includes-api
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power
