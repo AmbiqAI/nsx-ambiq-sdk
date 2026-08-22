@@ -26,6 +26,29 @@ time (see the 5.2.23 → 5.2.24 precedent).
   `atomiq110_fpga_turbo`) and is expected to stay outside the qualified
   archive scope for 5.2.25 unless silicon qualification lands first.
 
+## Recorded payload divergence: atomiq110 INTERNAL-marker sanitation (issue #52)
+
+The atomiq110 headers on `main` **diverge from the `npu-drop-2026.07.09`
+payload** and the 5.2.25 record must say so. `npu-drop-2026.07.09` is a raw
+engineering drop: upstream's release tooling strips vendor
+`#### INTERNAL ####` fences and the dead content between them before
+publishing, and that step had not been run. The divergence is a one-time,
+**deletion-only** sanitation performed by `sdk-intake/internal_markers.py` —
+988 lines removed across 23 files under
+`modules/nsx-ambiqsuite/sdk/mcu/atomiq110`, zero lines added or modified.
+Only comment-only marker lines, INTERNAL block bodies with no live
+preprocessor tokens, `#if 0 … #endif` regions inside a fence, and blank lines
+at a deletion seam were deleted; any block still holding a live declaration
+kept its body and its fence verbatim, so nothing visible to the compiler that
+built the prebuilt archives changed. The result is tool-reproducible: the
+scrubber run over the pre-scrub tree yields the committed tree byte-for-byte,
+and re-running it over the committed tree is a no-op. **Per-artifact
+provenance strings and `artifact-manifest.yaml` are retained unchanged, and
+the prebuilt archives are not affected — no artifact hash changes.** The
+scoped ownership exception is recorded on the `generated-ambiqsuite-provider`
+entry in `release/source-ownership.yaml`; future payloads are sanitized while
+staged, so no comparable divergence should recur.
+
 ## How the 5.2.24 records are treated
 
 `v5.2.24` predates all of the above. The **qualification report**

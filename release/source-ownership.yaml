@@ -10,6 +10,44 @@ entries:
     direct_edit: forbidden
     update_mechanism: sdk-intake/build_ambiqsuite.py
     provenance: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+    recorded_exceptions:
+      - id: atomiq110-internal-marker-sanitation
+        issue: 52
+        date: 2026-08-21
+        scope: modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+        summary: >-
+          One-time, deletion-only sanitation of vendor `#### INTERNAL ####`
+          engineering content from the atomiq110 headers. This tree is
+          `direct_edit: forbidden`; the change is recorded here as a scoped,
+          reviewed exception rather than treated as an ordinary edit, because
+          the `npu-drop-2026.07.09` payload was a raw engineering drop that
+          upstream's own release tooling had not stripped.
+        mechanism: sdk-intake/internal_markers.py
+        properties:
+          - >-
+            Tool-reproducible, not hand-edited. Running
+            "sdk-intake/internal_markers.py scrub --root
+            modules/nsx-ambiqsuite/sdk/mcu/atomiq110 --write" over the
+            pre-scrub tree yields the committed tree byte-for-byte, and
+            re-running it over the committed tree is a no-op.
+          - >-
+            Deletion-only at preprocessor-token level. 988 lines removed across
+            23 files, 0 lines added or modified. Only marker lines of blocks
+            removed entirely, bodies with no live tokens, "#if 0 ... #endif"
+            regions inside a fence, and blank lines at a deletion seam were
+            deleted. Any block still holding a live declaration kept its body
+            and its fence verbatim, so no symbol visible to the compiler that
+            built the prebuilt archives was touched.
+          - >-
+            Provenance strings, artifact manifests, and prebuilt archives are
+            unaffected; no artifact hash changes.
+        future_payloads: >-
+          Gated at staging. `stage` runs
+          `assert_no_new_internal_markers` against
+          `sdk-intake/internal-marker-baseline.yaml`, so a regenerated drop is
+          sanitized while staged and never needs a post-hoc edit to a promoted
+          tree. This exception is not a precedent for editing the provider tree
+          in place.
 
   - id: upstream-ambiq-usb-copy
     classification: upstream-derived-auxiliary

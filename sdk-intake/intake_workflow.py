@@ -22,6 +22,11 @@ intake reviewable and fail-closed:
   verify-ownership cross-check the generated-provider boundary declared in
                    `release/source-ownership.yaml` and validate any patch
                    hook ownership metadata.
+  verify-internal-markers
+                   ratchet a staged or promoted tree against
+                   `sdk-intake/internal-marker-baseline.yaml` so a regenerated
+                   engineering drop can never add `#### INTERNAL ####` content
+                   (also enforced automatically during `stage`).
   promote          atomically swap a validated staging tree into the real
                    provider tree. Requires --yes. Rolls back on failure.
 
@@ -52,18 +57,23 @@ import yaml
 # not by package import, so this tool works the same way whether invoked as
 # `python sdk-intake/intake_workflow.py`, via `uv run`, or loaded by tests.
 # --------------------------------------------------------------------------
-def _load_build_ambiqsuite():
-    module_path = Path(__file__).resolve().parent / "build_ambiqsuite.py"
-    spec = importlib.util.spec_from_file_location("nsx_intake_build_ambiqsuite", module_path)
+def _load_sibling_module(file_name: str, module_name: str):
+    module_path = Path(__file__).resolve().parent / file_name
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None or spec.loader is None:  # pragma: no cover - defensive
-        raise ImportError(f"could not load build_ambiqsuite.py from {module_path}")
+        raise ImportError(f"could not load {file_name} from {module_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
 
+def _load_build_ambiqsuite():
+    return _load_sibling_module("build_ambiqsuite.py", "nsx_intake_build_ambiqsuite")
+
+
 bas = _load_build_ambiqsuite()
+internal_markers = _load_sibling_module("internal_markers.py", "nsx_intake_internal_markers")
 
 TEXT_DIFF_SUFFIXES = (".h", ".hpp", ".inc", ".c", ".md", ".yaml", ".yml", ".txt", ".cmake")
 OWNERSHIP_MANIFEST_RELATIVE = Path("release") / "source-ownership.yaml"
@@ -1301,6 +1311,59 @@ def _assert_no_symlinks(root: Path, *, label: str) -> None:
         )
 
 
+def provider_sdk_relative(train: "bas.TrainSpec") -> str:
+    """Repository-relative posix path of a train's promoted provider tree, used
+    to key staged files against the repo-wide ratchet baseline."""
+    return bas.provider_sdk_root(train).resolve().relative_to(repo_root()).as_posix()
+
+
+def assert_no_new_internal_markers(staged_sdk_root: Path, *, path_prefix: str, baseline: Path | None = None) -> int:
+    """Fail closed when a staged payload carries more `#### INTERNAL ####`
+    engineering content than the recorded ratchet baseline.
+
+    A raw engineering drop fences internal notes -- commented-out enums, `#if 0`
+    experiments, ticket chatter -- between INTERNAL markers that upstream's own
+    release tooling strips before publishing. Promoting an unsanitized drop
+    leaks all of it into the committed provider tree, and once the drop's
+    prebuilt archives ship alongside those headers the content can no longer be
+    removed safely (a live declaration fenced inside an INTERNAL block is part
+    of the compiled ABI). So the gate runs here, on the staged payload, before
+    anything is promoted: scrub at intake, never post-hoc.
+
+    Historical trees keep their recorded counts; only increases fail."""
+    try:
+        hits = internal_markers.scan_tree(staged_sdk_root, path_prefix=path_prefix)
+        counts = internal_markers.marker_counts(hits)
+        comparison = internal_markers.compare_to_baseline(counts, internal_markers.load_baseline(baseline))
+        exempt = internal_markers.load_fence_exemptions(baseline)
+        fence_problems = internal_markers.find_unparseable_fences(staged_sdk_root, path_prefix=path_prefix)
+    except internal_markers.InternalMarkerError as error:
+        raise IntakeVerificationError(f"internal-marker scan failed: {error}") from error
+
+    # Counting marker lines cannot see a broken fence: an orphan BEGIN makes the
+    # count go *down* while the unterminated block swallows the rest of the file,
+    # and an orphan END leaves content fenced by nothing. Neither is scrubbable,
+    # so a new one fails the stage rather than being silently accepted.
+    new_fence_problems = [message for path, message in fence_problems if path not in exempt]
+    if new_fence_problems:
+        raise IntakeVerificationError(
+            "staged payload carries INTERNAL fences that cannot be parsed (orphan, nested, or "
+            "sharing a line with live code) and therefore cannot be scrubbed or ratcheted:\n  "
+            + "\n  ".join(new_fence_problems)
+        )
+
+    if not comparison.ok:
+        offending = {path for path, _found, _allowed in comparison.regressions}
+        locations = "\n  ".join(hit.render() for hit in hits if hit.path in offending)
+        raise IntakeVerificationError(
+            "staged payload adds INTERNAL engineering content beyond the recorded baseline "
+            f"({internal_markers.BASELINE_RELATIVE.as_posix()}):\n  {comparison.render()}\n  {locations}\n"
+            "Scrub the staged tree before promoting: "
+            f"python sdk-intake/internal_markers.py scrub --root {staged_sdk_root} --write"
+        )
+    return len(hits)
+
+
 def stage_provider_payload(
     train: "bas.TrainSpec",
     version: str,
@@ -1328,6 +1391,7 @@ def stage_provider_payload(
     patch_applications = apply_patch_queue(dest, resolved_patches_dir)
 
     _assert_no_symlinks(dest, label="staged payload")
+    assert_no_new_internal_markers(dest, path_prefix=provider_sdk_relative(train))
     verification = verify_artifact_hashes(dest, dest / "artifact-manifest.yaml")
     verification.raise_if_not_ok(label=f"staged artifact hashes for {train.train_id} {version}")
 
@@ -1501,6 +1565,19 @@ def _cmd_verify_ownership(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_verify_internal_markers(args: argparse.Namespace) -> int:
+    train = _resolve_train(args.train)
+    sdk_dir = args.sdk_dir or bas.provider_sdk_root(train)
+    try:
+        total = assert_no_new_internal_markers(sdk_dir, path_prefix=provider_sdk_relative(train))
+    except IntakeError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    print(f"==> OK: no new INTERNAL engineering content under {bas.display_path(sdk_dir)} "
+          f"({total} baselined marker line(s))")
+    return 0
+
+
 def _cmd_promote(args: argparse.Namespace) -> int:
     train = _resolve_train(args.train)
     try:
@@ -1545,6 +1622,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     verify_ownership.add_argument("--train", choices=tuple(bas.TRAINS), default="stable")
     verify_ownership.add_argument("--patches-dir", type=Path, default=None)
     verify_ownership.set_defaults(func=_cmd_verify_ownership)
+
+    verify_internal = subparsers.add_parser(
+        "verify-internal-markers",
+        help="Check a staged or promoted tree for new `#### INTERNAL ####` engineering content.",
+    )
+    verify_internal.add_argument("--train", choices=tuple(bas.TRAINS), default="stable")
+    verify_internal.add_argument("--sdk-dir", type=Path, default=None, help="Default: the promoted provider tree for --train.")
+    verify_internal.set_defaults(func=_cmd_verify_internal_markers)
 
     promote = subparsers.add_parser("promote", help="Atomically promote a validated staged payload into the provider tree.")
     promote.add_argument("--train", choices=tuple(bas.TRAINS), default="stable")
