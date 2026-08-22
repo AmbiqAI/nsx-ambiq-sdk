@@ -202,11 +202,8 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     am_hal_cachectrl_icache_enable();
     am_hal_cachectrl_dcache_enable(true);
 
-    if (!pCfg->need_xtal) {
-        am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC); // Use LFRC instead of XT
-        am_hal_rtc_osc_disable();
-    }
-    VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
+    // NOTE: the RTC-osc/VCOMP shutdown sequence that used to live here is
+    // performed by nsx_power_platform_shutdown_peripherals() below (#53).
     // NOTE: Atomiq110's MCUCTRL has no DBGCTRL register; disabling the
     // DEBUG power domain below is sufficient here.
     // Powering down various peripheral power domains
@@ -226,6 +223,13 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     nsx_power_platform_shutdown_peripherals(pCfg);
 
     // Configure power mode
+    //
+    // TODO(#53): unexplained 10 ms busy-wait inherited from FPGA bring-up,
+    // paid on every boot. Suspected to mask power-domain settling after the
+    // peripheral shutdowns above. Verify on atomiq110 FPGA whether it can be
+    // deleted or replaced with a status poll, then close
+    // https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/53.
+    //
     nsx_delay_us(10000);
     NSX_TRY(nsx_power_set_performance_mode(pCfg->perf_mode), "Set CPU Perf mode failed.");
 
