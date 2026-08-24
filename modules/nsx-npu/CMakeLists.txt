@@ -17,6 +17,7 @@ nsx_select_soc_arch_dir(NSX_NPU_ARCH_DIR
 # glue: power-domain sequencing, IRQ wiring, and performance-mode selection.
 set(NSX_NPU_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_npu.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_NPU_ARCH_DIR}/nsx_npu_timebase.c
 )
 
 add_library(nsx_npu STATIC ${NSX_NPU_SOURCES})
@@ -32,6 +33,12 @@ target_link_libraries(nsx_npu PUBLIC
 target_include_directories(nsx_npu PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-npu/includes-api>
+)
+
+# src/ holds module-internal headers only (nsx_npu_timebase.h); PRIVATE so no
+# consumer sees them and nothing is installed from here.
+target_include_directories(nsx_npu PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
 install(DIRECTORY
