@@ -8,6 +8,31 @@ if(NOT NSX_SDK_PROVIDER STREQUAL "ambiqsuite")
     )
 endif()
 
+# Deadline for nsx-ethos-u-driver's Ethos-U85 inference wait, in milliseconds.
+#
+# The driver defaults NSX_ETHOSU_INFERENCE_TIMEOUT_MS to empty, which compiles
+# upstream's ETHOSU_SEMAPHORE_WAIT_FOREVER into ethosu_driver.c: a wedged NPU
+# then hangs the caller indefinitely instead of returning
+# ETHOSU_JOB_RESULT_TIMEOUT and taking the ethosu_soft_reset() recovery path.
+#
+# It has to be seeded here rather than in modules/nsx-npu/CMakeLists.txt.
+# nsx-ethos-u-driver is an external module materialized by the neuralspotx
+# registry and consumes this value when *it* is configured, which happens before
+# nsx-npu is added (nsx-npu only requires the resulting nsx::ethos_u_driver
+# target). This SoC file is the earliest atomiq110-scoped hook in the flow.
+#
+# 5000 ms is a deliberately generous bring-up value: far beyond any plausible
+# Ethos-U85 inference on this part, so it only ever fires on a genuine wedge.
+# Override with -DNSX_ETHOSU_INFERENCE_TIMEOUT_MS=<ms>, or with "" to restore
+# upstream's wait-forever behaviour.
+#
+# The timeout is inert unless a timebase is also supplied; nsx-npu provides the
+# nsx_ethos_u_ticks()/nsx_ethos_u_ticks_per_ms() strong overrides for that.
+if(NOT DEFINED NSX_ETHOSU_INFERENCE_TIMEOUT_MS)
+    set(NSX_ETHOSU_INFERENCE_TIMEOUT_MS "5000" CACHE STRING
+        "Inference-wait timeout in ms for ethosu_wait() (empty = wait forever)")
+endif()
+
 set(NSX_AMBIQ_PART_NAME "atomiq110")
 set(NSX_AMBIQ_MCU_DIR "${NSX_AMBIQSUITE_ROOT}/mcu/${NSX_AMBIQ_PART_NAME}")
 set(NSX_AMBIQ_HAL_LIB_PART_NAME "atomiq110")

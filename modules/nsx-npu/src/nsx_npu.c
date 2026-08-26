@@ -11,6 +11,7 @@
 #include "am_mcu_apollo.h"
 #include "nsx_core.h"
 #include "nsx_ethos_u.h"
+#include "nsx_npu_timebase.h"
 
 //*****************************************************************************
 //
@@ -103,6 +104,16 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
             return NSX_STATUS_INIT_FAILED;
         }
     }
+
+    //
+    // Bring up the tick source behind nsx-ethos-u-driver's wait semaphore. Done
+    // last, once the clock tree is settled by the performance-mode selection
+    // above, because the tick rate is derived from CLKMGR. This is what lets a
+    // wedged NPU surface ETHOSU_JOB_RESULT_TIMEOUT instead of hanging the
+    // caller; it is best-effort, so init still succeeds if no usable counter is
+    // found -- waits then degrade to upstream's unbounded behaviour.
+    //
+    nsx_npu_timebase_init();
 
     g_nsx_npu_initialized = true;
     return NSX_STATUS_SUCCESS;
