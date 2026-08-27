@@ -102,6 +102,30 @@
 #define NSX_NPU_TB_PROBE_US_MIN (100U)
 #define NSX_NPU_TB_PROBE_US_MAX (8000U)
 
+//
+// How close to the ends of the 32-bit range a raw-counter decrease must be to
+// be accepted as a genuine wrap, rather than a reset by another legitimate
+// STIMER owner (am_hal_stimer_counter_clear() is a public HAL call, and this
+// module does not claim exclusive ownership of an already-running STIMER --
+// see nsx_npu_timebase_init()).
+//
+// A real wrap, observed at the polling rate nsx_ethos_u_ticks() is actually
+// called at (every loop iteration of the driver's bounded wait), looks like
+// "last_raw within slack of UINT32_MAX, raw within slack of 0": the counter
+// is polled far more often than it takes to traverse the full 32-bit range at
+// any tap this module derives a rate for (slowest is 512 Hz -> ~97 days;
+// fastest is 7.8125 MHz -> ~6.35 minutes). A clear, by contrast, can land the
+// counter anywhere -- including squarely in the middle of the range, which is
+// the case that most needs rejecting: it produces the same "decreased"
+// observation as a wrap but implies a fabricated forward jump of ~2^31 ticks.
+//
+// 2^28 ticks is generous slack for the polling-rate side of that argument (at
+// the fastest supported tap, ~34 s between polls; nothing in this module's
+// use ever gets close) while staying far below the half-range point where a
+// mid-range clear could be mistaken for a wrap.
+//
+#define NSX_NPU_TB_WRAP_SLACK (0x10000000U) // 2^28
+
 //*****************************************************************************
 //
 // Module state
@@ -119,8 +143,18 @@ static volatile uint32_t g_nsx_npu_tb_ticks_per_ms = 0U;
 // 32-to-64-bit software extension of the STIMER counter. Written only inside
 // the critical section in nsx_ethos_u_ticks() / nsx_npu_timebase_init().
 //
+// g_nsx_npu_tb_ticks is the full running total, advanced each call by a
+// non-negative per-call delta (see nsx_ethos_u_ticks()) rather than storing
+// separate "high word" and "current raw" halves: a delta that is clamped to
+// >= 0 is what keeps the published tick count monotonic non-decreasing even
+// when a raw-counter decrease turns out to be a clear rather than a wrap,
+// which the contract in nsx_ethos_u.h requires ("free-running, monotonic
+// 64-bit tick count") and the driver's `ticks() - start` unsigned subtraction
+// depends on -- a spurious decrease here would underflow that subtraction
+// into a huge value and trip exactly the false timeout this exists to avoid.
+//
 static uint32_t g_nsx_npu_tb_last_raw = 0U;
-static uint64_t g_nsx_npu_tb_high     = 0U;
+static uint64_t g_nsx_npu_tb_ticks    = 0U;
 
 //*****************************************************************************
 //
@@ -272,7 +306,7 @@ void nsx_npu_timebase_init(void)
     const uint32_t ui32Level = am_hal_interrupt_master_disable();
 
     g_nsx_npu_tb_last_raw     = am_hal_stimer_counter_get();
-    g_nsx_npu_tb_high         = 0U;
+    g_nsx_npu_tb_ticks        = 0U;
     g_nsx_npu_tb_ticks_per_ms = (ui32Hz + 500U) / 1000U;
 
     am_hal_interrupt_master_set(ui32Level);
@@ -306,13 +340,34 @@ uint64_t nsx_ethos_u_ticks(void)
     const uint32_t ui32Level = am_hal_interrupt_master_disable();
 
     const uint32_t ui32Raw = am_hal_stimer_counter_get();
-    if (ui32Raw < g_nsx_npu_tb_last_raw)
-    {
-        g_nsx_npu_tb_high += (UINT64_C(1) << 32);
-    }
-    g_nsx_npu_tb_last_raw = ui32Raw;
+    uint32_t ui32Delta;
 
-    const uint64_t ui64Ticks = g_nsx_npu_tb_high + (uint64_t)ui32Raw;
+    if (ui32Raw >= g_nsx_npu_tb_last_raw)
+    {
+        ui32Delta = ui32Raw - g_nsx_npu_tb_last_raw;
+    }
+    else
+    {
+        //
+        // A decrease is either a genuine 32-bit wrap or the counter being
+        // cleared out from under us by another legitimate STIMER owner (see
+        // NSX_NPU_TB_WRAP_SLACK's comment). Only a wrap contributes a
+        // (correctly small) forward delta; a rejected decrease contributes
+        // zero rather than either the fabricated ~2^32-tick jump the
+        // original bug produced or a negative delta that would make the
+        // published total go backward.
+        //
+        const bool bLooksLikeWrap =
+            (g_nsx_npu_tb_last_raw >= (UINT32_MAX - NSX_NPU_TB_WRAP_SLACK)) &&
+            (ui32Raw <= NSX_NPU_TB_WRAP_SLACK);
+
+        ui32Delta = bLooksLikeWrap ? ((UINT32_MAX - g_nsx_npu_tb_last_raw) + ui32Raw + 1U) : 0U;
+    }
+
+    g_nsx_npu_tb_last_raw = ui32Raw;
+    g_nsx_npu_tb_ticks    += ui32Delta;
+
+    const uint64_t ui64Ticks = g_nsx_npu_tb_ticks;
 
     am_hal_interrupt_master_set(ui32Level);
 
@@ -320,9 +375,10 @@ uint64_t nsx_ethos_u_ticks(void)
     // Wrap detection is polled rather than interrupt-driven, which is sound
     // here: the driver's bounded wait calls this every loop iteration, far
     // faster than the ~2.4 h it takes a 488 kHz 32-bit counter to wrap, so no
-    // wrap can be missed *during* a wait. A wrap missed between waits only
-    // under-reports elapsed time -- a late timeout, never a spurious one -- and
-    // the extended value stays monotonic either way.
+    // wrap can be missed *during* a wait. A wrap missed between waits, or a
+    // decrease rejected as a clear rather than accepted as a wrap, only
+    // under-reports elapsed time -- a late timeout, never a spurious one --
+    // and the extended value stays monotonic either way.
     //
     // The `| 1` bias keeps the result out of the driver's no-timebase sentinel
     // at a cost of at most one tick of skew on any elapsed-time difference.
