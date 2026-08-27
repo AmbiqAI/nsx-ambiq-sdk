@@ -109,11 +109,17 @@
 //*****************************************************************************
 
 //
-// Published tick rate. Zero means "no time source" -- the value the driver
-// reads as "wait forever", and the state this module stays in until
-// nsx_npu_timebase_init() has both configured and liveness-checked a counter.
+// Whether nsx_npu_timebase_init() has configured and liveness-checked a
+// counter. false means "no time source" -- the driver reads this (via a
+// ticks_per_ms() of 0) as "wait forever".
 //
-static volatile uint32_t g_nsx_npu_tb_ticks_per_ms = 0U;
+// The tick *rate* is deliberately not cached alongside this flag: it is
+// re-derived from the live CLKSEL on every nsx_ethos_u_ticks_per_ms() call
+// (see below) so a STIMER reconfigured by the application after init cannot
+// leave a stale rate behind. Only whether a counter is claimed and alive is
+// sticky.
+//
+static volatile bool g_nsx_npu_tb_active = false;
 
 //
 // 32-to-64-bit software extension of the STIMER counter. Written only inside
@@ -227,7 +233,7 @@ static bool nsx_npu_tb_counter_advances(uint32_t ui32Hz)
 
 void nsx_npu_timebase_init(void)
 {
-    if (g_nsx_npu_tb_ticks_per_ms != 0U)
+    if (g_nsx_npu_tb_active)
     {
         return;
     }
@@ -264,16 +270,15 @@ void nsx_npu_timebase_init(void)
     }
 
     //
-    // Round to nearest rather than truncating: the contract notes that an
-    // integral ticks-per-ms makes a 32768 Hz source fire ~2.4% early, and
-    // rounding halves that error for free. A source below 500 Hz rounds to 0,
-    // which correctly reads as "no usable time source".
+    // The rate itself is not stored here -- see g_nsx_npu_tb_active's comment.
+    // Only the extension state (needed so ticks() stays monotonic across the
+    // transition) is set up under the critical section.
     //
     const uint32_t ui32Level = am_hal_interrupt_master_disable();
 
-    g_nsx_npu_tb_last_raw     = am_hal_stimer_counter_get();
-    g_nsx_npu_tb_high         = 0U;
-    g_nsx_npu_tb_ticks_per_ms = (ui32Hz + 500U) / 1000U;
+    g_nsx_npu_tb_last_raw = am_hal_stimer_counter_get();
+    g_nsx_npu_tb_high     = 0U;
+    g_nsx_npu_tb_active   = true;
 
     am_hal_interrupt_master_set(ui32Level);
 }
@@ -286,7 +291,7 @@ void nsx_npu_timebase_init(void)
 
 uint64_t nsx_ethos_u_ticks(void)
 {
-    if (g_nsx_npu_tb_ticks_per_ms == 0U)
+    if (!g_nsx_npu_tb_active)
     {
         //
         // No timebase. Return the sentinel so the pair stays consistent -- the
@@ -332,5 +337,32 @@ uint64_t nsx_ethos_u_ticks(void)
 
 uint32_t nsx_ethos_u_ticks_per_ms(void)
 {
-    return g_nsx_npu_tb_ticks_per_ms;
+    if (!g_nsx_npu_tb_active)
+    {
+        return 0U;
+    }
+
+    //
+    // Re-derived from the live CLKSEL on every call rather than cached at
+    // init: an application is free to reconfigure STIMER for its own purposes
+    // any time after nsx_npu_timebase_init() returns (see the comment on
+    // NSX_NPU_TB_STIMER_CFG's claim policy above), and am_hal_stimer_config()
+    // is a whole-register write, so a stale cached rate would silently
+    // mis-scale every deadline computed from it -- either firing too early
+    // and aborting a healthy inference, or too late. This call is cheap
+    // relative to its cost here: nsx-ethos-u-driver's ethosu_semaphore_take()
+    // calls this once per wait setup, not once per poll iteration (that role
+    // belongs to nsx_ethos_u_ticks() alone), so the CLKMGR query below never
+    // lands on the hot path.
+    //
+    // Round to nearest for the same reason as at init: halves the ~2.4% early
+    // fire on a 32768 Hz source. A source below 500 Hz, or one whose CLKSEL
+    // this module cannot derive a rate for (e.g. switched to a CTIMER-fed
+    // tap), rounds to / returns 0, which correctly degrades this one wait to
+    // upstream's unbounded behaviour rather than mis-scaling it.
+    //
+    const uint32_t ui32ClkSel = _FLD2VAL(STIMER_STCFG_CLKSEL, STIMER->STCFG);
+    const uint32_t ui32Hz     = nsx_npu_tb_source_hz(ui32ClkSel);
+
+    return (ui32Hz + 500U) / 1000U;
 }
