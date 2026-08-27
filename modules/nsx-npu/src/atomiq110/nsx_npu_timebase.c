@@ -89,6 +89,7 @@
 #define NSX_NPU_TB_HFRC_DIV_7M8125 (64U)
 #define NSX_NPU_TB_HFRC_DIV_488K   (1024U)
 #define NSX_NPU_TB_XTAL_DIV_8KHZ   (4U)
+#define NSX_NPU_TB_XTAL_DIV_2KHZ   (16U)
 #define NSX_NPU_TB_XTAL_DIV_1KHZ   (32U)
 #define NSX_NPU_TB_XTAL_DIV_512HZ  (64U)
 
@@ -162,9 +163,13 @@ static uint32_t nsx_npu_tb_xtal_ls_hz(void)
 // application that had already configured STIMER for its own purposes keeps
 // its configuration and still gets a correctly scaled NPU deadline.
 //
-// Returns 0 for taps whose rate cannot be derived (NOCLK, and the CTIMER-fed
-// taps, whose rate depends on a timer this module does not own). 0 propagates
-// as "no time source", i.e. upstream's unbounded wait.
+// Returns 0 for taps whose rate cannot be derived (NOCLK; the CTIMER-fed
+// taps, whose rate depends on a timer this module does not own; and
+// HFRC_16MHZ, deliberately excluded until the divider off the ~500 MHz HFRC
+// root is confirmed against the register map -- 500 MHz / 16 MHz = 31.25 is
+// non-integral, so the ratio this file assumes for the other HFRC taps does
+// not hold here and a guessed divisor could silently mis-scale the deadline).
+// 0 propagates as "no time source", i.e. upstream's unbounded wait.
 //
 static uint32_t nsx_npu_tb_source_hz(uint32_t ui32ClkSel)
 {
@@ -181,6 +186,9 @@ static uint32_t nsx_npu_tb_source_hz(uint32_t ui32ClkSel)
 
         case STIMER_STCFG_CLKSEL_XTAL_8KHZ:
             return nsx_npu_tb_xtal_ls_hz() / NSX_NPU_TB_XTAL_DIV_8KHZ;
+
+        case STIMER_STCFG_CLKSEL_XTAL_2KHZ:
+            return nsx_npu_tb_xtal_ls_hz() / NSX_NPU_TB_XTAL_DIV_2KHZ;
 
         case STIMER_STCFG_CLKSEL_XTAL_1KHZ:
             return nsx_npu_tb_xtal_ls_hz() / NSX_NPU_TB_XTAL_DIV_1KHZ;
@@ -232,14 +240,19 @@ void nsx_npu_timebase_init(void)
         return;
     }
 
-    const uint32_t ui32Cfg = STIMER->STCFG;
-    uint32_t ui32ClkSel    = _FLD2VAL(STIMER_STCFG_CLKSEL, ui32Cfg);
-    const bool bRunning    = (_FLD2VAL(STIMER_STCFG_CLEAR, ui32Cfg) == STIMER_STCFG_CLEAR_RUN);
+    uint32_t ui32ClkSel  = _FLD2VAL(STIMER_STCFG_CLKSEL, STIMER->STCFG);
+    const bool bRunning  = am_hal_stimer_is_running();
 
     //
     // Only claim STIMER if nobody else is using it. A block that is already
     // clocked and running belongs to the application; stomping it would break
     // whatever it is timing, and reading its CLKSEL back is enough for us.
+    //
+    // am_hal_stimer_is_running() (not a hand-rolled CLEAR-bit check) so a
+    // block left FREEZE'd for a coherent multi-register read -- a documented
+    // legitimate use of FREEZE -- is not mistaken for "running": a CLEAR-only
+    // check would skip claiming it here, then fail the liveness probe below
+    // on a counter that never advances, silently degrading to "no timebase".
     //
     // Note that a STIMER started here is intentionally left running by
     // nsx_npu_deinit(): it is a free-running counter with no interrupt enabled,
