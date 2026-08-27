@@ -56,6 +56,32 @@ configuration:
 vela --accelerator-config ethos-u85-256 model.tflite
 ```
 
+## Inference timeout
+
+`nsx_npu_init` also arms the time source behind `nsx-ethos-u-driver`'s wait
+semaphore, so a wedged NPU returns `ETHOSU_JOB_RESULT_TIMEOUT` (and is
+soft-reset) after `NSX_ETHOSU_INFERENCE_TIMEOUT_MS` — seeded to 5000 ms by
+`cmake/socs/atomiq110.cmake` — instead of hanging the caller forever.
+
+The time source is STIMER. If the application has already started STIMER
+(`am_hal_stimer_config`, or firmware writing `STCFG` directly) its
+configuration is left alone and used as-is; otherwise `nsx-npu` starts it on
+the ~488 kHz HFRC tap and leaves it running after `nsx_npu_deinit`. The hooks
+publish a fixed 1 µs virtual clock scaled at the tap rate that is live at each
+read, so reconfiguring or clearing STIMER — before, between, or during
+inferences — never rescales an in-flight deadline.
+
+Arming is best-effort: `nsx_npu_init` still succeeds if it fails, but then
+every inference wait is unbounded. That is logged (`WARNING nsx-npu: inference
+timeout not armed ...`) and can be asserted on:
+
+```c
+NSX_TRY(nsx_npu_init(&cfg), "NPU init failed\n");
+if (nsx_npu_timebase_status() != NSX_NPU_TIMEBASE_ARMED) {
+    // STIMER is on a CTIMER-fed tap, or its counter is not advancing.
+}
+```
+
 ## Compatibility
 
 Atomiq110 only. The module fails the CMake configure step for other SoC
