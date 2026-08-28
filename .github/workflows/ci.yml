@@ -20,6 +20,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history: the release-provenance tests verify their claims
+          # against git (which commit last changed each promoted archive, and
+          # the numstat of the recorded INTERNAL-marker sanitation). Both skip
+          # themselves on a shallow clone, so the default fetch-depth of 1 let
+          # them pass without ever running.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
