@@ -1,0 +1,289 @@
+schema_version: 1
+
+distribution:
+  name: nsx-ambiq-sdk
+  version: "5.2.25"
+  tag: v5.2.25
+  title: "nsx-ambiq-sdk 5.2.25 — atomiq110 (Ethos-U85) experimental support"
+  git:
+    commit: null
+    commit_resolution:
+      source: immutable_tag_target
+      command: git rev-list -n 1 v5.2.25
+      publication_requirement: Tag v5.2.25 must point to the approved release commit.
+  supersedes:
+    version: "5.2.24"
+    tag: v5.2.24
+    commit: a9f4ec25a162f6f3700623feb691423bb5a51132
+    relationship: forward_release
+    reason: >-
+      5.2.25 is a forward content release, not a correction. It adds the
+      experimental atomiq110 (Cortex-M55 + Ethos-U85) platform, the nsx-npu
+      module, and NSX-side cleanups on top of 5.2.24. Nothing 5.2.24 published
+      is withdrawn or restated: its qualified SoC/board scope, its promoted
+      Apollo archives, and its provenance records all carry forward unchanged.
+  immutability_note: >-
+    v5.2.23 and v5.2.24 and their tags, releases, and commits are never moved,
+    deleted, or rewritten. Corrections are published as new distribution
+    versions. release/qualification-5.2.23.md and
+    release/qualification-5.2.24.md are frozen prose and are not amended by
+    this release.
+
+upstream:
+  provider: ambiqsuite
+  snapshot_identity: stable-2026.06.18
+  source_kind: git_ref
+  source_ref: stable
+  source_commit: caaf5af86087881647f56c70646c748d40c86e23
+  artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  raw_source_committed: false
+  official_numbered_release_claimed: false
+  mixed_payload_note: >-
+    The identity above describes every Apollo archive in this distribution and
+    is what `sdk:` in the artifact manifest declares. The atomiq110 archives are
+    the one exception: they were regenerated from the npu-drop-2026.07.09
+    payload, not from stable-2026.06.18. That divergence is recorded per
+    artifact in the artifact manifest and as the atomiq110-payload-identity
+    entry under `known_deviations` below. atomiq110 is experimental and outside
+    qualified scope, so no qualified claim rests on the npu-drop payload.
+
+payload_provenance:
+  summary: >-
+    Every Apollo HAL/BSP archive in 5.2.25 is byte-identical to the archive
+    published in 5.2.24 (and, transitively, in 5.2.23). The only archive-level
+    change is additive: six new atomiq110 archives (one HAL and one BSP per
+    toolchain train) introduced by 960624ee18afd9fbf5db957371c92c828bf6a721.
+  binary_payload_identical_to: null
+  binary_payload_delta:
+    relative_to: "5.2.24"
+    archives_added:
+      - gcc/lib/atomiq110/libam_hal.a
+      - atfe/lib/atomiq110/libam_hal.a
+      - acfe/lib/atomiq110/libam_hal.a
+      - gcc/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+      - atfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+      - acfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
+    archives_changed: []
+    archives_removed: []
+  artifact_manifest_generated_at: 2026-06-22
+  artifact_manifest_generated_at_note: >-
+    This is the artifact manifest's own `build.generated_at`, which dates the
+    stable-2026.06.18 build that produced the Apollo archives. The atomiq110
+    entries were appended later, by
+    960624ee18afd9fbf5db957371c92c828bf6a721; their own provenance is the
+    per-artifact npu-drop-2026.07.09 note in the artifact manifest, not this
+    date.
+  archive_determinism:
+    gcc: non_deterministic_ar_headers
+    atfe: deterministic
+    acfe: deterministic
+  determinism_note: >-
+    gcc archives are produced by arm-none-eabi-ar in non-deterministic mode, so
+    their bytes change on every rebuild even when no object code changes. atfe
+    (llvm-ar) and acfe (armar) archives carry zeroed member timestamps, so their
+    bytes change only when object code changes. Comparing archive bytes across
+    commits therefore means different things per train; see
+    docs/acfe-artifact-manifest-forensics.md.
+  toolchain_trains:
+    - manifest_key: gcc
+      cmake_family: gcc
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      archives_introduced_in:
+        - 1a919aee0f24adb17fa6345fc15a874d1e3a4c29
+        - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
+        - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+        - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+      manifest_hashes_correct_in_5_2_23: true
+    - manifest_key: atfe
+      cmake_family: atfe
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      archives_introduced_in:
+        - 56a72f08b34e9315f8c58a9defb784329e789678
+        - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
+        - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+        - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+      byte_stability_note: >-
+        22 of these archives have been byte-identical since
+        56a72f08b34e9315f8c58a9defb784329e789678, which predates the
+        caaf5af86087881647f56c70646c748d40c86e23 regeneration in
+        1a919aee0f24adb17fa6345fc15a874d1e3a4c29. That is expected rather than
+        stale: llvm-ar is deterministic, and the corresponding gcc archives
+        rebuilt in 1a919aee differ only in ar member timestamps, with every
+        object member byte-identical, so the upstream delta changed no object
+        code.
+      manifest_hashes_correct_in_5_2_23: true
+    - manifest_key: acfe
+      cmake_family: armclang
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      abi_cflags: '-fshort-wchar -fshort-enums'
+      abi_attributes:
+        Tag_ABI_PCS_wchar_t: 2
+        Tag_ABI_enum_size: smallest_container
+      archives_introduced_in:
+        - ddb88640e61660edc65ebc956b65dcbd6804d2e6
+        - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+        - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+      byte_stability_note: >-
+        All 55 object members of a sampled acfe HAL archive differ across
+        ddb88640e61660edc65ebc956b65dcbd6804d2e6, and armar emits zeroed member
+        timestamps, so that commit is a genuine object-code rebuild rather than
+        archive-metadata churn.
+      manifest_hashes_correct_in_5_2_23: false
+      correction_published_in: "5.2.24"
+      correction: >-
+        22 acfe sha256 records in the artifact manifest still described the
+        pre-ABI-fix archives replaced by ddb88640e61660edc65ebc956b65dcbd6804d2e6.
+        5.2.24 recorded the sha256 of the archives actually shipped, with no
+        archive bytes changed. 5.2.25 inherits the corrected records unchanged.
+      forensic_report: docs/acfe-artifact-manifest-forensics.md
+
+external_dependencies:
+  - name: nsx-ethos-u-driver
+    role: >-
+      Pristine upstream Arm ethos-u-core-driver plus the NSX wait-semaphore,
+      cache, and remap glue. nsx-npu links it as nsx::ethos_u_driver and
+      contributes only atomiq110 power/IRQ/performance-mode glue on top.
+    in_this_distribution: false
+    resolution: registry
+    repository: AmbiqAI/nsx-ethos-u-driver
+    pinned_release: nsx-ethos-u-driver-v0.1.2
+    resolved_by: >-
+      neuralspotx at workspace-assembly time, from
+      src/neuralspotx/data/registry.lock.yaml. It is deliberately not vendored
+      or promoted here, so this distribution neither ships nor qualifies its
+      bytes.
+    linkage_contract: >-
+      Consumers must link nsx::ethos_u_driver PUBLIC. The weak-symbol timebase
+      overrides are shipped through INTERFACE_SOURCES rather than as archive
+      members, so PRIVATE linkage silently strips them and restores upstream's
+      unbounded inference wait.
+
+qualification:
+  status: qualified_with_exclusions
+  report: release/qualification-5.2.25.md
+  inherits_from: release/qualification-5.2.24.md
+  scope:
+    socs:
+      - apollo2
+      - apollo3
+      - apollo3p
+      - apollo4l
+      - apollo4p
+      - apollo330P
+      - apollo510
+      - apollo510b
+      - apollo510L
+    boards:
+      - apollo2_evb
+      - apollo3_evb
+      - apollo3_evb_cygnus
+      - apollo3p_evb
+      - apollo3p_evb_cygnus
+      - apollo4l_evb
+      - apollo4l_blue_evb
+      - apollo4p_evb
+      - apollo4p_blue_kbr_evb
+      - apollo4p_blue_kxr_evb
+      - apollo4p_evb_disp_shield_rev2
+      - apollo330mP_evb
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+  toolchains:
+    - cmake_family: gcc
+      artifact_manifest_key: gcc
+      artifact_status: built
+      representative_link_smoke: passed
+    - cmake_family: atfe
+      artifact_manifest_key: atfe
+      artifact_status: built
+      representative_link_smoke: passed
+    - cmake_family: armclang
+      artifact_manifest_key: acfe
+      artifact_status: built
+      representative_link_smoke: passed
+  hardware_status: limited_feature_evidence_only
+
+exclusions:
+  descriptor_only:
+    socs:
+      - apollo5b
+    boards:
+      - apollo5b_evb
+  experimental:
+    socs:
+      - atomiq110
+    boards:
+      - atomiq110_fpga_turbo
+    experimental_note: >-
+      atomiq110 is FPGA bring-up on atomiq110_fpga_turbo and stays outside
+      qualified archive scope for 5.2.25. Its descriptors, promoted archives,
+      and the nsx-npu module are present and buildable, and parts of the
+      platform have been exercised on the FPGA, but no silicon exists, the FPGA
+      clock tree is not yet characterised, and no link-smoke or artifact
+      qualification claim is made for it. It leaves experimental status no
+      earlier than silicon qualification.
+
+known_deviations:
+  - id: atomiq110-payload-identity
+    description: >-
+      The atomiq110 HAL/BSP archives were regenerated from the
+      npu-drop-2026.07.09 payload rather than from the stable-2026.06.18 /
+      caaf5af86087881647f56c70646c748d40c86e23 snapshot that `upstream:` and the
+      artifact manifest's `sdk:` block declare for this distribution. The
+      distribution therefore carries two upstream payload identities. Every
+      qualified SoC and board is on the declared snapshot; only experimental
+      atomiq110 is on the npu drop, and the divergence is recorded per artifact
+      in the artifact manifest rather than left to be inferred.
+    introduced_in: 960624ee18afd9fbf5db957371c92c828bf6a721
+    paths:
+      - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+      - modules/nsx-ambiqsuite/sdk/lib/gcc/atomiq110
+      - modules/nsx-ambiqsuite/sdk/lib/atfe/atomiq110
+      - modules/nsx-ambiqsuite/sdk/lib/acfe/atomiq110
+  - id: atomiq110-internal-marker-sanitation
+    description: >-
+      The atomiq110 headers on this branch diverge from the npu-drop-2026.07.09
+      payload by a one-time, deletion-only sanitation of vendor
+      `#### INTERNAL ####` engineering content: 988 lines removed across 23
+      files, zero lines added or modified. npu-drop-2026.07.09 is a raw
+      engineering drop that upstream's release tooling had not stripped. The
+      scrub is tool-reproducible (sdk-intake/internal_markers.py), removed only
+      marker lines, marker-block bodies with no live preprocessor tokens,
+      `#if 0 ... #endif` regions inside a fence, and blank lines at a deletion
+      seam, and kept verbatim any block still holding a live declaration. No
+      symbol visible to the compiler that built the prebuilt archives changed
+      and no artifact hash changed. modules/nsx-ambiqsuite/sdk is
+      `direct_edit: forbidden`, so this is recorded as a scoped, reviewed
+      ownership exception; future payloads are sanitized while staged, gated by
+      assert_no_new_internal_markers against the committed baseline.
+    issue: 52
+    introduced_in: 835d80b01d58c14f264ee18d7e74a219c0731ef8
+    files_changed: 23
+    lines_removed: 988
+    lines_added: 0
+    artifact_hashes_changed: false
+    ownership_exception: atomiq110-internal-marker-sanitation
+    paths:
+      - release/source-ownership.yaml
+      - sdk-intake/internal_markers.py
+      - sdk-intake/internal-marker-baseline.yaml
+      - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+
+release_evidence:
+  - CHANGELOG.md
+  - docs/versioning.md
+  - docs/source-ownership.md
+  - docs/acfe-artifact-manifest-forensics.md
+  - docs/release-process.md
+  - release/source-ownership.yaml
+  - release/qualification-5.2.25.md
+  - release/nsx-ambiq-sdk-5.2.24.yaml
+  - release/qualification-5.2.24.md
+  - release/nsx-ambiq-sdk-5.2.23.yaml
+  - release/qualification-5.2.23.md
+  - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  - sdk-intake/internal-marker-baseline.yaml
+  - tests/test_release_metadata.py
+  - tests/test_artifact_baseline.py
+  - tests/test_internal_markers.py

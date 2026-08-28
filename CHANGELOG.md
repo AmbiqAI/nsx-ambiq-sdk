@@ -2,6 +2,45 @@
 
 All notable distribution changes are recorded here.
 
+## 5.2.25 - 2026-08-27
+
+- Adds the **experimental** `atomiq110` platform (Cortex-M55 + Arm Ethos-U85 on
+  the `atomiq110_fpga_turbo` FPGA board): SoC and board descriptors, promoted
+  HAL/BSP archives for all three toolchain trains, startup and linker scripts,
+  and the `nsx-power`/`nsx-core` atomiq110 backends.
+- Adds the `nsx-npu` module — Ethos-U85 power-domain sequencing, IRQ wiring,
+  and performance-mode selection on top of the pristine upstream driver.
+- Bounds the Ethos-U85 inference wait. `nsx-npu` supplies the STIMER timebase
+  hooks and `cmake/socs/atomiq110.cmake` seeds
+  `NSX_ETHOSU_INFERENCE_TIMEOUT_MS=5000`, so a wedged NPU returns
+  `ETHOSU_JOB_RESULT_TIMEOUT` and takes the soft-reset recovery path instead of
+  hanging the caller forever. A timebase that fails to arm is logged and
+  readable through `nsx_npu_timebase_status()`.
+- `atomiq110` and `atomiq110_fpga_turbo` remain **outside the qualified archive
+  scope**: FPGA bring-up only, no silicon, and an uncharacterised FPGA clock
+  tree. Every qualified SoC and board is unchanged from `5.2.24`.
+- **No promoted Apollo archive bytes change.** The only archive-level change is
+  additive: six new atomiq110 archives. Every qualified target still comes from
+  AmbiqSuite snapshot `stable-2026.06.18`, source commit
+  `caaf5af86087881647f56c70646c748d40c86e23`. The atomiq110 archives come from
+  the separate `npu-drop-2026.07.09` payload, recorded per artifact in the
+  artifact manifest and as a `known_deviations` entry.
+- `nsx-ethos-u-driver` is **deliberately not part of this distribution**. It is
+  registry-resolved from `AmbiqAI/nsx-ethos-u-driver` at
+  `nsx-ethos-u-driver-v0.1.2` by neuralspotx at workspace-assembly time.
+  Consumers must link `nsx::ethos_u_driver` PUBLIC.
+- Records a one-time, deletion-only INTERNAL-marker sanitation of the atomiq110
+  headers (issue #52): 988 lines removed across 23 files, zero added or
+  modified, no artifact hash changed. `modules/nsx-ambiqsuite/sdk` is
+  `direct_edit: forbidden`, so it is carried as a scoped ownership exception in
+  `release/source-ownership.yaml`; future payloads are sanitized while staged.
+- Dedupes the atomiq110 XTAL/VCOMP shutdown sequence (#53), the power-profile
+  printers (#54), and the Apollo5-class platform backend including DCU unlock.
+- Bumps the BLE Device Information Service default firmware revision to
+  `5.2.25`.
+- `5.2.23` and `5.2.24` remain published and immutable; their qualification
+  reports are left exactly as released.
+
 ## 5.2.24 - 2026-08-03
 
 - Corrects the promoted artifact manifest, which recorded superseded `sha256`

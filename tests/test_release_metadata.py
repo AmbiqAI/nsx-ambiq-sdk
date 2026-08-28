@@ -11,8 +11,14 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.24.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.23.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.25.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.24.yaml")
+# Oldest first. Every published version stays describable from any later
+# checkout, so the chain is walked rather than only the immediate predecessor.
+RELEASE_CHAIN = (
+    ("5.2.23", Path("release/nsx-ambiq-sdk-5.2.23.yaml"), "2eba24ad776096784764cbe91c8176b434dd3bdf"),
+    ("5.2.24", Path("release/nsx-ambiq-sdk-5.2.24.yaml"), "a9f4ec25a162f6f3700623feb691423bb5a51132"),
+)
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
 OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
@@ -27,7 +33,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.24"
+    assert root_version == "5.2.25"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -123,23 +129,33 @@ def test_release_evidence_exists(repo_root: Path) -> None:
 
 
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
-    """A corrected release must never erase the record it corrects.
+    """A new release must never erase the records it builds on.
 
-    `5.2.23` shipped a stale artifact manifest; `5.2.24` fixes it. Both release
-    manifests and both qualification reports stay in the tree so the published,
-    immutable `v5.2.23` remains describable from any later checkout.
+    `5.2.23` shipped a stale artifact manifest; `5.2.24` corrected it; `5.2.25`
+    adds experimental atomiq110 on top. Every release manifest and qualification
+    report stays in the tree so each published, immutable tag remains
+    describable from any later checkout.
     """
-    assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
-    superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.23"
-    assert (repo_root / superseded["qualification"]["report"]).is_file()
+    for version, manifest_path, commit in RELEASE_CHAIN:
+        assert (repo_root / manifest_path).is_file(), manifest_path
+        record = load_yaml(repo_root, manifest_path)
+        assert record["distribution"]["version"] == version
+        assert (repo_root / record["qualification"]["report"]).is_file()
+        assert record["distribution"]["git"]["commit_resolution"]["source"] == "immutable_tag_target"
+        assert commit == commit.lower() and len(commit) == 40
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
+    superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "2eba24ad776096784764cbe91c8176b434dd3bdf"
+    assert supersedes["commit"] == dict((v, c) for v, _, c in RELEASE_CHAIN)[supersedes["version"]]
     assert supersedes["reason"].strip()
+    # 5.2.25 adds content; it does not restate or withdraw what 5.2.24 published.
+    assert supersedes["relationship"] == "forward_release"
+    assert release["qualification"]["inherits_from"] == str(SUPERSEDED_RELEASE_MANIFEST.as_posix()).replace(
+        "nsx-ambiq-sdk-", "qualification-"
+    ).replace(".yaml", ".md")
 
 
 def test_payload_provenance_matches_the_promoted_artifact_manifest(repo_root: Path) -> None:
@@ -247,3 +263,118 @@ def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) 
         for path in entry.get("paths", [])
     ]
     assert all((repo_root / path).exists() for path in concrete_paths)
+
+
+def test_atomiq110_is_experimental_and_outside_qualified_scope(repo_root: Path) -> None:
+    """atomiq110 ships buildable but unqualified, and must say so.
+
+    The platform is FPGA bring-up with no silicon and an uncharacterised clock
+    tree. Its descriptors and archives are present, which is exactly why the
+    exclusion has to be explicit rather than inferred from their absence.
+    """
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    experimental = release["exclusions"]["experimental"]
+
+    assert "atomiq110" in experimental["socs"]
+    assert "atomiq110_fpga_turbo" in experimental["boards"]
+    assert experimental["experimental_note"].strip()
+
+    scope = release["qualification"]["scope"]
+    assert "atomiq110" not in scope["socs"]
+    assert "atomiq110_fpga_turbo" not in scope["boards"]
+
+    # Present in the tree: the exclusion is a scope decision, not a missing build.
+    assert (repo_root / "cmake" / "socs" / "atomiq110.cmake").is_file()
+    assert (repo_root / "boards" / "atomiq110_fpga_turbo" / "board.cmake").is_file()
+
+    report = (repo_root / release["qualification"]["report"]).read_text(encoding="utf-8")
+    assert "experimental" in report.lower()
+
+    # The qualification report must not quietly promote FPGA bring-up results
+    # into hardware evidence for this release.
+    assert "no new hardware evidence is claimed" in report.lower()
+
+
+def test_external_driver_dependency_is_recorded_with_its_pinned_release(repo_root: Path) -> None:
+    """nsx-ethos-u-driver is required by nsx-npu but is not in this distribution.
+
+    It is registry-resolved by neuralspotx, so the record has to name the pin it
+    is resolved at; a distribution that neither ships nor names it would leave
+    the Ethos-U85 build's provenance undocumented.
+    """
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    driver = {entry["name"]: entry for entry in release["external_dependencies"]}["nsx-ethos-u-driver"]
+
+    assert driver["in_this_distribution"] is False
+    assert driver["resolution"] == "registry"
+    assert driver["repository"] == "AmbiqAI/nsx-ethos-u-driver"
+    assert driver["pinned_release"] == "nsx-ethos-u-driver-v0.1.2"
+    assert driver["linkage_contract"].strip()
+
+    # Not vendored: no promoted or committed copy of the driver may exist here.
+    assert not (repo_root / "modules" / "nsx-ethos-u-driver").exists()
+
+    npu_manifest = yaml.safe_load(
+        (repo_root / "modules" / "nsx-npu" / "nsx-module.yaml").read_text(encoding="utf-8")
+    )
+    assert "nsx-ethos-u-driver" in npu_manifest["depends"]["required"]
+
+
+def test_internal_marker_deviation_agrees_with_ownership_record_and_git(repo_root: Path) -> None:
+    """The recorded sanitation divergence must match the ownership entry and git.
+
+    The release manifest, `release/source-ownership.yaml`, and the actual commit
+    each state the same one-time deletion-only scrub. Three independent records
+    of one event is how a stale one gets caught, so they are cross-checked
+    rather than trusted.
+
+    The git half is skipped when the checkout has no usable history.
+    """
+    import subprocess
+
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    deviation = {item["id"]: item for item in release["known_deviations"]}["atomiq110-internal-marker-sanitation"]
+
+    assert deviation["lines_added"] == 0, "the exception is deletion-only"
+    assert deviation["artifact_hashes_changed"] is False
+
+    inventory = load_yaml(repo_root, OWNERSHIP_INVENTORY)
+    provider = {entry["id"]: entry for entry in inventory["entries"]}["generated-ambiqsuite-provider"]
+    assert provider["direct_edit"] == "forbidden"
+    exception = {item["id"]: item for item in provider["recorded_exceptions"]}[deviation["ownership_exception"]]
+    assert exception["issue"] == deviation["issue"]
+    assert exception["scope"] in deviation["paths"]
+    assert f"{deviation['lines_removed']} lines removed across {deviation['files_changed']} files" in " ".join(
+        exception["properties"]
+    )
+
+    probe = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--is-shallow-repository"],
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode != 0 or probe.stdout.strip() != "false":
+        pytest.skip("git history unavailable or shallow")
+
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "show", "--numstat", "--format=", deviation["introduced_in"], "--", exception["scope"]],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        pytest.skip("git history unavailable for the sanitation commit")
+
+    added = removed = files = 0
+    for line in result.stdout.strip().splitlines():
+        columns = line.split("\t")
+        if len(columns) != 3 or columns[0] == "-":
+            continue
+        added += int(columns[0])
+        removed += int(columns[1])
+        files += 1
+
+    assert (files, added, removed) == (
+        deviation["files_changed"],
+        deviation["lines_added"],
+        deviation["lines_removed"],
+    ), "the recorded sanitation stats disagree with the commit they name"
