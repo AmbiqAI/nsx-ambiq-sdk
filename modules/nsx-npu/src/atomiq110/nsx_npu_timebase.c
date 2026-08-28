@@ -95,6 +95,27 @@
 // LFRC is nominal-only (the register map itself says "uncalibrated").
 #define NSX_NPU_TB_LFRC_HZ (1000U)
 
+//
+// HFRC_16MHZ does not fit the "divider off the CLKMGR-reported HFRC root"
+// model above: 500 MHz / 16 MHz = 31.25, non-integral, so there is no clean
+// divisor to express it as. Unlike the other taps, atomiq110.h names this one
+// with an absolute rate rather than a ratio
+// (STIMER_STCFG_CLKSEL_HFRC_16MHZ = 11, "16 MHz from the HFRC clock
+// divider"), so treat it the same way LFRC above is treated: a register-map-
+// cited literal rather than a derived value.
+//
+// This is a reasonable literal to trust, not a guess: the tap is named for
+// its rate, and while the SVD-derived comments elsewhere in this map are
+// occasionally off (tap 4 says 8162 Hz where 32768/4 = 8192, a transposed
+// digit this file already silently corrects via the divisor idiom), a
+// transposition typo is far likelier on an odd number like that than on a
+// round figure attached to a tap literally named HFRC_16MHZ. It also only
+// feeds a watchdog-style deadline, not a measurement, so a few percent of
+// error here would loosen or tighten a timeout, not silently mis-scale a
+// reported result.
+//
+#define NSX_NPU_TB_HFRC_16MHZ_HZ (16000000U)
+
 // Bounds on the liveness-probe busy wait, in microseconds. The probe waits for
 // roughly two ticks of the detected rate; the floor keeps fast taps from
 // probing a sub-tick interval, the ceiling keeps a misdetected slow tap from
@@ -190,6 +211,9 @@ static uint32_t nsx_npu_tb_source_hz(uint32_t ui32ClkSel)
 
         case STIMER_STCFG_CLKSEL_LFRC_1KHZ:
             return NSX_NPU_TB_LFRC_HZ;
+
+        case STIMER_STCFG_CLKSEL_HFRC_16MHZ:
+            return NSX_NPU_TB_HFRC_16MHZ_HZ;
 
         default:
             return 0U;
@@ -298,14 +322,22 @@ uint64_t nsx_ethos_u_ticks(void)
     }
 
     //
-    // The extension state is shared with any other caller, so the
-    // read-compare-update sequence runs with interrupts masked. This is a
-    // handful of instructions with no loop and no wait, which keeps the hook
-    // callable from any context, as the contract requires.
+    // am_hal_stimer_counter_get() is an uninvasive read of a free-running
+    // peripheral register with no shared software state of its own, so it
+    // does not need to be inside the critical section below -- only the
+    // compare-and-update against g_nsx_npu_tb_last_raw / g_nsx_npu_tb_high
+    // does, because that state is shared with any other caller of this hook.
+    // Reading the counter first keeps PRIMASK masked for only the handful of
+    // instructions that touch that shared state, instead of also covering the
+    // register access, which matters here: this hook is polled every
+    // iteration of the driver's bounded wait with no WFI/WFE by default, so a
+    // critical section here is on the hot path for the whole span of the
+    // wait, not a one-off cost.
     //
+    const uint32_t ui32Raw = am_hal_stimer_counter_get();
+
     const uint32_t ui32Level = am_hal_interrupt_master_disable();
 
-    const uint32_t ui32Raw = am_hal_stimer_counter_get();
     if (ui32Raw < g_nsx_npu_tb_last_raw)
     {
         g_nsx_npu_tb_high += (UINT64_C(1) << 32);
