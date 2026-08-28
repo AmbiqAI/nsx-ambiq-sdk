@@ -53,10 +53,23 @@ jobs:
       ARM_GNU_VERSION: 14.3.rel1
       ARM_GNU_MD5: 17272b6c72d476c82b692a06ada0636c
       GCC_ROOT: /opt/toolchains/gcc
+      # nsx-ethos-u-driver is registry-resolved at build time and not vendored
+      # here. Check it out so the cross-compile covers nsx_npu.c and the real
+      # nsx_ethos_u.h contract, not just the generated two-prototype stub. Keep
+      # ETHOS_U_DRIVER_REF in step with the tag the neuralspotx registry pins.
+      ETHOS_U_DRIVER_REPO: AmbiqAI/nsx-ethos-u-driver
+      ETHOS_U_DRIVER_REF: nsx-ethos-u-driver-v0.1.2
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout nsx-ethos-u-driver
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ETHOS_U_DRIVER_REPO }}
+          ref: ${{ env.ETHOS_U_DRIVER_REF }}
+          path: nsx-ethos-u-driver
 
       - name: Cache Arm GNU Toolchain
         id: toolchain-cache
@@ -91,4 +104,6 @@ jobs:
       - name: Cross-compile nsx-npu
         env:
           NSX_REQUIRE_ARM_GCC: "1"
+          NSX_REQUIRE_ETHOS_U_DRIVER: "1"
+          NSX_ETHOS_U_DRIVER_ROOT: ${{ github.workspace }}/nsx-ethos-u-driver
         run: uv run --group ci python -m pytest tests/test_npu_cross_compile.py -v

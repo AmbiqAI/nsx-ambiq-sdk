@@ -146,6 +146,9 @@ uint32_t nsx_npu_deinit(void)
     // clear state before the power-disable call rather than after it.
     nsx_ethos_u_deinit();
     ethosu_deinit(&g_nsx_npu_driver);
+    // Disarm the timebase so a later nsx_npu_init() re-validates STIMER instead
+    // of trusting the cached ARMED status; STIMER itself is left running.
+    nsx_npu_timebase_deinit();
     g_nsx_npu_initialized = false;
 
     if (am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)

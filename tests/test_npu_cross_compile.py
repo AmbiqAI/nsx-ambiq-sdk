@@ -6,9 +6,13 @@ Apollo boards -- so without this test nothing in CI compiles
 `modules/nsx-npu/src/**`. It delegates to `tools/nsx_npu_compile_check.py`,
 which uses arm-none-eabi-gcc directly with the SoC facts' flags.
 
-Locally the test skips when no toolchain is installed. The `arm-compile` job
-in `.github/workflows/ci.yml` sets `NSX_REQUIRE_ARM_GCC=1`, which turns that
-skip into a failure so the coverage cannot silently lapse in CI.
+Locally the test skips when no toolchain is installed, and covers only
+`nsx_npu_timebase.c` (against a generated stub header) unless
+`NSX_ETHOS_U_DRIVER_ROOT` points at an `nsx-ethos-u-driver` checkout. The
+`arm-compile` job in `.github/workflows/ci.yml` sets `NSX_REQUIRE_ARM_GCC=1`
+and `NSX_REQUIRE_ETHOS_U_DRIVER=1`, which turn both the missing-toolchain skip
+and a missing driver checkout into failures so neither layer of coverage can
+silently lapse in CI.
 """
 
 from __future__ import annotations
@@ -43,8 +47,19 @@ def test_soc_facts_expose_compiler_flags(repo_root: Path) -> None:
     assert "PART_atomiq110" in facts["definitions"]
 
 
+def _driver_root_or_skip() -> str | None:
+    driver_root = os.environ.get("NSX_ETHOS_U_DRIVER_ROOT")
+    if not driver_root and os.environ.get("NSX_REQUIRE_ETHOS_U_DRIVER") == "1":
+        raise AssertionError(
+            "NSX_ETHOS_U_DRIVER_ROOT unset; NSX_REQUIRE_ETHOS_U_DRIVER=1 forbids skipping "
+            "the nsx_npu.c / real-header compile"
+        )
+    return driver_root
+
+
 def test_nsx_npu_sources_cross_compile(repo_root: Path, tmp_path: Path) -> None:
     gcc = _gcc_or_skip()
+    driver_root = _driver_root_or_skip()
     command = [
         sys.executable,
         str(repo_root / "tools" / "nsx_npu_compile_check.py"),
@@ -55,11 +70,13 @@ def test_nsx_npu_sources_cross_compile(repo_root: Path, tmp_path: Path) -> None:
         "--build-root",
         str(tmp_path / "npu-compile-check"),
     ]
-    driver_root = os.environ.get("NSX_ETHOS_U_DRIVER_ROOT")
     if driver_root:
         command += ["--ethos-u-driver-root", driver_root]
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "ok   modules/nsx-npu/src/atomiq110/nsx_npu_timebase.c" in result.stdout
     if driver_root:
+        # nsx_npu.c only compiles in the real-driver-header pass; assert it was
+        # actually exercised rather than the tool having silently skipped it.
+        assert "[real driver headers] skipped" not in result.stdout
         assert "ok   modules/nsx-npu/src/nsx_npu.c" in result.stdout

@@ -20,15 +20,19 @@
  *  - `nsx_ethos_u_ticks_per_ms()` always reports 1000 once armed, i.e. the
  *    virtual tick is 1 us.
  *  - `nsx_ethos_u_ticks()` accumulates the raw counter's advance since the
- *    previous call, scaled by the rate of the tap STIMER is on *at that call*,
- *    into a 64-bit microsecond total.
+ *    previous call, converted at the rate of the tap STIMER is on, into a
+ *    64-bit microsecond total. An interval across which the tap changed, or one
+ *    spent on a tap whose rate cannot be derived (NOCLK, the CTIMER feeds), is
+ *    not converted: it is dropped and the reference re-anchored. The virtual
+ *    clock can therefore lag real time by up to one poll interval per tap
+ *    change, but it never runs ahead of it.
  *
- * Scaling per call, from the live CLKSEL, is what makes the deadline immune to
- * the application reconfiguring STIMER: whether it moves the tap before
- * `nsx_npu_init()`, between inferences, or in the middle of one, each raw delta
- * is converted at the rate that was in force while it elapsed, and the span the
- * driver computed from `ticks_per_ms()` stays valid. A cached rate cannot give
- * that guarantee -- a tap change from 488 kHz to 7.8 MHz against a cached
+ * Converting per call, from the live CLKSEL, is what makes the deadline immune
+ * to the application reconfiguring STIMER: whether it moves the tap before
+ * `nsx_npu_init()`, between inferences, or in the middle of one, every interval
+ * that is converted is converted at the one rate that governed it, and the span
+ * the driver computed from `ticks_per_ms()` stays valid. A cached rate cannot
+ * give that guarantee -- a tap change from 488 kHz to 7.8 MHz against a cached
  * 488 kHz over-reports elapsed time 16x and aborts a healthy inference.
  *
  * The other two hazards a shared counter presents are handled in the delta
@@ -401,6 +405,29 @@ nsx_npu_timebase_status_e nsx_npu_timebase_status(void)
     return g_nsx_npu_tb_status;
 }
 
+void nsx_npu_timebase_deinit(void)
+{
+    //
+    // Drop back to the pre-init state so the next nsx_npu_timebase_init() re-runs
+    // rate derivation and the liveness probe instead of taking the ARMED
+    // short-circuit. nsx_npu_deinit() leaves STIMER running, so between here and
+    // the next init the application may retune or stop it; a stale ARMED status
+    // would otherwise keep nsx_ethos_u_ticks() converting against a rate that no
+    // longer applies and nsx_npu_timebase_status() asserting a timebase that is
+    // no longer valid.
+    //
+    const uint32_t ui32Level = am_hal_interrupt_master_disable();
+
+    g_nsx_npu_tb_status      = NSX_NPU_TIMEBASE_NOT_INITIALIZED;
+    g_nsx_npu_tb_last_raw    = 0U;
+    g_nsx_npu_tb_virtual     = 0U;
+    g_nsx_npu_tb_rem         = 0U;
+    g_nsx_npu_tb_rate_clksel = STIMER_STCFG_CLKSEL_NOCLK;
+    g_nsx_npu_tb_rate_hz     = 0U;
+
+    am_hal_interrupt_master_set(ui32Level);
+}
+
 //*****************************************************************************
 //
 // Strong overrides of the nsx-ethos-u-driver weak timebase hooks
@@ -495,22 +522,19 @@ uint64_t nsx_ethos_u_ticks(void)
 
     const uint32_t ui32Level = am_hal_interrupt_master_disable();
 
-    if ((ui32ClkSel != g_nsx_npu_tb_rate_clksel) && (ui32NewHz != 0U))
-    {
-        g_nsx_npu_tb_rate_clksel = ui32ClkSel;
-        g_nsx_npu_tb_rate_hz     = ui32NewHz;
-        g_nsx_npu_tb_rem         = 0U; // The remainder is denominated in the old rate.
-    }
     //
-    // If the application has parked STIMER on a tap with no derivable rate
-    // (NOCLK, or a CTIMER feed) the pair above is left alone and this call
-    // credits nothing: the virtual clock holds still until a usable tap comes
-    // back. Holding still can only delay a timeout, whereas guessing a rate
-    // could fire one early.
+    // A raw delta may only be converted when one identified rate governed the
+    // whole [last_raw, raw] interval: the tap live now must be the tap that was
+    // live at the previous call, and its rate must be derivable.
+    // g_nsx_npu_tb_rate_clksel tracks the tap seen at the previous call
+    // whatever it was -- including NOCLK and the CTIMER feeds -- so a tap that
+    // changed and changed back is still recognised as a gap rather than
+    // crediting the away-time at the returning tap's rate.
     //
-    const bool bRateKnown = (ui32ClkSel == g_nsx_npu_tb_rate_clksel);
+    const bool bStableRate =
+        (ui32ClkSel == g_nsx_npu_tb_rate_clksel) && (g_nsx_npu_tb_rate_hz != 0U);
 
-    if (bRateKnown)
+    if (bStableRate)
     {
         bool bAdvance;
         const uint32_t ui32Hz      = g_nsx_npu_tb_rate_hz;
@@ -528,6 +552,31 @@ uint64_t nsx_ethos_u_ticks(void)
 
             g_nsx_npu_tb_virtual += ui64Num / ui32Hz;
             g_nsx_npu_tb_rem      = (uint32_t)(ui64Num % ui32Hz);
+            g_nsx_npu_tb_last_raw = ui32Raw;
+        }
+    }
+    else
+    {
+        //
+        // The tap changed since the previous call, or it is one whose rate this
+        // module cannot derive (NOCLK / CTIMER-fed). The ticks since the last
+        // call span an unknown mix of rates -- or a rate this module does not
+        // know at all -- so credit nothing and just re-anchor. The unaccounted
+        // span is a single poll interval, which can only push the deadline
+        // later, never earlier. (Crediting it at max(old, new) Hz would keep a
+        // conservative lower bound instead of dropping it, but the wait loop
+        // polls far faster than the deadline's resolution, so one interval of
+        // virtual time is not worth the extra state.)
+        //
+        bool bAdvance;
+        const uint32_t ui32WindowHz = (ui32NewHz != 0U) ? ui32NewHz : NSX_NPU_TB_VIRTUAL_HZ;
+        (void)nsx_npu_tb_raw_elapsed(ui32Raw, g_nsx_npu_tb_last_raw, ui32WindowHz, &bAdvance);
+
+        g_nsx_npu_tb_rate_clksel = ui32ClkSel;
+        g_nsx_npu_tb_rate_hz     = ui32NewHz; // 0 when the tap has no derivable rate
+        g_nsx_npu_tb_rem         = 0U;
+        if (bAdvance)
+        {
             g_nsx_npu_tb_last_raw = ui32Raw;
         }
     }

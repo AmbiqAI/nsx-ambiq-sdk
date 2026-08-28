@@ -30,3 +30,7 @@ artifacts/ambiqsuite/r[0-9]*/
 # Interrupted atomic provider promotions (exact generated sibling names only).
 /modules/nsx-ambiqsuite/sdk.promote-tmp/
 /modules/nsx-ambiqsuite/sdk.promote-backup/
+
+# Sibling nsx-ethos-u-driver checkout used by the arm-compile CI job (and by
+# anyone reproducing it locally); not vendored, resolved from the registry.
+/nsx-ethos-u-driver/
