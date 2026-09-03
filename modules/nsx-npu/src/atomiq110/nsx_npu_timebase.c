@@ -57,6 +57,22 @@
  *    to upstream's unbounded behaviour. `nsx_npu_init()` logs when that
  *    happens, and `nsx_npu_timebase_status()` exposes why.
  *
+ * TODO(atomiq110 silicon bring-up): CLKMGR's HFRC query on the
+ * atomiq110_fpga_turbo image reliably reports status=SUCCESS/hz=0 (the clock
+ * exists but is not calibrated). Falling back directly to the HAL's
+ * silicon-nominal HFRC estimate overestimates the real tap rate on this
+ * image by ~10x -- correct in direction (elapsed time under-reported, timeout
+ * fires late rather than early, see above) but needlessly imprecise.
+ * `nsx_npu_tb_fpga_calibrate_hfrc_root_hz()` replaces that guess, once at
+ * init, with a runtime measurement of the tap against the CPU cycle counter,
+ * gated entirely behind the upstream `ATOMIQ11X_FPGA` macro (see that
+ * function's own comment). It is FPGA-only bring-up plumbing: once real
+ * atomiq110 silicon is available and CLKMGR's HFRC report is verified
+ * trustworthy there, re-check whether this self-calibration path is still
+ * needed and remove it (and this note) if not -- `ATOMIQ11X_FPGA` will not be
+ * defined on a silicon build, so the code already goes dead on its own, but
+ * the dead branch and its test coverage should not linger indefinitely.
+ *
  * @copyright Copyright (c) 2026, Ambiq Micro, Inc.
  */
 
@@ -116,6 +132,19 @@
 #define NSX_NPU_TB_PROBE_US_MIN (100U)
 #define NSX_NPU_TB_PROBE_US_MAX (8000U)
 
+#ifdef ATOMIQ11X_FPGA
+//
+// Calibration window for nsx_npu_tb_fpga_calibrate_hfrc_root_hz(), in
+// microseconds. Runs once per boot from nsx_npu_timebase_init() only (never
+// from the per-tick nsx_npu_tb_source_hz() path), so a busy wait here is a
+// one-time init cost, not a recurring one. 10ms gives a comfortably
+// measurable STIMER delta even on the slowest HFRC-derived tap this module
+// recognises (HFRC_7_8125MHZ / 64 ~= 122 kHz at the silicon-nominal root, and
+// considerably slower than that on this FPGA image).
+//
+#define NSX_NPU_TB_FPGA_CAL_WINDOW_US (10000U)
+#endif
+
 //
 // A raw read that lands *behind* the last recorded value by no more than this
 // many milliseconds' worth of ticks is treated as a stale concurrent read (see
@@ -154,6 +183,22 @@ static uint32_t g_nsx_npu_tb_rem      = 0U; // Conversion remainder, in (raw tic
 //
 static uint32_t g_nsx_npu_tb_rate_clksel = STIMER_STCFG_CLKSEL_NOCLK;
 static uint32_t g_nsx_npu_tb_rate_hz     = 0U;
+
+#ifdef ATOMIQ11X_FPGA
+//
+// Cache for nsx_npu_tb_fpga_calibrate_hfrc_root_hz(): populated at most once,
+// by nsx_npu_timebase_init(), and only read afterwards (including by the
+// per-tick nsx_npu_tb_source_hz() path via nsx_npu_tb_hfrc_root_hz()) so that
+// the one-time calibration busy-wait never repeats. 0 means "not calibrated
+// yet" -- either CLKMGR's HFRC report has been usable so far, or the tap live
+// at the last init attempt wasn't HFRC-derived (see
+// nsx_npu_tb_fpga_calibrate_hfrc_root_hz()). Deliberately not reset by
+// nsx_npu_timebase_deinit(): the FPGA's core clock does not change within a
+// boot, so a calibration already obtained stays valid across a deinit/reinit
+// cycle and re-measuring would only re-pay the busy-wait for the same answer.
+//
+static uint32_t g_nsx_npu_tb_fpga_hfrc_root_hz = 0U;
+#endif
 
 //*****************************************************************************
 //
@@ -205,12 +250,18 @@ static uint32_t nsx_npu_tb_clk_hz(am_hal_clkmgr_clock_id_e eClockId, uint32_t ui
 // Accuracy caveat for atomiq110_fpga_turbo. The FPGA image is far slower than
 // silicon -- cmake/socs/facts/atomiq110.cmake records the turbo core at 25 MHz
 // -- while am_hal_clkgen.h's ATOMIQ11X_FPGA block still carries the silicon
-// numbers under a "TODO: check actual frequencies on FPGA". Hence the CLKMGR
-// query: if CLKMGR knows the real rate we scale correctly, and if it does not,
-// the HAL nominal makes us *over*-estimate the tick rate, so elapsed time is
-// under-reported and the deadline fires late rather than early. Late is the
-// safe direction -- the timeout still converts an infinite hang into a bounded
-// failure, and a long-but-healthy inference is never aborted spuriously.
+// numbers under a "TODO: check actual frequencies on FPGA". CLKMGR's HFRC
+// query on this FPGA image reliably reports status=SUCCESS/hz=0 (the clock
+// exists but is not calibrated), so the HFRC root-Hz lookup below
+// (nsx_npu_tb_hfrc_root_hz()) does not fall back straight to the HAL's
+// silicon-nominal HFRC macro when that happens: it uses a once-per-boot
+// self-calibration on the FPGA instead (nsx_npu_tb_fpga_calibrate_hfrc_root_hz(),
+// TODO note atop this file). The silicon-nominal macro remains the
+// last-resort fallback if calibration itself cannot get a reading, and is
+// still safe in that case -- an over-estimated tick rate under-reports
+// elapsed time, so the deadline fires late rather than early, converting an
+// infinite hang into a bounded failure without ever aborting a
+// long-but-healthy inference early.
 //
 typedef struct
 {
@@ -249,6 +300,120 @@ static uint32_t nsx_npu_tb_scaled_hz(const nsx_npu_tb_tap_t *psTaps, uint32_t ui
     return 0U;
 }
 
+#ifdef ATOMIQ11X_FPGA
+//
+// One-shot HFRC root calibration for atomiq110_fpga_turbo. Called only from
+// nsx_npu_timebase_init() (see the TODO note atop this file for why this
+// exists and when it should go away) -- never from the per-tick
+// nsx_npu_tb_source_hz() path, since it busy-waits.
+//
+// Measures the tap STIMER is *currently* running on -- ui32LiveClkSel, whatever
+// nsx_npu_timebase_init() has just settled on -- against the CPU cycle counter
+// (DWT->CYCCNT), which free-runs at the FPGA's own core clock. That core
+// clock is not a guess: g_ui32FPGAfreqMHz (am_hal_global.h) is the same
+// vendor-maintained value am_bsp_low_power_init() passes to
+// am_hal_global_FPGAfreqSet(), and that am_hal_itm.c's own SWO clock-divisor
+// math already depends on, so it tracks whatever frequency the current FPGA
+// SOF actually runs at -- 25 MHz today, though am_bsp.c's own commented-out
+// 48 MHz / 12 MHz alternatives show that has moved before and may again.
+//
+// This is the standard remedy for an uncalibrated/unreliable clock report:
+// measure the clock in question against a second clock of known frequency.
+// Here HFRC is the uncalibrated clock and the CPU cycle counter -- run off
+// the known-frequency FPGA core clock -- is the reference.
+//
+// The measured tap rate is converted back to an equivalent HFRC *root* rate
+// using the same ratio table nsx_npu_tb_scaled_hz() applies, so a single
+// calibration (performed against whichever HFRC tap happened to be live at
+// init) stays correct if the application later retunes STIMER to a different
+// HFRC tap: nsx_npu_tb_source_hz() rescales the cached root by that tap's own
+// ratio on every subsequent call, exactly as it would a CLKMGR-reported root.
+//
+// Returns 0 if ui32LiveClkSel is not one of the recognised HFRC taps (nothing
+// to calibrate against right now; the cache is left as-is for a future init
+// attempt to try again), or if the calibration window sees no STIMER or DWT
+// movement (e.g. STIMER is genuinely stopped) -- the caller's own liveness
+// probe (nsx_npu_tb_counter_advances()) reports that condition through its
+// normal path, so this function does not need to.
+//
+static uint32_t nsx_npu_tb_fpga_calibrate_hfrc_root_hz(uint32_t ui32LiveClkSel)
+{
+    uint32_t ui32Num = 0U;
+    uint32_t ui32Den = 0U;
+
+    for (uint32_t i = 0U; i < sizeof(g_nsx_npu_tb_hfrc_taps) / sizeof(g_nsx_npu_tb_hfrc_taps[0]); i++)
+    {
+        if (g_nsx_npu_tb_hfrc_taps[i].ui32ClkSel == ui32LiveClkSel)
+        {
+            ui32Num = g_nsx_npu_tb_hfrc_taps[i].ui32Num;
+            ui32Den = g_nsx_npu_tb_hfrc_taps[i].ui32Den;
+            break;
+        }
+    }
+
+    if (ui32Den == 0U)
+    {
+        return 0U; // Live tap isn't HFRC-derived; nothing to calibrate here.
+    }
+
+    // DWT is architectural (CMSIS core_cm55.h), not an ambiqsuite HAL/BSP
+    // symbol, so enabling it needs no HAL call and does not conflict with
+    // one; both writes are idempotent if trace is already enabled.
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;
+
+    const uint32_t ui32StimBefore = am_hal_stimer_counter_get();
+    const uint32_t ui32CycBefore  = DWT->CYCCNT;
+
+    am_hal_delay_us(NSX_NPU_TB_FPGA_CAL_WINDOW_US);
+
+    const uint32_t ui32StimDelta = am_hal_stimer_counter_get() - ui32StimBefore;
+    const uint32_t ui32CycDelta  = DWT->CYCCNT - ui32CycBefore;
+
+    if ((ui32StimDelta == 0U) || (ui32CycDelta == 0U))
+    {
+        return 0U;
+    }
+
+    // Measured tap rate: tap_hz = stimer_ticks * cpu_hz / cpu_cycles. Done in
+    // 64 bits since the numerator can reach ~4.3e9 * 25e6.
+    const uint64_t ui64CpuHz = (uint64_t)g_ui32FPGAfreqMHz * 1000000U;
+    const uint64_t ui64TapHz = ((uint64_t)ui32StimDelta * ui64CpuHz) / ui32CycDelta;
+
+    // Back out the HFRC root this tap implies, using this same tap's ratio --
+    // the inverse of what nsx_npu_tb_scaled_hz() will reapply on every call.
+    return (uint32_t)((ui64TapHz * ui32Den) / ui32Num);
+}
+#endif // ATOMIQ11X_FPGA
+
+//
+// HFRC root rate for nsx_npu_tb_source_hz()'s HFRC-derived taps. Prefers
+// CLKMGR's own report; if CLKMGR cannot supply one, uses the FPGA
+// self-calibration cache when populated (see
+// nsx_npu_tb_fpga_calibrate_hfrc_root_hz()), and only then falls back to the
+// HAL's silicon-nominal HFRC macro.
+//
+static uint32_t nsx_npu_tb_hfrc_root_hz(void)
+{
+    uint32_t ui32Hz = 0U;
+
+    if ((am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_HFRC, &ui32Hz, NULL) ==
+         AM_HAL_STATUS_SUCCESS) &&
+        (ui32Hz != 0U))
+    {
+        return ui32Hz;
+    }
+
+#ifdef ATOMIQ11X_FPGA
+    if (g_nsx_npu_tb_fpga_hfrc_root_hz != 0U)
+    {
+        return g_nsx_npu_tb_fpga_hfrc_root_hz;
+    }
+#endif
+
+    return AM_HAL_CLKMGR_HFRC_FREQ_ADJ_500MHZ;
+}
+
 //
 // Map a CLKSEL field to a rate in Hz. Returns 0 for taps whose rate cannot be
 // derived: NOCLK, and the CTIMER-fed taps.
@@ -264,7 +429,7 @@ static uint32_t nsx_npu_tb_source_hz(uint32_t ui32ClkSel)
                 g_nsx_npu_tb_hfrc_taps,
                 sizeof(g_nsx_npu_tb_hfrc_taps) / sizeof(g_nsx_npu_tb_hfrc_taps[0]),
                 ui32ClkSel,
-                nsx_npu_tb_clk_hz(AM_HAL_CLKMGR_CLK_ID_HFRC, AM_HAL_CLKMGR_HFRC_FREQ_ADJ_500MHZ));
+                nsx_npu_tb_hfrc_root_hz());
 
         case STIMER_STCFG_CLKSEL_XTAL_32KHZ:
         case STIMER_STCFG_CLKSEL_XTAL_8KHZ:
@@ -367,6 +532,30 @@ nsx_npu_timebase_status_e nsx_npu_timebase_init(void)
     }
 
     const uint32_t ui32ClkSel = _FLD2VAL(STIMER_STCFG_CLKSEL, ui32Cfg);
+
+#ifdef ATOMIQ11X_FPGA
+    //
+    // One-shot: only pay the calibration busy-wait the first time this image
+    // is asked to arm with CLKMGR's HFRC report unusable. Every later
+    // nsx_npu_tb_source_hz() call for an HFRC-derived tap -- including the one
+    // immediately below -- picks the cached result up through
+    // nsx_npu_tb_hfrc_root_hz() itself, so nothing further is needed here.
+    //
+    if (g_nsx_npu_tb_fpga_hfrc_root_hz == 0U)
+    {
+        uint32_t ui32ClkMgrHz = 0U;
+        const bool bClkMgrUsable =
+            (am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_HFRC, &ui32ClkMgrHz, NULL) ==
+             AM_HAL_STATUS_SUCCESS) &&
+            (ui32ClkMgrHz != 0U);
+
+        if (!bClkMgrUsable)
+        {
+            g_nsx_npu_tb_fpga_hfrc_root_hz = nsx_npu_tb_fpga_calibrate_hfrc_root_hz(ui32ClkSel);
+        }
+    }
+#endif
+
     const uint32_t ui32Hz     = nsx_npu_tb_source_hz(ui32ClkSel);
     if (ui32Hz == 0U)
     {
