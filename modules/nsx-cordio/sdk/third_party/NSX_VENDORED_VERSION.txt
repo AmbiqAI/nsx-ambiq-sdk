@@ -1,4 +1,4 @@
-stable-2026.06.18 (caaf5af860)
+stable-2026.08.30 (78bb76821e)
 
 Vendored from ~/Ambiq/sws/ambiqsuite/third_party/{cordio,uecc}
 - cordio/{ble-host,ble-profiles,wsf}
