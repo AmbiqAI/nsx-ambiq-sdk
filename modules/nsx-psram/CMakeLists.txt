@@ -113,7 +113,9 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     # guidance it is very similar to apollo510b_evb, so it tracks apollo510b_evb
     # and is assigned the "BA" driver (previously "N", on the same similarity
     # rationale, before apollo510b_evb itself was validated as BA). apollo510dL_evb
-    # has no such guidance and no hardware validation, so it is deliberately NOT
+    # has no such guidance and no successful hardware validation: on a lab EVB
+    # the profiler firmware built with either driver reported psram_init_failed,
+    # so the fitted part (if any) remains unconfirmed. It is deliberately NOT
     # defaulted either way: NSX_PSRAM_USE_BA_DRIVER must be set explicitly by the
     # caller (e.g. via -DNSX_PSRAM_USE_BA_DRIVER=0/1) until it is validated one way
     # or the other, at which point it should move into one of the explicit branches
