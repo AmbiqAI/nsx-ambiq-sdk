@@ -2,7 +2,7 @@ schema_version: 1
 module:
   name: nsx-npu
   type: backend_specific
-  version: "5.2.24"
+  version: "5.2.25"
 support:
   ambiqsuite: true
   zephyr: false

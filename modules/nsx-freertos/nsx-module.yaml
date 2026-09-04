@@ -4,7 +4,7 @@ module:
   name: nsx-freertos
   type: backend_specific
   category: rtos
-  version: "5.2.24"
+  version: "5.2.25"
 
 support:
   ambiqsuite: true

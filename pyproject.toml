@@ -1,6 +1,6 @@
 [project]
 name = "nsx-ambiq-sdk"
-version = "5.2.24"
+version = "5.2.25"
 description = "Unified Ambiq SDK package for NSX"
 requires-python = ">=3.10"
 

@@ -124,7 +124,7 @@ def test_dead_legacy_harness_files_are_removed(repo_root: Path) -> None:
 
 def test_python_package_version_matches_manifest_release(repo_root: Path) -> None:
     pyproject = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "5.2.24"' in pyproject
+    assert 'version = "5.2.25"' in pyproject
 
 
 def test_repo_has_ci_and_pre_commit_entrypoints(repo_root: Path) -> None:
