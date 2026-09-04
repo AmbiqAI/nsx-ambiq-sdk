@@ -15,12 +15,12 @@ summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite thi
 vendored:
   cordio:
     upstream: AmbiqSuite third_party/cordio
-    revision: stable-2026.08.30 (78bb76821e)
+    revision: stable-2026.09.01 (3062036c4f)
     path: sdk/third_party/cordio
     license: See sdk/third_party/cordio (Packetcraft/Arm + Ambiq)
   uecc:
     upstream: AmbiqSuite third_party/uecc (micro-ECC)
-    revision: stable-2026.08.30 (78bb76821e)
+    revision: stable-2026.09.01 (3062036c4f)
     path: sdk/third_party/uecc
     license: BSD-2-Clause
 

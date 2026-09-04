@@ -46,7 +46,7 @@ on:
       ambiqsuite_source_ref:
         description: "AmbiqSuite Git tag, branch, or commit to build"
         required: false
-        default: "78bb76821ecb52c9bbbf5867b104ea95780dd916"
+        default: "3062036c4f3e7822d27e6a842f226f423328a25a"
         type: string
 
 jobs:
