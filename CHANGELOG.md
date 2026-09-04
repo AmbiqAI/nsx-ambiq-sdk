@@ -2,6 +2,27 @@
 
 All notable distribution changes are recorded here.
 
+## 5.2.25 - unreleased
+
+- Carries the atomiq110 platform work merged after the immutable `v5.2.24`
+  tag (PR #46): atomiq110 HAL/BSP artifacts, `nsx-power`/`nsx-core` atomiq110
+  backends, and the new `nsx-npu` module (Ethos-U85 glue), plus atomiq110
+  STIMER timebase unit tests and an on-FPGA hardware test.
+- Re-pins the AmbiqSuite provider snapshot to `stable-2026.09.01`, source
+  commit `3062036c4f3e7822d27e6a842f226f423328a25a` (includes the RTL drop 10
+  register sync).
+- Rebuilds the atomiq110 HAL/BSP archives for all three toolchain trains
+  (gcc, atfe/ATfE 22.1.0, acfe/ACfE 6.24 with verified
+  `-fshort-wchar -fshort-enums` ABI) from that snapshot. All non-atomiq110
+  archives are carried over byte-unchanged from the `5.2.23`/`5.2.24`
+  payload.
+- Records the atomiq110 INTERNAL-marker sanitation (deletion-only,
+  tool-reproducible, no artifact hash changes; issue #52) and the
+  `nsx-ethos-u-driver` external-module scope boundary as known deviations.
+- `nsx-ethos-u-driver` is not part of this distribution; it is resolved from
+  `AmbiqAI/nsx-ethos-u-driver` (first release tag `nsx-ethos-u-driver-v0.1.1`)
+  by the neuralspotx registry at workspace-assembly time.
+
 ## 5.2.24 - 2026-08-03
 
 - Corrects the promoted artifact manifest, which recorded superseded `sha256`

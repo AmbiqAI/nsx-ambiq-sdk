@@ -75,7 +75,7 @@ static const ns_ble_device_info_t ns_ble_default_device_info = {
     .manufacturerName = "Ambiq",
     .modelNumber = "NSX BLE Device",
     .serialNumber = "unknown",
-    .firmwareRevision = "5.2.24",
+    .firmwareRevision = "5.2.25",
     .hardwareRevision = "Ambiq EVB",
     .softwareRevision = "nsx-ble",
     .vendorIdSource = NS_BLE_DIS_VENDOR_ID_SOURCE_BLUETOOTH_SIG,
@@ -229,7 +229,7 @@ static int ns_ble_apply_device_info(const ns_ble_device_info_t *configured) {
         NS_STATUS_SUCCESS) {
         return NS_STATUS_FAILURE;
     }
-    if (ns_ble_set_dis_string(DIS_FWR_HDL, ns_ble_select_string(info.firmwareRevision, "5.2.24")) !=
+    if (ns_ble_set_dis_string(DIS_FWR_HDL, ns_ble_select_string(info.firmwareRevision, "5.2.25")) !=
         NS_STATUS_SUCCESS) {
         return NS_STATUS_FAILURE;
     }

@@ -11,8 +11,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.24.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.23.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.25.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.24.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
 OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
@@ -27,7 +27,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.24"
+    assert root_version == "5.2.25"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -125,20 +125,21 @@ def test_release_evidence_exists(repo_root: Path) -> None:
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """A corrected release must never erase the record it corrects.
 
-    `5.2.23` shipped a stale artifact manifest; `5.2.24` fixes it. Both release
-    manifests and both qualification reports stay in the tree so the published,
-    immutable `v5.2.23` remains describable from any later checkout.
+    `5.2.24` corrected the stale `5.2.23` artifact manifest; `5.2.25` carries
+    the post-v5.2.24 atomiq110 content. All release manifests and
+    qualification reports stay in the tree so the published, immutable tags
+    remain describable from any later checkout.
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.23"
+    assert superseded["distribution"]["version"] == "5.2.24"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "2eba24ad776096784764cbe91c8176b434dd3bdf"
+    assert supersedes["commit"] == "a9f4ec25a162f6f3700623feb691423bb5a51132"
     assert supersedes["reason"].strip()
 
 

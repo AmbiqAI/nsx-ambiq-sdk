@@ -4,7 +4,7 @@ module:
   name: nsx-ambiq-bsp
   type: backend_specific
   category: sdk_component
-  version: "5.2.24"
+  version: "5.2.25"
 
 support:
   ambiqsuite: true
