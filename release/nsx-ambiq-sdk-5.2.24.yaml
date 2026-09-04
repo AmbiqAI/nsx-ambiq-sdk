@@ -81,6 +81,7 @@ payload_provenance:
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+        - 213833166a13f3abb9ae5b0d2de72530155a42ff  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
       byte_stability_note: >-
         22 of these 25 archives have been byte-identical since
         56a72f08b34e9315f8c58a9defb784329e789678, which predates the
@@ -102,6 +103,7 @@ payload_provenance:
         - ddb88640e61660edc65ebc956b65dcbd6804d2e6
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+        - 213833166a13f3abb9ae5b0d2de72530155a42ff  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
       byte_stability_note: >-
         All 55 object members of a sampled acfe HAL archive differ across
         ddb88640e61660edc65ebc956b65dcbd6804d2e6, and armar emits zeroed member
