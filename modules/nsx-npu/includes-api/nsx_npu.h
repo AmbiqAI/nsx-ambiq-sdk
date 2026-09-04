@@ -87,6 +87,26 @@ typedef struct {
 } nsx_npu_config_t;
 
 /**
+ * @brief State of the timebase behind the bounded Ethos-U inference wait.
+ *
+ * `nsx_npu_init` arms a time source (STIMER) for nsx-ethos-u-driver's wait
+ * semaphore so a wedged NPU returns `ETHOSU_JOB_RESULT_TIMEOUT` after
+ * `NSX_ETHOSU_INFERENCE_TIMEOUT_MS` instead of hanging forever. Arming is
+ * best-effort: `nsx_npu_init` still succeeds when it fails, but then every
+ * inference wait is unbounded. Query `nsx_npu_timebase_status` to confirm the
+ * timeout is in force.
+ */
+typedef enum {
+    NSX_NPU_TIMEBASE_ARMED = 0,         ///< Bounded inference wait is active.
+    NSX_NPU_TIMEBASE_NOT_INITIALIZED,   ///< `nsx_npu_init` has not run.
+    NSX_NPU_TIMEBASE_UNSUPPORTED_CLOCK, ///< The application runs STIMER from a
+                                        ///< tap whose rate cannot be derived
+                                        ///< (CTIMER0/1); left untouched.
+    NSX_NPU_TIMEBASE_COUNTER_STOPPED,   ///< STIMER is configured but its
+                                        ///< counter did not advance.
+} nsx_npu_timebase_status_e;
+
+/**
  * @brief Power on the Ethos-U85, initialize the core driver, and enable the
  * NPU interrupt.
  *
@@ -117,6 +137,17 @@ extern uint32_t nsx_npu_deinit(void);
  * @return Driver handle, or NULL when `nsx_npu_init` has not succeeded.
  */
 extern struct ethosu_driver *nsx_npu_driver(void);
+
+/**
+ * @brief Report whether the bounded Ethos-U inference wait is armed.
+ *
+ * `nsx_npu_init` logs a warning when arming fails; this returns the same
+ * result so applications and tests can assert on it. Safe to call at any time.
+ *
+ * @return `NSX_NPU_TIMEBASE_ARMED` when a timeout will fire on a wedged NPU,
+ *         otherwise the reason it will not.
+ */
+extern nsx_npu_timebase_status_e nsx_npu_timebase_status(void);
 
 #ifdef __cplusplus
 }

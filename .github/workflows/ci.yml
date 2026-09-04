@@ -41,3 +41,69 @@ jobs:
         run: |
           uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py sdk-intake/intake_workflow.py
           uv run --group ci python -m pytest
+
+  # nsx-npu's C sources have no other build coverage on pull requests: the
+  # contract tests configure with the host compiler, and container-validation
+  # is workflow_dispatch only. This job cross-compiles them for atomiq110 with
+  # the same Arm GNU release the dev/CI container pins (docker/dev-ci.Dockerfile).
+  arm-compile:
+    name: nsx-npu cross-compile (arm-none-eabi-gcc)
+    runs-on: ubuntu-latest
+    env:
+      ARM_GNU_VERSION: 14.3.rel1
+      ARM_GNU_MD5: 17272b6c72d476c82b692a06ada0636c
+      GCC_ROOT: /opt/toolchains/gcc
+      # nsx-ethos-u-driver is registry-resolved at build time and not vendored
+      # here. Check it out so the cross-compile covers nsx_npu.c and the real
+      # nsx_ethos_u.h contract, not just the generated two-prototype stub. Keep
+      # ETHOS_U_DRIVER_REF in step with the tag the neuralspotx registry pins.
+      ETHOS_U_DRIVER_REPO: AmbiqAI/nsx-ethos-u-driver
+      ETHOS_U_DRIVER_REF: nsx-ethos-u-driver-v0.1.2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout nsx-ethos-u-driver
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ETHOS_U_DRIVER_REPO }}
+          ref: ${{ env.ETHOS_U_DRIVER_REF }}
+          path: nsx-ethos-u-driver
+
+      - name: Cache Arm GNU Toolchain
+        id: toolchain-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GCC_ROOT }}
+          key: arm-gnu-toolchain-${{ env.ARM_GNU_VERSION }}-x86_64-${{ env.ARM_GNU_MD5 }}
+
+      - name: Install Arm GNU Toolchain
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          archive="arm-gnu-toolchain-${ARM_GNU_VERSION}-x86_64-arm-none-eabi.tar.xz"
+          url="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_GNU_VERSION}/binrel/${archive}"
+          curl -fsSL "${url}" -o "/tmp/${archive}"
+          echo "${ARM_GNU_MD5}  /tmp/${archive}" | md5sum -c -
+          sudo mkdir -p "${GCC_ROOT}"
+          sudo tar -xJf "/tmp/${archive}" -C "${GCC_ROOT}" --strip-components=1
+          sudo chown -R "$(id -u):$(id -g)" "${GCC_ROOT}"
+
+      - name: Show toolchain version
+        run: "${GCC_ROOT}/bin/arm-none-eabi-gcc --version | head -n 1"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group ci
+
+      - name: Cross-compile nsx-npu
+        env:
+          NSX_REQUIRE_ARM_GCC: "1"
+          NSX_REQUIRE_ETHOS_U_DRIVER: "1"
+          NSX_ETHOS_U_DRIVER_ROOT: ${{ github.workspace }}/nsx-ethos-u-driver
+        run: uv run --group ci python -m pytest tests/test_npu_cross_compile.py -v

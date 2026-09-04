@@ -111,9 +111,19 @@ uint32_t nsx_npu_init(const nsx_npu_config_t *cfg)
     // above, because the tick rate is derived from CLKMGR. This is what lets a
     // wedged NPU surface ETHOSU_JOB_RESULT_TIMEOUT instead of hanging the
     // caller; it is best-effort, so init still succeeds if no usable counter is
-    // found -- waits then degrade to upstream's unbounded behaviour.
+    // found -- waits then degrade to upstream's unbounded behaviour. That
+    // degradation must never be silent: it re-creates the exact hang the
+    // timebase exists to prevent, so it is logged here and exposed through
+    // nsx_npu_timebase_status().
     //
-    nsx_npu_timebase_init();
+    const nsx_npu_timebase_status_e timebase = nsx_npu_timebase_init();
+    if (timebase != NSX_NPU_TIMEBASE_ARMED)
+    {
+        nsx_printf("WARNING nsx-npu: inference timeout not armed (%s); a wedged NPU will hang.\n",
+                   (timebase == NSX_NPU_TIMEBASE_UNSUPPORTED_CLOCK) ? "STIMER on a CTIMER-fed or unclocked tap"
+                   : (timebase == NSX_NPU_TIMEBASE_COUNTER_STOPPED) ? "STIMER counter not advancing"
+                                                                    : "timebase not initialized");
+    }
 
     g_nsx_npu_initialized = true;
     return NSX_STATUS_SUCCESS;
@@ -136,6 +146,9 @@ uint32_t nsx_npu_deinit(void)
     // clear state before the power-disable call rather than after it.
     nsx_ethos_u_deinit();
     ethosu_deinit(&g_nsx_npu_driver);
+    // Disarm the timebase so a later nsx_npu_init() re-validates STIMER instead
+    // of trusting the cached ARMED status; STIMER itself is left running.
+    nsx_npu_timebase_deinit();
     g_nsx_npu_initialized = false;
 
     if (am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_NPU) != AM_HAL_STATUS_SUCCESS)

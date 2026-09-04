@@ -28,10 +28,10 @@ repos:
     hooks:
       - id: py-compile-sdk-intake
         name: py_compile sdk intake and smoke helpers
-        entry: python -m py_compile sdk-intake/build_ambiqsuite.py sdk-intake/intake_workflow.py sdk-intake/internal_markers.py tools/nsx_link_smoke.py tools/nsx_toolchain_file.py
+        entry: python -m py_compile sdk-intake/build_ambiqsuite.py sdk-intake/intake_workflow.py sdk-intake/internal_markers.py tools/nsx_link_smoke.py tools/nsx_toolchain_file.py tools/nsx_npu_compile_check.py
         language: system
         pass_filenames: false
-        files: ^(sdk-intake/(build_ambiqsuite|intake_workflow|internal_markers)\.py|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py)$
+        files: ^(sdk-intake/(build_ambiqsuite|intake_workflow|internal_markers)\.py|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py|tools/nsx_npu_compile_check\.py)$
       - id: pytest-contracts
         name: pytest contract tests
         entry: python -m pytest
@@ -40,4 +40,4 @@ repos:
         # The `modules/.*\.(h|c|...)` alternative is what makes the INTERNAL-marker
         # ratchet run locally: the payload those tests gate is the vendor headers
         # themselves, so a commit that edits or regenerates one must re-run them.
-        files: ^(tests/|modules/.*/(CMakeLists\.txt|nsx-module\.yaml|README\.md)|modules/.*\.(h|hpp|inc|c|cc|cpp|s|S|ld|icf)$|boards/.*/(board\.cmake|nsx-module\.yaml|README\.md)|boards/.*\.(h|c)$|cmake/|sdk-intake/(build_ambiqsuite|intake_workflow|internal_markers)\.py|sdk-intake/internal-marker-baseline\.yaml|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py|pyproject\.toml|README\.md)
+        files: ^(tests/|modules/.*/(CMakeLists\.txt|nsx-module\.yaml|README\.md)|modules/.*\.(h|hpp|inc|c|cc|cpp|s|S|ld|icf)$|boards/.*/(board\.cmake|nsx-module\.yaml|README\.md)|boards/.*\.(h|c)$|cmake/|sdk-intake/(build_ambiqsuite|intake_workflow|internal_markers)\.py|sdk-intake/internal-marker-baseline\.yaml|tools/nsx_link_smoke\.py|tools/nsx_toolchain_file\.py|tools/nsx_npu_compile_check\.py|pyproject\.toml|README\.md)

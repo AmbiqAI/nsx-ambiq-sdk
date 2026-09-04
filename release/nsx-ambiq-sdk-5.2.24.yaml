@@ -4,7 +4,7 @@ distribution:
   name: nsx-ambiq-sdk
   version: "5.2.24"
   tag: v5.2.24
-  title: "nsx-ambiq-sdk 5.2.24 — AmbiqSuite stable-2026.06.18"
+  title: "nsx-ambiq-sdk 5.2.24 — AmbiqSuite stable-2026.09.01"
   git:
     commit: null
     commit_resolution:
@@ -28,20 +28,28 @@ distribution:
 
 upstream:
   provider: ambiqsuite
-  snapshot_identity: stable-2026.06.18
+  snapshot_identity: stable-2026.09.01
   source_kind: git_ref
   source_ref: stable
-  source_commit: caaf5af86087881647f56c70646c748d40c86e23
+  source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
   artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
   raw_source_committed: false
   official_numbered_release_claimed: false
 
 payload_provenance:
   summary: >-
-    Every promoted HAL/BSP archive in 5.2.24 is byte-identical to the archive
-    published in 5.2.23. Only the artifact manifest's acfe sha256 records and
-    acfe ABI-flag provenance changed.
-  binary_payload_identical_to: "5.2.23"
+    5.2.24 re-pins the AmbiqSuite snapshot to stable-2026.09.01 (3062036c4f,
+    includes the RTL drop 10 register sync) and rebuilds the atomiq110 HAL/BSP
+    archives for all three toolchain trains from that snapshot. All other
+    parts' archives are carried over byte-unchanged from the 5.2.23 payload.
+    The artifact manifest's acfe sha256 records and acfe ABI-flag provenance
+    corrections from the 5.2.24 draft are retained.
+  binary_payload_identical_to: null
+  carried_over_archives_note: >-
+    Only the atomiq110 archives were rebuilt from 3062036c4f. Every other
+    part/board archive is byte-identical to the 5.2.23 payload, whose object
+    code was built from caaf5af86087881647f56c70646c748d40c86e23; those
+    archives were not rebuilt against 3062036c4f.
   artifact_manifest_generated_at: 2026-06-22
   archive_determinism:
     gcc: non_deterministic_ar_headers
@@ -57,21 +65,23 @@ payload_provenance:
   toolchain_trains:
     - manifest_key: gcc
       cmake_family: gcc
-      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
       archives_introduced_in:
         - 1a919aee0f24adb17fa6345fc15a874d1e3a4c29
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+        - d5a1a9321fd4f970a56d98d35b9786b31e32fbf0  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
       manifest_hashes_correct_in_5_2_23: true
     - manifest_key: atfe
       cmake_family: atfe
-      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
       archives_introduced_in:
         - 56a72f08b34e9315f8c58a9defb784329e789678
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+        - 213833166a13f3abb9ae5b0d2de72530155a42ff  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
       byte_stability_note: >-
         22 of these 25 archives have been byte-identical since
         56a72f08b34e9315f8c58a9defb784329e789678, which predates the
@@ -84,7 +94,7 @@ payload_provenance:
       manifest_hashes_correct_in_5_2_23: true
     - manifest_key: acfe
       cmake_family: armclang
-      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
       abi_cflags: '-fshort-wchar -fshort-enums'
       abi_attributes:
         Tag_ABI_PCS_wchar_t: 2
@@ -93,6 +103,7 @@ payload_provenance:
         - ddb88640e61660edc65ebc956b65dcbd6804d2e6
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
+        - 213833166a13f3abb9ae5b0d2de72530155a42ff  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
       byte_stability_note: >-
         All 55 object members of a sampled acfe HAL archive differ across
         ddb88640e61660edc65ebc956b65dcbd6804d2e6, and armar emits zeroed member

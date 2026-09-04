@@ -1,9 +1,9 @@
 sdk:
   provider: ambiqsuite
-  version: stable-2026.06.18
+  version: stable-2026.09.01
   source_kind: git_ref
   source_ref: stable
-  source_commit: caaf5af86087881647f56c70646c748d40c86e23
+  source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
   source_root: sdk-intake/local/work/ambiqsuite-stable
   raw_source_committed: false
 
@@ -139,19 +139,23 @@ parts:
   - logical_skew: atomiq110
     mcu_dir: mcu/atomiq110
     hal_source_dir: mcu/atomiq110/hal
-    # Regenerated from the npu-drop-2026.07.09 payload (commit
-    # 960624ee18afd9fbf5db957371c92c828bf6a721), not from the
-    # stable-2026.06.18 / caaf5af8 snapshot declared in `sdk:` above.
+    # HAL/BSP archives (all three toolchains) rebuilt from the
+    # stable-2026.09.01 / 3062036c4f snapshot declared in `sdk:` above,
+    # which includes the RTL drop 10 register sync (ambiqsuite
+    # 78bb7682/ebc4158a). gcc archives regenerated in nsx-ambiq-sdk commit
+    # d5a1a9321fd4f970a56d98d35b9786b31e32fbf0 (atomiq110 FPGA HFRC
+    # self-calibration + SWO bring-up validation); atfe (ATfE 22.1.0) and
+    # acfe (ACfE 6.24) archives regenerated from the same snapshot.
     hal_artifacts:
       gcc:
         path: gcc/lib/atomiq110/libam_hal.a
-        sha256: cf6fdec41c1f61a82f8da61a648100399a52e36ec627415f9fc033d2b3369bdc
+        sha256: b0429cc53061c4a9def84cb35eca0dc68443e3030248205944247e560932b0d9
       atfe:
         path: atfe/lib/atomiq110/libam_hal.a
-        sha256: a2bbd2ce689cf73864d31856a6a9377fb3a639f254ac582c5ca3099adcb1054f
+        sha256: b777326ee964493735481c8b75fe7a8c18cdb2f15350aa8a90e5927ff61ba486
       acfe:
         path: acfe/lib/atomiq110/libam_hal.a
-        sha256: d3f9d7d5e16be8e3eebfa8b9a32bbbbbc31a2c0d7aa82be50a6ed8a90032bb23
+        sha256: 431f87bf2455e9afb0d4a54e8c8f1d6979a2aea45f873d309532fef5b108114d
 
 boards:
   - nsx_board: apollo330mP_evb
@@ -365,15 +369,16 @@ boards:
     ambiq_board_name: atomiq110_fpga_turbo
     logical_skew: atomiq110
     bsp_source_dir: boards/atomiq110_fpga_turbo/bsp
-    # See the matching npu-drop-2026.07.09 note on the atomiq110 `hal_artifacts`
-    # entry above; these BSP archives share the same regenerated payload.
+    # See the matching provenance note on the atomiq110 `hal_artifacts` entry
+    # above: gcc/atfe/acfe archives all rebuilt from the ambiqsuite-3062036c4f
+    # (stable-2026.09.01) snapshot.
     bsp_artifacts:
       gcc:
         path: gcc/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
-        sha256: 8023bde7eade388a60172c82a38485551b36a82858b8e11834e3f5631da29caf
+        sha256: d6f3d6754c6ea3bd3aad4938c274ac716fd06df059a22d7087cc8807c6547274
       atfe:
         path: atfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
-        sha256: 187919d122c99e5403820147b530390b9827ca83afb6e0eb0ff699af77b0674f
+        sha256: 0933c895a90aaa91f0a7568a8d019733012675495fca7138e173c8c36268e928
       acfe:
         path: acfe/lib/atomiq110/atomiq110_fpga_turbo/libam_bsp.a
-        sha256: 85ad45cd28ed2df53f55dd5c5c2222d63018ab46c7881e6314ed051ca15f5639
+        sha256: 34ba4e1905f5f08de0058875aa66b22363d7f7889081c76207bde05ea618602d

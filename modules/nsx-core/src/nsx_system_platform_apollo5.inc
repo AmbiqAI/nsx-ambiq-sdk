@@ -11,7 +11,10 @@
  *
  * It provides the pieces those parts implement identically:
  *
- *   nsx_platform_dcu_unlock_swo()   (static; used by nsx_platform_debug_init)
+ *   nsx_platform_dcu_unlock_swo()   (static; used by the Apollo510
+ *                                    nsx_platform_debug_init; atomiq110
+ *                                    delegates to am_bsp_itm_printf_enable(),
+ *                                    which performs its own DCU unlock)
  *   nsx_platform_hw_init()
  *   nsx_platform_minimal_hw_init()
  *   nsx_platform_set_perf_mode()
@@ -78,6 +81,9 @@
     AM_HAL_DCU_CPUDBG_S_NON_INVASIVE | AM_HAL_DCU_CPUTRC_PERFCNT |     \
     AM_HAL_DCU_SWD | AM_HAL_DCU_TRACE)
 
+/* Declared unused-tolerant because not every includer calls it: atomiq110's
+ * nsx_platform_debug_init() delegates the DCU unlock to the BSP. */
+static uint32_t nsx_platform_dcu_unlock_swo(void) __attribute__((unused));
 static uint32_t nsx_platform_dcu_unlock_swo(void) {
     uint32_t ui32dcuVal;
     int32_t  i32RetValue = 0;
