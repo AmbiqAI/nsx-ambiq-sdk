@@ -18,8 +18,8 @@ time (see the 5.2.23 → 5.2.24 precedent).
   module (Ethos-U85 glue).
 - **External module dependency**: `nsx-npu` requires `nsx-ethos-u-driver`,
   which is deliberately **not** part of this distribution — it is resolved
-  from `AmbiqAI/nsx-ethos-u-driver` (first release tag
-  `nsx-ethos-u-driver-v0.1.1`) by the neuralspotx registry at
+  from `AmbiqAI/nsx-ethos-u-driver` (pinned at
+  `nsx-ethos-u-driver-v0.1.2`) by the neuralspotx registry at
   workspace-assembly time. The 5.2.25 record should state this scope
   boundary explicitly.
 - Qualification scope: atomiq110 remains **experimental** (FPGA bring-up;

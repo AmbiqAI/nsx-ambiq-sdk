@@ -20,7 +20,7 @@ All notable distribution changes are recorded here.
   tool-reproducible, no artifact hash changes; issue #52) and the
   `nsx-ethos-u-driver` external-module scope boundary as known deviations.
 - `nsx-ethos-u-driver` is not part of this distribution; it is resolved from
-  `AmbiqAI/nsx-ethos-u-driver` (first release tag `nsx-ethos-u-driver-v0.1.1`)
+  `AmbiqAI/nsx-ethos-u-driver` (pinned at `nsx-ethos-u-driver-v0.1.2`)
   by the neuralspotx registry at workspace-assembly time.
 
 ## 5.2.24 - 2026-08-03
