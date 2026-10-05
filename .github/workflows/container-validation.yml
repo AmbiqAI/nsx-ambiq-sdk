@@ -49,6 +49,9 @@ on:
         default: "3062036c4f3e7822d27e6a842f226f423328a25a"
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   container-validation:
     if: ${{ inputs.run_smoke == 'true' || inputs.run_sdk_build == 'true' }}
