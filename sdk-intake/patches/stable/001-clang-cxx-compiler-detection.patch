@@ -1,0 +1,340 @@
+diff --git a/devices/am_devices_emmc_rpmb.h b/devices/am_devices_emmc_rpmb.h
+index 9c9c88d..f7e279a 100644
+--- a/devices/am_devices_emmc_rpmb.h
++++ b/devices/am_devices_emmc_rpmb.h
+@@ -81,7 +81,7 @@ extern "C"
+ //! @{
+ //
+ //*****************************************************************************
+-#define AM_DEVICE_RPMB_DEBUG(fmt, ...)          am_util_debug_printf("[RPMB] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
++#define AM_DEVICE_RPMB_DEBUG(fmt, ...)          am_util_debug_printf("[RPMB] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
+ #define AM_DEVICES_EMMC_MBEDTLS_HEAP_SIZE       (1024)
+ 
+ #define USWAP_16(x)    ((((x) & 0xff00) >> 8) | (((x) & 0x00ff) << 8))
+diff --git a/devices/am_devices_mspi_psram_aps12804o.c b/devices/am_devices_mspi_psram_aps12804o.c
+index 7de7c21..5188dfe 100644
+--- a/devices/am_devices_mspi_psram_aps12804o.c
++++ b/devices/am_devices_mspi_psram_aps12804o.c
+@@ -2866,7 +2866,7 @@ APS12804O_tXPHS_delay( uint32_t ui32Iterations )
+     " bne   APS12804O_tXPHS_delay\n"
+   );
+ }
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ APS12804O_tXPHS_delay( uint32_t ui32Iterations )
+diff --git a/devices/am_devices_mspi_psram_aps12804o.h b/devices/am_devices_mspi_psram_aps12804o.h
+index 4cc6cce..adf1a98 100644
+--- a/devices/am_devices_mspi_psram_aps12804o.h
++++ b/devices/am_devices_mspi_psram_aps12804o.h
+@@ -593,7 +593,7 @@ extern uint32_t am_devices_mspi_psram_aps12804o_exit_halfsleep(void *pHandle);
+ extern __asm void APS12804O_tXPHS_delay( uint32_t ui32Iterations );
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ extern __attribute__((always_inline)) void APS12804O_tXPHS_delay( uint32_t ui32Iterations );
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ extern __attribute__((naked)) void APS12804O_tXPHS_delay( uint32_t ui32Iterations );
+ #elif defined(__IAR_SYSTEMS_ICC__)
+ #pragma diag_suppress = Pe940   // Suppress IAR compiler warning about missing
+diff --git a/devices/am_devices_mspi_psram_aps25616ba_1p2v.c b/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+index e1e9be1..081a063 100644
+--- a/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
++++ b/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+@@ -3519,7 +3519,7 @@ APS25616BA_tXPHS_delay( uint32_t ui32Iterations )
+     " bne   APS25616BA_tXPHS_delay\n"
+   );
+ }
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ APS25616BA_tXPHS_delay( uint32_t ui32Iterations )
+diff --git a/devices/am_devices_mspi_psram_aps25616ba_1p2v.h b/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+index b050093..e46906f 100644
+--- a/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
++++ b/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+@@ -714,7 +714,7 @@ extern uint32_t am_devices_mspi_psram_aps25616ba_exit_halfsleep(void *pHandle);
+ extern __asm void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ extern __attribute__((always_inline)) void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ extern __attribute__((naked)) void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
+ #elif defined(__IAR_SYSTEMS_ICC__)
+ #pragma diag_suppress = Pe940   // Suppress IAR compiler warning about missing
+diff --git a/devices/am_devices_mspi_psram_aps25616n.c b/devices/am_devices_mspi_psram_aps25616n.c
+index 8a5d901..4439206 100644
+--- a/devices/am_devices_mspi_psram_aps25616n.c
++++ b/devices/am_devices_mspi_psram_aps25616n.c
+@@ -3248,7 +3248,7 @@ APS25616N_tXPHS_delay( uint32_t ui32Iterations )
+     " bne   APS25616N_tXPHS_delay\n"
+   );
+ }
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ APS25616N_tXPHS_delay( uint32_t ui32Iterations )
+diff --git a/devices/am_devices_mspi_psram_aps25616n.h b/devices/am_devices_mspi_psram_aps25616n.h
+index 844f6e4..4b3c6db 100644
+--- a/devices/am_devices_mspi_psram_aps25616n.h
++++ b/devices/am_devices_mspi_psram_aps25616n.h
+@@ -623,7 +623,7 @@ extern uint32_t am_devices_mspi_psram_aps25616n_exit_halfsleep(void *pHandle);
+ extern __asm void APS25616N_tXPHS_delay( uint32_t ui32Iterations );
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ extern __attribute__((always_inline)) void APS25616N_tXPHS_delay( uint32_t ui32Iterations );
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ extern void APS25616N_tXPHS_delay( uint32_t ui32Iterations );
+ #elif defined(__IAR_SYSTEMS_ICC__)
+ #pragma diag_suppress = Pe940   // Suppress IAR compiler warning about missing
+diff --git a/mcu/apollo2/hal/am_hal_global.h b/mcu/apollo2/hal/am_hal_global.h
+index 73db326..0237177 100644
+--- a/mcu/apollo2/hal/am_hal_global.h
++++ b/mcu/apollo2/hal/am_hal_global.h
+@@ -94,7 +94,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/apollo2/regs/am_reg_macros_asm.h b/mcu/apollo2/regs/am_reg_macros_asm.h
+index cc0ca91..4150623 100644
+--- a/mcu/apollo2/regs/am_reg_macros_asm.h
++++ b/mcu/apollo2/regs/am_reg_macros_asm.h
+@@ -60,7 +60,7 @@ extern "C"
+ #define     AM_ASM_BKPT(n)  __breakpoint(n)
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_BKPT(n)  __asm("    bkpt "#n);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_BKPT(n)  __asm("    bkpt "#n);
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_BKPT(n)  asm("    bkpt "#n);
+@@ -75,7 +75,7 @@ extern "C"
+ #define     AM_ASM_WFI      __wfi();
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_WFI      __asm("    wfi");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_WFI      __asm("    wfi");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_WFI      asm("    wfi");
+@@ -90,7 +90,7 @@ extern "C"
+ #define     AM_ASM_WFE      __wfe();
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_WFE      __asm("    wfe");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_WFE      __asm("    wfe");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_WFE      asm("    wfe");
+@@ -105,7 +105,7 @@ extern "C"
+ #define     AM_ASM_SEV      __sev();
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_SEV      __asm("    sev");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_SEV      __asm("    sev");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_SEV      asm("    sev");
+@@ -120,7 +120,7 @@ extern "C"
+ #define     AM_ASM_NOP      __nop();
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_NOP      __asm("    nop");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_NOP      __asm("    nop");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_NOP      asm("    nop");
+@@ -136,7 +136,7 @@ extern "C"
+ #define     AM_ASM_DSB      __dsb(15);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_DSB      __asm("    dsb #15");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_DSB      __asm("    dsb #15");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_DSB      asm("    dsb #15");
+@@ -152,7 +152,7 @@ extern "C"
+ #define     AM_ASM_ISB      __isb(15);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ #define     AM_ASM_ISB      __asm("    isb #15");
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ #define     AM_ASM_ISB      __asm("    isb #15");
+ #elif   defined(__IAR_SYSTEMS_ICC__)
+ #define     AM_ASM_ISB      asm("    isb #15");
+diff --git a/mcu/apollo3/hal/am_hal_global.h b/mcu/apollo3/hal/am_hal_global.h
+index 4091953..0a7b6c8 100644
+--- a/mcu/apollo3/hal/am_hal_global.h
++++ b/mcu/apollo3/hal/am_hal_global.h
+@@ -141,7 +141,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ 
+ //*****************************************************************************
+diff --git a/mcu/apollo330P/hal/am_hal_global.h b/mcu/apollo330P/hal/am_hal_global.h
+index e1c88fa..00d7524 100644
+--- a/mcu/apollo330P/hal/am_hal_global.h
++++ b/mcu/apollo330P/hal/am_hal_global.h
+@@ -264,7 +264,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/apollo3p/hal/am_hal_global.h b/mcu/apollo3p/hal/am_hal_global.h
+index 517029d..77470c1 100644
+--- a/mcu/apollo3p/hal/am_hal_global.h
++++ b/mcu/apollo3p/hal/am_hal_global.h
+@@ -141,7 +141,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ 
+ //*****************************************************************************
+diff --git a/mcu/apollo4l/hal/am_hal_global.h b/mcu/apollo4l/hal/am_hal_global.h
+index 7561aa4..e870a60 100644
+--- a/mcu/apollo4l/hal/am_hal_global.h
++++ b/mcu/apollo4l/hal/am_hal_global.h
+@@ -290,7 +290,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/apollo4l/hal/mcu/am_hal_card.h b/mcu/apollo4l/hal/mcu/am_hal_card.h
+index ba0527b..ed660d3 100644
+--- a/mcu/apollo4l/hal/mcu/am_hal_card.h
++++ b/mcu/apollo4l/hal/mcu/am_hal_card.h
+@@ -468,7 +468,7 @@ extern "C"
+ // Internal macros
+ //
+ #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
+-#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
++#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
+ 
+ #define SECTOR_MODE       0x4
+ #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
+diff --git a/mcu/apollo4p/hal/am_hal_global.h b/mcu/apollo4p/hal/am_hal_global.h
+index 88affa8..685e6c3 100644
+--- a/mcu/apollo4p/hal/am_hal_global.h
++++ b/mcu/apollo4p/hal/am_hal_global.h
+@@ -299,7 +299,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/apollo4p/hal/mcu/am_hal_card.h b/mcu/apollo4p/hal/mcu/am_hal_card.h
+index 9ec9a33..97cdb67 100644
+--- a/mcu/apollo4p/hal/mcu/am_hal_card.h
++++ b/mcu/apollo4p/hal/mcu/am_hal_card.h
+@@ -468,7 +468,7 @@ extern "C"
+ // Internal macros
+ //
+ #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
+-#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
++#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
+ 
+ #define SECTOR_MODE       0x4
+ #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
+diff --git a/mcu/apollo510/hal/am_hal_global.h b/mcu/apollo510/hal/am_hal_global.h
+index 5b18eaa..a3dd40d 100644
+--- a/mcu/apollo510/hal/am_hal_global.h
++++ b/mcu/apollo510/hal/am_hal_global.h
+@@ -276,7 +276,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/apollo510/hal/mcu/am_hal_card.h b/mcu/apollo510/hal/mcu/am_hal_card.h
+index 0f1924c..64a8b4c 100644
+--- a/mcu/apollo510/hal/mcu/am_hal_card.h
++++ b/mcu/apollo510/hal/mcu/am_hal_card.h
+@@ -470,7 +470,7 @@ extern "C"
+ // Internal macros
+ //
+ #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
+-#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
++#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
+ 
+ #define SECTOR_MODE       0x4
+ #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
+diff --git a/mcu/apollo510L/hal/am_hal_global.h b/mcu/apollo510L/hal/am_hal_global.h
+index 247da51..1dd43b0 100644
+--- a/mcu/apollo510L/hal/am_hal_global.h
++++ b/mcu/apollo510L/hal/am_hal_global.h
+@@ -264,7 +264,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/atomiq110/hal/am_hal_global.h b/mcu/atomiq110/hal/am_hal_global.h
+index d368fb4..aa208f4 100644
+--- a/mcu/atomiq110/hal/am_hal_global.h
++++ b/mcu/atomiq110/hal/am_hal_global.h
+@@ -264,7 +264,7 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+ #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+-#elif defined(__GNUC_STDC_INLINE__)
++#elif defined(__GNUC__)
+ __attribute__((naked))
+ void
+ am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
+diff --git a/mcu/atomiq110/hal/mcu/am_hal_card.h b/mcu/atomiq110/hal/mcu/am_hal_card.h
+index 500e382..67a9c29 100644
+--- a/mcu/atomiq110/hal/mcu/am_hal_card.h
++++ b/mcu/atomiq110/hal/mcu/am_hal_card.h
+@@ -473,7 +473,7 @@ extern "C"
+ // Internal macros
+ //
+ #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
+-#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
++#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
+ 
+ #define SECTOR_MODE       0x4
+ #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
+diff --git a/mcu/atomiq110/regs/am_reg_macros.h b/mcu/atomiq110/regs/am_reg_macros.h
+index 508b0bb..3598fa9 100644
+--- a/mcu/atomiq110/regs/am_reg_macros.h
++++ b/mcu/atomiq110/regs/am_reg_macros.h
+@@ -228,7 +228,7 @@ _Pragma("GCC diagnostic pop")
+ // Macro for BKPT instruction
+ //*****************************************************************************
+ #ifndef AM_ASM_BKPT
+-#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC_STDC_INLINE__)
++#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC__)
+ #define AM_ASM_BKPT(n)          __asm("    bkpt "#n)
+ #elif defined(__IAR_SYSTEMS_ICC__)
+ #define AM_ASM_BKPT(n)          asm("    bkpt "#n)

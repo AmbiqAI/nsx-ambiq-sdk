@@ -1,0 +1,16 @@
+owner: apage224
+reason: >
+  AmbiqSuite selects its GNU code path with defined(__GNUC_STDC_INLINE__),
+  which describes inline semantics rather than the compiler. gcc defines it
+  in C and C++, but clang defines it only for C (C++ gets
+  __GNUC_GNU_INLINE__), so any C++ translation unit built with ATfE clang++
+  that includes am_hal_global.h, atomiq110 am_reg_macros.h, apollo2
+  am_reg_macros_asm.h, or the MSPI PSRAM device headers falls through to
+  "#error Compiler is unknown". The patch tests defined(__GNUC__) instead;
+  armclang is still matched first by __ARMCC_VERSION. It also adds the
+  space missing in the AM_HAL_CARD_DEBUG / AM_DEVICE_RPMB_DEBUG string
+  pastes ("..."fmt), which C++11 lexes as a user-defined literal suffix and
+  clang rejects. C builds with gcc and clang select the same branches as
+  before, so the prebuilt HAL/BSP archives are unaffected. Retire once the
+  fix lands upstream in AmbiqSuite.
+upstream_ref: AmbiqAI/nsx-ambiq-sdk#81
