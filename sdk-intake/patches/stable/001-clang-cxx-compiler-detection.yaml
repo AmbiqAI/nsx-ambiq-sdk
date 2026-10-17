@@ -10,8 +10,10 @@ reason: >
   armclang is still matched first by __ARMCC_VERSION. It also adds the
   space missing in the AM_HAL_CARD_DEBUG / AM_DEVICE_RPMB_DEBUG string
   pastes ("..."fmt), which C++11 lexes as a user-defined literal suffix and
-  clang rejects. C builds with gcc and clang select the same branches as
-  before, so the prebuilt HAL/BSP archives are unaffected. Fixes
+  clang rejects. Every configuration that compiled before (C99 and later
+  with gcc or clang, C++ with gcc, armclang) selects the same branch as
+  before, so the prebuilt HAL/BSP archives are unaffected; older modes
+  (C89/gnu89, C++98) that used to hit the #error now take the GNU path. Fixes
   AmbiqAI/nsx-ambiq-sdk#81. Retire once the fix lands upstream in
   AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
 upstream_ref: AmbiqAI/nsx-ambiq-sdk#82

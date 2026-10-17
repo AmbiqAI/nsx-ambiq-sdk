@@ -48,6 +48,39 @@ entries:
           sanitized while staged and never needs a post-hoc edit to a promoted
           tree. This exception is not a precedent for editing the provider tree
           in place.
+      - id: clang-cxx-header-compat
+        issue: 81
+        date: 2026-10-17
+        scope: modules/nsx-ambiqsuite/sdk
+        summary: >-
+          Intake patches 001 and 002 applied directly to the committed headers
+          so that C++ translation units build with clang (ATfE). The committed
+          payload cannot be reproduced from a single AmbiqSuite commit (see
+          issue 82), so the patches could not be applied by re-staging.
+        mechanism: sdk-intake/patches/stable
+        properties:
+          - >-
+            Tool-reproducible, not hand-edited. Applying
+            "sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch"
+            and "002-clang-cxx-unnamed-bitfield-qualifiers.patch" to the
+            previous payload with "git apply --directory=modules/nsx-ambiqsuite/sdk"
+            yields the committed tree byte-for-byte.
+          - >-
+            Headers only: 26 files, 40 lines. Compiler detection tests __GNUC__
+            instead of __GNUC_STDC_INLINE__, two debug macros gain the space
+            C++11 needs before a string paste, and unnamed padding bit-fields in
+            four USB register headers drop their qualifier. Every configuration
+            that compiled before selects the same code, and register struct
+            layout is unchanged.
+          - >-
+            Provenance strings, artifact manifests, and prebuilt archives are
+            unaffected; no artifact hash changes.
+        future_payloads: >-
+          The patches stay in the intake hook, so `stage` re-applies them, and
+          tests/test_committed_intake_patches.py fails if a promoted payload no
+          longer carries them (build_ambiqsuite.py --promote does not run the
+          hook). Retire both patches and this exception once AmbiqSuite carries
+          the fix (issue 82).
 
   - id: upstream-ambiq-usb-copy
     classification: upstream-derived-auxiliary

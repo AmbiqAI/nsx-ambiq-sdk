@@ -60,6 +60,14 @@ Patches are for generated headers and system sources.
   it against the new upstream content, or retire it if upstream fixed the
   underlying issue) before staging can proceed again.
 
+## Committed Payload Check
+
+Only `intake_workflow.py stage` runs this hook; `build_ambiqsuite.py --promote`
+writes the payload without it. `tests/test_committed_intake_patches.py` checks
+that every patch here loads with its sidecar and is already present in the
+committed `modules/nsx-ambiqsuite/sdk/` tree, so a regeneration that skips the
+hook fails CI instead of silently dropping the fix.
+
 ## Normal State
 
 This directory should usually be empty (aside from this README and the
