@@ -11,6 +11,7 @@ reason: >
   space missing in the AM_HAL_CARD_DEBUG / AM_DEVICE_RPMB_DEBUG string
   pastes ("..."fmt), which C++11 lexes as a user-defined literal suffix and
   clang rejects. C builds with gcc and clang select the same branches as
-  before, so the prebuilt HAL/BSP archives are unaffected. Retire once the
-  fix lands upstream in AmbiqSuite.
-upstream_ref: AmbiqAI/nsx-ambiq-sdk#81
+  before, so the prebuilt HAL/BSP archives are unaffected. Fixes
+  AmbiqAI/nsx-ambiq-sdk#81. Retire once the fix lands upstream in
+  AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
+upstream_ref: AmbiqAI/nsx-ambiq-sdk#82

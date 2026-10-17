@@ -714,7 +714,7 @@ extern uint32_t am_devices_mspi_psram_aps25616ba_exit_halfsleep(void *pHandle);
 extern __asm void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 extern __attribute__((always_inline)) void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 extern __attribute__((naked)) void APS25616BA_tXPHS_delay( uint32_t ui32Iterations );
 #elif defined(__IAR_SYSTEMS_ICC__)
 #pragma diag_suppress = Pe940   // Suppress IAR compiler warning about missing

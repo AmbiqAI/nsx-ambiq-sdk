@@ -81,7 +81,7 @@ extern "C"
 //! @{
 //
 //*****************************************************************************
-#define AM_DEVICE_RPMB_DEBUG(fmt, ...)          am_util_debug_printf("[RPMB] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
+#define AM_DEVICE_RPMB_DEBUG(fmt, ...)          am_util_debug_printf("[RPMB] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
 #define AM_DEVICES_EMMC_MBEDTLS_HEAP_SIZE       (1024)
 
 #define USWAP_16(x)    ((((x) & 0xff00) >> 8) | (((x) & 0x00ff) << 8))
