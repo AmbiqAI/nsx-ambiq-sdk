@@ -3,8 +3,9 @@
 Optional **Cordio / WSF Bluetooth LE host stack** for NSX on AmbiqSuite silicon.
 
 This module vendors the AmbiqSuite `third_party/cordio` stack (`ble-host` +
-`ble-profiles` + `wsf`) plus `uecc`, pinned to the same SDK drop as the
-`nsx-ambiqsuite` provider (`stable-2026.06.18`), and **builds it from source**
+`ble-profiles` + `wsf`) plus `uecc` at AmbiqSuite `stable-2026.06.18`, the
+drop the non-atomiq110 provider headers and archives come from, and
+**builds it from source**
 for the active SoC's BLE transport. It is the low-level host stack only; the
 app-facing convenience API (an `ns_ble.h`-equivalent) lives in the separate
 `nsx-ble` module.
@@ -51,6 +52,11 @@ here rather than in the core SDK provider.
 
 ## Provenance
 
-See `sdk/third_party/NSX_VENDORED_VERSION.txt`. Sources are an unmodified copy of
-the AmbiqSuite `third_party/cordio` and `third_party/uecc` trees at the pinned
-revision.
+Sources are the AmbiqSuite `third_party/cordio` and `third_party/uecc` trees
+at `stable-2026.06.18` (`caaf5af86087881647f56c70646c748d40c86e23`). `uecc` is
+unmodified. `cordio` carries a small set of NSX edits: LESC ECC-key validity
+handling (`dm_api.h`, `dm_sec_lesc.c`, `sec_ecc.c`, `smp_sc_act.c`), a GAP
+device-name setter (`svc_core.c`, `svc_core.h`), and Ambiq/NSX Device
+Information Service defaults including the distribution version
+(`svc_dis.c`). `sdk/third_party/NSX_VENDORED_VERSION.txt` records the revision
+and describes each edit.

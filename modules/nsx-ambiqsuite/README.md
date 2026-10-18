@@ -7,12 +7,22 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 ## SDK Version
 
-**AmbiqSuite snapshot `stable-2026.06.18`**, source ref `stable`, source commit
-`caaf5af86087881647f56c70646c748d40c86e23`.
+`sdk/artifact-manifest.yaml` records **AmbiqSuite snapshot
+`stable-2026.09.01`**, source ref `stable`, source commit
+`3062036c4f3e7822d27e6a842f226f423328a25a`. It is not represented as an
+official numbered AmbiqSuite release, and the payload is not one build of it:
 
-This is the exact promoted source identity recorded by
-`sdk/artifact-manifest.yaml`; it is not represented as an official numbered
-AmbiqSuite release. The NSX distribution and module version is `5.2.24`.
+- Apollo parts: headers and HAL/BSP archives are `stable-2026.06.18`
+  (`caaf5af86087881647f56c70646c748d40c86e23`) content. The headers carry the
+  intake patches under `sdk-intake/patches/stable/` (see
+  `release/source-ownership.yaml`).
+- `atomiq110` (experimental): headers are the `npu-drop-2026.07.09` payload;
+  the atfe/acfe archives are recorded as built from `3062036c4f`; the gcc
+  archives come from an unrecorded, older source. Headers and archives do not
+  fully match.
+
+`release/nsx-ambiq-sdk-5.2.26.yaml` records these as known deviations. The NSX
+distribution and module version is `5.2.26`.
 
 ## Package Contents
 

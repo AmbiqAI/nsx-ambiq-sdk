@@ -1,8 +1,29 @@
-stable-2026.09.01 (3062036c4f)
+stable-2026.06.18 (caaf5af860)
 
-Vendored from ~/Ambiq/sws/ambiqsuite/third_party/{cordio,uecc}
+Vendored from ~/Ambiq/sws/ambiqsuite/third_party/{cordio,uecc} at AmbiqSuite
+commit caaf5af86087881647f56c70646c748d40c86e23 (snapshot stable-2026.06.18)
 - cordio/{ble-host,ble-profiles,wsf}
 - uecc (micro-ECC, used by ble-host/sources/sec)
 
-This is the same AmbiqSuite drop the nsx-ambiqsuite provider payload is built
-from, so the stack links against the current HAL/BSP and device drivers.
+This is the AmbiqSuite drop the non-atomiq110 provider headers and archives
+come from, so the stack matches the HAL/BSP and device drivers it links
+against on the BLE-capable parts. It was not re-vendored when the provider
+identity moved to stable-2026.09.01 (3062036c4f) in 5.2.25; nsx-ambiq-sdk
+5.2.25 recorded this label as stable-2026.09.01 (3062036c4f) in error, and
+5.2.26 corrects it (see the nsx-cordio-vendored-revision-label known deviation
+in release/nsx-ambiq-sdk-5.2.26.yaml).
+
+uecc is an unmodified copy. cordio is unmodified except for these NSX edits
+(introduced in nsx-ambiq-sdk PR #30 unless noted):
+- ble-host/include/dm_api.h, ble-host/sources/stack/dm/dm_sec_lesc.c:
+  DmSecSetEccKey(NULL) invalidates the local LESC key and DmSecGetEccKey()
+  returns NULL when no valid key is available.
+- ble-host/sources/sec/uecc/sec_ecc.c: report uECC key-generation and
+  shared-secret failures instead of returning success with invalid keys.
+- ble-host/sources/stack/smp/smp_sc_act.c: cancel LESC pairing with
+  SMP_ERR_UNSPECIFIED when no valid local ECC key is available.
+- ble-profiles/sources/services/svc_core.{c,h}: SvcCoreGapSetDevName() and a
+  31-byte GAP device-name buffer.
+- ble-profiles/sources/services/svc_dis.c: Ambiq/NSX Device Information
+  Service defaults; DIS_DEFAULT_FW_REV tracks the distribution version and is
+  bumped at every release.

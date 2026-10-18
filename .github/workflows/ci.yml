@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history: tests/test_release_metadata.py verifies the release
+          # record's archive and upgrade-path claims against git, and fails
+          # (rather than skips) under CI=true when history is missing.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5

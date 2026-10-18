@@ -2,7 +2,57 @@
 
 All notable distribution changes are recorded here.
 
-## 5.2.25 - unreleased
+## 5.2.26 - unreleased
+
+- C++ translation units that include the AmbiqSuite HAL now build with ATfE
+  (clang++); they failed with `#error Compiler is unknown` and related errors
+  (issue #81, PR #83). Intake patches
+  `sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch` and
+  `002-clang-cxx-unnamed-bitfield-qualifiers.patch` change 26 provider
+  files, 40 lines: 23 headers and 3 `devices/am_devices_mspi_psram_*.c`
+  sources, which no NSX module compiles. C builds, gcc builds and armclang builds select the same
+  code as before, and register struct layout is unchanged. Recorded as the
+  `clang-cxx-header-compat` ownership exception and known deviation; the
+  upstream AmbiqSuite fix is tracked in issue #82.
+- `nsx-psram` lists `apollo510dL_evb` and `apollo510L` as compatible (issue
+  #76, PR #77). The driver must still be chosen explicitly with
+  `NSX_PSRAM_USE_BA_DRIVER`; the rev 2 EVB has no PSRAM fitted.
+- CI workflows declare read-only token permissions (PR #80).
+- The apollo2, apollo3 and apollo3p GCC linker scripts in `nsx-core` define
+  `__HeapBase` / `__HeapLimit`, which the force-linked `_sbrk` needs (issue
+  #85, PR #86). Apollo3/Apollo3P GCC and ATfE apps link for the first time;
+  they failed already on `v5.2.24`. Verified with `ble_webble` on the Apollo3
+  Blue Plus EVB (gcc and ATfE). apollo2 still does not build, for an unrelated
+  reason. Known open issue (#87): C++ global constructors do not run on
+  apollo2/apollo3/apollo3p. Their `startup_gcc.c` never calls
+  `__libc_init_array`, and their linker scripts define no `.init_array`
+  section or bounds.
+- Bumps the BLE DIS default firmware revision to `5.2.26`.
+- No archive changes: every HAL/BSP archive and the artifact manifest are
+  byte-identical to `v5.2.25`. All 67 non-atomiq110 archives are
+  byte-identical to `v5.2.24`.
+- `v5.2.25` was tagged but its GitHub release was not published, so boards
+  moving from `5.2.24` also receive the 5.2.25 content below for the first
+  time. `release/nsx-ambiq-sdk-5.2.26.yaml` (`consumer_upgrade`) lists the
+  changes per starting version.
+- Corrects the `nsx-cordio` vendored-revision label. 5.2.25 recorded it as
+  `stable-2026.09.01 (3062036c4f)`, but the cordio/uECC sources were never
+  re-vendored; they are the `stable-2026.06.18` (`caaf5af860`) tree plus NSX
+  edits. The label now says so, and `NSX_VENDORED_VERSION.txt` and the module
+  README list the NSX edits. No cordio/uECC source change.
+- Records the provider payload's real provenance, unchanged since 5.2.25.
+  Apollo headers and archives are `stable-2026.06.18` (`caaf5af8`) content.
+  The experimental atomiq110 headers are the `npu-drop-2026.07.09` payload.
+  The atomiq110 atfe/acfe archives are recorded as built from `3062036c4f`,
+  and its gcc archives come from an unrecorded, older source. The release
+  title and the per-train `archive_sets` say the same. The atomiq110 headers
+  and archives do not fully match; this is recorded as the open known
+  deviation `atomiq110-header-archive-mismatch`.
+- CI checks out full git history, so the record's archive and upgrade-path
+  checks run there, and they fail rather than skip when history is missing
+  under `CI=true`.
+
+## 5.2.25 - 2026-09-04 (tagged, not published)
 
 - Carries the atomiq110 platform work merged after the immutable `v5.2.24`
   tag (PR #46): atomiq110 HAL/BSP artifacts, `nsx-power`/`nsx-core` atomiq110

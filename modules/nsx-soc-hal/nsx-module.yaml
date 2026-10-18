@@ -3,7 +3,7 @@ schema_version: 1
 module:
   name: nsx-soc-hal
   type: soc
-  version: "5.2.25"
+  version: "5.2.26"
 
 support:
   ambiqsuite: true

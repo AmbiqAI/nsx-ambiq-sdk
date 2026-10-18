@@ -53,8 +53,9 @@ entries:
         date: 2026-10-17
         scope: modules/nsx-ambiqsuite/sdk
         summary: >-
-          Intake patches 001 and 002 applied directly to the committed headers
-          so that C++ translation units build with clang (ATfE). The committed
+          Intake patches 001 and 002 applied directly to the committed provider
+          headers and sources so that C++ translation units build with clang
+          (ATfE). The committed
           payload cannot be reproduced from a single AmbiqSuite commit (see
           issue 82), so the patches could not be applied by re-staging.
         mechanism: sdk-intake/patches/stable
@@ -66,7 +67,9 @@ entries:
             previous payload with "git apply --directory=modules/nsx-ambiqsuite/sdk"
             yields the committed tree byte-for-byte.
           - >-
-            Headers only: 26 files, 40 lines. Compiler detection tests __GNUC__
+            26 files, 40 lines: 23 headers and 3 C sources
+            (devices/am_devices_mspi_psram_{aps12804o,aps25616n,aps25616ba_1p2v}.c,
+            which no NSX module compiles). Compiler detection tests __GNUC__
             instead of __GNUC_STDC_INLINE__, two debug macros gain the space
             C++11 needs before a string paste, and unnamed padding bit-fields in
             four USB register headers drop their qualifier. Every configuration

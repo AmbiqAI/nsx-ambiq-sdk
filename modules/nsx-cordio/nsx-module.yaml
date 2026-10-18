@@ -4,23 +4,23 @@ module:
   name: nsx-cordio
   type: backend_specific
   category: sdk_component
-  version: "5.2.25"
+  version: "5.2.26"
 
 support:
   ambiqsuite: true
   zephyr: false
 
-summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) pinned to the provider SDK drop and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
+summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) at AmbiqSuite stable-2026.06.18 (caaf5af860) plus NSX edits, and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
 
 vendored:
   cordio:
     upstream: AmbiqSuite third_party/cordio
-    revision: stable-2026.09.01 (3062036c4f)
+    revision: stable-2026.06.18 (caaf5af860)
     path: sdk/third_party/cordio
     license: See sdk/third_party/cordio (Packetcraft/Arm + Ambiq)
   uecc:
     upstream: AmbiqSuite third_party/uecc (micro-ECC)
-    revision: stable-2026.09.01 (3062036c4f)
+    revision: stable-2026.06.18 (caaf5af860)
     path: sdk/third_party/uecc
     license: BSD-2-Clause
 
