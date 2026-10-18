@@ -21,8 +21,10 @@ distribution:
       tag, main gained the clang C++ header compatibility fix for the
       AmbiqSuite provider headers (intake patches 001 and 002, PR #83, issue
       #81), the nsx-psram compatibility entries for apollo510dL_evb and
-      apollo510L (PR #77, issue #76), and explicit CI workflow token
-      permissions (PR #80). v5.2.25 and its tag are not moved, deleted, or
+      apollo510L (PR #77, issue #76), explicit CI workflow token permissions
+      (PR #80), and the apollo2/apollo3/apollo3p GCC linker-script heap
+      symbols that let apollo3/apollo3p GCC and ATfE apps link (PR #86,
+      issue #85). v5.2.25 and its tag are not moved, deleted, or
       rewritten; 5.2.26 publishes that content as a new distribution version.
   immutability_note: >-
     v5.2.25 and v5.2.24, and their tags, releases, and commits, are never
@@ -78,6 +80,32 @@ consumer_upgrade:
         paths:
           - modules/nsx-psram/nsx-module.yaml
           - modules/nsx-psram/CMakeLists.txt
+      - id: nsx-core-apollo2-3-heap-symbols
+        refs: [PR 86, issue 85, issue 87]
+        summary: >-
+          The apollo2, apollo3 and apollo3p GCC linker scripts in nsx-core now
+          define __HeapBase and __HeapLimit (a .heap section after .bss running
+          to the top of RWMEM, with the 1 KiB guard ASSERT), which nsx-core's
+          force-linked _sbrk needs. Before this, every GCC or ATfE application
+          linking nsx::system for apollo3 and apollo3p boards failed to link,
+          already on v5.2.24; such apps now link for the first time. PR #86
+          verified ble_webble on the Apollo3 Blue Plus EVB with
+          arm-none-eabi-gcc 15.2.1 and ATfE 22.1.0 (flashed; 12 s of SWO
+          showed BLE bring-up stages 6 through 37 and no failure line). apollo2 gets the same
+          symbols but still does not build, for an unrelated reason; apollo3
+          (non-Plus) hardware was not tested; armclang uses scatter files and
+          is unaffected. Known open issue #87: these three linker scripts drop
+          .init_array, so C++ global constructors never run on
+          apollo2/apollo3/apollo3p. sbrk.c and nsx_system.h only update
+          comments; tests/test_cmake_contract.py requires every nsx-core GCC
+          linker script to define both symbols.
+        paths:
+          - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+          - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+          - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+          - modules/nsx-core/src/sbrk.c
+          - modules/nsx-core/includes-api/nsx_system.h
+          - tests/test_cmake_contract.py
       - id: ble-dis-firmware-revision
         refs: []
         summary: >-
@@ -242,6 +270,16 @@ consumer_upgrade:
           - modules/nsx-cordio/nsx-module.yaml
           - modules/nsx-cordio/README.md
           - modules/nsx-cordio/CMakeLists.txt
+      - id: nsx-core-apollo2-3-heap-symbols
+        refs: [PR 86, issue 85, issue 87]
+        summary: As above.
+        paths:
+          - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+          - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+          - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+          - modules/nsx-core/src/sbrk.c
+          - modules/nsx-core/includes-api/nsx_system.h
+          - tests/test_cmake_contract.py
       - id: ble-dis-firmware-revision
         refs: []
         summary: The BLE DIS default firmware revision string moves from 5.2.24 to 5.2.26.
@@ -658,6 +696,19 @@ known_deviations:
       - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
       - modules/nsx-cordio/nsx-module.yaml
       - modules/nsx-cordio/README.md
+  - id: apollo2-3-cxx-global-constructors
+    status: open
+    description: >-
+      The apollo2, apollo3 and apollo3p nsx-core GCC linker scripts drop
+      .init_array, so C++ global constructors never run on those parts with
+      gcc or ATfE. Present before 5.2.26 and not fixed here; it matters now
+      that apollo3/apollo3p GCC and ATfE apps link (PR #86). Tracked in
+      AmbiqAI/nsx-ambiq-sdk#87.
+    issues: [87]
+    paths:
+      - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+      - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+      - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
   - id: atomiq110-internal-marker-sanitation
     description: >-
       The atomiq110 headers under modules/nsx-ambiqsuite/sdk/mcu/atomiq110

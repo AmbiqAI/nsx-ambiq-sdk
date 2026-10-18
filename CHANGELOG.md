@@ -18,6 +18,13 @@ All notable distribution changes are recorded here.
   #76, PR #77). The driver must still be chosen explicitly with
   `NSX_PSRAM_USE_BA_DRIVER`; the rev 2 EVB has no PSRAM fitted.
 - CI workflows declare read-only token permissions (PR #80).
+- The apollo2, apollo3 and apollo3p GCC linker scripts in `nsx-core` define
+  `__HeapBase` / `__HeapLimit`, which the force-linked `_sbrk` needs (issue
+  #85, PR #86). Apollo3/Apollo3P GCC and ATfE apps link for the first time;
+  they failed already on `v5.2.24`. Verified with `ble_webble` on the Apollo3
+  Blue Plus EVB (gcc and ATfE). apollo2 still does not build, for an unrelated
+  reason. Known open issue: these scripts drop `.init_array`, so C++ global
+  constructors do not run on apollo2/apollo3/apollo3p (#87).
 - Bumps the BLE DIS default firmware revision to `5.2.26`.
 - No archive changes: every HAL/BSP archive and the artifact manifest are
   byte-identical to `v5.2.25`. All 67 non-atomiq110 archives are

@@ -9,8 +9,9 @@ explicit approval per `docs/release-process.md`.
 Version `5.2.26` is qualified as a content update of `5.2.25`. Its main change
 is the clang C++ header compatibility fix for the AmbiqSuite provider headers
 (issue #81, PR #83). It also carries the `nsx-psram` compatibility entries for
-`apollo510dL_evb` and `apollo510L` (PR #77) and CI workflow token permissions
-(PR #80).
+`apollo510dL_evb` and `apollo510L` (PR #77), CI workflow token permissions
+(PR #80), and the apollo2/apollo3/apollo3p GCC linker-script heap symbols
+that let apollo3/apollo3p GCC and ATfE apps link (PR #86, issue #85).
 
 `v5.2.25` is tagged (`aefce2ca858795e783c76726ebe7d14d9d4bde7c`) but its GitHub
 release was never published. `v5.2.24`
@@ -47,6 +48,7 @@ No archive changes: every HAL/BSP archive (73) and
 | `clang-cxx-header-compat` ownership exception and guard test | `release/source-ownership.yaml`, `tests/test_committed_intake_patches.py` |
 | `nsx-psram` lists `apollo510dL_evb` and `apollo510L` as compatible; the driver is still chosen explicitly (issue #76, PR #77) | `modules/nsx-psram/` |
 | CI workflow token permissions (PR #80) | `.github/workflows/` |
+| apollo2/apollo3/apollo3p GCC linker scripts define `__HeapBase`/`__HeapLimit` for `_sbrk` (issue #85, PR #86). Apollo3/3P GCC and ATfE apps link for the first time | `modules/nsx-core/src/apollo{2,3,3p}/gcc/linker_script.ld`, `modules/nsx-core/src/sbrk.c`, `modules/nsx-core/includes-api/nsx_system.h`, `tests/test_cmake_contract.py` |
 | BLE DIS default firmware revision `5.2.26` | `modules/nsx-ble/src/ns_ble.c`, `modules/nsx-cordio/.../svc_dis.c` |
 | `nsx-cordio` vendored-revision label corrected from `stable-2026.09.01 (3062036c4f)` (wrong in 5.2.25) to `stable-2026.06.18 (caaf5af860)`; NSX edits documented; README, CMake comment and manifest `summary` no longer say "pinned to the provider drop". No source change | `modules/nsx-cordio/` |
 | CI checks out full history so the record's git-history checks run (and fail rather than skip under `CI=true`) | `.github/workflows/ci.yml`, `tests/test_release_metadata.py` |
@@ -89,6 +91,7 @@ between `v5.2.24` and `v5.2.25`.
 | `nsx-power` shared power-profile printer (PR #56) | Yes: format unchanged, CSV dump no longer waits 1 ms per row on Apollo5-class parts, installed `src/` gains two files; public API unchanged | `modules/nsx-power/` |
 | `nsx-ambiq-hal` PMU init | No: atomiq110-only path under `AM_PART_ATOMIQ110` | `modules/nsx-ambiq-hal/src/nsx_ambiq_pmu.c` |
 | `nsx-psram` compatibility (PR #77) | Yes: `apollo510dL_evb` / `apollo510L` | `modules/nsx-psram/` |
+| `nsx-core` apollo2/apollo3/apollo3p heap symbols (PR #86) | Yes: Apollo3/3P GCC and ATfE apps that link `nsx::system` now link (they failed on v5.2.24); apollo2 still does not build for an unrelated reason | `modules/nsx-core/src/apollo{2,3,3p}/gcc/`, `modules/nsx-core/src/sbrk.c`, `modules/nsx-core/includes-api/nsx_system.h` |
 | `nsx-ble` / `nsx-cordio` DIS firmware revision `5.2.24` -> `5.2.26` | Yes: advertised string | `modules/nsx-ble/`, `modules/nsx-cordio/` |
 | `nsx-cordio` vendored-revision label | No: reads `stable-2026.06.18 (caaf5af860)` in both v5.2.24 and 5.2.26 (5.2.25 had it wrong); NSX edits now documented | `modules/nsx-cordio/` |
 | atomiq110 platform (`npu-drop-2026.07.09` headers, rebuilt archives), `nsx-npu`, atomiq110 power/core backends | No: atomiq110 targets only | `modules/nsx-npu/`, `*/src/atomiq110/`, `cmake/socs/atomiq110.cmake` |
@@ -142,6 +145,9 @@ Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
   NSX edits; the sources are unchanged, and the released 5.2.25 record is not
   amended. Moving cordio to newer upstream is left for a separate, tested
   change.
+- `apollo2-3-cxx-global-constructors` (open, #87): the apollo2/apollo3/apollo3p
+  nsx-core GCC linker scripts drop `.init_array`, so C++ global constructors
+  do not run on those parts with gcc or ATfE. Not fixed in 5.2.26.
 - `atomiq110-internal-marker-sanitation` and `nsx-ethos-u-driver-external`:
   carried from 5.2.25.
 
@@ -164,7 +170,14 @@ Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
 
 ## Hardware Evidence
 
-No new hardware evidence is claimed for `5.2.26`. The records inherited from
+One new hardware record, from PR #86: `ble_webble` built with
+arm-none-eabi-gcc 15.2.1 and with ATfE 22.1.0 for `apollo3p_evb` was flashed
+to an Apollo3 Blue Plus EVB. In 12 s of SWO capture, each build reported BLE
+bring-up `webble: stage 6` through `stage 37` and no `webble: FAIL` line.
+This shows that apps using the new heap symbols link and run on that board.
+It does not qualify BLE, and it says nothing about `apollo3_evb`, which was not
+tested. Otherwise no new hardware evidence is claimed for `5.2.26`. The
+records inherited from
 `5.2.23`/`5.2.24` stand unchanged for the non-atomiq110 archives, which are
 byte-identical. PR #77 records that `apollo510dL_evb` rev 2 firmware built with
 either PSRAM driver reports `psram_init_failed`, because that board has no
