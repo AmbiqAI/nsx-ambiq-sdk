@@ -3248,7 +3248,7 @@ APS25616N_tXPHS_delay( uint32_t ui32Iterations )
     " bne   APS25616N_tXPHS_delay\n"
   );
 }
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 __attribute__((naked))
 void
 APS25616N_tXPHS_delay( uint32_t ui32Iterations )

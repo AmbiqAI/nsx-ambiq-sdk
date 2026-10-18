@@ -1,0 +1,13 @@
+owner: apage224
+reason: >
+  The USB register headers for apollo4p, apollo510, apollo510L and
+  apollo330P declare unnamed padding bit-fields as `__IM uint32_t : N;`.
+  __IM expands to `volatile const`, and C++ does not allow qualifiers on an
+  unnamed bit-field, so clang++ rejects any C++ translation unit that
+  includes these headers ("anonymous bit-field cannot have qualifiers"); g++
+  accepts it. An unnamed bit-field cannot be accessed, so dropping the
+  qualifier changes neither layout nor behavior (sizeof of every register
+  struct is unchanged with arm-none-eabi-gcc). Companion to patch 001 for
+  AmbiqAI/nsx-ambiq-sdk#81. Retire once the fix lands upstream in
+  AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
+upstream_ref: AmbiqAI/nsx-ambiq-sdk#82

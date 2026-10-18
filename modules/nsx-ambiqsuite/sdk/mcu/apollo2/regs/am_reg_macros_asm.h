@@ -60,7 +60,7 @@ extern "C"
 #define     AM_ASM_BKPT(n)  __breakpoint(n)
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_BKPT(n)  __asm("    bkpt "#n);
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_BKPT(n)  __asm("    bkpt "#n);
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_BKPT(n)  asm("    bkpt "#n);
@@ -75,7 +75,7 @@ extern "C"
 #define     AM_ASM_WFI      __wfi();
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_WFI      __asm("    wfi");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_WFI      __asm("    wfi");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_WFI      asm("    wfi");
@@ -90,7 +90,7 @@ extern "C"
 #define     AM_ASM_WFE      __wfe();
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_WFE      __asm("    wfe");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_WFE      __asm("    wfe");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_WFE      asm("    wfe");
@@ -105,7 +105,7 @@ extern "C"
 #define     AM_ASM_SEV      __sev();
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_SEV      __asm("    sev");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_SEV      __asm("    sev");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_SEV      asm("    sev");
@@ -120,7 +120,7 @@ extern "C"
 #define     AM_ASM_NOP      __nop();
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_NOP      __asm("    nop");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_NOP      __asm("    nop");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_NOP      asm("    nop");
@@ -136,7 +136,7 @@ extern "C"
 #define     AM_ASM_DSB      __dsb(15);
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_DSB      __asm("    dsb #15");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_DSB      __asm("    dsb #15");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_DSB      asm("    dsb #15");
@@ -152,7 +152,7 @@ extern "C"
 #define     AM_ASM_ISB      __isb(15);
 #elif (defined (__ARMCC_VERSION)) && (__ARMCC_VERSION >= 6000000)
 #define     AM_ASM_ISB      __asm("    isb #15");
-#elif defined(__GNUC_STDC_INLINE__)
+#elif defined(__GNUC__)
 #define     AM_ASM_ISB      __asm("    isb #15");
 #elif   defined(__IAR_SYSTEMS_ICC__)
 #define     AM_ASM_ISB      asm("    isb #15");

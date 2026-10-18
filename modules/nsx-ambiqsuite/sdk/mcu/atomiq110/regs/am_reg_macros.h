@@ -215,7 +215,7 @@ _Pragma("GCC diagnostic pop")
 // Macro for BKPT instruction
 //*****************************************************************************
 #ifndef AM_ASM_BKPT
-#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC_STDC_INLINE__)
+#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC__)
 #define AM_ASM_BKPT(n)          __asm("    bkpt "#n)
 #elif defined(__IAR_SYSTEMS_ICC__)
 #define AM_ASM_BKPT(n)          asm("    bkpt "#n)
