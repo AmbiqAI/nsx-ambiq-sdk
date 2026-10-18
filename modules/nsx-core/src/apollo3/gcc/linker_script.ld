@@ -79,7 +79,7 @@ SECTIONS
 
     /* Guard: ensure data + bss leave room for a minimum heap */
     ASSERT( __HeapLimit > __HeapBase + 1024,
-            "RWMEM overflow: data + bss leave less than 1 KiB of heap" )
+            "RWMEM overflow: data + bss leave 1 KiB of heap or less" )
 
     .ARM.attributes 0 : { *(.ARM.attributes) }
 }

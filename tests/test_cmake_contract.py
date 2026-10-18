@@ -128,6 +128,25 @@ def test_newlib_bounded_sbrk_is_force_linked(repo_root: Path) -> None:
     assert "__HeapLimit" in sbrk
 
 
+def test_gcc_linker_scripts_define_the_sbrk_heap_bounds(repo_root: Path) -> None:
+    """Every GCC/ATfE linker script defines the symbols nsx-core's _sbrk uses.
+
+    _sbrk is force-linked into every newlib build, so a script without
+    __HeapBase/__HeapLimit fails every link on that SoC (#85).
+    """
+    scripts = sorted((repo_root / "modules" / "nsx-core" / "src").glob("*/gcc/*.ld"))
+    assert scripts
+    missing = [
+        str(script.relative_to(repo_root))
+        for script in scripts
+        if not all(
+            re.search(rf"\b{symbol}\s*=", script.read_text(encoding="utf-8"))
+            for symbol in ("__HeapBase", "__HeapLimit")
+        )
+    ]
+    assert not missing, f"linker scripts without __HeapBase/__HeapLimit: {missing}"
+
+
 def test_legacy_cm4f_armclang_boards_configure_with_c_startup(repo_root: Path, tmp_path: Path) -> None:
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")

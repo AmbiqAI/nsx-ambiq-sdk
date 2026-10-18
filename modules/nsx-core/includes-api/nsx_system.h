@@ -119,13 +119,12 @@
  *   The linker script MUST have `.preinit_array`, `.init_array`, and
  *   `.fini_array` sections or constructors silently won't run.
  *
- * ### Heap/Stack in TCM
- *   Both .stack and .heap are in MCU_TCM and are placed BEFORE .data
- *   and .bss. An oversized HEAP_SIZE (defined before including
- *   startup_gcc.c) consumes TCM budget and can push .data/.bss past
- *   the TCM boundary, causing a link-time overflow error. The heap is
- *   sized in uint32_t words, so HEAP_SIZE=1024 = 4KB.
- *   On staged Apollo510+ targets, stack and heap are separate sections in TCM.
+ * ### Heap and stack placement (GCC/ATfE)
+ *   .stack is a static section placed before .data and .bss. .heap is
+ *   placed after .bss and takes the rest of that RAM region (TCM on
+ *   Apollo4/Apollo5, main SRAM on Apollo2/Apollo3); nsx-core's _sbrk()
+ *   bounds malloc to [__HeapBase, __HeapLimit). Each linker script asserts
+ *   that more than 1 KiB of heap remains.
  *
  * @copyright Copyright (c) 2024-2026, Ambiq Micro, Inc.
  */
