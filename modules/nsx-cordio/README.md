@@ -51,6 +51,11 @@ here rather than in the core SDK provider.
 
 ## Provenance
 
-See `sdk/third_party/NSX_VENDORED_VERSION.txt`. Sources are an unmodified copy of
-the AmbiqSuite `third_party/cordio` and `third_party/uecc` trees at the pinned
-revision.
+Sources are the AmbiqSuite `third_party/cordio` and `third_party/uecc` trees
+at `stable-2026.06.18` (`caaf5af86087881647f56c70646c748d40c86e23`). `uecc` is
+unmodified. `cordio` carries a small set of NSX edits: LESC ECC-key validity
+handling (`dm_api.h`, `dm_sec_lesc.c`, `sec_ecc.c`, `smp_sc_act.c`), a GAP
+device-name setter (`svc_core.c`, `svc_core.h`), and Ambiq/NSX Device
+Information Service defaults including the distribution version
+(`svc_dis.c`). `sdk/third_party/NSX_VENDORED_VERSION.txt` records the revision
+and describes each edit.

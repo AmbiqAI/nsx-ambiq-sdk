@@ -42,6 +42,7 @@ No archive changes: every HAL/BSP archive (73) and
 | `nsx-psram` lists `apollo510dL_evb` and `apollo510L` as compatible; the driver is still chosen explicitly (issue #76, PR #77) | `modules/nsx-psram/` |
 | CI workflow token permissions (PR #80) | `.github/workflows/` |
 | BLE DIS default firmware revision `5.2.26` | `modules/nsx-ble/src/ns_ble.c`, `modules/nsx-cordio/.../svc_dis.c` |
+| `nsx-cordio` vendored-revision label corrected from `stable-2026.09.01 (3062036c4f)` (wrong in 5.2.25) to `stable-2026.06.18 (caaf5af860)`; NSX edits documented. No source change | `modules/nsx-cordio/` |
 
 Applying patches 001 and 002 to the `v5.2.25` provider tree with
 `git apply --directory=modules/nsx-ambiqsuite/sdk` gives the `5.2.26` tree
@@ -79,7 +80,7 @@ between `v5.2.24` and `v5.2.25`.
 | `nsx-ambiq-hal` PMU init | No: atomiq110-only path under `AM_PART_ATOMIQ110` | `modules/nsx-ambiq-hal/src/nsx_ambiq_pmu.c` |
 | `nsx-psram` compatibility (PR #77) | Yes: `apollo510dL_evb` / `apollo510L` | `modules/nsx-psram/` |
 | `nsx-ble` / `nsx-cordio` DIS firmware revision `5.2.24` -> `5.2.26` | Yes: advertised string | `modules/nsx-ble/`, `modules/nsx-cordio/` |
-| `nsx-cordio` vendored-revision label moved to `stable-2026.09.01 (3062036c4f)` | Label only: sources not re-vendored (known deviation) | `modules/nsx-cordio/` |
+| `nsx-cordio` vendored-revision label | No: reads `stable-2026.06.18 (caaf5af860)` in both v5.2.24 and 5.2.26 (5.2.25 had it wrong); NSX edits now documented | `modules/nsx-cordio/` |
 | atomiq110 platform, `nsx-npu`, atomiq110 power/core backends | No: atomiq110 targets only | `modules/nsx-npu/`, `*/src/atomiq110/`, `cmake/socs/atomiq110.cmake` |
 | Intake/CI tooling (INTERNAL-marker sanitizer, nsx-npu cross-compile job, patch guard test, token permissions) | No: not part of a consumer build | `sdk-intake/`, `tests/`, `.github/` |
 
@@ -96,11 +97,15 @@ Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
 - `mixed-snapshot-provider-payload` (now explicit, unchanged since 5.2.25):
   only atomiq110 content comes from `3062036c4f`; everything else is the
   `caaf5af8` content plus the patches.
-- `nsx-cordio-vendored-revision-label` (new finding, present since 5.2.25):
-  the label reads `3062036c4f`, but the vendored cordio/uecc sources match
-  AmbiqSuite `caaf5af860` (plus 7 NSX-modified files that predate `v5.2.24`).
-  Nine upstream cordio files that changed between the two commits are not
-  carried. Checked read-only against a local AmbiqSuite clone.
+- `nsx-cordio-vendored-revision-label` (corrected in 5.2.26): 5.2.25 labelled
+  the vendored cordio/uECC as `stable-2026.09.01 (3062036c4f)`, but the sources
+  match AmbiqSuite `caaf5af860` plus 7 NSX-edited files that predate `v5.2.24`
+  (PR #30); the nine upstream cordio files that changed between the two
+  commits are not carried. Checked read-only against a local AmbiqSuite clone.
+  5.2.26 restores the `stable-2026.06.18 (caaf5af860)` label and documents the
+  NSX edits; the sources are unchanged, and the released 5.2.25 record is not
+  amended. Moving cordio to newer upstream is left for a separate, tested
+  change.
 - `atomiq110-internal-marker-sanitation` and `nsx-ethos-u-driver-external`:
   carried from 5.2.25.
 

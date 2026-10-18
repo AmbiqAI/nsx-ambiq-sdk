@@ -323,6 +323,19 @@ def test_provider_ownership_exceptions_are_release_deviations(repo_root: Path) -
             assert path.relative_to(repo_root).as_posix() in declared_paths, path
 
 
+def test_nsx_cordio_vendored_revision_label_is_consistent(repo_root: Path) -> None:
+    """The cordio/uECC vendored-revision label must agree everywhere it is stated.
+
+    5.2.25 moved the label to the provider snapshot without re-vendoring the
+    sources. Re-vendoring must update all three statements together.
+    """
+    label = (repo_root / "modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt").read_text(
+        encoding="utf-8"
+    ).splitlines()[0].strip()
+    manifest = load_yaml(repo_root, Path("modules/nsx-cordio/nsx-module.yaml"))
+    assert {entry["revision"] for entry in manifest["vendored"].values()} == {label}
+
+
 def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) -> None:
     inventory = load_yaml(repo_root, OWNERSHIP_INVENTORY)
     entries = {entry["id"]: entry for entry in inventory["entries"]}

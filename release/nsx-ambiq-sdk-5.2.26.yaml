@@ -75,6 +75,19 @@ consumer_upgrade:
         paths:
           - modules/nsx-ble/src/ns_ble.c
           - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+      - id: nsx-cordio-vendored-revision-label
+        refs: [known_deviations.nsx-cordio-vendored-revision-label]
+        summary: >-
+          Corrects nsx-cordio's vendored-revision label, which 5.2.25 recorded
+          as stable-2026.09.01 (3062036c4f) in error, back to the true
+          provenance: stable-2026.06.18 (caaf5af860) plus the NSX edits now
+          listed in NSX_VENDORED_VERSION.txt and the module README. Metadata
+          and documentation only; the cordio and uECC sources are unchanged
+          apart from the DIS firmware revision string.
+        paths:
+          - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+          - modules/nsx-cordio/nsx-module.yaml
+          - modules/nsx-cordio/README.md
       - id: ci-workflow-token-permissions
         refs: [PR 80]
         summary: >-
@@ -162,12 +175,16 @@ consumer_upgrade:
       - id: nsx-cordio-vendored-revision-label
         refs: [known_deviations.nsx-cordio-vendored-revision-label]
         summary: >-
-          nsx-cordio's vendored-revision label moves to stable-2026.09.01
-          (3062036c4f). Cordio and uECC sources are unchanged apart from the
-          DIS firmware revision string; see the known deviation.
+          No provenance change for these consumers: the vendored-revision label
+          reads stable-2026.06.18 (caaf5af860) in both v5.2.24 and 5.2.26, and
+          the cordio and uECC sources are unchanged apart from the DIS firmware
+          revision string. 5.2.25 recorded the label as stable-2026.09.01
+          (3062036c4f) in error; 5.2.26 corrects it and documents the NSX edits
+          in NSX_VENDORED_VERSION.txt and the module README.
         paths:
           - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
           - modules/nsx-cordio/nsx-module.yaml
+          - modules/nsx-cordio/README.md
       - id: ble-dis-firmware-revision
         refs: []
         summary: The BLE DIS default firmware revision string moves from 5.2.24 to 5.2.26.
@@ -420,21 +437,27 @@ known_deviations:
       - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
       - modules/nsx-ambiqsuite/nsx-module.yaml
   - id: nsx-cordio-vendored-revision-label
+    status: corrected_in_5_2_26
     description: >-
-      nsx-cordio's vendored-revision label (NSX_VENDORED_VERSION.txt and the
-      `vendored:` block in nsx-module.yaml) reads stable-2026.09.01
-      (3062036c4f) since 5.2.25, but the cordio and uecc sources were not
-      re-vendored. Checked against AmbiqSuite read-only during 5.2.26
-      preparation: all 452 vendored files match caaf5af860 except 7
-      NSX-modified files that predate v5.2.24 (svc_dis.c, svc_core.c/.h,
-      dm_api.h, dm_sec_lesc.c, smp_sc_act.c, sec_ecc.c), and 9 upstream cordio
-      files that changed between caaf5af860 and 3062036c4f are not carried
-      (em9305 and 510L radio HCI drivers and the em9305 firmware image,
-      smp_act.c, hci_defs.h, fit_main.c). The label is inaccurate; the code
-      is the caaf5af860 cordio plus NSX patches, as shipped in 5.2.24.
+      In 5.2.25 (tag v5.2.25, aefce2ca) nsx-cordio's vendored-revision label
+      (NSX_VENDORED_VERSION.txt and both `revision:` lines of the `vendored:`
+      block in nsx-module.yaml) read stable-2026.09.01 (3062036c4f), set in
+      0940bca/2138331, but the cordio and uecc sources were never re-vendored.
+      Checked read-only against AmbiqSuite during 5.2.26 preparation: all 452
+      vendored files match caaf5af860 except 7 NSX-edited files that predate
+      v5.2.24 (PR #30: dm_api.h, dm_sec_lesc.c, sec_ecc.c, smp_sc_act.c,
+      svc_core.c/.h, svc_dis.c), and the 9 upstream cordio files that changed
+      between caaf5af860 and 3062036c4f are not carried (em9305 and 510L radio
+      HCI drivers and the em9305 firmware image, smp_act.c, hci_defs.h,
+      fit_main.c). 5.2.26 corrects the label to stable-2026.06.18 (caaf5af860)
+      and lists the NSX edits in NSX_VENDORED_VERSION.txt and the module
+      README; the sources are unchanged. The released 5.2.25 record is left
+      as published. Moving cordio to newer upstream is a BLE stack change for
+      a separate, tested release.
     paths:
       - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
       - modules/nsx-cordio/nsx-module.yaml
+      - modules/nsx-cordio/README.md
   - id: atomiq110-internal-marker-sanitation
     description: >-
       The atomiq110 headers under modules/nsx-ambiqsuite/sdk/mcu/atomiq110

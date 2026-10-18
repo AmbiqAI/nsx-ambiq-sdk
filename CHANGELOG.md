@@ -25,12 +25,15 @@ All notable distribution changes are recorded here.
   moving from `5.2.24` also receive the 5.2.25 content below for the first
   time. `release/nsx-ambiq-sdk-5.2.26.yaml` (`consumer_upgrade`) lists the
   changes per starting version.
-- Records two provenance gaps as known deviations: the provider payload mixes
-  `caaf5af8` content (non-atomiq110) with `3062036c4f` (atomiq110), and the
-  `nsx-cordio` vendored-revision label reads `stable-2026.09.01 (3062036c4f)`
-  although its sources are still the `caaf5af860` tree.
+- Corrects the `nsx-cordio` vendored-revision label. 5.2.25 recorded it as
+  `stable-2026.09.01 (3062036c4f)`, but the cordio/uECC sources were never
+  re-vendored; they are the `stable-2026.06.18` (`caaf5af860`) tree plus NSX
+  edits. The label now says so, and `NSX_VENDORED_VERSION.txt` and the module
+  README list the NSX edits. No cordio/uECC source change.
+- Records the provider payload's mixed provenance as a known deviation:
+  non-atomiq110 content is `caaf5af8`, atomiq110 content is `3062036c4f`.
 
-## 5.2.25 - unreleased
+## 5.2.25 - 2026-09-04 (tagged, not published)
 
 - Carries the atomiq110 platform work merged after the immutable `v5.2.24`
   tag (PR #46): atomiq110 HAL/BSP artifacts, `nsx-power`/`nsx-core` atomiq110
