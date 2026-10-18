@@ -8,8 +8,8 @@
  * was placed BEFORE .data/.bss in TCM, so libc malloc would walk straight
  * through .data once it exhausted the small fixed g_pui32Heap[] buffer.
  *
- * The linker scripts have been reordered so .heap occupies all remaining TCM
- * between .bss and the top of the region; this _sbrk() honors the
+ * The linker scripts place .heap after .bss so it occupies the rest of that
+ * RAM region (TCM on Apollo4/Apollo5, main SRAM on Apollo2/Apollo3); this _sbrk() honors the
  * __HeapBase / __HeapLimit symbols the linker exports and returns
  * (void *)-1 with errno=ENOMEM on overflow instead of clobbering memory.
  *
