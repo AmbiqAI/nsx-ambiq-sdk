@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 try:
@@ -20,6 +22,33 @@ OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
 
 def load_yaml(repo_root: Path, path: Path) -> dict:
     return yaml.safe_load((repo_root / path).read_text(encoding="utf-8"))
+
+
+def git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", "-C", str(repo_root), *args], capture_output=True, text=True)
+
+
+def history_unavailable(reason: str) -> None:
+    """Skip a git-history check locally, but fail it in CI.
+
+    The release record's history claims are only verified by these checks, so CI
+    (which sets CI=true and checks out full history) must never pass them by
+    skipping. Local shallow clones may still skip.
+    """
+    if os.environ.get("CI", "").lower() in {"1", "true", "yes"}:
+        pytest.fail(f"{reason}; CI must check out full history (actions/checkout fetch-depth: 0)")
+    pytest.skip(reason)
+
+
+def require_full_history(repo_root: Path) -> None:
+    probe = git(repo_root, "rev-parse", "--is-shallow-repository")
+    if probe.returncode != 0 or probe.stdout.strip() != "false":
+        history_unavailable("git history unavailable or shallow")
+
+
+def archive_scope(path: str) -> str:
+    """`atomiq110` or `non_atomiq110` for a promoted or manifest archive path."""
+    return "atomiq110" if "/atomiq110/" in f"/{path}" else "non_atomiq110"
 
 
 def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list[Path]) -> None:
@@ -160,8 +189,35 @@ def test_payload_provenance_matches_the_promoted_artifact_manifest(repo_root: Pa
     declared = {train["manifest_key"]: train for train in provenance["toolchain_trains"]}
     assert set(declared) == set(artifact["build"]["toolchains"])
 
+    # Per-train, per-archive-set source commits. The payload is not built from
+    # one commit (see known deviation mixed-snapshot-provider-payload), so each
+    # set records its own source: carried-over non-atomiq110 archives name the
+    # carried-over commit, and an atomiq110 set either names the recorded
+    # upstream commit or is null with an explanation.
+    manifest_counts: dict[tuple[str, str], int] = {}
+    for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
+        for entry in artifact.get(section) or []:
+            for toolchain, info in (entry.get(artifact_key) or {}).items():
+                scope = archive_scope(info["path"])
+                manifest_counts[(toolchain, scope)] = manifest_counts.get((toolchain, scope), 0) + 1
+
+    carried = provenance["carried_over_source_commit"]
+    built_from_upstream = False
     for key, train in declared.items():
-        assert train["built_from_source_commit"] == upstream["source_commit"]
+        assert "built_from_source_commit" not in train, key
+        sets = {archive_set["scope"]: archive_set for archive_set in train["archive_sets"]}
+        assert set(sets) == {"non_atomiq110", "atomiq110"}, key
+        for scope, archive_set in sets.items():
+            assert archive_set["archive_count"] == manifest_counts[(key, scope)], (key, scope)
+            commit = archive_set["built_from_source_commit"]
+            if commit is None:
+                assert archive_set["source_note"].strip(), (key, scope)
+            else:
+                assert len(commit) == 40 and set(commit) <= set("0123456789abcdef"), (key, scope)
+        assert sets["non_atomiq110"]["built_from_source_commit"] == carried, key
+        atomiq_commit = sets["atomiq110"]["built_from_source_commit"]
+        assert atomiq_commit in (None, upstream["source_commit"]), key
+        built_from_upstream |= atomiq_commit == upstream["source_commit"]
         assert train["archives_introduced_in"], key
         for commit in train["archives_introduced_in"]:
             assert len(commit) == 40 and set(commit) <= set("0123456789abcdef"), (key, commit)
@@ -172,6 +228,11 @@ def test_payload_provenance_matches_the_promoted_artifact_manifest(repo_root: Pa
     assert acfe["manifest_hashes_correct_in_5_2_23"] is False
     assert (repo_root / acfe["forensic_report"]).is_file()
     assert "ddb88640e61660edc65ebc956b65dcbd6804d2e6" in acfe["archives_introduced_in"]
+    # The recorded upstream identity must describe at least one shipped set.
+    assert built_from_upstream
+    assert sum(manifest_counts.values()) == sum(
+        archive_set["archive_count"] for train in declared.values() for archive_set in train["archive_sets"]
+    )
 
 
 def test_known_deviations_are_explicit_and_point_at_real_paths(repo_root: Path) -> None:
@@ -191,22 +252,13 @@ def test_archives_introduced_in_matches_git_history(repo_root: Path) -> None:
     how the defect this release corrects happened in the first place, so the
     claim is verified rather than trusted.
 
-    Skipped when the checkout has no usable history (for example a shallow CI
-    clone), since the property is about history, not the worktree.
+    Needs full git history: skipped in a local shallow clone, failed in CI.
     """
-    import subprocess
-
     artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     sdk_rel = Path("modules") / "nsx-ambiqsuite" / "sdk"
 
-    probe = subprocess.run(
-        ["git", "-C", str(repo_root), "rev-parse", "--is-shallow-repository"],
-        capture_output=True,
-        text=True,
-    )
-    if probe.returncode != 0 or probe.stdout.strip() != "false":
-        pytest.skip("git history unavailable or shallow")
+    require_full_history(repo_root)
 
     declared = {train["manifest_key"]: train for train in release["payload_provenance"]["toolchain_trains"]}
     for section, artifact_key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
@@ -220,7 +272,7 @@ def test_archives_introduced_in_matches_git_history(repo_root: Path) -> None:
                     text=True,
                 )
                 if result.returncode != 0 or not result.stdout.strip():
-                    pytest.skip("git history unavailable for promoted archives")
+                    history_unavailable("git history unavailable for promoted archives")
                 introducing = result.stdout.strip()
                 assert introducing in declared[toolchain]["archives_introduced_in"], (
                     f"{promoted.as_posix()} was last changed by {introducing}, which is not listed under "
@@ -266,22 +318,14 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
     their prebuilt archives are byte-identical. Compare the archive blobs at the
     recorded starting commit with HEAD instead of trusting the claim.
 
-    Skipped when the checkout has no usable history (for example a shallow CI
-    clone) or lacks the starting commit.
+    Needs full git history: skipped in a local shallow clone, failed in CI.
     """
-    import subprocess
-
-    def git(*args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(["git", "-C", str(repo_root), *args], capture_output=True, text=True)
-
-    probe = git("rev-parse", "--is-shallow-repository")
-    if probe.returncode != 0 or probe.stdout.strip() != "false":
-        pytest.skip("git history unavailable or shallow")
+    require_full_history(repo_root)
 
     lib_rel = "modules/nsx-ambiqsuite/sdk/lib"
 
     def archive_blobs(revision: str) -> dict[str, str]:
-        listing = git("ls-tree", "-r", revision, "--", lib_rel)
+        listing = git(repo_root, "ls-tree", "-r", revision, "--", lib_rel)
         assert listing.returncode == 0, listing.stderr
         blobs = {}
         for line in listing.stdout.splitlines():
@@ -294,14 +338,47 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
     assert head
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     for entry in release["consumer_upgrade"]:
-        if git("cat-file", "-e", f"{entry['from_commit']}^{{commit}}").returncode != 0:
-            pytest.skip(f"{entry['from_commit']} is not in this checkout")
+        if git(repo_root, "cat-file", "-e", f"{entry['from_commit']}^{{commit}}").returncode != 0:
+            history_unavailable(f"{entry['from_commit']} is not in this checkout")
         base = archive_blobs(entry["from_commit"])
         assert set(base) == set(head), entry["from_version"]
         changed = {path for path in head if base[path] != head[path]}
         changed_parts = {Path(path).relative_to(lib_rel).parts[1] for path in changed}
         assert changed_parts == set(entry["changed_archive_parts"]), entry["from_version"]
         assert len(head) - len(changed) == entry["unchanged_archive_count"], entry["from_version"]
+
+
+def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> None:
+    """Each upgrade path's change list must account for every file that changed
+    since its starting commit, so a consumer reading one entry sees everything
+    they receive. A path covers itself and, for a directory, everything under it.
+    Module manifests whose only change is the `version:` line are covered by the
+    distribution version bump.
+
+    Needs full git history: skipped in a local shallow clone, failed in CI.
+    """
+    require_full_history(repo_root)
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+
+    def version_line_only(base: str, path: str) -> bool:
+        diff = git(repo_root, "diff", "-U0", base, "HEAD", "--", path).stdout.splitlines()
+        changed = [line for line in diff if line[:1] in "+-" and not line.startswith(("+++", "---"))]
+        return bool(changed) and all(line[1:].strip().startswith("version:") for line in changed)
+
+    for entry in release["consumer_upgrade"]:
+        base = entry["from_commit"]
+        if git(repo_root, "cat-file", "-e", f"{base}^{{commit}}").returncode != 0:
+            history_unavailable(f"{base} is not in this checkout")
+        listed = [path.rstrip("/") for change in entry["changes"] for path in change["paths"]]
+        names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD")
+        assert names.returncode == 0, names.stderr
+        uncovered = [
+            name
+            for name in names.stdout.splitlines()
+            if not any(name == path or name.startswith(f"{path}/") for path in listed)
+            and not (name.startswith("modules/") and name.endswith("/nsx-module.yaml") and version_line_only(base, name))
+        ]
+        assert uncovered == [], (entry["from_version"], uncovered)
 
 
 def test_provider_ownership_exceptions_are_release_deviations(repo_root: Path) -> None:
@@ -327,13 +404,27 @@ def test_nsx_cordio_vendored_revision_label_is_consistent(repo_root: Path) -> No
     """The cordio/uECC vendored-revision label must agree everywhere it is stated.
 
     5.2.25 moved the label to the provider snapshot without re-vendoring the
-    sources. Re-vendoring must update all three statements together.
+    sources. Checks all three statements: line 1 of NSX_VENDORED_VERSION.txt,
+    both `vendored:` revisions in nsx-module.yaml, and the README's Provenance
+    section, which must name the label's snapshot and commit and no other
+    AmbiqSuite snapshot. Re-vendoring must update all three together.
     """
     label = (repo_root / "modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt").read_text(
         encoding="utf-8"
     ).splitlines()[0].strip()
     manifest = load_yaml(repo_root, Path("modules/nsx-cordio/nsx-module.yaml"))
     assert {entry["revision"] for entry in manifest["vendored"].values()} == {label}
+
+    import re
+
+    match = re.fullmatch(r"(stable-\d{4}\.\d{2}\.\d{2}) \(([0-9a-f]{10,40})\)", label)
+    assert match, label
+    snapshot, commit = match.groups()
+    readme = (repo_root / "modules/nsx-cordio/README.md").read_text(encoding="utf-8")
+    provenance = readme.split("## Provenance", 1)[1]
+    assert snapshot in provenance and commit in provenance
+    # The README must not tie the vendored stack to any other snapshot.
+    assert set(re.findall(r"stable-\d{4}\.\d{2}\.\d{2}", readme)) == {snapshot}
 
 
 def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) -> None:

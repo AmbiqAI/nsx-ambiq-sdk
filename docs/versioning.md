@@ -6,15 +6,20 @@
 root package and every manifest under `modules/` use this version because the
 repository is released as one coordinated distribution.
 
-Every distribution release maps to exactly one promoted AmbiqSuite payload
-and source identity. For both `5.2.23` and `5.2.24`, that identity is snapshot
+Every distribution release maps to exactly one promoted AmbiqSuite payload,
+and its release manifest records where each part of that payload came from.
+For `5.2.23` and `5.2.24` the whole payload is one source identity: snapshot
 `stable-2026.06.18`, source ref `stable`, source commit
 `caaf5af86087881647f56c70646c748d40c86e23`; `5.2.24` republishes the identical
-binary payload with a corrected artifact manifest. `5.2.25` and `5.2.26`
-record snapshot `stable-2026.09.01`, commit
-`3062036c4f3e7822d27e6a842f226f423328a25a`, from which only the `atomiq110`
-content was built; their release manifests record the remaining
-`caaf5af8` content and the intake patches as known deviations.
+binary payload with a corrected artifact manifest.
+
+From `5.2.25` the payload no longer comes from one commit. The artifact
+manifest records snapshot `stable-2026.09.01`
+(`3062036c4f3e7822d27e6a842f226f423328a25a`), but only the `atomiq110`
+atfe/acfe archives are recorded as built from it. The Apollo headers and
+archives are still `caaf5af8` content (plus the intake patches), and the
+`atomiq110` headers and gcc archives come from other sources. The release
+manifest's `payload_provenance` and `known_deviations` record each source.
 
 The distribution version does not assert an official numbered AmbiqSuite
 release. The source identity in the release manifest and promoted artifact

@@ -3,8 +3,9 @@
 Optional **Cordio / WSF Bluetooth LE host stack** for NSX on AmbiqSuite silicon.
 
 This module vendors the AmbiqSuite `third_party/cordio` stack (`ble-host` +
-`ble-profiles` + `wsf`) plus `uecc`, pinned to the same SDK drop as the
-`nsx-ambiqsuite` provider (`stable-2026.06.18`), and **builds it from source**
+`ble-profiles` + `wsf`) plus `uecc` at AmbiqSuite `stable-2026.06.18`, the
+drop the non-atomiq110 provider headers and archives come from, and
+**builds it from source**
 for the active SoC's BLE transport. It is the low-level host stack only; the
 app-facing convenience API (an `ns_ble.h`-equivalent) lives in the separate
 `nsx-ble` module.

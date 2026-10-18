@@ -10,7 +10,7 @@ support:
   ambiqsuite: true
   zephyr: false
 
-summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) pinned to the provider SDK drop and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
+summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) at AmbiqSuite stable-2026.06.18 (caaf5af860) plus NSX edits, and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
 
 vendored:
   cordio:

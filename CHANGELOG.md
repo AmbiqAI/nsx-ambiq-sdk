@@ -9,7 +9,8 @@ All notable distribution changes are recorded here.
   (issue #81, PR #83). Intake patches
   `sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch` and
   `002-clang-cxx-unnamed-bitfield-qualifiers.patch` change 26 provider
-  headers (40 lines). C builds, gcc builds and armclang builds select the same
+  files, 40 lines: 23 headers and 3 `devices/am_devices_mspi_psram_*.c`
+  sources, which no NSX module compiles. C builds, gcc builds and armclang builds select the same
   code as before, and register struct layout is unchanged. Recorded as the
   `clang-cxx-header-compat` ownership exception and known deviation; the
   upstream AmbiqSuite fix is tracked in issue #82.
@@ -30,8 +31,17 @@ All notable distribution changes are recorded here.
   re-vendored; they are the `stable-2026.06.18` (`caaf5af860`) tree plus NSX
   edits. The label now says so, and `NSX_VENDORED_VERSION.txt` and the module
   README list the NSX edits. No cordio/uECC source change.
-- Records the provider payload's mixed provenance as a known deviation:
-  non-atomiq110 content is `caaf5af8`, atomiq110 content is `3062036c4f`.
+- Records the provider payload's real provenance, unchanged since 5.2.25.
+  Apollo headers and archives are `stable-2026.06.18` (`caaf5af8`) content.
+  The experimental atomiq110 headers are the `npu-drop-2026.07.09` payload.
+  The atomiq110 atfe/acfe archives are recorded as built from `3062036c4f`,
+  and its gcc archives come from an unrecorded, older source. The release
+  title and the per-train `archive_sets` say the same. The atomiq110 headers
+  and archives do not fully match; this is recorded as the open known
+  deviation `atomiq110-header-archive-mismatch`.
+- CI checks out full git history, so the record's archive and upgrade-path
+  checks run there, and they fail rather than skip when history is missing
+  under `CI=true`.
 
 ## 5.2.25 - 2026-09-04 (tagged, not published)
 

@@ -4,7 +4,7 @@ distribution:
   name: nsx-ambiq-sdk
   version: "5.2.26"
   tag: v5.2.26
-  title: "nsx-ambiq-sdk 5.2.26 — AmbiqSuite stable-2026.09.01, clang C++ header compatibility"
+  title: "nsx-ambiq-sdk 5.2.26 — AmbiqSuite stable-2026.06.18 + clang C++ fixes; atomiq110 npu-drop-2026.07.09 (experimental)"
   git:
     commit: null
     commit_resolution:
@@ -32,8 +32,13 @@ distribution:
 # Who receives what. neuralSPOT-X moves every board to 5.2.26: atomiq110 boards
 # from 5.2.25, every other board from 5.2.24 (the last published GitHub
 # release). Each entry lists the shipped-content changes a consumer on that
-# version receives. `changed_archive_parts` is machine-verified against git by
-# tests/test_release_metadata.py::test_consumer_upgrade_archive_claims_match_git_history.
+# version receives. tests/test_release_metadata.py checks each entry against git:
+# `changed_archive_parts` / `unchanged_archive_count` by
+# test_consumer_upgrade_archive_claims_match_git_history, and that every file
+# changed since `from_commit` is covered by some change's `paths` by
+# test_consumer_upgrade_paths_cover_every_changed_file (module manifests whose
+# only change is the version line are covered implicitly). Both run in CI,
+# which checks out full history; they fail rather than skip when CI=true.
 consumer_upgrade:
   - from_version: "5.2.25"
     from_tag: v5.2.25
@@ -48,14 +53,20 @@ consumer_upgrade:
         summary: >-
           C++ translation units that include the AmbiqSuite HAL now compile
           with ATfE clang++. Intake patches 001 and 002 change 26 provider
-          headers (40 lines): GNU-path detection tests __GNUC__ instead of
-          __GNUC_STDC_INLINE__, two debug macros gain the space C++11 needs
-          before a string paste, and unnamed padding bit-fields in four USB
-          register headers drop their qualifier. Applies to every part.
+          files, 40 lines: 23 headers and 3 C sources
+          (devices/am_devices_mspi_psram_{aps12804o,aps25616n,aps25616ba_1p2v}.c).
+          GNU-path detection tests __GNUC__ instead of __GNUC_STDC_INLINE__,
+          two debug macros gain the space C++11 needs before a string paste,
+          and unnamed padding bit-fields in four USB register headers drop
+          their qualifier. Applies to every part. The three patched .c files
+          are not compiled by any NSX module (nsx-psram builds its own copies
+          under src/apollo*/devices/).
         paths:
-          - sdk-intake/patches/stable
+          - sdk-intake/patches
           - modules/nsx-ambiqsuite/sdk/mcu
           - modules/nsx-ambiqsuite/sdk/devices
+          - release/source-ownership.yaml
+          - tests/test_committed_intake_patches.py
       - id: nsx-psram-apollo510dl-compatibility
         refs: [PR 77, issue 76]
         summary: >-
@@ -81,13 +92,16 @@ consumer_upgrade:
           Corrects nsx-cordio's vendored-revision label, which 5.2.25 recorded
           as stable-2026.09.01 (3062036c4f) in error, back to the true
           provenance: stable-2026.06.18 (caaf5af860) plus the NSX edits now
-          listed in NSX_VENDORED_VERSION.txt and the module README. Metadata
-          and documentation only; the cordio and uECC sources are unchanged
+          listed in NSX_VENDORED_VERSION.txt and the module README; the
+          README, CMakeLists.txt comment and manifest summary no longer say the
+          stack is pinned to the provider's drop. Metadata and documentation
+          only; the cordio and uECC sources are unchanged
           apart from the DIS firmware revision string.
         paths:
           - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
           - modules/nsx-cordio/nsx-module.yaml
           - modules/nsx-cordio/README.md
+          - modules/nsx-cordio/CMakeLists.txt
       - id: ci-workflow-token-permissions
         refs: [PR 80]
         summary: >-
@@ -96,6 +110,34 @@ consumer_upgrade:
         paths:
           - .github/workflows/ci.yml
           - .github/workflows/container-validation.yml
+      - id: distribution-version
+        refs: []
+        summary: >-
+          Distribution version 5.2.26 in pyproject.toml, uv.lock and every
+          module manifest (version line only, except where another change
+          lists the manifest).
+        paths:
+          - pyproject.toml
+          - uv.lock
+      - id: release-records-and-docs
+        refs: []
+        summary: >-
+          The 5.2.26 release record and qualification report, CHANGELOG, and
+          README/versioning text that states the current version and payload
+          provenance. Not part of a consumer build.
+        paths:
+          - release
+          - CHANGELOG.md
+          - README.md
+          - docs
+          - modules/nsx-ambiqsuite/README.md
+      - id: repository-tests
+        refs: []
+        summary: >-
+          Contract tests moved to the 5.2.26 record, plus the release-record
+          checks. Not part of a consumer build.
+        paths:
+          - tests
 
   - from_version: "5.2.24"
     from_tag: v5.2.24
@@ -117,7 +159,11 @@ consumer_upgrade:
           (mcu/atomiq110, boards/atomiq110_fpga_turbo,
           CMSIS system_atomiq110.{h,c}) and the artifact manifest.
         paths:
-          - sdk-intake/patches/stable
+          - sdk-intake/patches
+          - modules/nsx-ambiqsuite/sdk/mcu
+          - modules/nsx-ambiqsuite/sdk/devices
+          - release/source-ownership.yaml
+          - tests/test_committed_intake_patches.py
       - id: provider-identity-repin
         refs: [release/nsx-ambiq-sdk-5.2.25.yaml]
         summary: >-
@@ -125,7 +171,10 @@ consumer_upgrade:
           nsx-ambiqsuite/nsx-module.yaml (sdk_release, upstream_revision)
           moves from stable-2026.06.18/caaf5af8 to stable-2026.09.01/3062036c4f.
           This is metadata for non-atomiq110 parts: their headers (apart from
-          the clang C++ patches) and archives remain the caaf5af8 content.
+          the clang C++ patches) and archives remain the caaf5af8 content. Of
+          the atomiq110 content only the atfe/acfe archives are recorded as
+          built from 3062036c4f; see known deviation
+          mixed-snapshot-provider-payload.
         paths:
           - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
           - modules/nsx-ambiqsuite/nsx-module.yaml
@@ -145,6 +194,7 @@ consumer_upgrade:
           - modules/nsx-core/src/apollo510/nsx_system_platform.c
           - modules/nsx-core/includes-api/nsx_mem.h
           - modules/nsx-core/src/nsx_cache.c
+          - modules/nsx-core/CMakeLists.txt
       - id: nsx-power-shared-profile-printer
         refs: [PR 56]
         summary: >-
@@ -158,7 +208,12 @@ consumer_upgrade:
         paths:
           - modules/nsx-power/src/nsx_power_profile.c
           - modules/nsx-power/src/nsx_power_internal.h
+          - modules/nsx-power/src/apollo3/nsx_power_profile.c
+          - modules/nsx-power/src/apollo330/nsx_power_profile.c
+          - modules/nsx-power/src/apollo4/nsx_power_profile.c
+          - modules/nsx-power/src/apollo5/nsx_power_profile.c
           - modules/nsx-power/CMakeLists.txt
+          - modules/nsx-power/CHANGELOG.md
       - id: nsx-ambiq-hal-pmu-atomiq110
         refs: [PR 46]
         summary: >-
@@ -172,6 +227,7 @@ consumer_upgrade:
         summary: As above.
         paths:
           - modules/nsx-psram/nsx-module.yaml
+          - modules/nsx-psram/CMakeLists.txt
       - id: nsx-cordio-vendored-revision-label
         refs: [known_deviations.nsx-cordio-vendored-revision-label]
         summary: >-
@@ -185,24 +241,39 @@ consumer_upgrade:
           - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
           - modules/nsx-cordio/nsx-module.yaml
           - modules/nsx-cordio/README.md
+          - modules/nsx-cordio/CMakeLists.txt
       - id: ble-dis-firmware-revision
         refs: []
         summary: The BLE DIS default firmware revision string moves from 5.2.24 to 5.2.26.
         paths:
           - modules/nsx-ble/src/ns_ble.c
+          - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
       - id: atomiq110-platform
         refs: [PR 46, PR 55, PR 58, PR 63, PR 64, PR 68, PR 75]
         summary: >-
-          atomiq110 (experimental) HAL/BSP archives rebuilt from
-          3062036c4f, sanitized atomiq110 headers, nsx-power and nsx-core
-          atomiq110 backends, the nsx-npu module (Ethos-U85 glue, external
-          nsx-ethos-u-driver), and the atomiq110 Ethos-U inference timeout in
-          cmake/socs/atomiq110.cmake. Selected only for atomiq110 targets.
+          atomiq110 (experimental): headers from the npu-drop-2026.07.09
+          payload (INTERNAL-marker sanitized), rebuilt HAL/BSP archives (atfe
+          and acfe recorded as built from 3062036c4f; the gcc archive's source
+          is not recorded), nsx-power and nsx-core atomiq110 backends, the
+          nsx-npu module (Ethos-U85 glue, external nsx-ethos-u-driver), and the
+          atomiq110 Ethos-U inference timeout in cmake/socs/atomiq110.cmake.
+          Selected only for atomiq110 targets. The shipped headers and archives
+          do not match; see known deviation atomiq110-header-archive-mismatch.
         paths:
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+          - modules/nsx-ambiqsuite/sdk/boards/atomiq110_fpga_turbo
+          - modules/nsx-ambiqsuite/sdk/CMSIS/AmbiqMicro/Include/system_atomiq110.h
+          - modules/nsx-ambiqsuite/sdk/CMSIS/AmbiqMicro/Source/system_atomiq110.c
+          - modules/nsx-ambiqsuite/sdk/lib/gcc/atomiq110
+          - modules/nsx-ambiqsuite/sdk/lib/atfe/atomiq110
+          - modules/nsx-ambiqsuite/sdk/lib/acfe/atomiq110
           - modules/nsx-npu
           - modules/nsx-power/src/atomiq110
+          - modules/nsx-power/nsx-module.yaml
           - modules/nsx-core/src/atomiq110
+          - modules/nsx-core/CMakeLists.txt
           - cmake/socs/atomiq110.cmake
+          - docs/platform-coverage.md
       - id: repository-tooling
         refs: [PR 58, PR 64, PR 80]
         summary: >-
@@ -210,9 +281,31 @@ consumer_upgrade:
           committed-intake-patch guard test, and CI token permissions. Not part
           of any consumer build.
         paths:
-          - sdk-intake/internal_markers.py
-          - tests/test_npu_cross_compile.py
-          - tests/test_committed_intake_patches.py
+          - sdk-intake
+          - tests
+          - tools
+          - .github
+          - .gitignore
+          - .pre-commit-config.yaml
+      - id: distribution-version
+        refs: []
+        summary: As above.
+        paths:
+          - pyproject.toml
+          - uv.lock
+      - id: release-records-and-docs
+        refs: []
+        summary: >-
+          The 5.2.25 and 5.2.26 release records and qualification reports (and
+          the machine-verified archives_introduced_in ledger in the 5.2.24
+          record), CHANGELOG, and README/versioning/intake docs. Not part of a
+          consumer build.
+        paths:
+          - release
+          - CHANGELOG.md
+          - README.md
+          - docs
+          - modules/nsx-ambiqsuite/README.md
 
 upstream:
   provider: ambiqsuite
@@ -223,6 +316,15 @@ upstream:
   artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
   raw_source_committed: false
   official_numbered_release_claimed: false
+  identity_scope: >-
+    The identity above is what the artifact manifest and the provider module
+    record. Of the shipped payload, only the atomiq110 atfe and acfe archives
+    are recorded as built from it. Every other archive and every
+    non-atomiq110 header is stable-2026.06.18 (caaf5af8) content, the
+    atomiq110 headers are the npu-drop-2026.07.09 payload, and the atomiq110
+    gcc archive's source is not recorded. See payload_provenance and known
+    deviations mixed-snapshot-provider-payload and
+    atomiq110-header-archive-mismatch.
 
 payload_provenance:
   summary: >-
@@ -235,11 +337,15 @@ payload_provenance:
     "git apply --directory=modules/nsx-ambiqsuite/sdk" yields the 5.2.26 tree
     byte-for-byte (checked during 5.2.26 preparation).
   binary_payload_identical_to: "5.2.25"
+  carried_over_source_commit: caaf5af86087881647f56c70646c748d40c86e23
   carried_over_archives_note: >-
-    Only the atomiq110 archives were rebuilt from 3062036c4f (in 5.2.25).
-    Every other part/board archive is byte-identical to the 5.2.23 payload,
-    whose object code was built from caaf5af86087881647f56c70646c748d40c86e23;
-    those archives were not rebuilt against 3062036c4f.
+    Only the six atomiq110 archives were rebuilt after 5.2.24: the atfe and
+    acfe ones from 3062036c4f (commit 2138331), and the gcc ones in d5a1a93
+    from a source that commit does not record. Every other part/board
+    archive (67) is byte-identical to the 5.2.23 payload, whose object code
+    was built from caaf5af86087881647f56c70646c748d40c86e23; those archives
+    were not rebuilt against 3062036c4f. Per-train, per-set provenance is in
+    toolchain_trains[].archive_sets.
   artifact_manifest_generated_at: 2026-06-22
   archive_determinism:
     gcc: non_deterministic_ar_headers
@@ -255,17 +361,49 @@ payload_provenance:
   toolchain_trains:
     - manifest_key: gcc
       cmake_family: gcc
-      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+      archive_sets:
+        - scope: non_atomiq110
+          archive_count: 23
+          built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+        - scope: atomiq110
+          archive_count: 2
+          built_from_source_commit: null
+          source_note: >-
+            Refreshed in d5a1a9321fd4f970a56d98d35b9786b31e32fbf0, whose
+            message does not name the AmbiqSuite source. The archive predates
+            AmbiqSuite 1d9cd5c06e (2026-07-22, an ancestor of both 78bb76821e
+            and 3062036c4f): it does not define the memory-vote API
+            (am_hal_pwrctrl_mem_vote_request/_release/_status_get,
+            am_hal_pwrctrl_mem_retention_status_get) or the
+            am_hal_secure_stimer_*/am_hal_secure_timer_* functions that the
+            atfe/acfe archives define. So it was not built from 3062036c4f,
+            although the artifact-manifest comment on this archive says it
+            was. See known deviation atomiq110-header-archive-mismatch.
       archives_introduced_in:
         - 1a919aee0f24adb17fa6345fc15a874d1e3a4c29
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
         - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
         - 960624ee18afd9fbf5db957371c92c828bf6a721  # atomiq110 payload regeneration from npu-drop-2026.07.09
-        - d5a1a9321fd4f970a56d98d35b9786b31e32fbf0  # atomiq110 payload regeneration from ambiqsuite-3062036c4f
+        - d5a1a9321fd4f970a56d98d35b9786b31e32fbf0  # atomiq110 gcc archive refresh; AmbiqSuite source not recorded (see archive_sets)
       manifest_hashes_correct_in_5_2_23: true
     - manifest_key: atfe
       cmake_family: atfe
-      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+      archive_sets:
+        - scope: non_atomiq110
+          archive_count: 23
+          built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+          source_note: >-
+            Object-code equivalent to a caaf5af8 build; most of these archives
+            are byte-identical since 56a72f08 (see byte_stability_note).
+        - scope: atomiq110
+          archive_count: 2
+          built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+          source_note: >-
+            Rebuilt in 213833166a13f3abb9ae5b0d2de72530155a42ff with ATfE
+            22.1.0, which records 3062036c4f as the source. Consistent with
+            the symbols: the archive defines the memory-vote API added
+            upstream in 1d9cd5c06e, an ancestor of 3062036c4f. Not
+            independently re-derived from source.
       archives_introduced_in:
         - 56a72f08b34e9315f8c58a9defb784329e789678
         - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
@@ -284,7 +422,18 @@ payload_provenance:
       manifest_hashes_correct_in_5_2_23: true
     - manifest_key: acfe
       cmake_family: armclang
-      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+      archive_sets:
+        - scope: non_atomiq110
+          archive_count: 21
+          built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+        - scope: atomiq110
+          archive_count: 2
+          built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+          source_note: >-
+            Rebuilt in 213833166a13f3abb9ae5b0d2de72530155a42ff with ACfE 6.24
+            (-fshort-wchar -fshort-enums), which records 3062036c4f as the
+            source. Defines the same global symbols as the atfe archive. Not
+            independently re-derived from source.
       abi_cflags: '-fshort-wchar -fshort-enums'
       abi_attributes:
         Tag_ABI_PCS_wchar_t: 2
@@ -354,7 +503,7 @@ qualification:
       representative_link_smoke: not_rerun
       link_smoke_note: >-
         ACfE (armclang) was not available for 5.2.26 qualification. The acfe
-        archives are byte-identical to 5.2.25, and the header patches do not
+        archives are byte-identical to 5.2.25, and the intake patches do not
         change the armclang branch, which __ARMCC_VERSION selects before the
         patched test. Last ArmClang link smoke: 5.2.25 / 5.2.23 records.
   hardware_status: limited_feature_evidence_only
@@ -398,9 +547,11 @@ known_deviations:
       The provider headers under modules/nsx-ambiqsuite/sdk diverge from the
       recorded AmbiqSuite payload by intake patches 001
       (clang-cxx-compiler-detection) and 002
-      (clang-cxx-unnamed-bitfield-qualifiers): 26 headers, 40 lines, applied
-      directly to the committed payload because it cannot be re-staged from a
-      single AmbiqSuite commit (issue #82). Headers only. Every configuration
+      (clang-cxx-unnamed-bitfield-qualifiers): 26 files, 40 lines (23 headers
+      and 3 C sources, devices/am_devices_mspi_psram_*.c), applied directly to
+      the committed payload because it cannot be re-staged from a single
+      AmbiqSuite commit (issue #82). No prebuilt archive is affected, and no
+      NSX module compiles the three patched .c files. Every configuration
       that compiled before selects the same branch (C with gcc or clang, C++
       with gcc, armclang), and register struct layout is unchanged. No
       archive or artifact-manifest change, so no artifact hash changes.
@@ -424,18 +575,67 @@ known_deviations:
       - tests/test_committed_intake_patches.py
   - id: mixed-snapshot-provider-payload
     description: >-
-      The provider identity records stable-2026.09.01 / 3062036c4f, but only
-      the atomiq110 headers and archives come from that snapshot (via the
-      npu-drop-2026.07.09 payload plus the 3062036c4f archive rebuilds).
-      Non-atomiq110 headers and all 67 non-atomiq110 archives are the
+      The provider identity records stable-2026.09.01 / 3062036c4f, but the
+      shipped payload comes from four sources, unchanged since 5.2.25:
+      (1) non-atomiq110 headers and all 67 non-atomiq110 archives are
       stable-2026.06.18 / caaf5af86087881647f56c70646c748d40c86e23 content,
-      plus the clang C++ intake patches. The payload therefore cannot be
-      reproduced from one AmbiqSuite commit; unchanged since 5.2.25, recorded
-      here explicitly. Resolution is tracked in issue #82.
+      plus the clang C++ intake patches; (2) the atomiq110 headers
+      (mcu/atomiq110, boards/atomiq110_fpga_turbo, system_atomiq110.{h,c})
+      are the npu-drop-2026.07.09 payload, INTERNAL-marker sanitized, and
+      every one carries the "revision npu-drop-2026.07.09" banner; after
+      removing INTERNAL blocks and banner lines, 28 of the 64 files that also
+      exist at 3062036c4f still differ in content from it; (3) the atomiq110
+      atfe and acfe archives are recorded as built from 3062036c4f; (4) the
+      atomiq110 gcc archives were refreshed from a source that is not
+      recorded and that predates 3062036c4f. The artifact-manifest comments
+      that say all three atomiq110 trains were rebuilt from 3062036c4f are
+      wrong for gcc; the manifest is generated payload and is left as shipped.
+      The payload therefore cannot be reproduced from one AmbiqSuite commit.
+      Resolution is tracked in issue #82.
     issues: [82]
     paths:
       - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
       - modules/nsx-ambiqsuite/nsx-module.yaml
+      - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+  - id: atomiq110-header-archive-mismatch
+    status: open
+    description: >-
+      atomiq110 (experimental) ships headers and prebuilt HAL archives built
+      from different sources (see mixed-snapshot-provider-payload), and they
+      do not match. Of the 544 am_hal_* function prototypes in the shipped
+      mcu/atomiq110 headers, 19 are defined by none of the three shipped
+      atomiq110 libam_hal.a archives: am_hal_systick_delay_us,
+      am_hal_mcuctrl_clkncnt_get, am_hal_mcuctrl_finecnt_get,
+      am_hal_mcuctrl_i3c_phy_pulldown_enable,
+      am_hal_mcuctrl_private_extclk32k_{enable,disable},
+      am_hal_mcuctrl_rss_codebase_set, am_hal_pdm_i2s_{enable,disable},
+      am_hal_pwrctrl_rss_{bootup,pwroff},
+      am_hal_pwrctrl_tempco_{init,sample_handler}, am_hal_spotmgr_log_change,
+      am_hal_spotmgr_simobuck_lp_autosw_{init,enable,disable},
+      am_hal_spotmgr_tempco_suspend and am_hal_sysctrl_ton_config_init. A
+      call to any of them compiles and then fails to link. Conversely, all
+      three archives define functions no shipped header declares, among them
+      am_hal_wdt_* (13 functions; am_hal_wdt.h is not shipped),
+      am_hal_ddb_*, am_hal_dsi_*, am_hal_pwrctrl_gpu_mode_select,
+      am_hal_rtc_osc_get and am_hal_usb_ep_xfer_abort (128 in the gcc
+      archive, 168 in atfe/acfe). The gcc archive also lacks 40 functions
+      the atfe/acfe archives define (the memory-vote API and
+      am_hal_secure_stimer_*/am_hal_secure_timer_*), so the same app can link
+      differently per toolchain. Enum and register-macro values also differ
+      between the two header sets (for example am_reg.h, am_hal_timer.h,
+      am_hal_pwrctrl.h, am_hal_gpio.h), so values an app passes into the
+      archives may be interpreted against different definitions. Counts from
+      llvm-nm --defined-only over the shipped archives and a prototype scan
+      of the shipped headers during 5.2.26 preparation. Not a regression for
+      atomiq110 consumers moving from 5.2.25 (identical bytes), and atomiq110
+      stays experimental and outside the qualified scope. Fixing it needs a
+      consistent atomiq110 regeneration (headers and all three archive
+      trains from one AmbiqSuite commit) in a later release.
+    paths:
+      - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+      - modules/nsx-ambiqsuite/sdk/lib/gcc/atomiq110
+      - modules/nsx-ambiqsuite/sdk/lib/atfe/atomiq110
+      - modules/nsx-ambiqsuite/sdk/lib/acfe/atomiq110
   - id: nsx-cordio-vendored-revision-label
     status: corrected_in_5_2_26
     description: >-

@@ -1,7 +1,8 @@
 # nsx-cordio: optional Cordio/WSF Bluetooth LE host stack.
 #
 # Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF)
-# pinned to the same SDK drop as the provider (stable-2026.06.18), and builds it
+# at AmbiqSuite stable-2026.06.18 (caaf5af860, plus NSX edits listed in
+# sdk/third_party/NSX_VENDORED_VERSION.txt), and builds it
 # from source for the active SoC's BLE transport. This is the low-level BLE host
 # stack; the app-facing convenience API lives in the separate nsx-ble module.
 #

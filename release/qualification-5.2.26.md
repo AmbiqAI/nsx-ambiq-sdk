@@ -22,9 +22,15 @@ neuralSPOT-X moves every board to `5.2.26`: `atomiq110_fpga_turbo` from
 `consumer_upgrade` section of `release/nsx-ambiq-sdk-5.2.26.yaml`, describe the
 changes from both versions.
 
-The provider identity is unchanged from `5.2.25`: snapshot
+The recorded provider identity is unchanged from `5.2.25`: snapshot
 `stable-2026.09.01`, ref `stable`, commit
-`3062036c4f3e7822d27e6a842f226f423328a25a`. This is not blanket board-level
+`3062036c4f3e7822d27e6a842f226f423328a25a`. It describes only the `atomiq110`
+atfe/acfe archives. The Apollo headers and all 67 Apollo archives are
+`stable-2026.06.18` (`caaf5af8`) content plus the intake patches. The
+experimental `atomiq110` headers are the `npu-drop-2026.07.09` payload, and
+its gcc archives come from an unrecorded, older source. The release title
+says this: "AmbiqSuite stable-2026.06.18 + clang C++ fixes; atomiq110
+npu-drop-2026.07.09 (experimental)". This is not blanket board-level
 hardware qualification and not vendor SDK release qualification. SWS
 AmbiqSuite remains the source of truth for HAL/BSP implementation and silicon
 qualification.
@@ -37,18 +43,19 @@ No archive changes: every HAL/BSP archive (73) and
 
 | Change | Path |
 | --- | --- |
-| clang C++ header compatibility: intake patches 001 and 002, 26 headers, 40 lines (issue #81, PR #83) | `sdk-intake/patches/stable/`, `modules/nsx-ambiqsuite/sdk/{mcu,devices}/` |
+| clang C++ compatibility: intake patches 001 and 002, 26 provider files (23 headers and 3 `devices/am_devices_mspi_psram_*.c` sources that no NSX module compiles), 40 lines (issue #81, PR #83) | `sdk-intake/patches/stable/`, `modules/nsx-ambiqsuite/sdk/{mcu,devices}/` |
 | `clang-cxx-header-compat` ownership exception and guard test | `release/source-ownership.yaml`, `tests/test_committed_intake_patches.py` |
 | `nsx-psram` lists `apollo510dL_evb` and `apollo510L` as compatible; the driver is still chosen explicitly (issue #76, PR #77) | `modules/nsx-psram/` |
 | CI workflow token permissions (PR #80) | `.github/workflows/` |
 | BLE DIS default firmware revision `5.2.26` | `modules/nsx-ble/src/ns_ble.c`, `modules/nsx-cordio/.../svc_dis.c` |
-| `nsx-cordio` vendored-revision label corrected from `stable-2026.09.01 (3062036c4f)` (wrong in 5.2.25) to `stable-2026.06.18 (caaf5af860)`; NSX edits documented. No source change | `modules/nsx-cordio/` |
+| `nsx-cordio` vendored-revision label corrected from `stable-2026.09.01 (3062036c4f)` (wrong in 5.2.25) to `stable-2026.06.18 (caaf5af860)`; NSX edits documented; README, CMake comment and manifest `summary` no longer say "pinned to the provider drop". No source change | `modules/nsx-cordio/` |
+| CI checks out full history so the record's git-history checks run (and fail rather than skip under `CI=true`) | `.github/workflows/ci.yml`, `tests/test_release_metadata.py` |
 
 Applying patches 001 and 002 to the `v5.2.25` provider tree with
 `git apply --directory=modules/nsx-ambiqsuite/sdk` gives the `5.2.26` tree
 byte-for-byte.
 
-The header patch changes which branch is selected only where compilation
+The patches change which branch is selected only where compilation
 used to fail: C++ with clang (and C89/C++98 modes). C with gcc or clang, C++
 with gcc, and armclang (matched first by `__ARMCC_VERSION`) select the same code
 as before. Unnamed padding bit-fields cannot be accessed, so dropping their
@@ -64,7 +71,10 @@ atfe and acfe) are byte-identical to `v5.2.24`, and their `sha256` records in
 the artifact manifest are unchanged. `git diff --stat v5.2.24 origin/main --
 'modules/nsx-ambiqsuite/sdk/lib/**'` lists only the six atomiq110 archives.
 `tests/test_release_metadata.py::test_consumer_upgrade_archive_claims_match_git_history`
-checks this against git.
+checks this against git, and
+`test_consumer_upgrade_paths_cover_every_changed_file` checks that the record's
+per-change file lists cover every file changed since `v5.2.24` and `v5.2.25`.
+CI now checks out full history for both.
 
 **Provider headers:** the only non-atomiq110 change is the clang C++ patch set
 (23 files outside the atomiq110 directories). None of these files changed
@@ -72,8 +82,8 @@ between `v5.2.24` and `v5.2.25`.
 
 | Change | Affects non-atomiq110 builds | Path |
 | --- | --- | --- |
-| clang C++ header patches (above) | Yes: headers for every part | `sdk-intake/patches/stable/` |
-| Provider identity re-pinned to `stable-2026.09.01` / `3062036c4f` | Metadata only: non-atomiq110 headers and archives stay the `caaf5af8` content | `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`, `modules/nsx-ambiqsuite/nsx-module.yaml` |
+| clang C++ intake patches (above) | Yes: headers for every part (the 3 patched `.c` sources are not compiled) | `sdk-intake/patches/stable/` |
+| Provider identity re-pinned to `stable-2026.09.01` / `3062036c4f` | Metadata only: non-atomiq110 headers and archives stay the `caaf5af8` content. Of the shipped payload only the atomiq110 atfe/acfe archives are recorded as built from it | `modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml`, `modules/nsx-ambiqsuite/nsx-module.yaml` |
 | `nsx-core` Apollo5-class platform backend moved into a shared `.inc` (PR #57) | Yes: Apollo5-class parts and apollo330P. The PR reports byte-identical objects for `apollo510_evb` (gcc 15.2.rel1) | `modules/nsx-core/src/` |
 | `nsx-core` `nsx_mem.h` / `nsx_cache.c` | No: new `AM_PART_ATOMIQ110` branches only | `modules/nsx-core/` |
 | `nsx-power` shared power-profile printer (PR #56) | Yes: format unchanged, CSV dump no longer waits 1 ms per row on Apollo5-class parts, installed `src/` gains two files; public API unchanged | `modules/nsx-power/` |
@@ -81,7 +91,7 @@ between `v5.2.24` and `v5.2.25`.
 | `nsx-psram` compatibility (PR #77) | Yes: `apollo510dL_evb` / `apollo510L` | `modules/nsx-psram/` |
 | `nsx-ble` / `nsx-cordio` DIS firmware revision `5.2.24` -> `5.2.26` | Yes: advertised string | `modules/nsx-ble/`, `modules/nsx-cordio/` |
 | `nsx-cordio` vendored-revision label | No: reads `stable-2026.06.18 (caaf5af860)` in both v5.2.24 and 5.2.26 (5.2.25 had it wrong); NSX edits now documented | `modules/nsx-cordio/` |
-| atomiq110 platform, `nsx-npu`, atomiq110 power/core backends | No: atomiq110 targets only | `modules/nsx-npu/`, `*/src/atomiq110/`, `cmake/socs/atomiq110.cmake` |
+| atomiq110 platform (`npu-drop-2026.07.09` headers, rebuilt archives), `nsx-npu`, atomiq110 power/core backends | No: atomiq110 targets only | `modules/nsx-npu/`, `*/src/atomiq110/`, `cmake/socs/atomiq110.cmake` |
 | Intake/CI tooling (INTERNAL-marker sanitizer, nsx-npu cross-compile job, patch guard test, token permissions) | No: not part of a consumer build | `sdk-intake/`, `tests/`, `.github/` |
 
 ## Known Deviations
@@ -89,14 +99,40 @@ between `v5.2.24` and `v5.2.25`.
 Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
 
 - `clang-cxx-header-compat` (new): intake patches 001 and 002 are applied
-  directly to the committed provider headers, because the payload cannot be
+  directly to the committed provider headers and sources, because the payload cannot be
   re-staged from one AmbiqSuite commit (issue #82). Upstream fix in progress on
   AmbiqSuite branch `bugfix/clang-cxx-header-compat` (`48bd9bd576`); the
   AmbiqSuite pull request is not yet open. Retire both patches once a
   regenerated payload carries the fix.
 - `mixed-snapshot-provider-payload` (now explicit, unchanged since 5.2.25):
-  only atomiq110 content comes from `3062036c4f`; everything else is the
-  `caaf5af8` content plus the patches.
+  the payload comes from four sources. Apollo headers and archives are
+  `caaf5af8` content plus the patches. The atomiq110 headers are the
+  `npu-drop-2026.07.09` payload: every file carries that revision banner, and
+  28 of the 64 that exist at `3062036c4f` still differ in content after
+  removing INTERNAL blocks and banners. The atomiq110 atfe/acfe archives are
+  recorded as built from `3062036c4f`. The atomiq110 gcc archives come from an
+  unrecorded source that predates it, because they lack the memory-vote API
+  added upstream in `1d9cd5c06e`. The artifact-manifest comments that say all
+  three atomiq110 trains were rebuilt from `3062036c4f` are wrong for gcc. The
+  manifest is generated payload and is left as shipped. The record's
+  `toolchain_trains[].archive_sets` now give the source per train and per
+  archive set.
+- `atomiq110-header-archive-mismatch` (new, open): the shipped atomiq110
+  headers and archives do not match.
+  - 19 of the 544 `am_hal_*` prototypes in the headers are defined by none of
+    the three archives, for example `am_hal_systick_delay_us` and
+    `am_hal_mcuctrl_clkncnt_get`. A call to one of them compiles and then fails
+    to link.
+  - All three archives define functions no shipped header declares, for
+    example the 13 `am_hal_wdt_*` functions (`am_hal_wdt.h` is not shipped),
+    `am_hal_ddb_*`, `am_hal_dsi_*`, `am_hal_pwrctrl_gpu_mode_select`,
+    `am_hal_rtc_osc_get` and `am_hal_usb_ep_xfer_abort`.
+  - The gcc archive lacks 40 functions that the atfe/acfe archives define.
+  - Enum and register-macro values differ between the two header sets.
+
+  This is not a regression for atomiq110 consumers moving from 5.2.25, whose
+  bytes are identical, and atomiq110 stays experimental. A consistent
+  atomiq110 regeneration is a follow-up.
 - `nsx-cordio-vendored-revision-label` (corrected in 5.2.26): 5.2.25 labelled
   the vendored cordio/uECC as `stable-2026.09.01 (3062036c4f)`, but the sources
   match AmbiqSuite `caaf5af860` plus 7 NSX-edited files that predate `v5.2.24`
@@ -124,7 +160,7 @@ Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
 | ATfE link smoke | Passed | `tools/nsx_link_smoke.py --toolchain-family atfe`, ATfE 22.1.0: same four boards; extended C smoke passes on all 16 boards. |
 | ATfE C++ link smoke | **Passed (new)** | One C++17 translation unit including `am_mcu_apollo.h` and `am_bsp.h` and calling `am_bsp_low_power_init()`, linked against `nsx::board`, `nsx::ambiq_bsp` and `nsx::soc_hal`, with `-fno-exceptions`: 16/16 boards pass on 5.2.26 and 0/16 on `7a4ac9f` (before #83), which fail with `Compiler is unknown`, the literal-suffix error, and the qualified anonymous bit-field error. With exceptions enabled, 11/16 pass; apollo2/apollo3/apollo3p boards then fail at link on `_exit` from the C library's `abort` (no syscall stubs in the minimal smoke), after the C++ file compiles. |
 | GCC C++ link smoke | Passed, no regression | Same C++ unit with arm-none-eabi-g++ 15.2.1 and `-fno-exceptions`: 16/16 on 5.2.26 and on `7a4ac9f`. |
-| ArmClang link smoke | **Not run** | ACfE is not installed in the qualification environment. The acfe archives are byte-identical to 5.2.25, and the header patches do not change the armclang branch. Last ArmClang evidence: the 5.2.25 / 5.2.23 records. A missing licensed toolchain is a recorded gap, not an implied pass. |
+| ArmClang link smoke | **Not run** | ACfE is not installed in the qualification environment. The acfe archives are byte-identical to 5.2.25, and the intake patches do not change the armclang branch. Last ArmClang evidence: the 5.2.25 / 5.2.23 records. A missing licensed toolchain is a recorded gap, not an implied pass. |
 
 ## Hardware Evidence
 
