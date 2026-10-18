@@ -145,9 +145,13 @@ Recorded in `release/nsx-ambiq-sdk-5.2.26.yaml` (`known_deviations`):
   NSX edits; the sources are unchanged, and the released 5.2.25 record is not
   amended. Moving cordio to newer upstream is left for a separate, tested
   change.
-- `apollo2-3-cxx-global-constructors` (open, #87): the apollo2/apollo3/apollo3p
-  nsx-core GCC linker scripts drop `.init_array`, so C++ global constructors
-  do not run on those parts with gcc or ATfE. Not fixed in 5.2.26.
+- `apollo2-3-cxx-global-constructors` (open, #87): C++ global constructors
+  do not run on apollo2/apollo3/apollo3p with gcc or ATfE. The nsx-core
+  `startup_gcc.c` for those parts never calls `__libc_init_array` (apollo4l,
+  apollo4p, the Apollo5 class and atomiq110 do). Their linker scripts also
+  define no `.init_array` section or `__init_array_start`/`__init_array_end`
+  bounds; the input section survives as an orphan after `.data`, but nothing
+  walks it. A fix needs both files. Not fixed in 5.2.26.
 - `atomiq110-internal-marker-sanitation` and `nsx-ethos-u-driver-external`:
   carried from 5.2.25.
 

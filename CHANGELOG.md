@@ -23,8 +23,10 @@ All notable distribution changes are recorded here.
   #85, PR #86). Apollo3/Apollo3P GCC and ATfE apps link for the first time;
   they failed already on `v5.2.24`. Verified with `ble_webble` on the Apollo3
   Blue Plus EVB (gcc and ATfE). apollo2 still does not build, for an unrelated
-  reason. Known open issue: these scripts drop `.init_array`, so C++ global
-  constructors do not run on apollo2/apollo3/apollo3p (#87).
+  reason. Known open issue (#87): C++ global constructors do not run on
+  apollo2/apollo3/apollo3p. Their `startup_gcc.c` never calls
+  `__libc_init_array`, and their linker scripts define no `.init_array`
+  section or bounds.
 - Bumps the BLE DIS default firmware revision to `5.2.26`.
 - No archive changes: every HAL/BSP archive and the artifact manifest are
   byte-identical to `v5.2.25`. All 67 non-atomiq110 archives are

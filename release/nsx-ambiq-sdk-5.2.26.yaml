@@ -39,7 +39,12 @@ distribution:
 # test_consumer_upgrade_archive_claims_match_git_history, and that every file
 # changed since `from_commit` is covered by some change's `paths` by
 # test_consumer_upgrade_paths_cover_every_changed_file (module manifests whose
-# only change is the version line are covered implicitly). Both run in CI,
+# only change is the version line are covered implicitly). `paths` must name
+# files exactly, unless the change sets `path_scope: tree` (with a reason), in
+# which case a listed directory covers everything under it. Separately,
+# test_intake_patches_are_the_only_non_atomiq110_provider_change checks that
+# the non-atomiq110 provider files changed since each `from_commit` are
+# exactly the files intake patches 001/002 touch. Both run in CI,
 # which checks out full history; they fail rather than skip when CI=true.
 consumer_upgrade:
   - from_version: "5.2.25"
@@ -64,9 +69,37 @@ consumer_upgrade:
           are not compiled by any NSX module (nsx-psram builds its own copies
           under src/apollo*/devices/).
         paths:
-          - sdk-intake/patches
-          - modules/nsx-ambiqsuite/sdk/mcu
-          - modules/nsx-ambiqsuite/sdk/devices
+          - sdk-intake/patches/README.md
+          - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+          - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+          - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+          - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_emmc_rpmb.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo2/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo2/regs/am_reg_macros_asm.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo3/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo3p/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_macros.h
           - release/source-ownership.yaml
           - tests/test_committed_intake_patches.py
       - id: nsx-psram-apollo510dl-compatibility
@@ -94,9 +127,11 @@ consumer_upgrade:
           showed BLE bring-up stages 6 through 37 and no failure line). apollo2 gets the same
           symbols but still does not build, for an unrelated reason; apollo3
           (non-Plus) hardware was not tested; armclang uses scatter files and
-          is unaffected. Known open issue #87: these three linker scripts drop
-          .init_array, so C++ global constructors never run on
-          apollo2/apollo3/apollo3p. sbrk.c and nsx_system.h only update
+          is unaffected. Known open issue #87: C++ global constructors never
+          run on apollo2/apollo3/apollo3p, because their startup files never
+          call __libc_init_array and their linker scripts define no
+          .init_array section or bounds (see known deviation
+          apollo2-3-cxx-global-constructors). sbrk.c and nsx_system.h only update
           comments; tests/test_cmake_contract.py requires every nsx-core GCC
           linker script to define both symbols.
         paths:
@@ -149,6 +184,9 @@ consumer_upgrade:
           - uv.lock
       - id: release-records-and-docs
         refs: []
+        path_scope: tree
+        path_scope_reason: >-
+          Release records and docs are not shipped in a consumer build; any file under these directories may change.
         summary: >-
           The 5.2.26 release record and qualification report, CHANGELOG, and
           README/versioning text that states the current version and payload
@@ -161,6 +199,9 @@ consumer_upgrade:
           - modules/nsx-ambiqsuite/README.md
       - id: repository-tests
         refs: []
+        path_scope: tree
+        path_scope_reason: >-
+          Tests are not shipped in a consumer build.
         summary: >-
           Contract tests moved to the 5.2.26 record, plus the release-record
           checks. Not part of a consumer build.
@@ -187,9 +228,37 @@ consumer_upgrade:
           (mcu/atomiq110, boards/atomiq110_fpga_turbo,
           CMSIS system_atomiq110.{h,c}) and the artifact manifest.
         paths:
-          - sdk-intake/patches
-          - modules/nsx-ambiqsuite/sdk/mcu
-          - modules/nsx-ambiqsuite/sdk/devices
+          - sdk-intake/patches/README.md
+          - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+          - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+          - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+          - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_emmc_rpmb.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.c
+          - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo2/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo2/regs/am_reg_macros_asm.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo3/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo3p/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_usbregs.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_global.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h
+          - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_macros.h
           - release/source-ownership.yaml
           - tests/test_committed_intake_patches.py
       - id: provider-identity-repin
@@ -288,6 +357,9 @@ consumer_upgrade:
           - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
       - id: atomiq110-platform
         refs: [PR 46, PR 55, PR 58, PR 63, PR 64, PR 68, PR 75]
+        path_scope: tree
+        path_scope_reason: >-
+          The atomiq110 payload (npu-drop-2026.07.09 headers, rebuilt archives) and the new nsx-npu module are replaced wholesale; every file under these atomiq110-only directories is part of this change.
         summary: >-
           atomiq110 (experimental): headers from the npu-drop-2026.07.09
           payload (INTERNAL-marker sanitized), rebuilt HAL/BSP archives (atfe
@@ -314,6 +386,9 @@ consumer_upgrade:
           - docs/platform-coverage.md
       - id: repository-tooling
         refs: [PR 58, PR 64, PR 80]
+        path_scope: tree
+        path_scope_reason: >-
+          Intake tooling, tests, tools and CI are not shipped in a consumer build.
         summary: >-
           INTERNAL-marker sanitizer and baseline, nsx-npu cross-compile CI job,
           committed-intake-patch guard test, and CI token permissions. Not part
@@ -333,6 +408,9 @@ consumer_upgrade:
           - uv.lock
       - id: release-records-and-docs
         refs: []
+        path_scope: tree
+        path_scope_reason: >-
+          Release records and docs are not shipped in a consumer build; any file under these directories may change.
         summary: >-
           The 5.2.25 and 5.2.26 release records and qualification reports (and
           the machine-verified archives_introduced_in ledger in the 5.2.24
@@ -699,13 +777,22 @@ known_deviations:
   - id: apollo2-3-cxx-global-constructors
     status: open
     description: >-
-      The apollo2, apollo3 and apollo3p nsx-core GCC linker scripts drop
-      .init_array, so C++ global constructors never run on those parts with
-      gcc or ATfE. Present before 5.2.26 and not fixed here; it matters now
-      that apollo3/apollo3p GCC and ATfE apps link (PR #86). Tracked in
-      AmbiqAI/nsx-ambiq-sdk#87.
+      C++ global constructors never run on apollo2, apollo3 and apollo3p with
+      gcc or ATfE. Two causes, both in nsx-core: the startup files
+      (src/apollo{2,3,3p}/gcc/startup_gcc.c) never call __libc_init_array,
+      unlike apollo4l/apollo4p/apollo5-class/atomiq110, and the GCC linker
+      scripts define no .preinit_array/.init_array output sections or
+      __init_array_start/__init_array_end symbols. The linker still keeps the
+      .init_array input as an orphan section placed after .data, so the
+      constructor table is linked but nothing walks it. A fix has to change
+      both the startup files and the linker scripts. Present before 5.2.26 and
+      not fixed here; it matters now that apollo3/apollo3p GCC and ATfE apps
+      link (PR #86). Tracked in AmbiqAI/nsx-ambiq-sdk#87.
     issues: [87]
     paths:
+      - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+      - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+      - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
       - modules/nsx-core/src/apollo2/gcc/linker_script.ld
       - modules/nsx-core/src/apollo3/gcc/linker_script.ld
       - modules/nsx-core/src/apollo3p/gcc/linker_script.ld

@@ -351,9 +351,11 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
 def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> None:
     """Each upgrade path's change list must account for every file that changed
     since its starting commit, so a consumer reading one entry sees everything
-    they receive. A path covers itself and, for a directory, everything under it.
-    Module manifests whose only change is the `version:` line are covered by the
-    distribution version bump.
+    they receive. Paths name files exactly. Only a change that declares
+    `path_scope: tree` (with a `path_scope_reason`) may list a directory, which
+    then covers everything under it; this keeps a broad entry from silently
+    absorbing an unrelated change. Module manifests whose only change is the
+    `version:` line are covered by the distribution version bump.
 
     Needs full git history: skipped in a local shallow clone, failed in CI.
     """
@@ -369,16 +371,81 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
         base = entry["from_commit"]
         if git(repo_root, "cat-file", "-e", f"{base}^{{commit}}").returncode != 0:
             history_unavailable(f"{base} is not in this checkout")
-        listed = [path.rstrip("/") for change in entry["changes"] for path in change["paths"]]
+        files: set[str] = set()
+        trees: set[str] = set()
+        for change in entry["changes"]:
+            scope = change.get("path_scope", "files")
+            assert scope in ("files", "tree"), (entry["from_version"], change["id"], scope)
+            for path in change["paths"]:
+                path = path.rstrip("/")
+                if (repo_root / path).is_dir():
+                    assert scope == "tree", (
+                        f"{entry['from_version']} {change['id']}: {path} is a directory; list files, "
+                        "or declare path_scope: tree with a path_scope_reason"
+                    )
+                    assert change["path_scope_reason"].strip(), change["id"]
+                    trees.add(path)
+                else:
+                    files.add(path)
         names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD")
         assert names.returncode == 0, names.stderr
         uncovered = [
             name
             for name in names.stdout.splitlines()
-            if not any(name == path or name.startswith(f"{path}/") for path in listed)
+            if name not in files
+            and not any(name.startswith(f"{tree}/") for tree in trees)
             and not (name.startswith("modules/") and name.endswith("/nsx-module.yaml") and version_line_only(base, name))
         ]
         assert uncovered == [], (entry["from_version"], uncovered)
+
+
+def patched_provider_files(repo_root: Path) -> set[str]:
+    """Provider files touched by the committed intake patches, repo-relative."""
+    touched = set()
+    for patch in (repo_root / "sdk-intake" / "patches").glob("*/*.patch"):
+        for line in patch.read_text(encoding="utf-8").splitlines():
+            if line.startswith("+++ b/"):
+                touched.add(f"modules/nsx-ambiqsuite/sdk/{line[len('+++ b/'):].strip()}")
+    return touched
+
+
+def is_atomiq110_specific(path: str) -> bool:
+    parts = Path(path).parts
+    return any(part == "atomiq110" or part.startswith("atomiq110_") for part in parts) or Path(path).name.startswith(
+        "system_atomiq110."
+    )
+
+
+def test_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Path) -> None:
+    """The record says intake patches 001/002 are the only change to provider
+    headers and sources outside the atomiq110-specific files since each
+    upgrade's starting commit. Check that against git, and check that the
+    clang-cxx-header-compat change lists exactly the patched provider files.
+
+    Needs full git history: skipped in a local shallow clone, failed in CI.
+    """
+    require_full_history(repo_root)
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    patched = patched_provider_files(repo_root)
+    assert patched
+    provider = "modules/nsx-ambiqsuite/sdk"
+    for entry in release["consumer_upgrade"]:
+        base = entry["from_commit"]
+        if git(repo_root, "cat-file", "-e", f"{base}^{{commit}}").returncode != 0:
+            history_unavailable(f"{base} is not in this checkout")
+        names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD", "--", provider)
+        assert names.returncode == 0, names.stderr
+        changed = {
+            name
+            for name in names.stdout.splitlines()
+            if not is_atomiq110_specific(name) and name != f"{provider}/artifact-manifest.yaml"
+        }
+        assert changed == {name for name in patched if not is_atomiq110_specific(name)}, entry["from_version"]
+
+        clang = next(change for change in entry["changes"] if change["id"] == "clang-cxx-header-compat")
+        assert clang.get("path_scope", "files") == "files"
+        listed_provider = {path for path in clang["paths"] if path.startswith(f"{provider}/")}
+        assert listed_provider == patched, entry["from_version"]
 
 
 def test_provider_ownership_exceptions_are_release_deviations(repo_root: Path) -> None:
