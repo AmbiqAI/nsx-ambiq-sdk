@@ -11,8 +11,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.25.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.24.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.26.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.25.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
 OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
@@ -27,7 +27,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.25"
+    assert root_version == "5.2.26"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -125,21 +125,21 @@ def test_release_evidence_exists(repo_root: Path) -> None:
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """A corrected release must never erase the record it corrects.
 
-    `5.2.24` corrected the stale `5.2.23` artifact manifest; `5.2.25` carries
-    the post-v5.2.24 atomiq110 content. All release manifests and
-    qualification reports stay in the tree so the published, immutable tags
-    remain describable from any later checkout.
+    `5.2.24` corrected the stale `5.2.23` artifact manifest; `5.2.25` carried
+    the post-v5.2.24 atomiq110 content; `5.2.26` carries the clang C++ header
+    fix. All release manifests and qualification reports stay in the tree so
+    the immutable tags remain describable from any later checkout.
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.24"
+    assert superseded["distribution"]["version"] == "5.2.25"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "a9f4ec25a162f6f3700623feb691423bb5a51132"
+    assert supersedes["commit"] == "aefce2ca858795e783c76726ebe7d14d9d4bde7c"
     assert supersedes["reason"].strip()
 
 
@@ -229,6 +229,98 @@ def test_archives_introduced_in_matches_git_history(repo_root: Path) -> None:
 
     for train in declared.values():
         assert train["archives_introduced_in"], train["manifest_key"]
+
+
+def test_consumer_upgrade_paths_cover_the_versions_consumers_move_from(repo_root: Path) -> None:
+    """The record must describe every version a consumer moves from, not only
+    the version it supersedes.
+
+    `v5.2.25` was tagged but never published as a GitHub release, so most
+    consumers move to this release from `v5.2.24`. Each upgrade path names the
+    commit it starts from and the shipped changes, and every path it cites
+    exists.
+    """
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
+    paths = {entry["from_version"]: entry for entry in release["consumer_upgrade"]}
+
+    assert superseded["distribution"]["version"] in paths
+    assert superseded["distribution"]["supersedes"]["version"] in paths
+    for version, entry in paths.items():
+        assert entry["from_tag"] == f"v{version}"
+        assert len(entry["from_commit"]) == 40 and set(entry["from_commit"]) <= set("0123456789abcdef")
+        assert isinstance(entry["github_release_published"], bool)
+        assert entry["consumers"].strip()
+        assert entry["changes"], version
+        for change in entry["changes"]:
+            assert change["id"] and change["summary"].strip(), (version, change)
+            for path in change["paths"]:
+                assert (repo_root / path).exists(), (version, change["id"], path)
+    assert paths[superseded["distribution"]["version"]]["from_commit"] == release["distribution"]["supersedes"]["commit"]
+
+
+def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> None:
+    """Verify each upgrade path's claim about which HAL/BSP archives changed.
+
+    Consumers on non-atomiq110 boards move from `v5.2.24`; the record tells them
+    their prebuilt archives are byte-identical. Compare the archive blobs at the
+    recorded starting commit with HEAD instead of trusting the claim.
+
+    Skipped when the checkout has no usable history (for example a shallow CI
+    clone) or lacks the starting commit.
+    """
+    import subprocess
+
+    def git(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(["git", "-C", str(repo_root), *args], capture_output=True, text=True)
+
+    probe = git("rev-parse", "--is-shallow-repository")
+    if probe.returncode != 0 or probe.stdout.strip() != "false":
+        pytest.skip("git history unavailable or shallow")
+
+    lib_rel = "modules/nsx-ambiqsuite/sdk/lib"
+
+    def archive_blobs(revision: str) -> dict[str, str]:
+        listing = git("ls-tree", "-r", revision, "--", lib_rel)
+        assert listing.returncode == 0, listing.stderr
+        blobs = {}
+        for line in listing.stdout.splitlines():
+            meta, path = line.split("\t", 1)
+            if path.endswith(".a"):
+                blobs[path] = meta.split()[2]
+        return blobs
+
+    head = archive_blobs("HEAD")
+    assert head
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    for entry in release["consumer_upgrade"]:
+        if git("cat-file", "-e", f"{entry['from_commit']}^{{commit}}").returncode != 0:
+            pytest.skip(f"{entry['from_commit']} is not in this checkout")
+        base = archive_blobs(entry["from_commit"])
+        assert set(base) == set(head), entry["from_version"]
+        changed = {path for path in head if base[path] != head[path]}
+        changed_parts = {Path(path).relative_to(lib_rel).parts[1] for path in changed}
+        assert changed_parts == set(entry["changed_archive_parts"]), entry["from_version"]
+        assert len(head) - len(changed) == entry["unchanged_archive_count"], entry["from_version"]
+
+
+def test_provider_ownership_exceptions_are_release_deviations(repo_root: Path) -> None:
+    """Every recorded exception to the generated-provider boundary, and every
+    intake patch applied to the committed payload, must be declared in the
+    release record so the release says how its payload differs from upstream."""
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    inventory = load_yaml(repo_root, OWNERSHIP_INVENTORY)
+    deviations = {deviation["id"]: deviation for deviation in release["known_deviations"]}
+
+    provider = next(entry for entry in inventory["entries"] if entry["id"] == "generated-ambiqsuite-provider")
+    for exception in provider.get("recorded_exceptions", []):
+        assert exception["id"] in deviations, exception["id"]
+
+    declared_paths = {path for deviation in deviations.values() for path in deviation["paths"]}
+    patches = sorted((repo_root / "sdk-intake" / "patches").glob("*/*.patch"))
+    for patch in patches:
+        for path in (patch, patch.with_suffix(".yaml")):
+            assert path.relative_to(repo_root).as_posix() in declared_paths, path
 
 
 def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) -> None:

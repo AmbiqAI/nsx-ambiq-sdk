@@ -2,6 +2,34 @@
 
 All notable distribution changes are recorded here.
 
+## 5.2.26 - unreleased
+
+- C++ translation units that include the AmbiqSuite HAL now build with ATfE
+  (clang++); they failed with `#error Compiler is unknown` and related errors
+  (issue #81, PR #83). Intake patches
+  `sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch` and
+  `002-clang-cxx-unnamed-bitfield-qualifiers.patch` change 26 provider
+  headers (40 lines). C builds, gcc builds and armclang builds select the same
+  code as before, and register struct layout is unchanged. Recorded as the
+  `clang-cxx-header-compat` ownership exception and known deviation; the
+  upstream AmbiqSuite fix is tracked in issue #82.
+- `nsx-psram` lists `apollo510dL_evb` and `apollo510L` as compatible (issue
+  #76, PR #77). The driver must still be chosen explicitly with
+  `NSX_PSRAM_USE_BA_DRIVER`; the rev 2 EVB has no PSRAM fitted.
+- CI workflows declare read-only token permissions (PR #80).
+- Bumps the BLE DIS default firmware revision to `5.2.26`.
+- No archive changes: every HAL/BSP archive and the artifact manifest are
+  byte-identical to `v5.2.25`. All 67 non-atomiq110 archives are
+  byte-identical to `v5.2.24`.
+- `v5.2.25` was tagged but its GitHub release was not published, so boards
+  moving from `5.2.24` also receive the 5.2.25 content below for the first
+  time. `release/nsx-ambiq-sdk-5.2.26.yaml` (`consumer_upgrade`) lists the
+  changes per starting version.
+- Records two provenance gaps as known deviations: the provider payload mixes
+  `caaf5af8` content (non-atomiq110) with `3062036c4f` (atomiq110), and the
+  `nsx-cordio` vendored-revision label reads `stable-2026.09.01 (3062036c4f)`
+  although its sources are still the `caaf5af860` tree.
+
 ## 5.2.25 - unreleased
 
 - Carries the atomiq110 platform work merged after the immutable `v5.2.24`
