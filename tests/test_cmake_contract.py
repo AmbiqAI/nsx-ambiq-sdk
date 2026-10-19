@@ -164,7 +164,7 @@ def test_gcc_linker_scripts_keep_constructor_arrays_in_flash(script: Path) -> No
             assert re.search(rf"\b__{section}_{bound}\s*=", body), f"{script}: missing {section} {bound}"
         assert re.search(rf"KEEP\s*\(\s*\*\s*\(\.{section}\*?\)\s*\)", body), script
         if section != "preinit_array":
-            assert re.search(rf"SORT\s*\(\.{section}\.\*\)", body), script
+            assert re.search(rf"SORT(?:_BY_INIT_PRIORITY)?\s*\(\.{section}\.\*\)", body), script
 
 
 @pytest.mark.parametrize(

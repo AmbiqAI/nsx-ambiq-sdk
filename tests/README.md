@@ -9,12 +9,16 @@ correctness.
 
 `test_cpp_startup.py` links the shipped apollo2/apollo3/apollo3p startup and
 linker scripts with a C++ global constructor, checks the reset-handler call,
-and verifies a nonempty constructor table in flash and a binary below 2 MiB.
+and verifies a nonempty constructor table in flash, numeric constructor
+priority order, resolved runtime array bounds, and a binary below 2 MiB.
 GCC runs when `arm-none-eabi-gcc` is on PATH (required in the cross-compile CI
 job); ATfE runs when installed under `/opt/toolchains/atfe` or `ATFE_ROOT`.
 Missing toolchains skip locally. The fixture exposes `constructor_result` for
 an optional debugger check: `0x600DC0DE` means the constructor ran after memory
-initialization. Build checks alone do not establish execution on hardware.
+initialization, with preinit hooks before constructors in priority order.
+Build checks alone do not establish execution on hardware. The scripts define
+both the traditional newlib array bounds and the combined preinit/init bounds
+used by ATfE 22.1 picolibc.
 
 Published release upgrade-file lists are checked against their immutable tag;
 before the tag exists they are checked against HEAD. This keeps later fixes

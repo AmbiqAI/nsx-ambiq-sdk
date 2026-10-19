@@ -62,6 +62,19 @@ def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc
     assert 0 <= address < 0x200000 and size >= 4, "constructor table must be nonempty and in flash"
 
     symbols = run(readelf, "-sW", str(elf), cwd=repo_root)
+    assert not re.search(r"\bUND\s+__(?:bothinit|preinit|init)_array_(?:start|end)\b", symbols), (
+        "the selected C runtime's constructor-array bounds must resolve, including weak references\n" + symbols
+    )
+    table_file = tmp_path / "init-array.bin"
+    run(objcopy, "--dump-section", f".init_array={table_file}", str(elf), cwd=repo_root)
+    data = table_file.read_bytes()
+    entries = [int.from_bytes(data[index:index + 4], "little") | 1 for index in range(0, len(data), 4)]
+    priorities = []
+    for name in ("priority_first", "priority_second"):
+        symbol = re.search(rf"\d+:\s+([0-9a-fA-F]+)\s+\d+\s+FUNC\s+\w+\s+\w+\s+\S+\s+{name}\b", symbols)
+        assert symbol, symbols
+        priorities.append(entries.index(int(symbol.group(1), 16) | 1))
+    assert priorities[0] < priorities[1], "constructor priorities must be sorted numerically (101 before 1000)"
     handler = re.search(r"\d+:\s+([0-9a-fA-F]+)\s+(\d+)\s+FUNC\s+\w+\s+\w+\s+\S+\s+Reset_Handler\b", symbols)
     assert handler, symbols
     start, length = int(handler.group(1), 16) & ~1, int(handler.group(2))

@@ -105,6 +105,10 @@ extern void am_default_isr(void)      __attribute ((weak));
 extern int main(void);
 extern void __libc_init_array(void);
 
+// Default newlib hook when the app links with -nostartfiles.
+void _init(void) __attribute__((weak));
+void _init(void) {}
+
 //*****************************************************************************
 //
 // Reserve space for the system stack.
