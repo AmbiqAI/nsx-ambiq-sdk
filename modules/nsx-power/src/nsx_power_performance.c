@@ -1,0 +1,47 @@
+/** CPU performance selection for Apollo510 and Apollo330P/510L. */
+#include "am_mcu_apollo.h"
+#include "am_hal_clkmgr.h"
+#include "nsx_power.h"
+
+uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
+    am_hal_pwrctrl_mcu_mode_e hardware_mode;
+    uint32_t core_hz;
+
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    if (mode == NSX_POWER_PERF_MAX) {
+        hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2;
+        // HP2 runs from PLLVCO. Audio can configure a rate below 250 MHz;
+        // do not publish the nominal maximum as the current CPU frequency.
+        uint32_t status = am_hal_clkmgr_clock_config_get(
+            AM_HAL_CLKMGR_CLK_ID_PLLVCO, &core_hz, NULL);
+        if (status != AM_HAL_STATUS_SUCCESS) {
+            return status;
+        }
+        if (core_hz < AM_HAL_CLKGEN_FREQ_HP192_HZ || core_hz > AM_HAL_CLKGEN_FREQ_HP250_HZ) {
+            return AM_HAL_STATUS_INVALID_ARG;
+        }
+    } else if (mode == NSX_POWER_PERF_HIGH) {
+        hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1;
+        core_hz = AM_HAL_CLKGEN_FREQ_HP192_HZ;
+    } else {
+        hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+        core_hz = AM_HAL_CLKGEN_FREQ_MAX_HZ;
+    }
+#else
+    if (mode == NSX_POWER_PERF_HIGH || mode == NSX_POWER_PERF_MAX) {
+        hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE;
+        core_hz = AM_HAL_CLKGEN_FREQ_HP250_HZ;
+    } else {
+        hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+        core_hz = AM_HAL_CLKGEN_FREQ_MAX_HZ;
+    }
+#endif
+
+    uint32_t status = am_hal_pwrctrl_mcu_mode_select(hardware_mode);
+    if (status == AM_HAL_STATUS_SUCCESS) {
+        // The caller owns SysTick and other timebases; updating this CMSIS
+        // value does not reprogram their reload values or cached conversions.
+        SystemCoreClock = core_hz;
+    }
+    return status;
+}

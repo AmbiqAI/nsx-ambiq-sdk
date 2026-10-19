@@ -10,6 +10,8 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - `toolchain-smoke.md` describes opt-in local/CI link smokes for staged toolchains.
 - `small-m55-memory.md` records the Apollo330 Plus/Apollo510 Lite physical and
   application memory limits, source conflicts, and supported linker profiles.
+- `core-clock.md` records the part-specific performance clock sources and the
+  boundary between CMSIS clock synchronization and application-owned timing.
 
 ## Intake And Scope
 

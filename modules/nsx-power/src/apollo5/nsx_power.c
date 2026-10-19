@@ -50,25 +50,6 @@
 #include "am_hal_clkmgr.h"
 #include "am_hal_spotmgr.h"
 
-uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
-    uint32_t retval = NSX_STATUS_SUCCESS;
-#if defined(AM_PART_APOLLO510L)
-    if (mode == NSX_POWER_PERF_MAX) {
-        retval = am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2);
-    } else if (mode == NSX_POWER_PERF_HIGH) {
-        retval = am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1);
-    } else {
-        retval = am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
-#else
-    if ((mode == NSX_POWER_PERF_HIGH) || (mode == NSX_POWER_PERF_MAX)) {
-        retval = am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
-    } else {
-        retval = am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
-#endif
-    return retval;
-}
 
 //*****************************************************************************
 //

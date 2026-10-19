@@ -1,0 +1,140 @@
+"""Execute the actual performance selector against a controllable HAL."""
+
+from pathlib import Path
+import json
+import os
+import shlex
+import shutil
+import subprocess
+
+import pytest
+
+from test_cmake_contract import configure_contract_project
+from tools.nsx_npu_compile_check import find_gcc
+
+
+@pytest.fixture(params=("apollo510", "apollo330P", "apollo510L"))
+def clock_harness(request, repo_root: Path, tmp_path: Path) -> Path:
+    family = request.param
+    (tmp_path / "nsx_power.h").write_text('''
+#include <stdint.h>
+#define NSX_STATUS_SUCCESS 0u
+typedef enum { NSX_POWER_PERF_NOT_SET=-1, NSX_POWER_PERF_LOW=0,
+    NSX_POWER_PERF_HIGH=1, NSX_POWER_PERF_MAX=2 } nsx_power_perf_mode_t;
+uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t);
+''')
+    (tmp_path / "am_mcu_apollo.h").write_text('''
+#include <stdint.h>
+#include <stddef.h>
+#define AM_HAL_STATUS_SUCCESS 0u
+#define AM_HAL_STATUS_INVALID_ARG 1u
+#define AM_HAL_CLKGEN_FREQ_MAX_HZ 96000000u
+#define AM_HAL_CLKGEN_FREQ_HP250_HZ 250000000u
+extern uint32_t SystemCoreClock;
+#if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+#define HAS_HP2 1
+#define AM_HAL_CLKGEN_FREQ_HP192_HZ 192000000u
+typedef enum { AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER=0,
+    AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1=1,
+    AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2=2 } am_hal_pwrctrl_mcu_mode_e;
+#else
+#define HAS_HP2 0
+typedef enum { AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER=0,
+    AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE=1 } am_hal_pwrctrl_mcu_mode_e;
+#endif
+uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e);
+''')
+    (tmp_path / "am_hal_clkmgr.h").write_text('''
+#define AM_HAL_CLKMGR_CLK_ID_PLLVCO 5
+uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
+''')
+    harness = tmp_path / "harness.c"
+    harness.write_text('''
+#include <assert.h>
+#include <string.h>
+#include "am_mcu_apollo.h"
+#include "nsx_power.h"
+uint32_t SystemCoreClock = 777;
+static unsigned select_status, query_status, pll_hz=221184000;
+static unsigned selected=999, selects, queries;
+uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e mode) {
+    assert(SystemCoreClock == 777); // Publish only after hardware succeeds.
+    selected=mode; ++selects; return select_status;
+}
+uint32_t am_hal_clkmgr_clock_config_get(unsigned id, uint32_t *hz, void *cfg) {
+    assert(id == 5 && cfg == NULL); ++queries; *hz=pll_hz;
+    return query_status;
+}
+int main(int argc, char **argv) {
+    assert(argc == 2);
+    const char *test=argv[1];
+    nsx_power_perf_mode_t mode=NSX_POWER_PERF_MAX;
+    if (!strcmp(test,"low")) mode=NSX_POWER_PERF_LOW;
+    if (!strcmp(test,"not-set")) mode=NSX_POWER_PERF_NOT_SET;
+    if (!strcmp(test,"high")) mode=NSX_POWER_PERF_HIGH;
+    if (!strcmp(test,"select-fails")) select_status=91;
+    if (!strcmp(test,"query-fails")) query_status=92;
+    if (!strcmp(test,"zero-pll")) pll_hz=0;
+    if (!strcmp(test,"excessive-pll")) pll_hz=300000000;
+    if (!strcmp(test,"low-pll")) pll_hz=96000000;
+    unsigned result=nsx_power_set_performance_mode(mode);
+    if (HAS_HP2 && (query_status || pll_hz < 192000000 || pll_hz > 250000000)) {
+        assert(result != 0 && selects == 0 && SystemCoreClock == 777);
+        if (query_status) assert(result == query_status);
+    } else if (select_status) {
+        assert(result == select_status && selects == 1 && SystemCoreClock == 777);
+    } else {
+        assert(result == 0 && selects == 1);
+        unsigned expected_mode=mode==NSX_POWER_PERF_HIGH ? 1 : mode==NSX_POWER_PERF_MAX ? (HAS_HP2 ? 2 : 1) : 0;
+        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : 250000000;
+        assert(selected == expected_mode && SystemCoreClock == expected_hz);
+        assert(queries == (HAS_HP2 && expected_mode==2 ? 1u : 0u));
+    }
+}
+''')
+    cc = shutil.which("cc")
+    assert cc is not None, "A host C compiler is required"
+    target = tmp_path / "harness"
+    command = [cc, "-std=c11", "-Wall", "-Wextra", "-Werror", f"-DAM_PART_{family.upper()}", f"-I{tmp_path}",
+               str(repo_root / "modules/nsx-power/src/nsx_power_performance.c"), str(harness), "-o", str(target)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    return target
+
+
+@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-pll", "excessive-pll", "low-pll"))
+def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> None:
+    result = subprocess.run([str(clock_harness), scenario], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("board", ("apollo510_evb", "apollo510b_evb", "apollo330mP_evb", "apollo510dL_evb"))
+@pytest.mark.parametrize("family", ("gcc", "atfe", "armclang"))
+def test_performance_compiles_with_real_hal(repo_root: Path, tmp_path: Path, board: str, family: str) -> None:
+    if family == "gcc":
+        compiler = find_gcc(None)
+        if compiler is None and os.environ.get("NSX_REQUIRE_ARM_GCC") == "1":
+            pytest.fail("Arm GCC is required")
+    elif family == "atfe":
+        compiler = Path(os.environ.get("ATFE_ROOT", "/opt/toolchains/atfe")) / "bin/clang"
+        if not compiler.is_file():
+            if "ATFE_ROOT" in os.environ:
+                pytest.fail("ATFE_ROOT does not contain bin/clang")
+            compiler = None
+    else:
+        found = shutil.which("armclang")
+        compiler = Path(found) if found else None
+    if compiler is None:
+        pytest.skip(f"{family} is unavailable")
+    result = configure_contract_project(repo_root, tmp_path, board, family,
+        ("nsx-core", "nsx-power"), prelude=("set(CMAKE_EXPORT_COMPILE_COMMANDS ON)",))
+    assert result.returncode == 0, result.stdout
+    build = tmp_path / family / board / "build"
+    entries = json.loads((build / "compile_commands.json").read_text())
+    selected = [entry for entry in entries if entry["file"].endswith("/nsx_power_performance.c")]
+    assert len(selected) == 1, "The module must compile the shared selector exactly once"
+    command = shlex.split(selected[0]["command"])
+    command[0] = str(compiler)
+    command[command.index("-o") + 1] = str(tmp_path / "performance.o")
+    result = subprocess.run(command, cwd=selected[0]["directory"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
