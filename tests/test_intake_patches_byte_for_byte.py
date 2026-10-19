@@ -72,8 +72,8 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
 
     for patch in patches:
         result = subprocess.run(
-            ["git", "apply", *[f"--include={path}" for path in sorted(paths)], str(patch)],
-            cwd=tmp_path, capture_output=True, text=True,
+            ["git", "apply", *[f"--include={path}" for path in sorted(paths)], "-"],
+            input=patch.read_text(encoding="utf-8"), cwd=tmp_path, capture_output=True, text=True,
         )
         assert result.returncode == 0, f"{patch.name} cannot apply to {tag}:\n{result.stderr}"
 
@@ -82,6 +82,18 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
         expected = (tmp_path / path).read_bytes()
         actual = (repo_root / PAYLOAD / path).read_bytes()
         if expected != actual:
+            # Compare committed bytes: Git's clean filters may normalize a
+            # Windows checkout's CRLF. Keep detecting dirty edits outside hunks.
+            object_ids = []
+            for content, options in ((expected, []), (actual, [f"--path={(PAYLOAD / path).as_posix()}"])):
+                result = subprocess.run(
+                    ["git", "hash-object", *options, "--stdin"], input=content,
+                    cwd=repo_root, capture_output=True,
+                )
+                assert result.returncode == 0, result.stderr
+                object_ids.append(result.stdout.strip())
+            if object_ids[0] == object_ids[1]:
+                continue
             diff = difflib.diff_bytes(
                 difflib.unified_diff, expected.splitlines(keepends=True), actual.splitlines(keepends=True),
                 fromfile=f"{tag} + intake patches/{path}".encode(),
