@@ -147,6 +147,22 @@ function(nsx_validate_prebuilt_abi)
     if(DEFINED NSX_FLOAT_ABI AND NOT NSX_FLOAT_ABI STREQUAL "hard")
         message(FATAL_ERROR "AmbiqSuite prebuilt artifacts require hard-float ABI; got NSX_FLOAT_ABI='${NSX_FLOAT_ABI}'.")
     endif()
+    # FILEPATH cache entries survive reconfiguration. A new artifact selector
+    # must not silently leave yesterday's GCC paths paired with today's ATfE
+    # flags. Known staged paths have an explicit artifact-family directory.
+    foreach(nsx_library_var NSX_HAL_LIB NSX_BSP_LIB)
+        if(DEFINED ${nsx_library_var})
+            file(TO_CMAKE_PATH "${${nsx_library_var}}" nsx_library_path)
+            if(nsx_library_path MATCHES "/lib/(gcc|atfe|acfe)/")
+                if(NOT CMAKE_MATCH_1 STREQUAL NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+                    message(FATAL_ERROR
+                        "${nsx_library_var} selects ${CMAKE_MATCH_1} artifacts, but the selected ABI is "
+                        "${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}. Clear the CMake cache or set "
+                        "${nsx_library_var} to the matching artifact path.")
+                endif()
+            endif()
+        endif()
+    endforeach()
     if(TARGET nsx::soc_flags)
         get_target_property(nsx_abi_selected nsx::soc_flags NSX_VENDOR_ABI_ARTIFACT)
         if(nsx_abi_selected AND NOT nsx_abi_selected STREQUAL NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)

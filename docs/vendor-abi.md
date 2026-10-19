@@ -16,7 +16,9 @@ uses short enums. Hard-float remains required. C and C++ usage requirements are
 carried by the SoC flags target; assembler inputs do not receive enum/wchar flags.
 
 Set an explicit NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN before including the board/SoC
-descriptor. Changing it after ABI target creation is rejected. Custom library
+descriptor. Changing it after ABI target creation is rejected. Reconfiguration also rejects
+known staged HAL/BSP paths cached from a different artifact family; clear those
+CMake cache entries before switching. Custom library
 path overrides must obey the declared selected artifact ABI; they are not
 automatically reclassified by arbitrary archive contents. Do not append
 conflicting per-source options or pragmas to vendor-facing translation units.

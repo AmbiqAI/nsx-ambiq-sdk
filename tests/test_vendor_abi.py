@@ -79,3 +79,21 @@ def test_late_artifact_change_is_rejected(repo_root: Path, tmp_path: Path) -> No
         post_board_include=("set(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN atfe)",))
     assert result.returncode != 0
     assert "selection changed after SoC ABI flags" in result.stdout
+
+
+def test_reconfigure_does_not_keep_incompatible_cached_libraries(repo_root: Path, tmp_path: Path) -> None:
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "atfe")
+    assert result.returncode == 0, result.stdout
+    source = tmp_path / "atfe/apollo510_evb"
+    build = source / "build"
+    command = ["cmake", "-S", str(source), "-B", str(build), "-DNSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN=atfe"]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "selects gcc artifacts" in result.stdout + result.stderr
+    assert "Clear the CMake cache" in " ".join((result.stdout + result.stderr).split())
+    # Explicit cache cleanup permits the new, internally consistent selection.
+    result = subprocess.run([*command, "-UNSX_HAL_LIB", "-UNSX_BSP_LIB"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    cache = (build / "CMakeCache.txt").read_text()
+    assert f"NSX_HAL_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/libam_hal.a" in cache
+    assert f"NSX_BSP_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a" in cache
