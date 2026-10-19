@@ -63,7 +63,7 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
     subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True, capture_output=True)
     for path in sorted(paths):
         result = subprocess.run(
-            ["git", "show", f"{commit}:{PAYLOAD / path}"], cwd=repo_root, capture_output=True
+            ["git", "show", f"{commit}:{(PAYLOAD / path).as_posix()}"], cwd=repo_root, capture_output=True
         )
         assert result.returncode == 0, f"cannot read {tag}:{PAYLOAD / path}: {result.stderr!r}"
         destination = tmp_path / path
