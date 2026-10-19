@@ -18,6 +18,12 @@ manifests, checks repo shape, verifies the SDK-drop manifest template, and
 guards against accidentally importing optional AmbiqSuite middleware into the
 core bundle.
 
+The intake-patch byte checks reconstruct each patched provider file from the
+release record's starting commits, apply the stable patch queue, and compare
+the complete bytes with the working tree. This catches edits outside patch
+hunks as well as missing fixes. Fetch full history and release tags to run
+these checks locally; missing history skips locally and fails in CI.
+
 ## Owned By NSX
 
 - CMake descriptor configure tests for every supported SoC/skew and board.
