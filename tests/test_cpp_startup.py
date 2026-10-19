@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from tools.nsx_npu_compile_check import find_gcc
 
 
 def run(*command: str, cwd: Path) -> str:
@@ -21,12 +22,12 @@ def run(*command: str, cwd: Path) -> str:
 @pytest.mark.parametrize("soc", ("apollo2", "apollo3", "apollo3p"))
 def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc: str) -> None:
     if family == "gcc":
-        compiler = shutil.which("arm-none-eabi-gcc")
+        compiler = find_gcc(None)
         if compiler is None:
             if os.environ.get("NSX_REQUIRE_ARM_GCC") == "1":
                 pytest.fail("arm-none-eabi-gcc required by NSX_REQUIRE_ARM_GCC=1")
             pytest.skip("Arm GNU toolchain is not installed")
-        tool_bin = Path(compiler).parent
+        tool_bin = compiler.parent
         cc, cxx, objcopy, readelf, objdump = (
             str(tool_bin / f"arm-none-eabi-{tool}") for tool in ("gcc", "g++", "objcopy", "readelf", "objdump")
         )

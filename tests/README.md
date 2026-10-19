@@ -11,7 +11,7 @@ correctness.
 linker scripts with a C++ global constructor, checks the reset-handler call,
 and verifies a nonempty constructor table in flash, numeric constructor
 priority order, resolved runtime array bounds, and a binary below 2 MiB.
-GCC runs when `arm-none-eabi-gcc` is on PATH (required in the cross-compile CI
+GCC runs when `arm-none-eabi-gcc` is under `GCC_ROOT/bin` or on PATH (required in the cross-compile CI
 job); ATfE runs when installed under `/opt/toolchains/atfe` or `ATFE_ROOT`.
 Missing toolchains skip locally. The fixture exposes `constructor_result` for
 an optional debugger check: `0x600DC0DE` means the constructor ran after memory
