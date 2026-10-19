@@ -15,7 +15,7 @@ destination is the exclusive end of SRAM. The Apollo4L/P and Apollo510B/legacy
 Apollo5B loops now follow that rule for their data/shared/ITCM copies.
 
 Validation uses real GNU/ATfE links and, when available, QEMU execution of the
-shared-copy instructions extracted unchanged from production startup. QEMU uses
+data/shared/ITCM-copy instructions extracted unchanged from production startup. QEMU uses
 scratch addresses and direct entry; it does not model Apollo peripherals, the
 full boot flow or physical memory apertures. Existing small-M55 startup tests
 remain in place.

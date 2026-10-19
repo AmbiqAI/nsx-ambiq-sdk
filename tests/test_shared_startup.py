@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import socket
+import struct
 import subprocess
 
 import pytest
@@ -51,6 +52,19 @@ def test_shared_load_copy_window(repo_root: Path, tmp_path: Path, script: str, c
         return
     image = tmp_path / "shared.bin"
     subprocess.run([str(objcopy), "--dump-section", f".shared={image}", str(elf)], check=True, capture_output=True)
+    # Read actual ELF load headers: a wrong _init_data_sram symbol must not
+    # pass merely because the VMA markers and section bytes look correct.
+    elf_bytes = elf.read_bytes()
+    assert elf_bytes[:6] == b"\x7fELF\x01\x01"
+    phoff = struct.unpack_from("<I", elf_bytes, 28)[0]
+    entsize, count = struct.unpack_from("<HH", elf_bytes, 42)
+    origins = []
+    for index in range(count):
+        kind, _, vma, lma, filesz, _, _, _ = struct.unpack_from("<8I", elf_bytes, phoff + index * entsize)
+        offset = addresses["_ssdata"] - vma
+        if kind == 1 and 0 <= offset and offset + len(expected) * 4 <= filesz:
+            origins.append(lma + offset)
+    assert origins == [addresses["_init_data_sram"]]
     data = image.read_bytes()
     assert len(data) == len(expected) * 4
     for name, value in expected:
@@ -62,7 +76,8 @@ def test_shared_load_copy_window(repo_root: Path, tmp_path: Path, script: str, c
 
 @pytest.mark.parametrize("soc", SOCS)
 @pytest.mark.parametrize("empty", (False, True))
-def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empty: bool) -> None:
+@pytest.mark.parametrize("loop", ("copy_loop", "copy_loop_sram", "copy_loop_itcm"))
+def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empty: bool, loop: str) -> None:
     qemu = shutil.which("qemu-system-arm")
     compiler = compiler_for_test("gcc")
     gdb = compiler.parent / "arm-none-eabi-gdb"
@@ -70,9 +85,12 @@ def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empt
         pytest.skip("QEMU and Arm GDB are required for copy-loop execution")
     text = (repo_root / f"modules/nsx-core/src/{soc}/gcc/startup_gcc.c").read_text()
     blocks = re.findall(r"__asm\((.*?)\);", text, re.S)
-    selected = [block for block in blocks if "ldr     r0, =_init_data_sram" in block]
+    decoded = ["".join(ast.literal_eval(token) for token in re.findall(r'"(?:[^"\\]|\\.)*"', block)) for block in blocks]
+    selected = [block for block in decoded if f"{loop}:" in block]
+    if not selected and loop == "copy_loop_itcm":
+        pytest.skip("This part's startup has no ITCM copy loop")
     assert len(selected) == 1
-    assembly = "".join(ast.literal_eval(token) for token in re.findall(r'"(?:[^"\\]|\\.)*"', selected[0]))
+    assembly = selected[0]
     end = "destination" if empty else "destination + 8"
     probe = tmp_path / "loop.s"
     probe.write_text('.syntax unified\n.thumb\n.section .text,"ax"\n.global Reset_Handler,done\n.thumb_func\nReset_Handler:\n' + assembly + '''
@@ -84,7 +102,7 @@ initial: .word 0xAABBCCDD,0x11223344
 .section .data,"aw"
 .global destination
 destination: .word 0xDEADBEEF,0xDEADBEEF,0xDEADBEEF
-''' + f'.set _init_data_sram,initial\n.set _ssdata,destination\n.set _sedata,{end}\n')
+''' + f'.set _init_data_sram,initial\n.set _ssdata,destination\n.set _sedata,{end}\n.set _init_data,initial\n.set _sdata,destination\n.set _edata,{end}\n.set _init_itcm_text,initial\n.set _s_itcm_text,destination\n.set _e_itcm_text,{end}\n')
     linker = tmp_path / "loop.ld"
     linker.write_text('SECTIONS { .text 0x01000000 : { *(.text*) *(.rodata*) } .data 0x21000000 : { *(.data*) } }')
     elf = tmp_path / "loop.elf"

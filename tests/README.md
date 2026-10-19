@@ -100,6 +100,6 @@ these checks locally; missing history skips locally and fails in CI.
 
 `test_shared_startup.py` checks all 18 GNU shared-section layouts with GCC and
 optional ATfE using resource-only, shared-only, subsection, combined and empty
-inputs. With QEMU/GDB installed it executes each family's production shared-copy
+inputs. With QEMU/GDB installed it executes each family's production data/shared/ITCM-copy
 assembly at scratch addresses for empty and nonempty ranges; these are copy-logic
 checks, not Apollo hardware or physical-memory-map qualification.
