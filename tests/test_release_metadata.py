@@ -46,6 +46,35 @@ def require_full_history(repo_root: Path) -> None:
         history_unavailable("git history unavailable or shallow")
 
 
+def release_content_revision(repo_root: Path, release: dict) -> str:
+    """Audit a published release's change list at its immutable tag.
+
+    Before publication there is no tag, so the proposed release is HEAD.
+    Later development must not be attributed to an already published release.
+    Current-payload integrity checks still inspect HEAD/the working tree.
+    """
+    tag = release["distribution"]["tag"]
+    result = git(repo_root, "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}")
+    return result.stdout.strip() if result.returncode == 0 else "HEAD"
+
+
+def test_release_content_revision_freezes_at_publication(tmp_path: Path) -> None:
+    assert git(tmp_path, "init", "--quiet").returncode == 0
+    release = {"distribution": {"tag": "v-test"}}
+    assert release_content_revision(tmp_path, release) == "HEAD"
+    for subject in ("release", "later-development"):
+        result = git(
+            tmp_path, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+            "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", subject,
+        )
+        assert result.returncode == 0, result.stderr
+        if subject == "release":
+            assert git(tmp_path, "tag", "v-test").returncode == 0
+            published = git(tmp_path, "rev-parse", "HEAD").stdout.strip()
+    assert release_content_revision(tmp_path, release) == published
+    assert published != git(tmp_path, "rev-parse", "HEAD").stdout.strip()
+
+
 def archive_scope(path: str) -> str:
     """`atomiq110` or `non_atomiq110` for a promoted or manifest archive path."""
     return "atomiq110" if "/atomiq110/" in f"/{path}" else "non_atomiq110"
@@ -361,9 +390,10 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
     """
     require_full_history(repo_root)
     release = load_yaml(repo_root, RELEASE_MANIFEST)
+    revision = release_content_revision(repo_root, release)
 
     def version_line_only(base: str, path: str) -> bool:
-        diff = git(repo_root, "diff", "-U0", base, "HEAD", "--", path).stdout.splitlines()
+        diff = git(repo_root, "diff", "-U0", base, revision, "--", path).stdout.splitlines()
         changed = [line for line in diff if line[:1] in "+-" and not line.startswith(("+++", "---"))]
         return bool(changed) and all(line[1:].strip().startswith("version:") for line in changed)
 
@@ -387,7 +417,7 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
                     trees.add(path)
                 else:
                     files.add(path)
-        names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD")
+        names = git(repo_root, "diff", "--name-only", "--no-renames", base, revision)
         assert names.returncode == 0, names.stderr
         uncovered = [
             name

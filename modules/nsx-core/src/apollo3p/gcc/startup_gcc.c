@@ -120,6 +120,15 @@ void SysTick_Handler(void)
 //
 //*****************************************************************************
 extern int main(void);
+extern void __libc_init_array(void);
+
+// Default CRT hooks and DSO identity for -nostartfiles C/C++ applications.
+// Weak definitions allow an application or alternate CRT to supply its own.
+void _init(void) __attribute__((weak));
+void _init(void) {}
+void _fini(void) __attribute__((weak));
+void _fini(void) {}
+void *__dso_handle __attribute__((weak)) = 0;
 
 //*****************************************************************************
 //
@@ -329,6 +338,11 @@ Reset_Handler(void)
           "        it      lt\n"
           "        strlt   r2, [r0], #4\n"
           "        blt     zero_loop");
+
+    //
+    // Run C/C++ initialization after all data and BSS regions are ready.
+    //
+    __libc_init_array();
 
     //
     // Call the application's entry point.

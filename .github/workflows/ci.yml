@@ -109,9 +109,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --group ci
 
-      - name: Cross-compile nsx-npu
+      - name: Cross-compile nsx-npu and C++ startup fixtures
         env:
           NSX_REQUIRE_ARM_GCC: "1"
           NSX_REQUIRE_ETHOS_U_DRIVER: "1"
           NSX_ETHOS_U_DRIVER_ROOT: ${{ github.workspace }}/nsx-ethos-u-driver
-        run: uv run --group ci python -m pytest tests/test_npu_cross_compile.py -v
+        run: uv run --group ci python -m pytest tests/test_npu_cross_compile.py tests/test_cpp_startup.py -v
