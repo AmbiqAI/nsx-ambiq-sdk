@@ -101,3 +101,8 @@ these checks locally; missing history skips locally and fails in CI.
 `test_vendor_abi.py` compiles standalone SDK consumers using real PDM headers
 in C/C++ and extracts the selected vendor implementation into a relocatable
 link. GCC is required in cross-compile CI; ATfE/ArmClang cases run when installed.
+
+`test_link_smoke.py` builds complete firmware for four staged M55 boards and
+validates entry/vector/stack/vendor symbols and ELF physical load bounds. It
+rejects missing startup and corrupted firmware evidence. GCC is required by
+the cross-compile job; unavailable optional compilers skip explicitly.

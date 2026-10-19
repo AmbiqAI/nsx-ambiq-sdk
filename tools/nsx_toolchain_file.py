@@ -49,7 +49,10 @@ set(CMAKE_SIZE {root}/bin/llvm-size)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(CMAKE_C_COMPILER_TARGET thumbv8.1m.main-unknown-none-eabihf)
 set(CMAKE_ASM_COMPILER_TARGET thumbv8.1m.main-unknown-none-eabihf)
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-nostartfiles")
+# nsx-core's retarget layer consumes newlib; use the same overlay as nsx apps.
+set(CMAKE_C_FLAGS_INIT "--config=newlib.cfg")
+set(CMAKE_ASM_FLAGS_INIT "--config=newlib.cfg")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-nostartfiles --config=newlib.cfg")
 """
     if toolchain_family == "armclang":
         root = cmake_quote(acfe_root)

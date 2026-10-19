@@ -2,8 +2,8 @@
 
 This repo includes an opt-in link-smoke runner for validating that staged NSX
 boards consume the expected HAL/BSP artifacts and can link a minimal executable.
-Normal CI does not run these smokes because they build firmware-like link
-targets and ACfE link steps require license configuration.
+The GCC PR-CI job builds these firmware smokes. ATfE and ACfE are optional in
+ordinary CI; ACfE link steps require a licensed toolchain.
 
 ## Local ACfE Example
 
@@ -32,27 +32,39 @@ uv run --group ci python tools/nsx_link_smoke.py \
 build root when `--toolchain-file` is omitted. Pass `--toolchain-file` only when
 validating a custom CMake toolchain definition.
 
-Expected outputs (one `smoke.elf` per staged board):
+The supported smoke matrix is the four staged M55 boards below, each with GCC,
+ATfE and ArmClang. Apollo2/3/4, legacy Apollo5B and AT110 are not qualified by
+this runner; their other tests and hardware acceptance remain separate.
 
 ```text
-/tmp/nsx-link-smoke/armclang/apollo2_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo3_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo3_evb_cygnus/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo3p_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo3p_evb_cygnus/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo4l_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo4l_blue_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo4p_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo4p_blue_kbr_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo4p_blue_kxr_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo330mP_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo510_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo510b_evb/smoke.elf
-/tmp/nsx-link-smoke/armclang/apollo510dL_evb/smoke.elf
+apollo330mP_evb
+apollo510_evb
+apollo510b_evb
+apollo510dL_evb
 ```
 
-`apollo5b_evb` is descriptor-only and is skipped by the smoke runner until its
-HAL/BSP artifacts are staged.
+Each successful run writes `smoke.elf` and `smoke-evidence.json` under
+`<build-root>/<toolchain>/<board>/`. The record hashes the ELF, real startup,
+System source, selected linker file and actual configured HAL/BSP inputs.
+
+The firmware links real startup/System code, the core runtime used by Apollo510B
+fault handlers, and required HAL/BSP functions. The ELF check requires the reset
+entry, vector words, aligned RAM stack, SystemInit/main and vendor definitions,
+and checks physical load bytes against the selected application NVM aperture.
+The entry probe never substitutes clock/startup stubs. These are link/layout
+checks; no board is flashed and peripheral behavior is not qualified.
+
+ATfE requires its matching newlib overlay (`bin/newlib.cfg`); generated toolchain
+files select it with `--config=newlib.cfg`, matching the NSX app runtime. The
+container installs the version-matched official overlay and checks its published
+SHA256. An installation without the overlay fails rather than silently testing
+a different C runtime. See the [ATfE release assets](https://github.com/arm/arm-toolchain/releases/tag/release-22.1.0-ATfE).
+
+`test_link_smoke.py` builds this matrix when compilers are installed and rejects
+missing startup plus corrupt entries, vector/stack words, missing System/HAL
+definitions and load overruns. GCC is required in the cross-compile PR job;
+ATfE/ArmClang remain local or optional container qualification. Skipped cases
+are not passing evidence. ABI field-layout checks remain in `test_vendor_abi.py`.
 
 ## Standard Dev/CI Container
 
