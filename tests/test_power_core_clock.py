@@ -141,7 +141,12 @@ int main(int argc, char **argv) {
                str(repo_root / "modules/nsx-power/src/nsx_power_performance.c"), str(harness), "-o", str(target)]
     if family.endswith("-fpga"):
         command.append("-DAPOLLO5_FPGA=8")
-    result = subprocess.run(command, capture_output=True, text=True)
+    # GCC_ROOT selects the Arm compiler for NSX tests, but host GCC also
+    # interprets it as its own installation prefix. Do not redirect host
+    # builtin headers into an Arm toolchain installation in cross-compile CI.
+    host_env = os.environ.copy()
+    host_env.pop("GCC_ROOT", None)
+    result = subprocess.run(command, capture_output=True, text=True, env=host_env)
     assert result.returncode == 0, result.stderr
     return target
 
