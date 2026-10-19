@@ -52,3 +52,21 @@ bytes. Validation rejects arithmetic/address overflow, invalid widths, unaligned
 buffers and frames exceeding the part's 20-bit DMATOTCOUNT field before hardware
 setup. The HAL's threshold/count divisibility requirements still apply. This
 bounds work does not change packing, audio conversion or clock selection.
+
+## Failure handling
+
+Init returns `NSX_STATUS_INIT_FAILED` for HAL setup failures; start and stop
+return `NSX_STATUS_FAILURE` for HAL operation failures. Capture becomes started
+only after enable and DMA start succeed. `nsx_audio_get_status()` reports a
+latched lifecycle or ISR error for an owned instance, including DMA rearm errors.
+It returns invalid-handle before init or after successful stop. Poll it when
+callbacks stop arriving; callbacks carry sample data, not error notifications.
+
+A failed start/capture requires stop, then init before another start. Keep the
+configuration and buffers alive until stop succeeds. Failed teardown retains
+the handle and instance ownership so stop can be retried; it never reports
+success merely because cleanup was attempted. IRQ delivery is disabled before
+teardown, and powered-off register accesses are avoided on a retry. Init failure
+attempts the same cleanup; if that fails, call stop again before reusing buffers
+or the instance. Shared clock configuration is not restored because other
+consumers may own that clock. Lifecycle calls require application serialization.

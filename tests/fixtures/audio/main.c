@@ -16,6 +16,7 @@ unsigned am_hal_pdm_interrupt_disable(void*h,unsigned n){(void)h;(void)n;return 
 unsigned am_hal_pdm_interrupt_clear(void*h,unsigned n){(void)h;(void)n;return 0;}
 unsigned am_hal_pdm_interrupt_status_get(void*h,uint32_t*s,bool b){(void)h;(void)b;*s=AM_HAL_PDM_INT_DCMP;return 0;}
 unsigned am_hal_pdm_enable(void*h){(void)h;return enable_error;}
+unsigned am_hal_pdm_dma_stop(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_disable(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_deinitialize(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_dma_start(void*h,am_hal_pdm_transfer_t*t){(void)h;dma_calls++;last_dma_count=t->ui32TotalCount;last_dma_base=t->ui32TargetAddr;last_dma_reverse=t->ui32TargetAddrReverse;return dma_error;}

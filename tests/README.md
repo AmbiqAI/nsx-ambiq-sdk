@@ -97,3 +97,8 @@ these checks locally; missing history skips locally and fails in CI.
    toolchains are available.
 4. Validate capability facts from CMake cache output or generated manifest.
 5. Run optional hardware smoke tests for UART, timer, sleep, reset, and PMU.
+
+`test_audio_lifecycle.py` fault-injects actual Apollo3/Apollo5 backend calls under
+ASan/UBSan. It verifies failure returns, IRQ/state publication, instance ownership,
+teardown retry without powered-off register access and observable ISR failures.
+Mocks qualify software control flow; physical DMA and capture need board testing.

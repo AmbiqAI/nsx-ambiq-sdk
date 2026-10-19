@@ -50,9 +50,9 @@ unsigned am_hal_clkmgr_clock_config(unsigned,unsigned,void*);
 #define AM_HAL_PDM_GAIN_STEP_0_13DB 27u
 #define AM_HAL_PDM_HIGH_PASS_ENABLE 28u
 #define AM_HAL_PDM_INT_DCMP 1u
-#define AM_HAL_PDM_INT_DERR 30u
-#define AM_HAL_PDM_INT_OVF 31u
-#define AM_HAL_PDM_INT_UNDFL 32u
+#define AM_HAL_PDM_INT_DERR 2u
+#define AM_HAL_PDM_INT_OVF 8u
+#define AM_HAL_PDM_INT_UNDFL 4u
 #define AM_HAL_PDM_MCLKDIV_1 33u
 #define AM_HAL_PDM_MCLKDIV_3 34u
 #define AM_HAL_PDM_PDMA_CLKO_DIV14 35u
@@ -73,3 +73,14 @@ unsigned am_hal_pdm_dma_get_buffer(void*);
 #define AM_HAL_PDM_CLK_1_5MHZ 46u
 #define AM_HAL_PDM_INTERNAL_CLK 47u
 #define AM_HAL_PDM_DMA_THRESHOLD_MIN 16u
+
+unsigned am_hal_pdm_dma_stop(void*);
+
+#ifdef TEST_LIFECYCLE
+void test_irq_enable(unsigned);
+void test_irq_disable(unsigned);
+#undef NVIC_EnableIRQ
+#undef NVIC_DisableIRQ
+#define NVIC_EnableIRQ(n) test_irq_enable(n)
+#define NVIC_DisableIRQ(n) test_irq_disable(n)
+#endif
