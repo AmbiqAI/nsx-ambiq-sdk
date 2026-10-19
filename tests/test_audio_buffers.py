@@ -34,7 +34,7 @@ def audio_binary(request: pytest.FixtureRequest, repo_root: Path, tmp_path_facto
 
 
 @pytest.mark.parametrize("scenario", ("valid", "stereo", "24bit", "overflow", "channel-overflow",
-    "zero", "channels", "width", "dma-short", "pcm-short", "dma-align", "pcm-align",
+    "zero", "channels", "width", "unknown-width", "high-address", "dma-short", "pcm-short", "dma-align", "pcm-align",
     "address-wrap", "instance", "count-too-large", "count-limit"))
 def test_audio_buffer_bounds(audio_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(audio_binary), scenario], capture_output=True, text=True)

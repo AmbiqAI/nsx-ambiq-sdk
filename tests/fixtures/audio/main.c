@@ -5,7 +5,7 @@
 #include "nsx_audio.h"
 #include "am_mcu_apollo.h"
 extern void am_pdm0_isr(void);
-static unsigned init_clock_error,enable_error,dma_error,last_dma_count,init_calls,callback_count;
+static unsigned init_clock_error,enable_error,dma_error,last_dma_count,last_dma_base,last_dma_reverse,init_calls,callback_count;
 unsigned am_hal_pdm_initialize(unsigned n,void **h){(void)n;init_calls++;*h=(void*)1;return 0;}
 unsigned am_hal_pdm_power_control(void*h,unsigned p,bool r){(void)h;(void)p;(void)r;return 0;}
 unsigned am_hal_pdm_configure(void*h,am_hal_pdm_config_t*c){(void)h;(void)c;return 0;}
@@ -18,7 +18,7 @@ unsigned am_hal_pdm_interrupt_status_get(void*h,uint32_t*s,bool b){(void)h;(void
 unsigned am_hal_pdm_enable(void*h){(void)h;return enable_error;}
 unsigned am_hal_pdm_disable(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_deinitialize(void*h){(void)h;return 0;}
-unsigned am_hal_pdm_dma_start(void*h,am_hal_pdm_transfer_t*t){(void)h;last_dma_count=t->ui32TotalCount;return dma_error;}
+unsigned am_hal_pdm_dma_start(void*h,am_hal_pdm_transfer_t*t){(void)h;last_dma_count=t->ui32TotalCount;last_dma_base=t->ui32TargetAddr;last_dma_reverse=t->ui32TargetAddrReverse;return dma_error;}
 unsigned am_hal_clkmgr_clock_config(unsigned id,unsigned hz,void*c){(void)id;(void)hz;(void)c;return init_clock_error;}
 void am_bsp_pdm_pins_enable(unsigned n){(void)n;}void am_bsp_pdm_pins_disable(unsigned n){(void)n;}
 static _Alignas(32) uint32_t dma[256];
@@ -41,6 +41,14 @@ int main(int argc,char**argv){
  if(!strcmp(test,"zero"))cfg.num_samples=0;
  if(!strcmp(test,"channels"))cfg.num_channels=3;
  if(!strcmp(test,"width"))cfg.pdm.sample_width=0;
+ if(!strcmp(test,"unknown-width"))cfg.pdm.sample_width=(nsx_audio_pdm_sample_width_e)4;
+ if(!strcmp(test,"high-address")){
+#if UINTPTR_MAX > UINT32_MAX
+ cfg.dma_buffer=(uint32_t*)(uintptr_t)0x100000000ULL;
+#else
+ return 0;
+#endif
+ }
  if(!strcmp(test,"dma-short"))cfg.dma_buffer_size--;
  if(!strcmp(test,"pcm-short"))cfg.pcm_buffer_size--;
  if(!strcmp(test,"dma-align"))cfg.dma_buffer=(uint32_t*)((uintptr_t)dma+4);
@@ -59,10 +67,17 @@ int main(int argc,char**argv){
  assert(init==0);assert(init_calls==1);
  if(!strcmp(test,"count-limit"))return 0;
  assert(nsx_audio_start(&cfg)==0);
- assert(last_dma_count==(!strcmp(test,"24bit")?96:64));
+ unsigned frame=!strcmp(test,"24bit")?96:64;
+ assert(last_dma_count==frame);
+ assert(last_dma_base==(unsigned)(uintptr_t)dma);
+ assert(last_dma_reverse==last_dma_base+frame);
+ if(!strcmp(test,"24bit"))for(unsigned i=0;i<256;i++)dma[i]=(i+100)<<8;
  am_pdm0_isr();
  assert(callback_count==1);
- for(unsigned i=0;i<16;i++)assert(pcm[i]==(!strcmp(test,"24bit")?0:(int)(i+100)));
+ assert(last_dma_count==frame);
+ assert(last_dma_base==(unsigned)(uintptr_t)dma);
+ assert(last_dma_reverse==last_dma_base+frame);
+ for(unsigned i=0;i<16;i++)assert(pcm[i]==(int)(i+100));
  assert(pcm[16]==-1);
  assert(nsx_audio_stop(&cfg)==0);
  return 0;
