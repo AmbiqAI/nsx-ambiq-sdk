@@ -120,6 +120,7 @@ void SysTick_Handler(void)
 //
 //*****************************************************************************
 extern int main(void);
+extern void __libc_init_array(void);
 
 //*****************************************************************************
 //
@@ -329,6 +330,11 @@ Reset_Handler(void)
           "        it      lt\n"
           "        strlt   r2, [r0], #4\n"
           "        blt     zero_loop");
+
+    //
+    // Run C/C++ initialization after all data and BSS regions are ready.
+    //
+    __libc_init_array();
 
     //
     // Call the application's entry point.

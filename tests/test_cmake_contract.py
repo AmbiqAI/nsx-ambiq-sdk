@@ -5,6 +5,8 @@ import re
 import shutil
 import subprocess
 
+import pytest
+
 
 def read(repo_root: Path, relative_path: str) -> str:
     return (repo_root / relative_path).read_text(encoding="utf-8")
@@ -145,6 +147,42 @@ def test_gcc_linker_scripts_define_the_sbrk_heap_bounds(repo_root: Path) -> None
         )
     ]
     assert not missing, f"linker scripts without __HeapBase/__HeapLimit: {missing}"
+
+
+@pytest.mark.parametrize(
+    "script", sorted((Path(__file__).resolve().parents[1] / "modules/nsx-core/src").glob("*/gcc/*.ld")),
+    ids=lambda path: f"{path.parent.parent.name}/{path.name}",
+)
+def test_gcc_linker_scripts_keep_constructor_arrays_in_flash(script: Path) -> None:
+    source = re.sub(r"/\*.*?\*/|//[^\n]*", "", script.read_text(encoding="utf-8"), flags=re.S)
+    for section in ("preinit_array", "init_array", "fini_array"):
+        match = re.search(rf"\.{section}\s*:\s*\{{(.*?)\}}\s*>\s*(\w+)", source, re.S)
+        assert match, f"{script}: missing .{section} output section"
+        body, region = match.groups()
+        assert region in {"ROMEM", "MCU_MRAM"}, f"{script}: .{section} is not in flash"
+        for bound in ("start", "end"):
+            assert re.search(rf"\b__{section}_{bound}\s*=", body), f"{script}: missing {section} {bound}"
+        assert re.search(rf"KEEP\s*\(\s*\*\s*\(\.{section}\*?\)\s*\)", body), script
+        if section != "preinit_array":
+            assert re.search(rf"SORT\s*\(\.{section}\.\*\)", body), script
+
+
+@pytest.mark.parametrize(
+    "startup", sorted((Path(__file__).resolve().parents[1] / "modules/nsx-core/src").glob("*/gcc/startup_gcc.c")),
+    ids=lambda path: path.parent.parent.name,
+)
+def test_gcc_startups_call_constructors_after_memory_init(startup: Path) -> None:
+    source = re.sub(r"/\*.*?\*/|//[^\n]*", "", startup.read_text(encoding="utf-8"), flags=re.S)
+    reset = re.search(r"\bReset_Handler\s*\(void\)\s*\{(.*?)\n\}", source, re.S)
+    assert reset, startup
+    body = reset.group(1)
+    call = re.search(r"\b__libc_init_array\s*\(\s*\)\s*;|\bbl\s+__libc_init_array\b", body)
+    assert call, f"{startup}: reset handler never calls __libc_init_array"
+    main = re.search(r"\bmain\s*\(\s*\)\s*;|\bbl\s+main\b", body)
+    assert main and body.index("_ebss") < call.start() < main.start(), startup
+    # Apollo3P also initializes its separate TCM BSS before constructors run.
+    if "_etcm_bss" in body:
+        assert body.index("_etcm_bss") < call.start(), startup
 
 
 def test_legacy_cm4f_armclang_boards_configure_with_c_startup(repo_root: Path, tmp_path: Path) -> None:
