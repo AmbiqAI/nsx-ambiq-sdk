@@ -27,6 +27,9 @@ used by ATfE 22.1 picolibc.
 They also enable newlib's lazy fini-array registration, so `exit` support
 registers finalizers before user constructors without pulling exit into apps
 that never use it.
+The GCC fixture uses the toolchain's default full newlib. Custom
+`--specs=nano.specs` CRT/exit integration is outside this fixture's scope:
+nano needs its CRT to register finalizers and link the required exit handlers.
 
 Published release upgrade-file lists are checked against their immutable tag;
 before the tag exists they are checked against HEAD. This keeps later fixes
