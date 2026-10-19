@@ -73,7 +73,7 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
     for patch in patches:
         result = subprocess.run(
             ["git", "apply", *[f"--include={path}" for path in sorted(paths)], "-"],
-            input=patch.read_text(encoding="utf-8"), cwd=tmp_path, capture_output=True, text=True,
+            input=patch.read_text(encoding="utf-8").encode("utf-8"), cwd=tmp_path, capture_output=True,
         )
         assert result.returncode == 0, f"{patch.name} cannot apply to {tag}:\n{result.stderr}"
 
