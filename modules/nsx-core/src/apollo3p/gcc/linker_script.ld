@@ -66,6 +66,9 @@ SECTIONS
         PROVIDE_HIDDEN (__fini_array_end = .);
     } > ROMEM
 
+    /* Let newlib register fini-array dispatch when exit support is linked. */
+    PROVIDE(__libc_fini = _fini);
+
     .data :
     {
         . = ALIGN(4);

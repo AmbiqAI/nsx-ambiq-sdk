@@ -17,13 +17,16 @@ in the cross-compile CI job); ATfE runs when installed under
 Missing toolchains skip locally. The fixture exposes `constructor_result` for
 an optional debugger check: `0x600DC0DE` means the constructor ran after memory
 initialization, with preinit hooks before constructors in priority order, and
-the global destructor ran through explicit `exit(0)`. The fixture's `_exit`
+the global destructor and fini-array callback ran through explicit `exit(0)`. The fixture's `_exit`
 hook records the final result. Reset still enters a breakpoint if `main`
 returns; automatic process exit is not added. Both startup defaults and
 application-provided strong CRT definitions are linked to guard override support.
 Build checks alone do not establish execution on hardware. The scripts define
 both the traditional newlib array bounds and the combined preinit/init bounds
 used by ATfE 22.1 picolibc.
+They also enable newlib's lazy fini-array registration, so `exit` support
+registers finalizers before user constructors without pulling exit into apps
+that never use it.
 
 Published release upgrade-file lists are checked against their immutable tag;
 before the tag exists they are checked against HEAD. This keeps later fixes

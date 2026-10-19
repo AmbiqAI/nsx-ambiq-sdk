@@ -71,6 +71,10 @@ def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc
     )
 
     symbols = run(readelf, "-sW", str(elf), cwd=repo_root)
+    if family == "gcc":
+        assert not re.search(r"\bUND\s+__libc_fini\b", symbols), (
+            "newlib must register fini-array callbacks for explicit exit\n" + symbols
+        )
     assert not re.search(r"\bUND\s+__(?:bothinit|preinit|init)_array_(?:start|end)\b", symbols), (
         "the selected C runtime's constructor-array bounds must resolve, including weak references\n" + symbols
     )
