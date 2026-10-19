@@ -10,6 +10,7 @@
  */
 
 #include "nsx_audio.h"
+#include "../nsx_audio_buffers.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -30,6 +31,8 @@
 
 static nsx_audio_config_t *g_pdm_cfgs[NSX_PDM_MAX_INSTANCES] = {0};
 
+#define NSX_PDM_COUNT_LIMIT PDM0_DMATOTCOUNT_TOTCOUNT_Msk
+
 /* PDM IRQ table — PDM0 always present, PDM1-3 gated by NSX_PDM1TO3_PRESENT. */
 #ifdef NSX_PDM1TO3_PRESENT
 static const IRQn_Type g_pdm_irqs[] = {PDM0_IRQn, PDM1_IRQn, PDM2_IRQn, PDM3_IRQn};
@@ -49,13 +52,18 @@ static void pdm_isr_handler(uint32_t mic_idx) {
         return;
     }
 
+    nsx_audio_buffer_layout_t layout;
+    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
+        return;
+    }
+
     am_hal_pdm_interrupt_status_get(cfg->_pdm_handle, &status, true);
     am_hal_pdm_interrupt_clear(cfg->_pdm_handle, status);
 
     if (status & AM_HAL_PDM_INT_DCMP) {
         /* DMA transfer complete — extract PCM samples. */
-        uint32_t *raw = (uint32_t *)((uintptr_t)cfg->dma_buffer & ~0xFU);
-        uint32_t n = cfg->num_samples * cfg->num_channels;
+        uint32_t *raw = cfg->dma_buffer;
+        uint32_t n = layout.samples;
         int16_t *pcm = cfg->pcm_buffer;
 
         if (cfg->pdm.sample_width == NSX_AUDIO_PDM_16BIT) {
@@ -75,10 +83,10 @@ static void pdm_isr_handler(uint32_t mic_idx) {
 
         /* Re-trigger DMA for continuous capture. */
         am_hal_pdm_dma_start(cfg->_pdm_handle, &(am_hal_pdm_transfer_t){
-            .ui32TotalCount = n * cfg->pdm.sample_width * 2,
-            .ui32TargetAddr = (uint32_t)(((uintptr_t)cfg->dma_buffer + 3) & ~0xFU),
-            .ui32TargetAddrReverse = (uint32_t)(((uintptr_t)cfg->dma_buffer + 3) & ~0xFU)
-                                     + n * cfg->pdm.sample_width * 2,
+            .ui32TotalCount = layout.frame_bytes,
+            .ui32TargetAddr = (uint32_t)(uintptr_t)cfg->dma_buffer,
+            .ui32TargetAddrReverse = (uint32_t)(uintptr_t)cfg->dma_buffer
+                                     + layout.frame_bytes,
         });
     }
 }
@@ -138,13 +146,8 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
     /* Validate buffer sizes.
      * DMA buffer must hold 2× (double-buffered) the sample frame.
      * PCM buffer must hold the deinterleaved samples. */
-    uint32_t samples_total = cfg->num_samples * cfg->num_channels;
-    uint32_t dma_frame_bytes = samples_total * cfg->pdm.sample_width * 2;
-    uint32_t pcm_frame_bytes = samples_total * sizeof(int16_t);
-    if (cfg->dma_buffer_size < dma_frame_bytes * 2) {
-        return NSX_STATUS_INVALID_CONFIG;
-    }
-    if (cfg->pcm_buffer_size < pcm_frame_bytes) {
+    nsx_audio_buffer_layout_t layout;
+    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
@@ -313,15 +316,19 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
         return NSX_STATUS_INVALID_HANDLE;
     }
 
+    nsx_audio_buffer_layout_t layout;
+    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+
     am_hal_pdm_enable(cfg->_pdm_handle);
 
     /* Trigger the first DMA transfer. */
-    uint32_t n = cfg->num_samples * cfg->num_channels;
     am_hal_pdm_transfer_t xfer = {
-        .ui32TotalCount      = n * cfg->pdm.sample_width * 2,
-        .ui32TargetAddr      = (uint32_t)(((uintptr_t)cfg->dma_buffer + 3) & ~0xFU),
-        .ui32TargetAddrReverse = (uint32_t)(((uintptr_t)cfg->dma_buffer + 3) & ~0xFU)
-                                 + n * cfg->pdm.sample_width * 2,
+        .ui32TotalCount      = layout.frame_bytes,
+        .ui32TargetAddr      = (uint32_t)(uintptr_t)cfg->dma_buffer,
+        .ui32TargetAddrReverse = (uint32_t)(uintptr_t)cfg->dma_buffer
+                                 + layout.frame_bytes,
     };
     am_hal_pdm_dma_start(cfg->_pdm_handle, &xfer);
 
