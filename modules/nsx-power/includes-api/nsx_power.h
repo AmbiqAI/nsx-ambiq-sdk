@@ -182,7 +182,8 @@ extern void nsx_power_deep_sleep(void);
  *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
  * SystemCoreClock value. Apollo510 HP uses configured HFRC2; Apollo330P/510L
- * HP2 uses configured PLLVCO. Audio can set either below 250 MHz. FPGA builds
+ * HP2 uses configured PLLVCO. Apollo510 pending HFRC2 adjustment still reports
+ * nominal free-running 250 MHz. Active audio adjustment can lower the rate. FPGA builds
  * use scaled HAL mode constants. The application owns SysTick reloads and other
  * cached timing conversions; update them after a successful switch. Direct
  * HAL clock changes are outside this helper's synchronization contract. If

@@ -50,7 +50,9 @@ On Apollo510/Apollo510B and Apollo330P/Apollo510L,
 after the HAL successfully switches the CPU mode. On silicon, Apollo510 uses
 the 96 MHz LP constant and queries configured HFRC2 for HP; HIGH and MAX
 select the same HP mode. HFRC2 is normally 250 MHz, but audio can configure
-it to 196.608 MHz. Apollo330P/510L use 96 MHz LP, 192 MHz HP1 (HIGH), and the
+it to 196.608 MHz. A stored audio setting takes effect only when adjustment
+is active; pending configuration alone still reports nominal free-running
+250 MHz. Apollo330P/510L use 96 MHz LP, 192 MHz HP1 (HIGH), and the
 configured PLLVCO rate for HP2 (MAX). Audio can also lower that PLL rate.
 Invalid or unavailable clock-source configuration fails before requesting the
 mode change. FPGA builds use the HAL's scaled execution-rate constants.

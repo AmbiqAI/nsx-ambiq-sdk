@@ -36,6 +36,10 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t);
 #define AM_HAL_CLKGEN_FREQ_HP250_HZ 250000000u
 #endif
 extern uint32_t SystemCoreClock;
+#define CLKGEN_HF2ADJ0_HF2ADJEN_EN 1u
+typedef struct { struct { volatile unsigned HF2ADJEN; } HF2ADJ0_b; } clock_regs;
+extern clock_regs mock_clkgen;
+#define CLKGEN (&mock_clkgen)
 #if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
 #define HAS_HP2 1
 #if defined(APOLLO5_FPGA)
@@ -71,6 +75,7 @@ uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
 #include "nsx_power.h"
 #include "am_hal_clkmgr.h"
 uint32_t SystemCoreClock = 777;
+clock_regs mock_clkgen;
 static unsigned select_status, query_status, pll_hz=221184000, hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
 static unsigned selected=999, selects, queries;
 uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e mode) {
@@ -90,8 +95,12 @@ int main(int argc, char **argv) {
     if (!strcmp(test,"not-set")) mode=NSX_POWER_PERF_NOT_SET;
     if (!strcmp(test,"high")) mode=NSX_POWER_PERF_HIGH;
     if (!strcmp(test,"audio-high")) mode=NSX_POWER_PERF_HIGH;
-    if (!strcmp(test,"audio-high") || !strcmp(test,"audio-max")) hfrc2_hz=196608000;
-    if (!strcmp(test,"adjusted-250")) hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ;
+    if (!strcmp(test,"audio-high") || !strcmp(test,"audio-max")) hfrc2_hz=196608000, mock_clkgen.HF2ADJ0_b.HF2ADJEN=1;
+    if (!strcmp(test,"pending-audio")) hfrc2_hz=196608000;
+    if (!strcmp(test,"adjusted-250")) {
+        hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ;
+        mock_clkgen.HF2ADJ0_b.HF2ADJEN=1;
+    }
     if (!strcmp(test,"unsupported-source")) pll_hz=hfrc2_hz=200000000;
     if (!strcmp(test,"select-fails")) select_status=91;
     if (!strcmp(test,"query-fails")) query_status=92;
@@ -99,11 +108,13 @@ int main(int argc, char **argv) {
     if (!strcmp(test,"excessive-source")) pll_hz=hfrc2_hz=300000000;
     if (!strcmp(test,"low-source")) pll_hz=hfrc2_hz=96000000;
 #if !HAS_HP2 && !defined(APOLLO5_FPGA)
-    if (!strcmp(test,"audio-then-free")) {
+    if (!strcmp(test,"audio-then-free") || !strcmp(test,"released-audio")) {
         hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ;
+        mock_clkgen.HF2ADJ0_b.HF2ADJEN=1;
         assert(nsx_power_set_performance_mode(mode)==0 && SystemCoreClock==196608000);
         SystemCoreClock=777; selects=queries=0;
-        hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
+        mock_clkgen.HF2ADJ0_b.HF2ADJEN=0;
+        if (!strcmp(test,"audio-then-free")) hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
     }
 #endif
     unsigned result=nsx_power_set_performance_mode(mode);
@@ -127,7 +138,7 @@ int main(int argc, char **argv) {
 #endif
         assert(queries == 0);
 #else
-        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : hfrc2_hz==AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ ? 250000000 : hfrc2_hz;
+        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : !mock_clkgen.HF2ADJ0_b.HF2ADJEN || hfrc2_hz==AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ ? 250000000 : hfrc2_hz;
         assert(queries == (expected_mode!=0 && (!HAS_HP2 || expected_mode==2) ? 1u : 0u));
 #endif
         assert(selected == expected_mode && SystemCoreClock == expected_hz);
@@ -151,7 +162,7 @@ int main(int argc, char **argv) {
     return target
 
 
-@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-source", "excessive-source", "low-source", "audio-high", "audio-max", "adjusted-250", "unsupported-source", "audio-then-free"))
+@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-source", "excessive-source", "low-source", "audio-high", "audio-max", "adjusted-250", "unsupported-source", "audio-then-free", "pending-audio", "released-audio"))
 def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> None:
     result = subprocess.run([str(clock_harness), scenario], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
