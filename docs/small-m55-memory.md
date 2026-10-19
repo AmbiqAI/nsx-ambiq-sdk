@@ -69,3 +69,12 @@ limit, including initialized data loaded into RAM. The aggregate load region
 must stop before the radio firmware even when its individual RO region fits.
 GNU checks also verify shared subsections fall inside the startup-copy bounds
 and that NBL unwind tables do not retain otherwise unused C++ functions.
+
+Startup copy bounds include `.resource_table` and all `.shared*` initialized
+data, matching the beginning of the shared load image. Empty data, shared
+and DTCM-code ranges are checked before accessing memory. In particular,
+an empty shared range after a full shared BSS must not store at SRAM's
+exclusive end. The startup fixture includes resource metadata, shared data,
+shared BSS and executable DTCM code; its debugger result is `0x600DC0DE`
+when those initialization checks pass. Its system and CRT initialization
+functions are stubs, so this fixture does not qualify HAL or C++ startup.

@@ -117,6 +117,9 @@ def test_small_m55_startup_links(repo_root: Path, tmp_path: Path, soc: str, prof
     stub.write_text('''
 volatile unsigned initialized_data = 0x12345678;
 volatile unsigned zeroed_bss;
+__attribute__((section(".resource_table"))) volatile unsigned resource_marker = 0xAABBCCDD;
+__attribute__((section(".shared.sample"))) volatile unsigned shared_initialized = 0x11223344;
+__attribute__((section(".sram_bss"))) volatile unsigned shared_zeroed;
 __attribute__((section(".dtcm_text"), noinline)) unsigned hot_function(void) {
     return 0x600DC0DE;
 }
@@ -125,6 +128,7 @@ void SystemInit(void) {}
 void __libc_init_array(void) {}
 int main(void) {
     memory_result = initialized_data == 0x12345678 && zeroed_bss == 0
+        && resource_marker == 0xAABBCCDD && shared_initialized == 0x11223344 && shared_zeroed == 0
         ? hot_function() : 0xBAD;
     for (;;) { __asm volatile("nop"); }
 }
@@ -141,6 +145,22 @@ int main(void) {
     script = repo_root / f"modules/nsx-core/src/{soc}/gcc/linker_script_{profile}.ld"
     result = subprocess.run([str(compiler), *flags, "-nostdlib", f"-T{script}", str(tmp_path / "startup.o"), str(tmp_path / "main.o"), "-o", str(tmp_path / "memory.elf")], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+    nm = compiler.parent / ("llvm-nm" if family == "atfe" else "arm-none-eabi-nm")
+    symbols = subprocess.check_output([str(nm), "-n", str(tmp_path / "memory.elf")], text=True)
+    addresses = {name: int(address, 16) for address, name in re.findall(r"^([0-9a-fA-F]+)\s+\w\s+(\S+)$", symbols, re.M)}
+    assert addresses["_ssdata"] <= addresses["resource_marker"] < addresses["shared_initialized"] < addresses["_sedata"]
+
+
+@pytest.mark.parametrize("soc", SOCS)
+def test_small_m55_skips_empty_copy_ranges(repo_root: Path, soc: str) -> None:
+    # A full .sram_bss and empty .shared is legal; the copy destination can
+    # equal physical SRAM's exclusive end. No first store is then permitted.
+    source = (repo_root / f"modules/nsx-core/src/{soc}/gcc/startup_gcc.c").read_text()
+    for loop in ("copy_loop", "copy_loop_sram", "copy_loop_dtcm"):
+        start = source.index(f'"{loop}:')
+        check = source.index(f'"{loop}_check:')
+        branch = source.rfind(f'b       {loop}_check', 0, start)
+        assert branch != -1 and branch < start < check, f"{soc}: {loop} must test bounds before its first access"
 
 
 @pytest.mark.parametrize("soc", SOCS)
