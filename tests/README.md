@@ -7,6 +7,18 @@ capabilities, paths, prebuilt artifacts, wrappers, and minimal integration.
 SWS AmbiqSuite tests remain the source of truth for HAL and BSP implementation
 correctness.
 
+`test_small_m55_memory.py` rejects nonexistent ITCM profiles on Apollo330P and
+Apollo510L, checks GNU/ArmClang memory declarations against the documented part
+limits, and uses GCC/ATfE to link the shipped GNU startup with both SBL and NBL
+scripts. Separate oversized objects must fail for application NVM, DTCM and
+shared SRAM. GCC is required in the Arm cross-compile job; ATfE runs when
+`ATFE_ROOT` is available. See `docs/small-m55-memory.md` for source revisions
+and the radio-firmware reservation.
+If `armlink` is available, additional scatter-file link probes check aggregate
+load-image limits as well as execution-region bounds. GNU regressions also
+cover shared-data subsections, resource-table copy bounds, empty startup-copy
+ranges, and unused C++ code with unwind tables.
+
 `test_cpp_startup.py` links the shipped apollo2/apollo3/apollo3p startup and
 linker scripts with a C++ global object with a nontrivial destructor, checks the reset-handler call,
 and verifies a nonempty constructor table in flash, numeric constructor

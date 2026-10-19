@@ -8,6 +8,8 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - Per-SoC facts live in `cmake/socs/facts/<skew>.cmake` (the single source of truth, including SEGGER/J-Link defaults) and are loaded by `nsx_load_soc_facts()`; see [../cmake/README.md](../cmake/README.md).
 - `platform-coverage.md` lists staged, descriptor-only, and planned SoC/board coverage.
 - `toolchain-smoke.md` describes opt-in local/CI link smokes for staged toolchains.
+- `small-m55-memory.md` records the Apollo330 Plus/Apollo510 Lite physical and
+  application memory limits, source conflicts, and supported linker profiles.
 
 ## Intake And Scope
 
