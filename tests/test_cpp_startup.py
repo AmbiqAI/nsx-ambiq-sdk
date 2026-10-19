@@ -20,7 +20,8 @@ def run(*command: str, cwd: Path) -> str:
 
 @pytest.mark.parametrize("family", ("gcc", "atfe"))
 @pytest.mark.parametrize("soc", ("apollo2", "apollo3", "apollo3p"))
-def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc: str) -> None:
+@pytest.mark.parametrize("crt_overrides", (False, True), ids=("default-crt", "application-crt"))
+def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc: str, crt_overrides: bool) -> None:
     if family == "gcc":
         compiler = find_gcc(None)
         if compiler is None:
@@ -48,6 +49,7 @@ def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc
         f"-DCMAKE_C_COMPILER={cc}", f"-DCMAKE_CXX_COMPILER={cxx}",
         f"-DNSX_TEST_SDK_ROOT={repo_root}", f"-DNSX_TEST_BOARD={soc}_evb",
         f"-DNSX_TOOLCHAIN_FAMILY={family}", "-DCMAKE_BUILD_TYPE=Release",
+        f"-DNSX_TEST_CRT_OVERRIDES={'ON' if crt_overrides else 'OFF'}",
         cwd=repo_root,
     )
     run("cmake", "--build", str(tmp_path), cwd=repo_root)

@@ -107,9 +107,13 @@ extern void am_default_isr(void)      __attribute ((weak));
 extern int main(void);
 extern void __libc_init_array(void);
 
-// Default newlib hook when the app links with -nostartfiles.
+// Default CRT hooks and DSO identity for -nostartfiles C/C++ applications.
+// Weak definitions allow an application or alternate CRT to supply its own.
 void _init(void) __attribute__((weak));
 void _init(void) {}
+void _fini(void) __attribute__((weak));
+void _fini(void) {}
+void *__dso_handle __attribute__((weak)) = 0;
 
 //*****************************************************************************
 //

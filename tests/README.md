@@ -8,14 +8,19 @@ SWS AmbiqSuite tests remain the source of truth for HAL and BSP implementation
 correctness.
 
 `test_cpp_startup.py` links the shipped apollo2/apollo3/apollo3p startup and
-linker scripts with a C++ global constructor, checks the reset-handler call,
+linker scripts with a C++ global object with a nontrivial destructor, checks the reset-handler call,
 and verifies a nonempty constructor table in flash, numeric constructor
 priority order, resolved runtime array bounds, and a binary below 2 MiB.
-GCC runs when `arm-none-eabi-gcc` is under `GCC_ROOT/bin` or on PATH (required in the cross-compile CI
-job); ATfE runs when installed under `/opt/toolchains/atfe` or `ATFE_ROOT`.
+GCC runs when `arm-none-eabi-gcc` is under `GCC_ROOT/bin` or on PATH (required
+in the cross-compile CI job); ATfE runs when installed under
+`/opt/toolchains/atfe` or `ATFE_ROOT`.
 Missing toolchains skip locally. The fixture exposes `constructor_result` for
 an optional debugger check: `0x600DC0DE` means the constructor ran after memory
-initialization, with preinit hooks before constructors in priority order.
+initialization, with preinit hooks before constructors in priority order, and
+the global destructor ran through explicit `exit(0)`. The fixture's `_exit`
+hook records the final result. Reset still enters a breakpoint if `main`
+returns; automatic process exit is not added. Both startup defaults and
+application-provided strong CRT definitions are linked to guard override support.
 Build checks alone do not establish execution on hardware. The scripts define
 both the traditional newlib array bounds and the combined preinit/init bounds
 used by ATfE 22.1 picolibc.
