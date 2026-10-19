@@ -7,21 +7,39 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    MCU_ITCM     (rwx) : ORIGIN = 0x00000000, LENGTH = 262144
-    MCU_MRAM     (rx)  : ORIGIN = 0x00400000, LENGTH = 4128768
-    MCU_TCM      (rwx) : ORIGIN = 0x20000000, LENGTH = 507904
-    SHARED_SRAM  (rwx) : ORIGIN = 0x20080000, LENGTH = 3145728
+    /* AP330MPA/AP510DLA application NVM ends at 0x00594000; see docs/small-m55-memory.md. */
+    MCU_MRAM     (rx)  : ORIGIN = 0x00400000, LENGTH = 1654784
+    MCU_TCM      (rwx) : ORIGIN = 0x20000000, LENGTH = 245760
+    SHARED_SRAM  (rwx) : ORIGIN = 0x20080000, LENGTH = 1835008
     /* STACK        (rw)  : ORIGIN = 0x2007D000, LENGTH = 12288
     HEAP         (rw)  : ORIGIN = 0x2007C000, LENGTH = 4096 */
 }
 
 SECTIONS
 {
+
     .text :
     {
         . = ALIGN(4);
         KEEP(*(.isr_vector))
         KEEP(*(.patch))
+        . = ALIGN(4);
+        _etext = .;
+    } > MCU_MRAM
+
+    .dtcm_text :
+    {
+        . = ALIGN(4);
+        _s_dtcm_text = .;
+        *(.dtcm_text)
+        *(.dtcm_text*)
+        . = ALIGN(4);
+        _e_dtcm_text = .;
+    } > MCU_TCM AT>MCU_MRAM
+
+    .text :
+    {
+        . = ALIGN(4);
         *(.text)
         *(.text*)
         *(.rodata)
@@ -32,13 +50,13 @@ SECTIONS
 
     .ARM.extab :
     {
-        *(.ARM.extab* .gnu.linkonce.armextab.*)
+        KEEP(*(.ARM.extab* .gnu.linkonce.armextab.*))
     } > MCU_MRAM
 
     __exidx_start = .;
     .ARM.exidx :
     {
-        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+        KEEP(*(.ARM.exidx* .gnu.linkonce.armexidx.*))
     } > MCU_MRAM
     __exidx_end = .;
 
@@ -65,18 +83,8 @@ SECTIONS
         PROVIDE_HIDDEN (__fini_array_end = .);
     } > MCU_MRAM
 
-    .itcm_text :
-    {
-        . = ALIGN(4);
-        _s_itcm_text = .;
-        *(.itcm_text)
-        *(.itcm_text*)
-        . = ALIGN(4);
-        _e_itcm_text = .;
-    } > MCU_ITCM AT>MCU_MRAM
+    _init_dtcm_text = LOADADDR(.dtcm_text);
 
-    /* used by startup to initialize the functions located in ITCM */
-    _init_itcm_text = LOADADDR(.itcm_text);
 
     /* User stack section initialized by startup code. */
     .stack (NOLOAD):
@@ -133,9 +141,14 @@ SECTIONS
     ASSERT( __HeapLimit > __HeapBase + 1024,
             "TCM overflow: stack + data + bss leave less than 1 KiB of heap" )
 
+    /*--------------------------------------------------------------------------
+     * Uninitialized data in Shared SRAM
+     * Place with __attribute__((section(".sram_bss")))
+     *--------------------------------------------------------------------------*/
     .sram_bss (NOLOAD):
     {
         . = ALIGN(4);
+        /* Marks start/end of SRAM BSS */
         _ssram_bss = .;
         *(.sram_bss)
         *(.sram_bss*)
@@ -151,7 +164,6 @@ SECTIONS
 
         _ssdata = .;
         KEEP(*(.shared))
-        *(.shared*)
         . = ALIGN(4);
         _sedata = .;
     } > SHARED_SRAM AT>MCU_MRAM

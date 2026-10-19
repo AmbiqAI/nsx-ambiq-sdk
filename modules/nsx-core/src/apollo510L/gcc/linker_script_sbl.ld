@@ -7,7 +7,8 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    MCU_MRAM     (rx)  : ORIGIN = 0x00410000, LENGTH = 2031616
+    /* AP330MPA/AP510DLA application NVM ends at 0x00594000; see docs/small-m55-memory.md. */
+    MCU_MRAM     (rx)  : ORIGIN = 0x00410000, LENGTH = 1589248
     MCU_TCM      (rwx) : ORIGIN = 0x20000000, LENGTH = 245760
     SHARED_SRAM  (rwx) : ORIGIN = 0x20080000, LENGTH = 1835008
     /* STACK        (rw)  : ORIGIN = 0x2007D000, LENGTH = 12288
