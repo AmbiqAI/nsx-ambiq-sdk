@@ -61,6 +61,12 @@ def test_cpp_constructor_image(repo_root: Path, tmp_path: Path, family: str, soc
     assert table, sections
     address, size = (int(value, 16) for value in table.groups())
     assert 0 <= address < 0x200000 and size >= 4, "constructor table must be nonempty and in flash"
+    preinit = re.search(r"\]\s+\.preinit_array\s+\S+\s+([0-9a-fA-F]+)\s+\S+\s+([0-9a-fA-F]+)", sections)
+    assert preinit, sections
+    preinit_address, preinit_size = (int(value, 16) for value in preinit.groups())
+    assert preinit_address + preinit_size == address, (
+        "picolibc's combined preinit/init table must contain no intervening orphan sections\n" + sections
+    )
 
     symbols = run(readelf, "-sW", str(elf), cwd=repo_root)
     assert not re.search(r"\bUND\s+__(?:bothinit|preinit|init)_array_(?:start|end)\b", symbols), (

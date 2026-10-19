@@ -35,6 +35,18 @@ SECTIONS
         . = ALIGN(8);
     } > RWMEM
 
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } > ROMEM
+
+    .ARM.exidx :
+    {
+        __exidx_start = .;
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+        __exidx_end = .;
+    } > ROMEM
+
     .preinit_array :
     {
         /* ATfE 22.1 picolibc walks preinit + init through these bounds. */
