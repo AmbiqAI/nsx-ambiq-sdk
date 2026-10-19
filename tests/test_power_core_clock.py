@@ -13,7 +13,7 @@ from test_cmake_contract import configure_contract_project
 from tools.nsx_npu_compile_check import find_gcc
 
 
-@pytest.fixture(params=("apollo510", "apollo330P", "apollo510L"))
+@pytest.fixture(params=("apollo510", "apollo330P", "apollo510L", "apollo510-fpga", "apollo330P-fpga", "apollo510L-fpga"))
 def clock_harness(request, repo_root: Path, tmp_path: Path) -> Path:
     family = request.param
     (tmp_path / "nsx_power.h").write_text('''
@@ -28,12 +28,21 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t);
 #include <stddef.h>
 #define AM_HAL_STATUS_SUCCESS 0u
 #define AM_HAL_STATUS_INVALID_ARG 1u
+#if defined(APOLLO5_FPGA)
+#define AM_HAL_CLKGEN_FREQ_MAX_HZ (APOLLO5_FPGA * 1000000u)
+#define AM_HAL_CLKGEN_FREQ_HP250_HZ 20000000u
+#else
 #define AM_HAL_CLKGEN_FREQ_MAX_HZ 96000000u
 #define AM_HAL_CLKGEN_FREQ_HP250_HZ 250000000u
+#endif
 extern uint32_t SystemCoreClock;
 #if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
 #define HAS_HP2 1
+#if defined(APOLLO5_FPGA)
+#define AM_HAL_CLKGEN_FREQ_HP192_HZ 16000000u
+#else
 #define AM_HAL_CLKGEN_FREQ_HP192_HZ 192000000u
+#endif
 typedef enum { AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER=0,
     AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1=1,
     AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2=2 } am_hal_pwrctrl_mcu_mode_e;
@@ -46,6 +55,7 @@ uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e);
 ''')
     (tmp_path / "am_hal_clkmgr.h").write_text('''
 #define AM_HAL_CLKMGR_CLK_ID_PLLVCO 5
+#define AM_HAL_CLKMGR_CLK_ID_HFRC2 6
 uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
 ''')
     harness = tmp_path / "harness.c"
@@ -55,14 +65,15 @@ uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
 #include "am_mcu_apollo.h"
 #include "nsx_power.h"
 uint32_t SystemCoreClock = 777;
-static unsigned select_status, query_status, pll_hz=221184000;
+static unsigned select_status, query_status, pll_hz=221184000, hfrc2_hz=250000000;
 static unsigned selected=999, selects, queries;
 uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e mode) {
     assert(SystemCoreClock == 777); // Publish only after hardware succeeds.
     selected=mode; ++selects; return select_status;
 }
 uint32_t am_hal_clkmgr_clock_config_get(unsigned id, uint32_t *hz, void *cfg) {
-    assert(id == 5 && cfg == NULL); ++queries; *hz=pll_hz;
+    assert(id == (HAS_HP2 ? 5u : 6u) && cfg == NULL);
+    ++queries; *hz=HAS_HP2 ? pll_hz : hfrc2_hz;
     return query_status;
 }
 int main(int argc, char **argv) {
@@ -72,13 +83,20 @@ int main(int argc, char **argv) {
     if (!strcmp(test,"low")) mode=NSX_POWER_PERF_LOW;
     if (!strcmp(test,"not-set")) mode=NSX_POWER_PERF_NOT_SET;
     if (!strcmp(test,"high")) mode=NSX_POWER_PERF_HIGH;
+    if (!strcmp(test,"audio-high")) mode=NSX_POWER_PERF_HIGH;
+    if (!strcmp(test,"audio-high") || !strcmp(test,"audio-max")) hfrc2_hz=196608000;
     if (!strcmp(test,"select-fails")) select_status=91;
     if (!strcmp(test,"query-fails")) query_status=92;
-    if (!strcmp(test,"zero-pll")) pll_hz=0;
-    if (!strcmp(test,"excessive-pll")) pll_hz=300000000;
-    if (!strcmp(test,"low-pll")) pll_hz=96000000;
+    if (!strcmp(test,"zero-source")) pll_hz=hfrc2_hz=0;
+    if (!strcmp(test,"excessive-source")) pll_hz=hfrc2_hz=300000000;
+    if (!strcmp(test,"low-source")) pll_hz=hfrc2_hz=96000000;
     unsigned result=nsx_power_set_performance_mode(mode);
-    if (HAS_HP2 && (query_status || pll_hz < 192000000 || pll_hz > 250000000)) {
+#if defined(APOLLO5_FPGA)
+    unsigned bad_source=0;
+#else
+    unsigned bad_source=query_status || (HAS_HP2 ? pll_hz < 192000000 || pll_hz > 250000000 : hfrc2_hz <= 96000000 || hfrc2_hz > 250000000);
+#endif
+    if (bad_source) {
         assert(result != 0 && selects == 0 && SystemCoreClock == 777);
         if (query_status) assert(result == query_status);
     } else if (select_status) {
@@ -86,23 +104,33 @@ int main(int argc, char **argv) {
     } else {
         assert(result == 0 && selects == 1);
         unsigned expected_mode=mode==NSX_POWER_PERF_HIGH ? 1 : mode==NSX_POWER_PERF_MAX ? (HAS_HP2 ? 2 : 1) : 0;
-        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : 250000000;
+#if defined(APOLLO5_FPGA)
+        unsigned expected_hz=expected_mode==0 ? AM_HAL_CLKGEN_FREQ_MAX_HZ : AM_HAL_CLKGEN_FREQ_HP250_HZ;
+#if HAS_HP2
+        if (expected_mode==1) expected_hz=AM_HAL_CLKGEN_FREQ_HP192_HZ;
+#endif
+        assert(queries == 0);
+#else
+        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : hfrc2_hz;
+        assert(queries == (expected_mode!=0 && (!HAS_HP2 || expected_mode==2) ? 1u : 0u));
+#endif
         assert(selected == expected_mode && SystemCoreClock == expected_hz);
-        assert(queries == (HAS_HP2 && expected_mode==2 ? 1u : 0u));
     }
 }
 ''')
     cc = shutil.which("cc")
     assert cc is not None, "A host C compiler is required"
     target = tmp_path / "harness"
-    command = [cc, "-std=c11", "-Wall", "-Wextra", "-Werror", f"-DAM_PART_{family.upper()}", f"-I{tmp_path}",
+    command = [cc, "-std=c11", "-Wall", "-Wextra", "-Werror", f"-DAM_PART_{family.split('-')[0].upper()}", f"-I{tmp_path}",
                str(repo_root / "modules/nsx-power/src/nsx_power_performance.c"), str(harness), "-o", str(target)]
+    if family.endswith("-fpga"):
+        command.append("-DAPOLLO5_FPGA=8")
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     return target
 
 
-@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-pll", "excessive-pll", "low-pll"))
+@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-source", "excessive-source", "low-source", "audio-high", "audio-max"))
 def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> None:
     result = subprocess.run([str(clock_harness), scenario], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

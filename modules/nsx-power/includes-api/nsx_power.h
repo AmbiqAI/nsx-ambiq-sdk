@@ -75,7 +75,7 @@ extern const nsx_core_api_t nsx_power_current_version;
 typedef enum {
     NSX_POWER_PERF_NOT_SET = -1,
     NSX_POWER_PERF_LOW     = 0, ///< LP 96 MHz (HFRC)
-    NSX_POWER_PERF_HIGH    = 1, ///< Apollo510: 250 MHz; Apollo330P/510L: HP1 192 MHz.
+    NSX_POWER_PERF_HIGH    = 1, ///< Apollo510: configured HFRC2; Apollo330P/510L: HP1 192 MHz.
     NSX_POWER_PERF_MAX     = 2  ///< Apollo330P/510L: configured HP2 PLL rate; otherwise HIGH.
 } nsx_power_perf_mode_t;
 
@@ -181,10 +181,13 @@ extern void nsx_power_deep_sleep(void);
  * @brief Set CPU performance mode.
  *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
- * SystemCoreClock value. HP2 uses the configured PLLVCO rate, which can be
- * below 250 MHz. The application still owns SysTick reload values and other
+ * SystemCoreClock value. Apollo510 HP uses configured HFRC2; Apollo330P/510L
+ * HP2 uses configured PLLVCO. Audio can set either below 250 MHz. FPGA builds
+ * use scaled HAL mode constants. The application owns SysTick reloads and other
  * cached timing conversions; update them after a successful switch. Direct
- * HAL clock changes are outside this helper's synchronization contract.
+ * HAL clock changes are outside this helper's synchronization contract. If
+ * peripheral initialization changes the CPU source, reapply the desired mode
+ * afterward, then refresh timing settings.
  *
  * @param mode  Desired performance mode from `nsx_power_perf_mode_t`.
  * @return uint32_t status.

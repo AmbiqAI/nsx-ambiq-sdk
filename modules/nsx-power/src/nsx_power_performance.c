@@ -10,6 +10,11 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     if (mode == NSX_POWER_PERF_MAX) {
         hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2;
+#if defined(APOLLO5_FPGA)
+        // The FPGA runs scaled clocks, while CLKMGR retains nominal silicon
+        // PLL configuration values for the HAL's own mode-switch validation.
+        core_hz = AM_HAL_CLKGEN_FREQ_HP250_HZ;
+#else
         // HP2 runs from PLLVCO. Audio can configure a rate below 250 MHz;
         // do not publish the nominal maximum as the current CPU frequency.
         uint32_t status = am_hal_clkmgr_clock_config_get(
@@ -20,6 +25,7 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
         if (core_hz < AM_HAL_CLKGEN_FREQ_HP192_HZ || core_hz > AM_HAL_CLKGEN_FREQ_HP250_HZ) {
             return AM_HAL_STATUS_INVALID_ARG;
         }
+#endif
     } else if (mode == NSX_POWER_PERF_HIGH) {
         hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1;
         core_hz = AM_HAL_CLKGEN_FREQ_HP192_HZ;
@@ -30,7 +36,20 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
 #else
     if (mode == NSX_POWER_PERF_HIGH || mode == NSX_POWER_PERF_MAX) {
         hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE;
+#if defined(APOLLO5_FPGA)
         core_hz = AM_HAL_CLKGEN_FREQ_HP250_HZ;
+#else
+        // Audio can configure the shared HP CPU source to 196.608 MHz.
+        // Merely entering HP mode does not restore it to 250 MHz.
+        uint32_t status = am_hal_clkmgr_clock_config_get(
+            AM_HAL_CLKMGR_CLK_ID_HFRC2, &core_hz, NULL);
+        if (status != AM_HAL_STATUS_SUCCESS) {
+            return status;
+        }
+        if (core_hz <= AM_HAL_CLKGEN_FREQ_MAX_HZ || core_hz > AM_HAL_CLKGEN_FREQ_HP250_HZ) {
+            return AM_HAL_STATUS_INVALID_ARG;
+        }
+#endif
     } else {
         hardware_mode = AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
         core_hz = AM_HAL_CLKGEN_FREQ_MAX_HZ;

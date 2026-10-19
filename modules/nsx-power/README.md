@@ -47,12 +47,13 @@ The public API is exported as `nsx_power.h`.
 
 On Apollo510/Apollo510B and Apollo330P/Apollo510L,
 `nsx_power_set_performance_mode()` updates the CMSIS `SystemCoreClock` value
-after the HAL successfully switches the CPU mode. Apollo510 uses the HAL's
-96 MHz LP / 250 MHz HP constants; HIGH and MAX select the same HP mode.
-Apollo330P/510L use 96 MHz LP, 192 MHz HP1 (HIGH), and the configured PLLVCO
-rate for HP2 (MAX). An audio configuration can set that PLL rate below
-250 MHz, so MAX does not imply a fixed 250 MHz clock. Invalid or unavailable
-HP2 clock configuration fails before requesting the mode change.
+after the HAL successfully switches the CPU mode. On silicon, Apollo510 uses
+the 96 MHz LP constant and queries configured HFRC2 for HP; HIGH and MAX
+select the same HP mode. HFRC2 is normally 250 MHz, but audio can configure
+it to 196.608 MHz. Apollo330P/510L use 96 MHz LP, 192 MHz HP1 (HIGH), and the
+configured PLLVCO rate for HP2 (MAX). Audio can also lower that PLL rate.
+Invalid or unavailable clock-source configuration fails before requesting the
+mode change. FPGA builds use the HAL's scaled execution-rate constants.
 
 The application owns SysTick and other timing peripherals. After a successful
 switch, recalculate the SysTick reload using `SystemCoreClock`, and refresh
@@ -60,7 +61,9 @@ cached cycle-to-time conversions. Updating the CMSIS variable does not retune
 an already-running RTOS tick. Direct HAL clock changes and the vendor
 `SystemCoreClockUpdate()` routine do not go through this helper; the latter
 still reports the startup frequency in the current SDK. Applications using
-those lower-level paths must maintain their own clock synchronization.
+those lower-level paths must maintain their own clock synchronization. If
+audio or peripheral initialization changes a shared CPU clock source, reapply
+the desired performance mode afterward and then refresh timing settings.
 
 The frequency table follows the per-part HAL constants and the Apollo510,
 Apollo330 Plus and Apollo510 Lite datasheet clocking sections. In particular,

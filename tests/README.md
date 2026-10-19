@@ -20,7 +20,7 @@ cover shared-data subsections, resource-table copy bounds, empty startup-copy
 ranges, and unused C++ code with unwind tables.
 `test_power_core_clock.py` exercises the shared Apollo510/Apollo330P/510L
 performance selector with a controllable HAL, including variable HP2 PLL
-rates and failure paths. It also compiles that source against real HAL headers
+and Apollo510 HFRC2 audio rates, FPGA scaling, and failure paths. It also compiles that source against real HAL headers
 using each board's generated CMake flags. GCC is required in the cross-compile
 job; ATfE is enabled by `ATFE_ROOT`, and ArmClang by an available `armclang`.
 
