@@ -31,3 +31,5 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - Put new design notes here only when they describe an active maintainer contract.
 
 Keep these files short and factual. If a note no longer guides a maintainer action or contract, remove it.
+
+- [scatter-load-bounds.md](scatter-load-bounds.md) — aggregate NVM scatter load bounds and real-linker checks.
