@@ -97,7 +97,7 @@ unset(_nsx_bsp_caps)
 # ---------------------------------------------------------------------------
 
 if(NSX_AMBIQSUITE_USE_PREBUILT)
-    nsx_validate_prebuilt_abi()
+    nsx_validate_prebuilt_abi(NSX_BSP_LIB)
     nsx_assert_file_exists("${NSX_BSP_LIB}")
     target_link_libraries(nsx_ambiq_bsp INTERFACE "${NSX_BSP_LIB}" nsx_ambiq_hal)
 else()

@@ -150,10 +150,19 @@ function(nsx_validate_prebuilt_abi)
     # FILEPATH cache entries survive reconfiguration. A new artifact selector
     # must not silently leave yesterday's GCC paths paired with today's ATfE
     # flags. Known staged paths have an explicit artifact-family directory.
-    foreach(nsx_library_var NSX_HAL_LIB NSX_BSP_LIB)
+    foreach(nsx_library_var IN LISTS ARGN)
         if(DEFINED ${nsx_library_var})
-            file(TO_CMAKE_PATH "${${nsx_library_var}}" nsx_library_path)
-            if(nsx_library_path MATCHES "/lib/(gcc|atfe|acfe)/")
+            get_filename_component(nsx_library_path "${${nsx_library_var}}" REALPATH
+                BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+            file(TO_CMAKE_PATH "${nsx_library_path}" nsx_library_path)
+            if("${nsx_library_var}" STREQUAL "NSX_HAL_LIB")
+                set(nsx_family_pattern "/lib/(gcc|atfe|acfe)/[^/]+/libam_hal[.]a$")
+            elseif("${nsx_library_var}" STREQUAL "NSX_BSP_LIB")
+                set(nsx_family_pattern "/lib/(gcc|atfe|acfe)/[^/]+/[^/]+/libam_bsp[.]a$")
+            else()
+                message(FATAL_ERROR "Unknown vendor library role: ${nsx_library_var}")
+            endif()
+            if(nsx_library_path MATCHES "${nsx_family_pattern}")
                 if(NOT CMAKE_MATCH_1 STREQUAL NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
                     message(FATAL_ERROR
                         "${nsx_library_var} selects ${CMAKE_MATCH_1} artifacts, but the selected ABI is "

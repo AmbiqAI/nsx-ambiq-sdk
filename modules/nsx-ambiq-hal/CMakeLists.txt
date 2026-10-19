@@ -121,7 +121,7 @@ target_include_directories(nsx_ambiq_hal PUBLIC ${NSX_AMBIQ_HAL_INCLUDE_ARGS})
 target_compile_definitions(nsx_ambiq_hal PUBLIC NSX_AMBIQSUITE)
 
 if(NSX_AMBIQSUITE_USE_PREBUILT)
-    nsx_validate_prebuilt_abi()
+    nsx_validate_prebuilt_abi(NSX_HAL_LIB)
     nsx_assert_file_exists("${NSX_HAL_LIB}")
     target_link_libraries(nsx_ambiq_hal PUBLIC "${NSX_HAL_LIB}")
     nsx_toolchain_uses_newlib(NSX_TOOLCHAIN_USES_NEWLIB)

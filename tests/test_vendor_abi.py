@@ -97,3 +97,44 @@ def test_reconfigure_does_not_keep_incompatible_cached_libraries(repo_root: Path
     cache = (build / "CMakeCache.txt").read_text()
     assert f"NSX_HAL_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/libam_hal.a" in cache
     assert f"NSX_BSP_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a" in cache
+
+
+@pytest.mark.parametrize("wrong_library", (False, True))
+def test_ancestor_directory_cannot_classify_archive_abi(repo_root: Path, tmp_path: Path, wrong_library: bool) -> None:
+    ancestor = "atfe" if wrong_library else "gcc"
+    alias = tmp_path / "lib" / ancestor / "sdk"
+    alias.parent.mkdir(parents=True)
+    try:
+        alias.symlink_to(repo_root, target_is_directory=True)
+    except OSError:
+        pytest.skip("Directory symlinks unavailable")
+    prelude = ["set(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN atfe)"]
+    if wrong_library:
+        prelude.append(f'set(NSX_HAL_LIB "{alias}/modules/nsx-ambiqsuite/sdk/lib/gcc/apollo510/libam_hal.a" CACHE FILEPATH "override")')
+    result = configure_contract_project(alias, tmp_path / "project", "apollo510_evb", "atfe", prelude=tuple(prelude))
+    if wrong_library:
+        assert result.returncode != 0
+        assert "selects gcc artifacts" in result.stdout
+    else:
+        assert result.returncode == 0, result.stdout
+
+
+def test_hal_only_does_not_validate_unused_bsp_cache(repo_root: Path, tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    (source / "CMakeLists.txt").write_text(f'''cmake_minimum_required(VERSION 3.20)
+project(hal_only C)
+include(GNUInstallDirs)
+set(NSX_ROOT "{repo_root}")
+set(NSX_CMAKE_DIR "${{NSX_ROOT}}/cmake")
+set(NSX_SDK_PROVIDER ambiqsuite)
+set(NSX_TOOLCHAIN_FAMILY atfe)
+set(NSX_AMBIQSUITE_VERSION stable-2026.06.18)
+set(NSX_AMBIQSUITE_ROOT "${{NSX_ROOT}}/modules/nsx-ambiqsuite/sdk")
+include("${{NSX_ROOT}}/boards/apollo510_evb/board.cmake")
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-cmsis-core" cmsis)
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-hal" hal)
+''')
+    unused_bsp = repo_root / "modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a"
+    result = subprocess.run(["cmake", "-S", str(source), "-B", str(tmp_path / "build"), f"-DNSX_BSP_LIB={unused_bsp}"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
