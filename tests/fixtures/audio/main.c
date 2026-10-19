@@ -41,7 +41,7 @@ int main(int argc,char**argv){
  if(!strcmp(test,"zero"))cfg.num_samples=0;
  if(!strcmp(test,"channels"))cfg.num_channels=3;
  if(!strcmp(test,"width"))cfg.pdm.sample_width=0;
- if(!strcmp(test,"unknown-width"))cfg.pdm.sample_width=(nsx_audio_pdm_sample_width_e)4;
+ if(!strcmp(test,"unknown-width"))cfg.pdm.sample_width=(nsx_audio_pdm_sample_width_e)4,cfg.dma_buffer_size=256;
  if(!strcmp(test,"high-address")){
 #if UINTPTR_MAX > UINT32_MAX
  cfg.dma_buffer=(uint32_t*)(uintptr_t)0x100000000ULL;
