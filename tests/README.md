@@ -97,3 +97,7 @@ these checks locally; missing history skips locally and fails in CI.
    toolchains are available.
 4. Validate capability facts from CMake cache output or generated manifest.
 5. Run optional hardware smoke tests for UART, timer, sleep, reset, and PMU.
+
+`test_vendor_abi.py` compiles standalone SDK consumers using real PDM headers
+in C/C++ and extracts the selected vendor implementation into a relocatable
+link. GCC is required in cross-compile CI; ATfE/ArmClang cases run when installed.
