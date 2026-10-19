@@ -97,3 +97,9 @@ these checks locally; missing history skips locally and fails in CI.
    toolchains are available.
 4. Validate capability facts from CMake cache output or generated manifest.
 5. Run optional hardware smoke tests for UART, timer, sleep, reset, and PMU.
+
+`test_shared_startup.py` checks all 18 GNU shared-section layouts with GCC and
+optional ATfE using resource-only, shared-only, subsection, combined and empty
+inputs. With QEMU/GDB installed it executes each family's production shared-copy
+assembly at scratch addresses for empty and nonempty ranges; these are copy-logic
+checks, not Apollo hardware or physical-memory-map qualification.

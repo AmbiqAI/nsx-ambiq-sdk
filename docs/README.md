@@ -31,3 +31,5 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - Put new design notes here only when they describe an active maintainer contract.
 
 Keep these files short and factual. If a note no longer guides a maintainer action or contract, remove it.
+
+- [shared-startup.md](shared-startup.md) — shared/resource startup copy windows and validation.
