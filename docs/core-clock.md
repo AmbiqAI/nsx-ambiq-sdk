@@ -14,8 +14,9 @@ platform implementations.
 
 On silicon, the HFRC2 or HP2 PLLVCO query runs before the mode switch. A
 failed query or an invalid rate returns an error before changing the CPU
-mode: Apollo510 requires a rate above LP and at most 250 MHz; Apollo330P/510L
-require 192–250 MHz for HP2. FPGA builds publish the scaled HAL mode constants
+mode: Apollo510 accepts the HAL's free-running 250 MHz sentinel (zero),
+adjusted 250 MHz or adjusted 196.608 MHz; Apollo330P/510L require 192–250 MHz
+for HP2. The free-running sentinel is normalized to nominal hertz. FPGA builds publish the scaled HAL mode constants
 instead: their clock-manager configuration retains nominal silicon rates,
 which are not the FPGA execution rates. A failed HAL switch propagates its status and does not publish a new
 frequency. As with the HAL itself, a failed hardware transition is not a

@@ -53,7 +53,12 @@ typedef enum { AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER=0,
 #endif
 uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e);
 ''')
-    (tmp_path / "am_hal_clkmgr.h").write_text('''
+    # Use the packaged HAL's configuration values, including the free-run
+    # sentinel, rather than assuming every successful query returns hertz.
+    clk_header = (repo_root / "modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_clkmgr.h").read_text()
+    hfrc2_definitions = "\n".join(line for line in clk_header.splitlines()
+                                  if line.startswith("#define AM_HAL_CLKMGR_HFRC2_FREQ_"))
+    (tmp_path / "am_hal_clkmgr.h").write_text(hfrc2_definitions + "\n" + '''
 #define AM_HAL_CLKMGR_CLK_ID_PLLVCO 5
 #define AM_HAL_CLKMGR_CLK_ID_HFRC2 6
 uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
@@ -64,8 +69,9 @@ uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);
 #include <string.h>
 #include "am_mcu_apollo.h"
 #include "nsx_power.h"
+#include "am_hal_clkmgr.h"
 uint32_t SystemCoreClock = 777;
-static unsigned select_status, query_status, pll_hz=221184000, hfrc2_hz=250000000;
+static unsigned select_status, query_status, pll_hz=221184000, hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
 static unsigned selected=999, selects, queries;
 uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e mode) {
     assert(SystemCoreClock == 777); // Publish only after hardware succeeds.
@@ -85,16 +91,26 @@ int main(int argc, char **argv) {
     if (!strcmp(test,"high")) mode=NSX_POWER_PERF_HIGH;
     if (!strcmp(test,"audio-high")) mode=NSX_POWER_PERF_HIGH;
     if (!strcmp(test,"audio-high") || !strcmp(test,"audio-max")) hfrc2_hz=196608000;
+    if (!strcmp(test,"adjusted-250")) hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ;
+    if (!strcmp(test,"unsupported-source")) pll_hz=hfrc2_hz=200000000;
     if (!strcmp(test,"select-fails")) select_status=91;
     if (!strcmp(test,"query-fails")) query_status=92;
     if (!strcmp(test,"zero-source")) pll_hz=hfrc2_hz=0;
     if (!strcmp(test,"excessive-source")) pll_hz=hfrc2_hz=300000000;
     if (!strcmp(test,"low-source")) pll_hz=hfrc2_hz=96000000;
+#if !HAS_HP2 && !defined(APOLLO5_FPGA)
+    if (!strcmp(test,"audio-then-free")) {
+        hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ;
+        assert(nsx_power_set_performance_mode(mode)==0 && SystemCoreClock==196608000);
+        SystemCoreClock=777; selects=queries=0;
+        hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
+    }
+#endif
     unsigned result=nsx_power_set_performance_mode(mode);
 #if defined(APOLLO5_FPGA)
     unsigned bad_source=0;
 #else
-    unsigned bad_source=query_status || (HAS_HP2 ? pll_hz < 192000000 || pll_hz > 250000000 : hfrc2_hz <= 96000000 || hfrc2_hz > 250000000);
+    unsigned bad_source=query_status || (HAS_HP2 ? pll_hz < 192000000 || pll_hz > 250000000 : (hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ));
 #endif
     if (bad_source) {
         assert(result != 0 && selects == 0 && SystemCoreClock == 777);
@@ -111,7 +127,7 @@ int main(int argc, char **argv) {
 #endif
         assert(queries == 0);
 #else
-        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : hfrc2_hz;
+        unsigned expected_hz=expected_mode==0 ? 96000000 : HAS_HP2 ? (expected_mode==1 ? 192000000 : pll_hz) : hfrc2_hz==AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ ? 250000000 : hfrc2_hz;
         assert(queries == (expected_mode!=0 && (!HAS_HP2 || expected_mode==2) ? 1u : 0u));
 #endif
         assert(selected == expected_mode && SystemCoreClock == expected_hz);
@@ -130,7 +146,7 @@ int main(int argc, char **argv) {
     return target
 
 
-@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-source", "excessive-source", "low-source", "audio-high", "audio-max"))
+@pytest.mark.parametrize("scenario", ("low", "high", "max", "not-set", "select-fails", "query-fails", "zero-source", "excessive-source", "low-source", "audio-high", "audio-max", "adjusted-250", "unsupported-source", "audio-then-free"))
 def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> None:
     result = subprocess.run([str(clock_harness), scenario], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

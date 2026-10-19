@@ -46,7 +46,12 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
         if (status != AM_HAL_STATUS_SUCCESS) {
             return status;
         }
-        if (core_hz <= AM_HAL_CLKGEN_FREQ_MAX_HZ || core_hz > AM_HAL_CLKGEN_FREQ_HP250_HZ) {
+        // CLKMGR represents nominal free-running HFRC2 by a sentinel (0),
+        // not a frequency in hertz. Normalize only its supported settings.
+        if (core_hz == AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ) {
+            core_hz = AM_HAL_CLKGEN_FREQ_HP250_HZ;
+        } else if (core_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ &&
+                   core_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ) {
             return AM_HAL_STATUS_INVALID_ARG;
         }
 #endif
