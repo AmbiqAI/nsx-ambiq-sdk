@@ -18,6 +18,11 @@ If `armlink` is available, additional scatter-file link probes check aggregate
 load-image limits as well as execution-region bounds. GNU regressions also
 cover shared-data subsections, resource-table copy bounds, empty startup-copy
 ranges, and unused C++ code with unwind tables.
+`test_power_core_clock.py` exercises the shared Apollo510/Apollo330P/510L
+performance selector with a controllable HAL, including variable HP2 PLL
+and Apollo510 HFRC2 audio rates, FPGA scaling, and failure paths. It also compiles that source against real HAL headers
+using each board's generated CMake flags. GCC is required in the cross-compile
+job; ATfE is enabled by `ATFE_ROOT`, and ArmClang by an available `armclang`.
 
 `test_cpp_startup.py` links the shipped apollo2/apollo3/apollo3p startup and
 linker scripts with a C++ global object with a nontrivial destructor, checks the reset-handler call,
