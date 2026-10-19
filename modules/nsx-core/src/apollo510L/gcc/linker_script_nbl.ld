@@ -164,6 +164,7 @@ SECTIONS
 
         _ssdata = .;
         KEEP(*(.shared))
+        *(.shared*)
         . = ALIGN(4);
         _sedata = .;
     } > SHARED_SRAM AT>MCU_MRAM

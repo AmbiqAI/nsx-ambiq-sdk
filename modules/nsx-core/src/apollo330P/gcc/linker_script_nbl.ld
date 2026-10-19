@@ -50,13 +50,13 @@ SECTIONS
 
     .ARM.extab :
     {
-        KEEP(*(.ARM.extab* .gnu.linkonce.armextab.*))
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
     } > MCU_MRAM
 
     __exidx_start = .;
     .ARM.exidx :
     {
-        KEEP(*(.ARM.exidx* .gnu.linkonce.armexidx.*))
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } > MCU_MRAM
     __exidx_end = .;
 
@@ -164,6 +164,7 @@ SECTIONS
 
         _ssdata = .;
         KEEP(*(.shared))
+        *(.shared*)
         . = ALIGN(4);
         _sedata = .;
     } > SHARED_SRAM AT>MCU_MRAM

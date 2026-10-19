@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 import pytest
@@ -83,7 +84,7 @@ def test_small_m55_link_enforces_memory_bounds(repo_root: Path, tmp_path: Path, 
     gcc = compiler_for_test(family)
     origin = 0x00410000 if profile == "sbl" else 0x00400000
     extra = {
-        "small": '.section .dtcm_text,"ax"\n.thumb_func\nhot_function: bx lr\n',
+        "small": '.section .dtcm_text,"ax"\n.thumb_func\nhot_function: bx lr\n.section .shared.foo,"aw"\n.global shared_value\nshared_value: .word 0x12345678\n',
         "mram-overflow": f'.section .rodata,"a"\n.space {APP_END - origin + 1}\n',
         "tcm-overflow": '.section .bss,"aw",%nobits\n.space 262145\n',
         "sram-overflow": '.section .sram_bss,"aw",%nobits\n.space 1835009\n',
@@ -97,6 +98,10 @@ def test_small_m55_link_enforces_memory_bounds(repo_root: Path, tmp_path: Path, 
     result = subprocess.run([str(gcc), *target, "-mcpu=cortex-m55", "-mthumb", "-mfloat-abi=hard", "-nostdlib", f"-T{script}", str(obj), "-o", str(tmp_path / "probe.elf")], text=True, capture_output=True)
     if allocation == "small":
         assert result.returncode == 0, result.stderr
+        nm = gcc.parent / ("llvm-nm" if family == "atfe" else "arm-none-eabi-nm")
+        symbols = subprocess.check_output([str(nm), "-n", str(tmp_path / "probe.elf")], text=True)
+        addresses = {name: int(address, 16) for address, name in re.findall(r"^([0-9a-fA-F]+)\s+\w\s+(\S+)$", symbols, re.M)}
+        assert 0x20080000 <= addresses["_ssdata"] <= addresses["shared_value"] < addresses["_sedata"] <= 0x20240000
     else:
         assert result.returncode != 0, f"{script} accepted {allocation}"
         assert any(word in result.stderr.lower() for word in ("overflow", "will not fit", "outside", "backwards")), result.stderr
@@ -136,3 +141,54 @@ int main(void) {
     script = repo_root / f"modules/nsx-core/src/{soc}/gcc/linker_script_{profile}.ld"
     result = subprocess.run([str(compiler), *flags, "-nostdlib", f"-T{script}", str(tmp_path / "startup.o"), str(tmp_path / "main.o"), "-o", str(tmp_path / "memory.elf")], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("soc", SOCS)
+@pytest.mark.parametrize("profile", PROFILES)
+@pytest.mark.parametrize("allocation", ("small", "ro-overflow", "load-overflow", "tcm-overflow", "sram-overflow"))
+def test_small_m55_scatter_enforces_load_bounds(repo_root: Path, tmp_path: Path, soc: str, profile: str, allocation: str) -> None:
+    linker = shutil.which("armlink")
+    if linker is None:
+        pytest.skip("Arm linker is unavailable")
+    compiler = compiler_for_test("gcc")
+    origin = 0x00410000 if profile == "sbl" else 0x00400000
+    space = APP_END - origin
+    extra = {
+        "small": "",
+        "ro-overflow": f'.section .rodata,"a"\n.space {space + 1}\n',
+        "load-overflow": f'.section .rodata,"a"\n.space {space - 2048}\n.section .data,"aw"\n.space 8196\n',
+        "tcm-overflow": '.section .bss,"aw",%nobits\n.space 262145\n',
+        "sram-overflow": '.section .sram_bss,"aw",%nobits\n.space 1835009\n',
+    }[allocation]
+    asm = tmp_path / "probe.s"
+    asm.write_text('.syntax unified\n.thumb\n.section RESET,"ax"\n.global Reset_Handler\n.thumb_func\nReset_Handler: b .\n' + extra)
+    obj = tmp_path / "probe.o"
+    subprocess.run([str(compiler), "-mcpu=cortex-m55", "-mthumb", "-c", str(asm), "-o", str(obj)], check=True, capture_output=True)
+    script = repo_root / f"modules/nsx-core/src/{soc}/armclang/linker_script_{profile}.sct"
+    # armlink normally discards unreferenced input sections; retaining the
+    # allocation probes is essential for testing their actual region limits.
+    result = subprocess.run([linker, "--no_remove", "--scatter", str(script), "--entry", "Reset_Handler", str(obj), "-o", str(tmp_path / "probe.elf")], capture_output=True, text=True)
+    if allocation == "small":
+        assert result.returncode == 0, result.stdout + result.stderr
+    else:
+        assert result.returncode != 0 and "exceeds limit" in result.stdout + result.stderr, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("soc", SOCS)
+def test_nbl_does_not_retain_unused_cpp_functions(repo_root: Path, tmp_path: Path, soc: str) -> None:
+    gcc = compiler_for_test("gcc")
+    cxx = gcc.parent / "arm-none-eabi-g++"
+    source = tmp_path / "unused.cpp"
+    source.write_text('''extern "C" {
+__attribute__((noinline)) void unused(void) { __asm volatile(".space 65536"); }
+void Reset_Handler(void) { for (;;) { __asm volatile("nop"); } }
+}''')
+    obj = tmp_path / "unused.o"
+    flags = ["-mcpu=cortex-m55", "-mthumb", "-mfloat-abi=hard"]
+    subprocess.run([str(cxx), *flags, "-O1", "-ffunction-sections", "-c", str(source), "-o", str(obj)], check=True, capture_output=True)
+    script = repo_root / f"modules/nsx-core/src/{soc}/gcc/linker_script_nbl.ld"
+    elf = tmp_path / "unused.elf"
+    result = subprocess.run([str(cxx), *flags, "-nostdlib", "-Wl,--gc-sections", f"-T{script}", str(obj), "-o", str(elf)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    symbols = subprocess.check_output([str(gcc.parent / "arm-none-eabi-nm"), str(elf)], text=True)
+    assert not re.search(r"\bunused$", symbols, re.M), "Unwind tables must not root unused code"

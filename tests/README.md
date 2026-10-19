@@ -14,6 +14,9 @@ scripts. Separate oversized objects must fail for application NVM, DTCM and
 shared SRAM. GCC is required in the Arm cross-compile job; ATfE runs when
 `ATFE_ROOT` is available. See `docs/small-m55-memory.md` for source revisions
 and the radio-firmware reservation.
+If `armlink` is available, additional scatter-file link probes check aggregate
+load-image limits as well as execution-region bounds. GNU regressions also
+cover shared-data subsections and unused C++ code with unwind tables.
 
 `test_cpp_startup.py` links the shipped apollo2/apollo3/apollo3p startup and
 linker scripts with a C++ global object with a nontrivial destructor, checks the reset-handler call,

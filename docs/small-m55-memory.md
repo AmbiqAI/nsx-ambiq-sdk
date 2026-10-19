@@ -63,4 +63,9 @@ rejects selecting the unsupported profile, and links real Arm object files
 against both SoCs' GNU SBL/NBL scripts. Separate probes exceed application NVM,
 physical DTCM and shared SRAM; each must fail at link time. Small images must
 still link. The Arm GCC CI job runs these checks with its required toolchain.
-Region checks for scatter files do not substitute for running the Arm linker.
+When `armlink` is installed, additional scatter-file probes retain their input
+sections and verify both execution-region limits and the aggregate NVM load
+limit, including initialized data loaded into RAM. The aggregate load region
+must stop before the radio firmware even when its individual RO region fits.
+GNU checks also verify shared subsections fall inside the startup-copy bounds
+and that NBL unwind tables do not retain otherwise unused C++ functions.
