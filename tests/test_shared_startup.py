@@ -74,10 +74,7 @@ def test_shared_load_copy_window(repo_root: Path, tmp_path: Path, script: str, c
         assert int.from_bytes(data[offset:offset + 4], "little") == value
 
 
-@pytest.mark.parametrize("soc", SOCS)
-@pytest.mark.parametrize("empty", (False, True))
-@pytest.mark.parametrize("loop", ("copy_loop", "copy_loop_sram", "copy_loop_itcm"))
-def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empty: bool, loop: str) -> None:
+def check_actual_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empty: bool, loop: str, premature_read: bool = False) -> None:
     qemu = shutil.which("qemu-system-arm")
     compiler = compiler_for_test("gcc")
     gdb = compiler.parent / "arm-none-eabi-gdb"
@@ -99,6 +96,10 @@ def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empt
         "copy_loop_sram": ("_init_data_sram", "_ssdata", "_sedata"),
         "copy_loop_itcm": ("_init_itcm_text", "_s_itcm_text", "_e_itcm_text"),
     }[loop]
+    if premature_read:
+        assembly, count = re.subn(rf"(ldr\s+r2,\s*={end_symbol}[^\n]*\n)",
+                                  r"\1    ldr r3, [r0]\n", assembly, count=1)
+        assert count == 1
     probe = tmp_path / "loop.s"
     probe.write_text('.syntax unified\n.thumb\n.section .text,"ax"\n.global Reset_Handler,done\n.thumb_func\nReset_Handler:\n' + assembly + '''
 .thumb_func
@@ -122,15 +123,34 @@ destination: .word 0xDEADBEEF,0xDEADBEEF,0xDEADBEEF
     with (tmp_path / "qemu.log").open("w") as log:
         process = subprocess.Popen([qemu, "-M", "mps3-an547", "-nographic", "-S", "-gdb", f"tcp:127.0.0.1:{port}", "-kernel", str(elf)], stdout=log, stderr=log)
         try:
-            commands = ["set pagination off", "set confirm off", f"target remote 127.0.0.1:{port}", "set $xpsr=0x01000000", "set $pc=Reset_Handler", "break done", "continue", "x/3wx &destination", "detach", "quit"]
+            commands = ["set pagination off", "set confirm off", f"target remote 127.0.0.1:{port}", "set $xpsr=0x01000000", "set $pc=Reset_Handler", "break done"]
+            if empty:
+                commands.append("rwatch -location *(unsigned long long *)&initial")
+            commands += ["continue", 'printf "COPY_DONE=%d\\n", ((unsigned long)$pc & ~1) == ((unsigned long)&done & ~1)', "x/3wx &destination", "detach", "quit"]
             command = [str(gdb), "-q", "-nx", "-batch", str(elf)]
             for item in commands:
                 command += ["-ex", item]
             result = subprocess.run(command, capture_output=True, text=True, timeout=15)
             (tmp_path / "gdb.log").write_text(result.stdout + result.stderr)
             assert result.returncode == 0, result.stdout + result.stderr
+            if "COPY_DONE=0" in result.stdout:
+                raise AssertionError("copy accessed source before done: " + result.stdout)
+            assert "COPY_DONE=1" in result.stdout, result.stdout + result.stderr
             expected = "0xdeadbeef\t0xdeadbeef\t0xdeadbeef" if empty else "0xaabbccdd\t0x11223344\t0xdeadbeef"
             assert expected in result.stdout.lower(), result.stdout + result.stderr
         finally:
             process.terminate()
             process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("soc", SOCS)
+@pytest.mark.parametrize("empty", (False, True))
+@pytest.mark.parametrize("loop", ("copy_loop", "copy_loop_sram", "copy_loop_itcm"))
+def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empty: bool, loop: str) -> None:
+    check_actual_copy_loop(repo_root, tmp_path, soc, empty, loop)
+
+
+@pytest.mark.parametrize("loop", ("copy_loop", "copy_loop_sram", "copy_loop_itcm"))
+def test_empty_copy_oracle_detects_source_read(repo_root: Path, tmp_path: Path, loop: str) -> None:
+    with pytest.raises(AssertionError, match="copy accessed source before done"):
+        check_actual_copy_loop(repo_root, tmp_path, "apollo510b", True, loop, premature_read=True)
