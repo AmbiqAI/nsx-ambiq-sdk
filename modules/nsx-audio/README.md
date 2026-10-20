@@ -41,3 +41,14 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg);
 uint32_t nsx_audio_start(nsx_audio_config_t *cfg);
 uint32_t nsx_audio_stop(nsx_audio_config_t *cfg);
 ```
+
+## Buffer contract
+
+Keep the configuration and its buffers alive and unchanged between successful
+init and stop; serialize lifecycle operations with the ISR/callback. Each DMA
+frame preserves the existing backend convention of `samples * channels * width * 2`
+bytes, with two frames reserved. PCM needs `samples * channels * sizeof(int16_t)`
+bytes. Validation rejects arithmetic/address overflow, invalid widths, unaligned
+buffers and frames exceeding the part's 20-bit DMATOTCOUNT field before hardware
+setup. The HAL's threshold/count divisibility requirements still apply. This
+bounds work does not change packing, audio conversion or clock selection.

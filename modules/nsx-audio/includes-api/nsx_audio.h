@@ -106,7 +106,10 @@ typedef struct {
     nsx_audio_pdm_gain_e    right_gain;    /**< Right channel gain */
 } nsx_audio_pdm_config_t;
 
-/** Main audio configuration. */
+/** Main audio configuration.
+ * Keep this object and both buffers alive and unchanged from successful init
+ * until stop returns. Serialize init/start/stop with capture and callbacks.
+ */
 struct nsx_audio_config {
     nsx_audio_source_e      source;        /**< Audio source (PDM only) */
     uint8_t                 num_channels;  /**< 1 = mono, 2 = stereo */
@@ -115,7 +118,8 @@ struct nsx_audio_config {
     nsx_audio_pdm_config_t  pdm;           /**< PDM-specific config */
 
     /** DMA sample buffer — must be 32-byte aligned. Size must be at least
-     *  num_samples * num_channels * sample_width * 2 (double-buffered). */
+     *  num_samples * num_channels * sample_width * 4 bytes (two DMA frames).
+     *  Each frame is limited by the selected part's DMATOTCOUNT field. */
     uint32_t               *dma_buffer;
     uint32_t                dma_buffer_size; /**< Total size in bytes */
 
