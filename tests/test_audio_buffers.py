@@ -71,10 +71,13 @@ def test_audio_dma_cache_views(repo_root: Path, tmp_path: Path, scenario: str) -
     assert compiler
     fixture = repo_root / "tests/fixtures/audio"
     binary = tmp_path / "cache"
-    subprocess.run([compiler, "-std=c11", "-g", "-O1", "-DTEST_CACHE", "-fno-pie", "-no-pie",
+    env = os.environ.copy()
+    env.pop("GCC_ROOT", None)  # Cross-toolchain root also affects host GCC headers.
+    result = subprocess.run([compiler, "-std=c11", "-g", "-O1", "-DTEST_CACHE", "-fno-pie", "-no-pie",
         "-fsanitize=address,undefined", f"-I{fixture}",
         f"-I{repo_root / 'modules/nsx-audio/includes-api'}",
         str(repo_root / "modules/nsx-audio/src/apollo5/nsx_pdm_apollo5.c"),
-        str(fixture / "main.c"), "-o", str(binary)], check=True, capture_output=True, text=True)
+        str(fixture / "main.c"), "-o", str(binary)], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
     result = subprocess.run([str(binary), scenario], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
