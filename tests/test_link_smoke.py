@@ -18,15 +18,38 @@ from tools.nsx_link_smoke import DEFAULT_BOARDS, write_smoke_source
 from tools.nsx_toolchain_file import write_toolchain_file
 
 
+def armclang_for_test() -> Path:
+    root = os.environ.get("ACFE_ROOT")
+    if root is not None:
+        compiler = Path(root) / "bin" / "armclang"
+        if not root or not compiler.is_file() or not os.access(compiler, os.X_OK):
+            pytest.fail(f"ACFE_ROOT does not contain an executable bin/armclang: {root!r}")
+        return compiler.resolve()
+    compiler = shutil.which("armclang")
+    if not compiler:
+        pytest.skip("ArmClang unavailable")
+    return Path(compiler).resolve()
+
+
+def test_armclang_explicit_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    compiler = tmp_path / "bin/armclang"
+    compiler.parent.mkdir()
+    compiler.touch(mode=0o755)
+    monkeypatch.setenv("ACFE_ROOT", str(tmp_path))
+    monkeypatch.setenv("PATH", "/nonexistent")
+    assert armclang_for_test() == compiler
+    monkeypatch.setenv("ACFE_ROOT", str(tmp_path / "missing"))
+    with pytest.raises(pytest.fail.Exception, match="ACFE_ROOT"):
+        armclang_for_test()
+
+
 @pytest.fixture(scope="session", params=[(family, board) for family in ("gcc", "atfe", "armclang") for board in DEFAULT_BOARDS])
 def firmware(request: pytest.FixtureRequest, repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
     family, board = request.param
     env = os.environ.copy()
     if family == "armclang":
-        compiler = shutil.which("armclang")
-        if not compiler:
-            pytest.skip("ArmClang unavailable")
-        env["ACFE_ROOT"] = str(Path(compiler).parent.parent)
+        compiler = armclang_for_test()
+        env["ACFE_ROOT"] = str(compiler.parent.parent)
     else:
         compiler = compiler_for_test(family)
         env["GCC_ROOT" if family == "gcc" else "ATFE_ROOT"] = str(compiler.parent.parent)
@@ -54,7 +77,7 @@ def test_smoke_is_linked_firmware(firmware: tuple[Path, Path]) -> None:
     assert evidence.symbols["SystemInit"]
 
 
-@pytest.mark.parametrize("fault", ("entry", "missing-system", "missing-hal", "reset-vector", "stack", "load-overrun"))
+@pytest.mark.parametrize("fault", ("entry", "entry-even", "missing-system", "missing-hal", "reset-vector", "stack", "load-overrun", "vector-load-shift", "load-overlap", "code-load-shift"))
 def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: Path, fault: str) -> None:
     binary, script = firmware
     evidence = inspect_firmware(binary, script)
@@ -62,6 +85,8 @@ def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: P
     phoff = struct.unpack_from("<I", data, 28)[0]
     phsize, phnum = struct.unpack_from("<HH", data, 42)
     vector_offset = None
+    vector_header = None
+    code_header = None
     first_load = None
     for index in range(phnum):
         offset = phoff + index * phsize
@@ -70,9 +95,14 @@ def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: P
             first_load = offset if first_load is None else first_load
             if address <= evidence.vector and evidence.vector + 8 <= address + size:
                 vector_offset = file_offset + evidence.vector - address
-    assert vector_offset is not None and first_load is not None
+                vector_header = offset
+            if address <= (evidence.entry & ~1) < address + size:
+                code_header = offset
+    assert vector_offset is not None and first_load is not None and vector_header is not None
     if fault == "entry":
         struct.pack_into("<I", data, 24, 0x8000)
+    elif fault == "entry-even":
+        struct.pack_into("<I", data, 24, evidence.entry & ~1)
     elif fault == "missing-system":
         data = data.replace(b"SystemInit\0", b"XystemInit\0")
     elif fault == "missing-hal":
@@ -81,8 +111,27 @@ def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: P
         struct.pack_into("<I", data, vector_offset + 4, 0x8001)
     elif fault == "stack":
         struct.pack_into("<I", data, vector_offset, 0x1000)
-    else:
+    elif fault == "load-overrun":
         struct.pack_into("<I", data, first_load + 12, evidence.nvm_end)
+    elif fault == "vector-load-shift":
+        physical = struct.unpack_from("<I", data, vector_header + 12)[0]
+        struct.pack_into("<I", data, vector_header + 12, physical + 0x100)
+    elif fault == "load-overlap":
+        # ArmClang may combine all file-backed bytes into a single segment.
+        # Add a RAM-copy segment whose load bytes collide with the vectors,
+        # without changing any existing segment or vector VMA.
+        headers = bytes(data[phoff:phoff + phsize * phnum])
+        new_phoff = (len(data) + 3) & ~3
+        data.extend(bytes(new_phoff - len(data)))
+        data.extend(headers)
+        data.extend(struct.pack("<8I", 1, vector_offset, 0x20000000,
+                                evidence.nvm_origin, 4, 4, 6, 4))
+        struct.pack_into("<I", data, 28, new_phoff)
+        struct.pack_into("<H", data, 44, phnum + 1)
+    else:
+        assert code_header is not None
+        physical = struct.unpack_from("<I", data, code_header + 12)[0]
+        struct.pack_into("<I", data, code_header + 12, physical + 0x100)
     broken = tmp_path / "broken.elf"
     broken.write_bytes(data)
     with pytest.raises(ValueError):

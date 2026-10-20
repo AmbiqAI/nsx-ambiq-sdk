@@ -90,8 +90,8 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
         address = symbols[symbol] & ~1
         if not any(seg.flags & 1 and seg.address <= address < seg.address + seg.file_size for seg in segments):
             raise ValueError(f"Firmware symbol is outside loaded executable code: {symbol}")
-    if entry & ~1 != symbols["Reset_Handler"] & ~1:
-        raise ValueError("Firmware entry does not select Reset_Handler")
+    if not entry & 1 or entry & ~1 != symbols["Reset_Handler"] & ~1:
+        raise ValueError("Firmware entry does not select Thumb Reset_Handler")
     script = linker_script.read_text()
     if linker_script.suffix == ".sct":
         region = re.search(r"\bMCU_MRAM\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)", script)
@@ -112,6 +112,8 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
     if len(vector_segments) != 1:
         raise ValueError("Firmware vector words are not loaded")
     segment = vector_segments[0]
+    if segment.physical + vector - segment.address != origin:
+        raise ValueError("Firmware vector words are not physically loaded at the application origin")
     stack, reset = unpack(data, segment.offset + vector - segment.address, "<II")
     if not reset & 1 or reset & ~1 != symbols["Reset_Handler"] & ~1:
         raise ValueError("Firmware reset vector does not select Thumb Reset_Handler")
@@ -120,5 +122,14 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
     loads = [seg for seg in segments if seg.file_size]
     if not loads or any(seg.physical < origin or seg.physical + seg.file_size > origin + size for seg in loads):
         raise ValueError("Firmware load bytes extend outside the application NVM aperture")
+    ordered_loads = sorted(loads, key=lambda seg: seg.physical)
+    if any(left.physical + left.file_size > right.physical
+           for left, right in zip(ordered_loads, ordered_loads[1:])):
+        raise ValueError("Firmware physical load spans overlap")
+    # NVM-resident bytes execute/read in place. RAM sections may have a
+    # different load address because startup copies them to their VMA.
+    if any(seg.address < origin + size and seg.address + seg.file_size > origin
+           and seg.physical != seg.address for seg in loads):
+        raise ValueError("Firmware NVM execution and physical load addresses differ")
     return FirmwareEvidence(entry, vector, stack, origin, origin + size,
         max(seg.physical + seg.file_size for seg in loads), {name: symbols[name] for name in required})

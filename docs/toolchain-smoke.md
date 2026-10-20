@@ -51,6 +51,9 @@ The firmware links real startup/System code, the core runtime used by Apollo510B
 fault handlers, and required HAL/BSP functions. The ELF check requires the reset
 entry, vector words, aligned RAM stack, SystemInit/main and vendor definitions,
 and checks physical load bytes against the selected application NVM aperture.
+Physical load spans must not overlap, vector bytes must load at the application
+origin, and NVM execution addresses must match their physical load addresses.
+Both the ELF entry and reset vector must select Thumb Reset_Handler.
 The entry probe never substitutes clock/startup stubs. These are link/layout
 checks; no board is flashed and peripheral behavior is not qualified.
 
@@ -62,9 +65,11 @@ a different C runtime. See the [ATfE release assets](https://github.com/arm/arm-
 
 `test_link_smoke.py` builds this matrix when compilers are installed and rejects
 missing startup plus corrupt entries, vector/stack words, missing System/HAL
-definitions and load overruns. GCC is required in the cross-compile PR job;
+definitions, load overruns, overlaps and shifted load addresses. GCC is required in the cross-compile PR job;
 ATfE/ArmClang remain local or optional container qualification. Skipped cases
 are not passing evidence. ABI field-layout checks remain in `test_vendor_abi.py`.
+ArmClang tests honor `ACFE_ROOT` before searching `PATH`; an invalid explicit
+root fails the tests instead of skipping the compiler.
 
 ## Standard Dev/CI Container
 
