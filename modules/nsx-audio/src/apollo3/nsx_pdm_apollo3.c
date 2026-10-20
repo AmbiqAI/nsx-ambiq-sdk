@@ -18,6 +18,26 @@ static am_hal_pdm_transfer_t g_xfers[NSX_PDM_MAX_INSTANCES];
 
 static const IRQn_Type g_pdm_irqs[] = {PDM_IRQn};
 
+static bool g_powered[NSX_PDM_MAX_INSTANCES];
+static bool g_power_requested[NSX_PDM_MAX_INSTANCES];
+static bool g_enable_attempted[NSX_PDM_MAX_INSTANCES];
+static bool g_pins_enabled[NSX_PDM_MAX_INSTANCES];
+
+static bool nsx_audio_owns(const nsx_audio_config_t *cfg) {
+    return cfg != NULL && (uint32_t)cfg->pdm.mic < NSX_PDM_MAX_INSTANCES &&
+        g_pdm_cfgs[(uint32_t)cfg->pdm.mic] == cfg && cfg->_pdm_handle != NULL;
+}
+
+uint32_t nsx_audio_get_status(const nsx_audio_config_t *cfg) {
+    return !nsx_audio_owns(cfg) ? NSX_STATUS_INVALID_HANDLE : cfg->_last_error;
+}
+
+static void nsx_audio_capture_failed(nsx_audio_config_t *cfg) {
+    cfg->_last_error = NSX_STATUS_FAILURE;
+    cfg->_started = 0;
+    NVIC_DisableIRQ(g_pdm_irqs[(uint32_t)cfg->pdm.mic]);
+}
+
 static void nsx_audio_pdm_pins_enable(uint32_t mic_idx) {
     if (mic_idx != 0) {
         return;
@@ -49,7 +69,7 @@ static void pdm_isr_handler(uint32_t mic_idx) {
         return;
     }
     nsx_audio_config_t *cfg = g_pdm_cfgs[mic_idx];
-    if (cfg == NULL || cfg->_pdm_handle == NULL) {
+    if (cfg == NULL || cfg->_pdm_handle == NULL || !cfg->_started) {
         return;
     }
 
@@ -59,7 +79,12 @@ static void pdm_isr_handler(uint32_t mic_idx) {
     }
 
     am_hal_interupt_service_msg_t isr_data = {0};
-    am_hal_pdm_interrupt_service(cfg->_pdm_handle, &isr_data, &g_xfers[mic_idx]);
+    if (am_hal_pdm_interrupt_service(cfg->_pdm_handle, &isr_data, &g_xfers[mic_idx]) != AM_HAL_STATUS_SUCCESS ||
+        (isr_data.isrStat & (AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_UNDFL | AM_HAL_PDM_INT_OVF))) {
+        g_xfers[mic_idx].bRestartDMA = false;
+        nsx_audio_capture_failed(cfg);
+        return;
+    }
 
     if (isr_data.isrStat & AM_HAL_PDM_INT_DCMP) {
         uint32_t *raw = (uint32_t *)g_xfers[mic_idx].ui32BufferWithDataAddr;
@@ -125,6 +150,13 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
+    if (g_pdm_cfgs[mic_idx] != NULL) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+    cfg->_pdm_handle = NULL;
+    cfg->_started = 0;
+    cfg->_last_error = NSX_STATUS_INIT_FAILED;
+
     am_hal_pdm_config_t pdm_hal = {
         .eClkDivider = AM_HAL_PDM_MCLKDIV_1,
         .eLeftGain = (am_hal_pdm_gain_e)cfg->pdm.left_gain,
@@ -146,38 +178,49 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
     };
 
     uint32_t rc = am_hal_pdm_initialize(mic_idx, &cfg->_pdm_handle);
-    if (rc != AM_HAL_STATUS_SUCCESS) {
+    if (rc != AM_HAL_STATUS_SUCCESS || cfg->_pdm_handle == NULL) {
+        cfg->_pdm_handle = NULL;
         return NSX_STATUS_INIT_FAILED;
     }
+    g_pdm_cfgs[mic_idx] = cfg;
+    g_power_requested[mic_idx] = true;
     rc = am_hal_pdm_power_control(cfg->_pdm_handle, AM_HAL_PDM_POWER_ON, false);
     if (rc != AM_HAL_STATUS_SUCCESS) {
-        return NSX_STATUS_INIT_FAILED;
+        goto init_failed;
     }
-    rc = am_hal_pdm_configure(cfg->_pdm_handle, &pdm_hal);
-    if (rc != AM_HAL_STATUS_SUCCESS) {
-        return NSX_STATUS_INIT_FAILED;
+    g_powered[mic_idx] = true;
+    if (am_hal_pdm_configure(cfg->_pdm_handle, &pdm_hal) != AM_HAL_STATUS_SUCCESS) {
+        goto init_failed;
     }
-
     nsx_audio_pdm_pins_enable(mic_idx);
-    am_hal_pdm_fifo_flush(cfg->_pdm_handle);
-    am_hal_pdm_fifo_threshold_setup(cfg->_pdm_handle, AM_HAL_PDM_DMA_THRESHOLD_MIN);
-    am_hal_pdm_interrupt_enable(cfg->_pdm_handle,
-                                AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_DCMP |
-                                AM_HAL_PDM_INT_UNDFL | AM_HAL_PDM_INT_OVF);
+    g_pins_enabled[mic_idx] = true;
+    if (am_hal_pdm_fifo_flush(cfg->_pdm_handle) != AM_HAL_STATUS_SUCCESS ||
+        am_hal_pdm_fifo_threshold_setup(cfg->_pdm_handle, AM_HAL_PDM_DMA_THRESHOLD_MIN) != AM_HAL_STATUS_SUCCESS ||
+        am_hal_pdm_interrupt_clear(cfg->_pdm_handle, 0xFFFFFFFF) != AM_HAL_STATUS_SUCCESS ||
+        am_hal_pdm_interrupt_enable(cfg->_pdm_handle,
+            AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_DCMP | AM_HAL_PDM_INT_UNDFL | AM_HAL_PDM_INT_OVF) != AM_HAL_STATUS_SUCCESS) {
+        goto init_failed;
+    }
     NVIC_SetPriority(g_pdm_irqs[mic_idx], 0x03);
     NVIC_ClearPendingIRQ(g_pdm_irqs[mic_idx]);
-    NVIC_EnableIRQ(g_pdm_irqs[mic_idx]);
-
-    g_pdm_cfgs[mic_idx] = cfg;
-    cfg->_started = 0;
+    /* Interrupt delivery starts only after a successful start sequence. */
+    cfg->_last_error = NSX_STATUS_SUCCESS;
     return NSX_STATUS_SUCCESS;
+
+init_failed:
+    (void)nsx_audio_stop(cfg);
+    cfg->_last_error = NSX_STATUS_INIT_FAILED;
+    return NSX_STATUS_INIT_FAILED;
 }
 
 uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
-    if (cfg == NULL || cfg->_pdm_handle == NULL) {
+    if (!nsx_audio_owns(cfg)) {
         return NSX_STATUS_INVALID_HANDLE;
     }
 
+    if (cfg->_started || cfg->_last_error != NSX_STATUS_SUCCESS) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
     nsx_audio_buffer_layout_t layout;
     if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
@@ -190,28 +233,58 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
     g_xfers[mic_idx].ui32TotalCount = layout.frame_bytes;
     g_xfers[mic_idx].bRestartDMA = true;
 
-    am_hal_pdm_enable(cfg->_pdm_handle);
-    am_hal_pdm_dma_start(cfg->_pdm_handle, &g_xfers[mic_idx]);
+    g_enable_attempted[(uint32_t)cfg->pdm.mic] = true;
+    if (am_hal_pdm_enable(cfg->_pdm_handle) != AM_HAL_STATUS_SUCCESS) {
+        nsx_audio_capture_failed(cfg);
+        return NSX_STATUS_FAILURE;
+    }
+    if (am_hal_pdm_dma_start(cfg->_pdm_handle, &g_xfers[mic_idx]) != AM_HAL_STATUS_SUCCESS) {
+        nsx_audio_capture_failed(cfg);
+        return NSX_STATUS_FAILURE;
+    }
     cfg->_started = 1;
+    NVIC_EnableIRQ(g_pdm_irqs[(uint32_t)cfg->pdm.mic]);
     return NSX_STATUS_SUCCESS;
 }
 
 uint32_t nsx_audio_stop(nsx_audio_config_t *cfg) {
-    if (cfg == NULL || cfg->_pdm_handle == NULL) {
+    if (!nsx_audio_owns(cfg)) {
         return NSX_STATUS_INVALID_HANDLE;
     }
-
     uint32_t mic_idx = (uint32_t)cfg->pdm.mic;
     NVIC_DisableIRQ(g_pdm_irqs[mic_idx]);
-    am_hal_pdm_interrupt_clear(cfg->_pdm_handle, 0xFFFFFFFF);
-    am_hal_pdm_interrupt_disable(cfg->_pdm_handle, 0xFFFFFFFF);
-    am_hal_pdm_disable(cfg->_pdm_handle);
-    am_hal_pdm_power_control(cfg->_pdm_handle, AM_HAL_PDM_POWER_OFF, false);
-    am_hal_pdm_deinitialize(cfg->_pdm_handle);
-    nsx_audio_pdm_pins_disable(mic_idx);
-
-    cfg->_pdm_handle = NULL;
     cfg->_started = 0;
+    if (g_powered[mic_idx]) {
+        if (am_hal_pdm_interrupt_disable(cfg->_pdm_handle, 0xFFFFFFFF) != AM_HAL_STATUS_SUCCESS ||
+            am_hal_pdm_interrupt_clear(cfg->_pdm_handle, 0xFFFFFFFF) != AM_HAL_STATUS_SUCCESS) {
+            cfg->_last_error = NSX_STATUS_FAILURE;
+            return NSX_STATUS_FAILURE;
+        }
+        g_xfers[mic_idx].bRestartDMA = false;
+        if (g_enable_attempted[mic_idx] && am_hal_pdm_disable(cfg->_pdm_handle) != AM_HAL_STATUS_SUCCESS) {
+            cfg->_last_error = NSX_STATUS_FAILURE;
+            return NSX_STATUS_FAILURE;
+        }
+        g_enable_attempted[mic_idx] = false;
+    }
+    if (g_power_requested[mic_idx]) {
+        if (am_hal_pdm_power_control(cfg->_pdm_handle, AM_HAL_PDM_POWER_OFF, false) != AM_HAL_STATUS_SUCCESS) {
+            cfg->_last_error = NSX_STATUS_FAILURE;
+            return NSX_STATUS_FAILURE;
+        }
+        g_powered[mic_idx] = false;
+        g_power_requested[mic_idx] = false;
+    }
+    if (am_hal_pdm_deinitialize(cfg->_pdm_handle) != AM_HAL_STATUS_SUCCESS) {
+        cfg->_last_error = NSX_STATUS_FAILURE;
+        return NSX_STATUS_FAILURE;
+    }
+    if (g_pins_enabled[mic_idx]) {
+        nsx_audio_pdm_pins_disable(mic_idx);
+        g_pins_enabled[mic_idx] = false;
+    }
+    cfg->_pdm_handle = NULL;
+    cfg->_last_error = NSX_STATUS_SUCCESS;
     g_pdm_cfgs[mic_idx] = NULL;
     return NSX_STATUS_SUCCESS;
 }

@@ -135,7 +135,8 @@ struct nsx_audio_config {
 
     /* --- internal state (set by nsx_audio_init, do not modify) --- */
     void                   *_pdm_handle;
-    uint8_t                 _started;
+    volatile uint8_t        _started;
+    volatile uint32_t       _last_error;
 };
 
 /** Default PDM configuration for the active SDK/SoC family. */
@@ -160,6 +161,13 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg);
  * @return 0 on success.
  */
 uint32_t nsx_audio_start(nsx_audio_config_t *cfg);
+
+/** Return the last lifecycle/ISR status for an initialized, owned instance.
+ * Returns NSX_STATUS_INVALID_HANDLE before init or after successful stop.
+ * A nonzero capture error requires stop, then init before another start.
+ * Keep buffers alive until stop succeeds; retry stop if teardown fails.
+ */
+uint32_t nsx_audio_get_status(const nsx_audio_config_t *cfg);
 
 /**
  * Stop audio sampling and power down PDM.
