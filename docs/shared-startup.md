@@ -19,3 +19,7 @@ data/shared/ITCM-copy instructions extracted unchanged from production startup. 
 scratch addresses and direct entry; it does not model Apollo peripherals, the
 full boot flow or physical memory apertures. Existing small-M55 startup tests
 remain in place.
+
+Empty-range execution sets a GDB read watchpoint over the source and must reach
+`done` without stopping on an access. Deliberate premature-load mutations prove
+that this check catches a read even when destination sentinels are unchanged.
