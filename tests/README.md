@@ -101,3 +101,15 @@ these checks locally; missing history skips locally and fails in CI.
 `test_vendor_abi.py` compiles standalone SDK consumers using real PDM headers
 in C/C++ and extracts the selected vendor implementation into a relocatable
 link. GCC is required in cross-compile CI; ATfE/ArmClang cases run when installed.
+
+`test_audio_lifecycle.py` fault-injects actual Apollo3/Apollo5 backend calls under
+ASan/UBSan. It verifies failure returns, IRQ/state publication, instance ownership,
+teardown retry without powered-off register access and observable ISR failures.
+Mocks qualify software control flow; physical DMA and capture need board testing.
+
+Apollo5 audio lifecycle tests model active two-stage DMA: a second start fails,
+completion service selects alternating buffers, and threshold-only interrupts
+must be serviced without producing a callback. They also exercise service
+failure, invalid completed-buffer addresses, and capture replacement from a
+callback, including the replacement's next frame. Actual AP510B runs are
+recorded separately from the host HAL model.
