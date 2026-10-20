@@ -6,7 +6,11 @@
 
 extern void am_pdm0_isr(void);
 static const char *failure;
+static const char *cleanup_failure;
+static unsigned cleanup_failures;
 static unsigned failures, calls, init_calls, dma_calls, callbacks, irq_enabled;
+static uint32_t irq_status=AM_HAL_PDM_INT_DCMP;
+static am_hal_pdm_transfer_t *serviced_transfer;
 static bool powered, callback_stop, callback_restart;
 static nsx_audio_config_t *active;
 static _Alignas(32) uint32_t dma[32];
@@ -17,6 +21,9 @@ static unsigned operation(const char *name) {
     calls++;
     if (failure != NULL && !strcmp(failure, name) && !failures++) {
         return 91;
+    }
+    if (cleanup_failure != NULL && failures && !strcmp(cleanup_failure, name) && !cleanup_failures++) {
+        return 92;
     }
     return 0;
 }
@@ -39,7 +46,7 @@ unsigned am_hal_pdm_fifo_threshold_setup(void*h,unsigned n) {(void)h;(void)n;ass
 unsigned am_hal_pdm_interrupt_enable(void*h,unsigned n) {(void)h;(void)n;assert(powered);return operation("irq-enable");}
 unsigned am_hal_pdm_interrupt_disable(void*h,unsigned n) {(void)h;(void)n;assert(powered);return operation("irq-disable");}
 unsigned am_hal_pdm_interrupt_clear(void*h,unsigned n) {(void)h;(void)n;assert(powered);return operation("irq-clear");}
-unsigned am_hal_pdm_interrupt_status_get(void*h,uint32_t*s,bool b) {(void)h;(void)b;assert(powered);*s=AM_HAL_PDM_INT_DCMP;return operation("status");}
+unsigned am_hal_pdm_interrupt_status_get(void*h,uint32_t*s,bool b) {(void)h;(void)b;assert(powered);*s=irq_status;return operation("status");}
 unsigned am_hal_pdm_enable(void*h) {(void)h;assert(powered);return operation("enable");}
 unsigned am_hal_pdm_disable(void*h) {(void)h;assert(powered);return operation("disable");}
 unsigned am_hal_pdm_deinitialize(void*h) {(void)h;assert(!powered);return operation("deinit");}
@@ -54,7 +61,8 @@ void am_bsp_pdm_pins_enable(unsigned n) {(void)n;}
 void am_bsp_pdm_pins_disable(unsigned n) {(void)n;}
 unsigned am_hal_pdm_dma_get_buffer(void*h) {(void)h;return (unsigned)(uintptr_t)dma;}
 unsigned am_hal_pdm_interrupt_service(void*h,am_hal_interupt_service_msg_t*s,am_hal_pdm_transfer_t*t) {
-    (void)h;s->isrStat=AM_HAL_PDM_INT_DCMP;t->ui32BufferWithDataAddr=(unsigned)(uintptr_t)dma;
+    (void)h;s->isrStat=irq_status;t->ui32BufferWithDataAddr=(unsigned)(uintptr_t)dma;
+    serviced_transfer=t;
     return operation("service");
 }
 static void callback(nsx_audio_config_t*c,void*b,uint32_t n) {
@@ -82,6 +90,23 @@ int main(int argc,char **argv) {
     assert(nsx_audio_get_status(NULL)!=0);
     assert(nsx_audio_get_status(&cfg)!=0);
     const char *phase=argv[1], *fault=argv[2];
+    if(!strcmp(phase,"init-cleanup")) {
+        failure=!strcmp(fault,"power-on/power-off")?"power-on":"configure";
+        cleanup_failure=!strcmp(fault,"configure/deinit")?"deinit":"power-off";
+        assert(nsx_audio_init(&cfg)!=0);
+        assert(failures && cleanup_failures && cfg._pdm_handle!=NULL);
+        assert(!cfg._started && !irq_enabled && nsx_audio_get_status(&cfg)!=0);
+        unsigned before=calls;
+        nsx_audio_config_t other=cfg;
+        assert(nsx_audio_init(&cfg)!=0 && nsx_audio_init(&other)!=0);
+        assert(nsx_audio_start(&cfg)!=0 && calls==before);
+        failure=NULL;
+        cleanup_failure=NULL;
+        assert(nsx_audio_stop(&cfg)==0);
+        assert(!powered && cfg._pdm_handle==NULL);
+        assert(nsx_audio_init(&other)==0 && nsx_audio_stop(&other)==0);
+        return 0;
+    }
     if(!strcmp(phase,"init")) {
         failure=fault;
         assert(nsx_audio_init(&cfg)!=0);
@@ -109,6 +134,20 @@ int main(int argc,char **argv) {
         return 0;
     }
     assert(nsx_audio_start(&cfg)==0 && irq_enabled);
+    if(!strcmp(phase,"hardware-error")) {
+        if(strstr(fault,"derr"))irq_status=AM_HAL_PDM_INT_DERR;
+        else if(strstr(fault,"undfl"))irq_status=AM_HAL_PDM_INT_UNDFL;
+        else {assert(strstr(fault,"ovf"));irq_status=AM_HAL_PDM_INT_OVF;}
+        if(strstr(fault,"+dcmp"))irq_status|=AM_HAL_PDM_INT_DCMP;
+        am_pdm0_isr();
+        assert(!cfg._started && !irq_enabled && nsx_audio_get_status(&cfg)!=0);
+        assert(callbacks==0 && dma_calls==1);
+#ifdef TEST_APOLLO3
+        assert(serviced_transfer!=NULL && !serviced_transfer->bRestartDMA);
+#endif
+        assert(nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
     if(!strcmp(phase,"stop")) {
         failure=fault;
         assert(nsx_audio_stop(&cfg)!=0);

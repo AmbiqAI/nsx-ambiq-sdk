@@ -32,6 +32,8 @@ CASES += [("start", step) for step in ("enable", "dma-start")]
 CASES += [("stop", step) for step in ("irq-disable", "irq-clear", "dma-stop", "disable", "power-off", "deinit")]
 CASES += [("isr", step) for step in ("status", "irq-clear", "service", "dma-start")]
 CASES += [("ownership", "none"), ("callback-stop", "none"), ("callback-restart", "none")]
+CASES += [("init-cleanup", step) for step in ("power-on/power-off", "configure/power-off", "configure/deinit")]
+CASES += [("hardware-error", bit + suffix) for bit in ("derr", "undfl", "ovf") for suffix in ("", "+dcmp")]
 
 
 @pytest.mark.parametrize("phase,fault", CASES)
