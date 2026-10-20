@@ -236,3 +236,29 @@ def test_smoke_rejects_incomplete_load_or_stack(firmware: tuple[Path, Path], tmp
     broken.write_bytes(data)
     with pytest.raises(ValueError):
         inspect_firmware(broken, script)
+
+
+@pytest.mark.parametrize("section_name", (".data", ".shared", ".itcm_text", ".dtcm_text"))
+def test_smoke_rejects_shifted_ram_load(firmware: tuple[Path, Path], tmp_path: Path, section_name: str) -> None:
+    binary, script = firmware
+    if script.suffix == ".sct":
+        pytest.skip("ArmClang uses a single NVM scatter load")
+    data = bytearray(binary.read_bytes())
+    evidence = inspect_firmware(binary, script)
+    phoff, shoff = struct.unpack_from("<II", data, 28)
+    phsize, phnum, shsize, shnum, names_index = struct.unpack_from("<5H", data, 42)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_section = sections[names_index]
+    names = data[names_section[4]:names_section[4] + names_section[5]]
+    section = next((s for s in sections if names[s[0]:names.find(0, s[0])] == section_name.encode() and s[5]), None)
+    if section is None:
+        pytest.skip(f"{section_name} not present in this board image")
+    loads = [(phoff + i * phsize, struct.unpack_from("<8I", data, phoff + i * phsize)) for i in range(phnum)]
+    offset, seg = next((offset, seg) for offset, seg in loads if seg[0] == 1 and seg[1] <= section[4] and section[4] + section[5] <= seg[1] + seg[4])
+    shifted = (evidence.load_end + 0x103) & ~3
+    assert shifted + seg[4] < evidence.nvm_end
+    struct.pack_into("<I", data, offset + 12, shifted)
+    broken = tmp_path / "shifted.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError, match="startup copy source"):
+        inspect_firmware(broken, script)

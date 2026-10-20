@@ -35,7 +35,10 @@ class Symbol:
 
 
 def check_section_loads(data: bytes, sections: list[Section], segments: list[Segment],
-                        regions: dict[str, tuple[int, int]], scatter: bool) -> None:
+                        regions: dict[str, tuple[int, int]], scatter: bool, definitions: dict[str, Symbol]) -> None:
+    copy_sources = {".data": "_init_data", ".shared": "_init_data_sram",
+                    ".itcm_text": "_init_itcm_text", ".dtcm_text": "_init_dtcm_text",
+                    ".tcm": "_init_tcm"}
     for section in sections:
         if not section.flags & 2 or not section.size or section.kind == 8:  # SHF_ALLOC, SHT_NOBITS
             continue
@@ -53,6 +56,12 @@ def check_section_loads(data: bytes, sections: list[Section], segments: list[Seg
         else:
             candidates = [seg for seg in candidates
                           if section.address == seg.address + section.offset - seg.offset]
+        if not scatter and section.name in copy_sources:
+            source = definitions.get(copy_sources[section.name])
+            if source is None or not candidates or any(
+                seg.physical + section.offset - seg.offset != source.address for seg in candidates
+            ):
+                raise ValueError(f"Firmware load disagrees with startup copy source: {section.name}")
         if not candidates or section.flags & 4 and not any(seg.flags & 1 for seg in candidates):
             raise ValueError(f"Firmware section lacks complete consistent load coverage: {section.name}")
 
@@ -229,7 +238,7 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
     if stack % 8 or not any(a < stack <= a + n for a, n in ram):
         raise ValueError("Firmware initial stack is outside declared RAM or unaligned")
     check_stack(stack, allocated_sections, definitions, regions, linker_script.suffix == ".sct")
-    check_section_loads(data, allocated_sections, segments, regions, linker_script.suffix == ".sct")
+    check_section_loads(data, allocated_sections, segments, regions, linker_script.suffix == ".sct", definitions)
     loads = [seg for seg in segments if seg.file_size]
     if not loads or any(seg.physical < origin or seg.physical + seg.file_size > origin + size for seg in loads):
         raise ValueError("Firmware load bytes extend outside the application NVM aperture")

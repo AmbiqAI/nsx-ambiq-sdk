@@ -34,6 +34,8 @@ def write_smoke_source(source_dir: Path, repo: Path, board: str, toolchain_famil
     (source_dir / "main.c").write_text(
         '#include "am_bsp.h"\n#include "am_mcu_apollo.h"\n'
         'volatile unsigned smoke_probe;\n'
+        '__attribute__((used, section(".shared"))) volatile unsigned smoke_shared = 0x12345678;\n'
+        f'__attribute__((used, section("{(".dtcm_text" if board in ("apollo330mP_evb", "apollo510dL_evb") else ".itcm_text")}"))) unsigned smoke_tcm(void) {{ return 42; }}\n'
         'int main(void) {\n'
         '    static am_hal_pdm_config_t config;\n'
         '    if (smoke_probe) {\n'
