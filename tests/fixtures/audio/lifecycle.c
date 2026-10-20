@@ -180,7 +180,7 @@ int main(int argc,char **argv) {
         check_samples=true;
         for(unsigned frame=0;frame<6;frame++){
             uint32_t *raw=(uint32_t *)(uintptr_t)next_buffer;
-            for(unsigned i=0;i<16;i++)raw[i]=(frame+1)*100+i;
+            for(unsigned i=0;i<16;i++)raw[i]=((frame+1)*100+i)<<8;
             irq_status=AM_HAL_PDM_INT_DCMP;
             am_pdm0_isr();
             assert(cfg._started && irq_enabled && nsx_audio_get_status(&cfg)==0);

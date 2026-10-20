@@ -5,10 +5,10 @@
 #include "nsx_audio.h"
 #include "am_mcu_apollo.h"
 extern void am_pdm0_isr(void);
-static unsigned init_clock_error,enable_error,dma_error,dma_calls,last_dma_count,last_dma_base,last_dma_reverse,init_calls,callback_count;
+static unsigned init_clock_error,enable_error,dma_error,dma_calls,last_dma_count,last_dma_base,last_dma_reverse,init_calls,callback_count,last_packing;
 unsigned am_hal_pdm_initialize(unsigned n,void **h){(void)n;init_calls++;*h=(void*)1;return 0;}
 unsigned am_hal_pdm_power_control(void*h,unsigned p,bool r){(void)h;(void)p;(void)r;return 0;}
-unsigned am_hal_pdm_configure(void*h,am_hal_pdm_config_t*c){(void)h;(void)c;return 0;}
+unsigned am_hal_pdm_configure(void*h,am_hal_pdm_config_t*c){(void)h;last_packing=c->bDataPacking;return 0;}
 unsigned am_hal_pdm_fifo_flush(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_fifo_threshold_setup(void*h,unsigned n){(void)h;(void)n;return 0;}
 unsigned am_hal_pdm_interrupt_enable(void*h,unsigned n){(void)h;(void)n;return 0;}
@@ -41,7 +41,7 @@ int main(int argc,char**argv){
  for(unsigned i=0;i<256;i++)dma[i]=i+100;
  for(unsigned i=0;i<128;i++)pcm[i]=-1;
  const char *test=argv[1];
- bool valid=!strcmp(test,"valid") || !strcmp(test,"stereo") || !strcmp(test,"24bit") || !strcmp(test,"count-limit");
+ bool valid=!strcmp(test,"valid") || !strcmp(test,"stereo") || !strcmp(test,"24bit") || !strcmp(test,"count-limit") || !strcmp(test,"packing") || !strcmp(test,"pcm16-boundaries") || !strcmp(test,"pcm24-boundaries");
  if(!strcmp(test,"overflow"))cfg.num_samples=0x80000001u;
  if(!strcmp(test,"channel-overflow"))cfg.num_samples=0x80000001u,cfg.num_channels=2;
  if(!strcmp(test,"zero"))cfg.num_samples=0;
@@ -64,9 +64,9 @@ int main(int argc,char**argv){
  if(!strcmp(test,"count-too-large"))cfg.num_samples=262144,cfg.dma_buffer_size=UINT32_MAX,cfg.pcm_buffer_size=UINT32_MAX;
  if(!strcmp(test,"count-limit"))cfg.num_samples=262143,cfg.dma_buffer_size=UINT32_MAX,cfg.pcm_buffer_size=UINT32_MAX;
  if(!strcmp(test,"stereo"))cfg.num_channels=2,cfg.num_samples=8;
- if(!strcmp(test,"24bit"))cfg.pdm.sample_width=NSX_AUDIO_PDM_24BIT,cfg.dma_buffer_size=192;
+ if(!strcmp(test,"24bit") || !strcmp(test,"pcm24-boundaries"))cfg.pdm.sample_width=NSX_AUDIO_PDM_24BIT;
 #ifdef TEST_APOLLO3
- if(!strcmp(test,"24bit"))valid=false;
+ if(cfg.pdm.sample_width==NSX_AUDIO_PDM_24BIT)valid=false;
 #endif
  unsigned init=nsx_audio_init(&cfg);
  if(!valid){assert(init!=0);assert(init_calls==0);return 0;}
@@ -74,18 +74,32 @@ int main(int argc,char**argv){
  if(!strcmp(test,"count-limit"))return 0;
  assert(nsx_audio_start(&cfg)==0);
  assert(dma_calls==1);
- unsigned frame=!strcmp(test,"24bit")?96:64;
+ unsigned frame=64;
+#ifndef TEST_APOLLO3
+ if(!strcmp(test,"packing"))assert(last_packing==0);
+#endif
  assert(last_dma_count==frame);
  assert(last_dma_base==(unsigned)(uintptr_t)dma);
  assert(last_dma_reverse==last_dma_base+frame);
- if(!strcmp(test,"24bit"))for(unsigned i=0;i<256;i++)dma[i]=(i+100)<<8;
+ #ifndef TEST_APOLLO3
+ for(unsigned i=0;i<256;i++)dma[i]=(i+100)<<8;
+#endif
+ const uint32_t raw_edges[]={0,0x7fffff,0x800000,0xffffff,0x100,0xffff00,0xff,0xffff7f,
+   0x123456,0xedcbaa,0xab800000,0xcd7fffff,0xffff,0x10000,0xff0000,0xfeffff};
+ const int16_t pcm_edges[]={0,32767,-32768,-1,1,-1,0,-1,4660,-4661,-32768,32767,255,256,-256,-257};
+ bool boundaries=!strcmp(test,"pcm16-boundaries") || !strcmp(test,"pcm24-boundaries");
+#ifndef TEST_APOLLO3
+ if(boundaries)for(unsigned i=0;i<16;i++)dma[i]=raw_edges[i];
+#else
+ (void)raw_edges;(void)pcm_edges;boundaries=false;
+#endif
  am_pdm0_isr();
  assert(callback_count==1);
  assert(dma_calls==1); /* HAL service owns continuous DMA on both backends. */
  assert(last_dma_count==frame);
  assert(last_dma_base==(unsigned)(uintptr_t)dma);
  assert(last_dma_reverse==last_dma_base+frame);
- for(unsigned i=0;i<16;i++)assert(pcm[i]==(int)(i+100));
+ for(unsigned i=0;i<16;i++)assert(pcm[i]==(boundaries?pcm_edges[i]:(int)(i+100)));
  assert(pcm[16]==-1);
  assert(nsx_audio_stop(&cfg)==0);
  return 0;
