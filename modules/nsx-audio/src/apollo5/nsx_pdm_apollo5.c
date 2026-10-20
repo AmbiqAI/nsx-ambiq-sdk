@@ -30,6 +30,7 @@
 #endif
 
 static nsx_audio_config_t *g_pdm_cfgs[NSX_PDM_MAX_INSTANCES] = {0};
+static am_hal_pdm_transfer_t g_xfers[NSX_PDM_MAX_INSTANCES];
 
 #define NSX_PDM_COUNT_LIMIT PDM0_DMATOTCOUNT_TOTCOUNT_Msk
 
@@ -44,9 +45,6 @@ static bool g_powered[NSX_PDM_MAX_INSTANCES];
 static bool g_power_requested[NSX_PDM_MAX_INSTANCES];
 static bool g_enable_attempted[NSX_PDM_MAX_INSTANCES];
 static bool g_pins_enabled[NSX_PDM_MAX_INSTANCES];
-/* Stop invalidates the currently executing callback's capture, even when
- * that callback reinitializes the same config address before returning. */
-static bool g_callback_stopped[NSX_PDM_MAX_INSTANCES];
 
 static bool nsx_audio_owns(const nsx_audio_config_t *cfg) {
     return cfg != NULL && (uint32_t)cfg->pdm.mic < NSX_PDM_MAX_INSTANCES &&
@@ -90,9 +88,22 @@ static void pdm_isr_handler(uint32_t mic_idx) {
         return;
     }
 
+    /* The HAL advances ping/pong DMA and services threshold-only completion
+     * bookkeeping. Restarting DMA here collides with its active next stage. */
+    if (am_hal_pdm_interrupt_service(cfg->_pdm_handle, status, &g_xfers[mic_idx]) != AM_HAL_STATUS_SUCCESS) {
+        nsx_audio_capture_failed(cfg);
+        return;
+    }
+
     if (status & AM_HAL_PDM_INT_DCMP) {
         /* DMA transfer complete — extract PCM samples. */
-        uint32_t *raw = cfg->dma_buffer;
+        uintptr_t completed = am_hal_pdm_dma_get_buffer(cfg->_pdm_handle);
+        uintptr_t ping = (uintptr_t)cfg->dma_buffer;
+        if (completed != ping && completed != ping + layout.frame_bytes) {
+            nsx_audio_capture_failed(cfg);
+            return;
+        }
+        uint32_t *raw = (uint32_t *)completed;
         uint32_t n = layout.samples;
         int16_t *pcm = cfg->pcm_buffer;
 
@@ -107,24 +118,10 @@ static void pdm_isr_handler(uint32_t mic_idx) {
             }
         }
 
-        g_callback_stopped[mic_idx] = false;
+        /* The callback may stop and replace this capture. Do not touch cfg
+         * or its transfer again after returning from application code. */
         if (cfg->callback) {
             cfg->callback(cfg, pcm, n);
-        }
-
-        /* Do not rearm a stopped or replacement capture using this ISR's
-         * old layout. Check the stop flag before dereferencing cfg again. */
-        if (g_callback_stopped[mic_idx] || g_pdm_cfgs[mic_idx] != cfg || !cfg->_started) {
-            return;
-        }
-        /* Re-trigger DMA for continuous capture. */
-        if (am_hal_pdm_dma_start(cfg->_pdm_handle, &(am_hal_pdm_transfer_t){
-            .ui32TotalCount = layout.frame_bytes,
-            .ui32TargetAddr = (uint32_t)(uintptr_t)cfg->dma_buffer,
-            .ui32TargetAddrReverse = (uint32_t)(uintptr_t)cfg->dma_buffer
-                                     + layout.frame_bytes,
-        }) != AM_HAL_STATUS_SUCCESS) {
-            nsx_audio_capture_failed(cfg);
         }
     }
 }
@@ -402,13 +399,14 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
     }
 
     /* Trigger the first DMA transfer. */
-    am_hal_pdm_transfer_t xfer = {
+    uint32_t mic_idx = (uint32_t)cfg->pdm.mic;
+    g_xfers[mic_idx] = (am_hal_pdm_transfer_t){
         .ui32TotalCount      = layout.frame_bytes,
         .ui32TargetAddr      = (uint32_t)(uintptr_t)cfg->dma_buffer,
         .ui32TargetAddrReverse = (uint32_t)(uintptr_t)cfg->dma_buffer
                                  + layout.frame_bytes,
     };
-    if (am_hal_pdm_dma_start(cfg->_pdm_handle, &xfer) != AM_HAL_STATUS_SUCCESS) {
+    if (am_hal_pdm_dma_start(cfg->_pdm_handle, &g_xfers[mic_idx]) != AM_HAL_STATUS_SUCCESS) {
         nsx_audio_capture_failed(cfg);
         return NSX_STATUS_FAILURE;
     }
@@ -424,7 +422,6 @@ uint32_t nsx_audio_stop(nsx_audio_config_t *cfg) {
     }
     uint32_t mic_idx = (uint32_t)cfg->pdm.mic;
     NVIC_DisableIRQ(g_pdm_irqs[mic_idx]);
-    g_callback_stopped[mic_idx] = true;
     cfg->_started = 0;
     if (g_powered[mic_idx]) {
         if (am_hal_pdm_interrupt_disable(cfg->_pdm_handle, 0xFFFFFFFF) != AM_HAL_STATUS_SUCCESS ||

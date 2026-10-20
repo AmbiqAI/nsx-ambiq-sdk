@@ -12,6 +12,13 @@ static unsigned failures, calls, init_calls, dma_calls, callbacks, irq_enabled;
 static uint32_t irq_status=AM_HAL_PDM_INT_DCMP;
 static am_hal_pdm_transfer_t *serviced_transfer;
 static bool powered, callback_stop, callback_restart;
+#ifndef TEST_APOLLO3
+/* Two-stage DMA model: start queues ping/pong once. Each completion must
+ * be serviced before the completed buffer can be consumed. */
+static bool dma_active, serviced, check_samples, bad_buffer;
+static unsigned service_calls, buffer_calls, completed_buffer, next_buffer;
+static am_hal_pdm_transfer_t transfer;
+#endif
 static nsx_audio_config_t *active;
 static _Alignas(32) uint32_t dma[32];
 static _Alignas(32) uint32_t small_dma[8];
@@ -53,20 +60,54 @@ unsigned am_hal_pdm_deinitialize(void*h) {(void)h;assert(!powered);return operat
 unsigned am_hal_pdm_dma_start(void*h,am_hal_pdm_transfer_t*t) {
     (void)h;assert(powered);assert(t->ui32TotalCount==active->num_samples*4);
     assert(t->ui32TotalCount*2<=active->dma_buffer_size);dma_calls++;
-    return operation("dma-start");
+    unsigned rc=operation("dma-start");
+#ifndef TEST_APOLLO3
+    if(!rc && dma_active)return 9; /* AM_HAL_STATUS_HW_ERR, observed on AP510B. */
+    if(!rc){dma_active=true;transfer=*t;next_buffer=t->ui32TargetAddr;}
+#endif
+    return rc;
 }
-unsigned am_hal_pdm_dma_stop(void*h) {(void)h;assert(powered);return operation("dma-stop");}
+unsigned am_hal_pdm_dma_stop(void*h) {
+    (void)h;assert(powered);unsigned rc=operation("dma-stop");
+#ifndef TEST_APOLLO3
+    if(!rc)dma_active=false;
+#endif
+    return rc;
+}
 unsigned am_hal_clkmgr_clock_config(unsigned id,unsigned hz,void*c) {(void)id;(void)hz;(void)c;return operation("clock");}
 void am_bsp_pdm_pins_enable(unsigned n) {(void)n;}
 void am_bsp_pdm_pins_disable(unsigned n) {(void)n;}
+#ifdef TEST_APOLLO3
 unsigned am_hal_pdm_dma_get_buffer(void*h) {(void)h;return (unsigned)(uintptr_t)dma;}
 unsigned am_hal_pdm_interrupt_service(void*h,am_hal_interupt_service_msg_t*s,am_hal_pdm_transfer_t*t) {
     (void)h;s->isrStat=irq_status;t->ui32BufferWithDataAddr=(unsigned)(uintptr_t)dma;
     serviced_transfer=t;
     return operation("service");
 }
+#else
+unsigned am_hal_pdm_interrupt_service(void*h,uint32_t status,am_hal_pdm_transfer_t*t) {
+    (void)h;assert(powered && dma_active);service_calls++;
+    assert(t->ui32TargetAddr==transfer.ui32TargetAddr);
+    assert(t->ui32TargetAddrReverse==transfer.ui32TargetAddrReverse);
+    assert(t->ui32TotalCount==transfer.ui32TotalCount);
+    unsigned rc=operation("service");
+    if(!rc && (status & AM_HAL_PDM_INT_DCMP)){
+        completed_buffer=next_buffer;
+        next_buffer=next_buffer==transfer.ui32TargetAddr?transfer.ui32TargetAddrReverse:transfer.ui32TargetAddr;
+        serviced=true;
+    }
+    return rc;
+}
+unsigned am_hal_pdm_dma_get_buffer(void*h) {
+    (void)h;assert(serviced);serviced=false;buffer_calls++;
+    return bad_buffer?0:completed_buffer;
+}
+#endif
 static void callback(nsx_audio_config_t*c,void*b,uint32_t n) {
-    assert(b==pcm && n==16);callbacks++;
+    assert(b==pcm && n==active->num_samples);callbacks++;
+#ifndef TEST_APOLLO3
+    if(check_samples)for(unsigned i=0;i<n;i++)assert(pcm[i]==(int16_t)(callbacks*100+i));
+#endif
     if(callback_stop)assert(nsx_audio_stop(c)==0);
     if(callback_restart) {
         assert(nsx_audio_stop(c)==0);
@@ -134,6 +175,40 @@ int main(int argc,char **argv) {
         return 0;
     }
     assert(nsx_audio_start(&cfg)==0 && irq_enabled);
+#ifndef TEST_APOLLO3
+    if(!strcmp(phase,"ping-pong")) {
+        check_samples=true;
+        for(unsigned frame=0;frame<6;frame++){
+            uint32_t *raw=(uint32_t *)(uintptr_t)next_buffer;
+            for(unsigned i=0;i<16;i++)raw[i]=(frame+1)*100+i;
+            irq_status=AM_HAL_PDM_INT_DCMP;
+            am_pdm0_isr();
+            assert(cfg._started && irq_enabled && nsx_audio_get_status(&cfg)==0);
+            assert(callbacks==frame+1 && buffer_calls==frame+1 && dma_calls==1);
+            unsigned before=service_calls;
+            irq_status=AM_HAL_PDM_INT_THR;
+            am_pdm0_isr();
+            assert(service_calls==before+1 && callbacks==frame+1 && buffer_calls==frame+1);
+        }
+        assert(nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
+    if(!strcmp(phase,"bad-buffer")) {
+        bad_buffer=true;
+        am_pdm0_isr();
+        assert(callbacks==0 && !cfg._started && !irq_enabled && nsx_audio_get_status(&cfg)!=0);
+        assert(nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
+    if(!strcmp(phase,"threshold-error")) {
+        failure="service";irq_status=AM_HAL_PDM_INT_THR;
+        am_pdm0_isr();
+        assert(service_calls==1 && buffer_calls==0 && callbacks==0);
+        assert(!cfg._started && !irq_enabled && nsx_audio_get_status(&cfg)!=0);
+        assert(nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
+#endif
     if(!strcmp(phase,"hardware-error")) {
         if(strstr(fault,"derr"))irq_status=AM_HAL_PDM_INT_DERR;
         else if(strstr(fault,"undfl"))irq_status=AM_HAL_PDM_INT_UNDFL;
@@ -162,7 +237,7 @@ int main(int argc,char **argv) {
         failure=fault;
         am_pdm0_isr();
         assert(!cfg._started && !irq_enabled && nsx_audio_get_status(&cfg)!=0);
-        assert(callbacks==(!strcmp(fault,"dma-start")?1u:0u));
+        assert(callbacks==0);
         assert(nsx_audio_stop(&cfg)==0);
         return 0;
     }
@@ -179,6 +254,11 @@ int main(int argc,char **argv) {
         callback_restart=true;
         am_pdm0_isr();
         assert(callbacks==1 && cfg._started && irq_enabled && powered && dma_calls==2);
+#ifndef TEST_APOLLO3
+        callback_restart=false;
+        am_pdm0_isr();
+        assert(callbacks==2 && cfg._started && irq_enabled && dma_calls==2);
+#endif
         assert(nsx_audio_stop(&cfg)==0);
         return 0;
     }
