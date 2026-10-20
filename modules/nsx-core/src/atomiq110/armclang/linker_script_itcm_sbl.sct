@@ -6,7 +6,7 @@
 ; atomiq110 FPGA: MRAM is emulated at 0x22000000 and SRAM at 0x21000000, unlike
 ; Apollo5 silicon (0x00400000 / 0x20080000). This ITCM-execution "sbl" variant
 ; reserves the first 64 KB of MRAM for the secure bootloader -> app base 0x22010000.
-LR_1 0x22010000
+LR_1 0x22010000 0x003F0000
 {
     MCU_MRAM 0x22010000 0x003F0000
     {

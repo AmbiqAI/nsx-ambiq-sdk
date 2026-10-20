@@ -98,6 +98,11 @@ these checks locally; missing history skips locally and fails in CI.
 4. Validate capability facts from CMake cache output or generated manifest.
 5. Run optional hardware smoke tests for UART, timer, sleep, reset, and PMU.
 
+`test_scatter_load_bounds.py` exercises all 18 scatter profiles with real
+`armlink`: valid small/exact-boundary images and RO/aggregate-load overflow.
+The linker is optional for ordinary host CI but mandatory for release
+qualification of ArmClang layouts; skipped cases do not establish that result.
+
 `test_shared_startup.py` checks all 18 GNU shared-section layouts with GCC and
 optional ATfE using resource-only, shared-only, subsection, combined and empty
 inputs. With QEMU/GDB installed it executes each family's production data/shared/ITCM-copy
