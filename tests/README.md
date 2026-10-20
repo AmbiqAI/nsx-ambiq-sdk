@@ -111,3 +111,26 @@ Firmware mutations also remove initialized-data loads, truncate an executable
 load inside a required function, shift section file mappings, and move MSP to
 the stack limit or below its expected top. All 12 board/compiler images remain
 positive controls for GNU copy-down and ArmClang scatter loading.
+
+`test_scatter_load_bounds.py` exercises all 18 scatter profiles with real
+`armlink`: valid small/exact-boundary images and RO/aggregate-load overflow.
+The linker is optional for ordinary host CI but mandatory for release
+qualification of ArmClang layouts; skipped cases do not establish that result.
+
+`test_shared_startup.py` checks all 18 GNU shared-section layouts with GCC and
+optional ATfE using resource-only, shared-only, subsection, combined and empty
+inputs. With QEMU/GDB installed it executes each family's production data/shared/ITCM-copy
+assembly at scratch addresses for empty and nonempty ranges; these are copy-logic
+checks, not Apollo hardware or physical-memory-map qualification.
+
+`test_audio_lifecycle.py` fault-injects actual Apollo3/Apollo5 backend calls under
+ASan/UBSan. It verifies failure returns, IRQ/state publication, instance ownership,
+teardown retry without powered-off register access and observable ISR failures.
+Mocks qualify software control flow; physical DMA and capture need board testing.
+
+Apollo5 audio lifecycle tests model active two-stage DMA: a second start fails,
+completion service selects alternating buffers, and threshold-only interrupts
+must be serviced without producing a callback. They also exercise service
+failure, invalid completed-buffer addresses, and capture replacement from a
+callback, including the replacement's next frame. Actual AP510B runs are
+recorded separately from the host HAL model.
