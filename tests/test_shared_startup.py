@@ -92,6 +92,13 @@ def test_actual_shared_copy_loop(repo_root: Path, tmp_path: Path, soc: str, empt
     assert len(selected) == 1
     assembly = selected[0]
     end = "destination" if empty else "destination + 8"
+    # Only this loop's linker symbols may resolve. Aliasing all three ranges
+    # would conceal a startup loop accidentally reading another range.
+    source_symbol, start_symbol, end_symbol = {
+        "copy_loop": ("_init_data", "_sdata", "_edata"),
+        "copy_loop_sram": ("_init_data_sram", "_ssdata", "_sedata"),
+        "copy_loop_itcm": ("_init_itcm_text", "_s_itcm_text", "_e_itcm_text"),
+    }[loop]
     probe = tmp_path / "loop.s"
     probe.write_text('.syntax unified\n.thumb\n.section .text,"ax"\n.global Reset_Handler,done\n.thumb_func\nReset_Handler:\n' + assembly + '''
 .thumb_func
@@ -102,7 +109,7 @@ initial: .word 0xAABBCCDD,0x11223344
 .section .data,"aw"
 .global destination
 destination: .word 0xDEADBEEF,0xDEADBEEF,0xDEADBEEF
-''' + f'.set _init_data_sram,initial\n.set _ssdata,destination\n.set _sedata,{end}\n.set _init_data,initial\n.set _sdata,destination\n.set _edata,{end}\n.set _init_itcm_text,initial\n.set _s_itcm_text,destination\n.set _e_itcm_text,{end}\n')
+''' + f'.set {source_symbol},initial\n.set {start_symbol},destination\n.set {end_symbol},{end}\n')
     linker = tmp_path / "loop.ld"
     linker.write_text('SECTIONS { .text 0x01000000 : { *(.text*) *(.rodata*) } .data 0x21000000 : { *(.data*) } }')
     elf = tmp_path / "loop.elf"
