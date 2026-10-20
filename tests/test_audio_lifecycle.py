@@ -30,7 +30,8 @@ def lifecycle_binary(request: pytest.FixtureRequest, repo_root: Path, tmp_path_f
 CASES = [("init", step) for step in ("clock", "initialize", "power-on", "configure", "flush", "threshold", "irq-clear", "irq-enable")]
 CASES += [("start", step) for step in ("enable", "dma-start")]
 CASES += [("stop", step) for step in ("irq-disable", "irq-clear", "dma-stop", "disable", "power-off", "deinit")]
-CASES += [("isr", step) for step in ("status", "irq-clear", "service", "dma-start")]
+CASES += [("isr", step) for step in ("status", "irq-clear", "service")]
+CASES += [("ping-pong", "none"), ("bad-buffer", "none"), ("threshold-error", "none")]
 CASES += [("ownership", "none"), ("callback-stop", "none"), ("callback-restart", "none")]
 CASES += [("init-cleanup", step) for step in ("power-on/power-off", "configure/power-off", "configure/deinit")]
 CASES += [("hardware-error", bit + suffix) for bit in ("derr", "undfl", "ovf") for suffix in ("", "+dcmp")]
@@ -41,7 +42,7 @@ def test_audio_lifecycle_failure(lifecycle_binary: tuple[Path, str], phase: str,
     binary, backend = lifecycle_binary
     if backend == "apollo3" and (fault in ("clock", "dma-stop") or phase == "isr" and fault != "service"):
         pytest.skip("Operation belongs to the Apollo5 HAL contract")
-    if backend == "apollo5" and fault == "service":
-        pytest.skip("Operation belongs to the Apollo3 HAL contract")
+    if backend == "apollo3" and phase in ("ping-pong", "bad-buffer", "threshold-error"):
+        pytest.skip("Operation belongs to the Apollo5 HAL contract")
     result = subprocess.run([str(binary), phase, fault], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

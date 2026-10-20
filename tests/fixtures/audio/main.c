@@ -25,8 +25,13 @@ void am_bsp_pdm_pins_enable(unsigned n){(void)n;}void am_bsp_pdm_pins_disable(un
 static _Alignas(32) uint32_t dma[256];
 static int16_t pcm[128];
 unsigned am_hal_pdm_dma_get_buffer(void*h){(void)h;return (unsigned)(uintptr_t)dma;}
+#ifdef TEST_APOLLO3
 unsigned am_hal_pdm_interrupt_service(void*h,am_hal_interupt_service_msg_t*s,am_hal_pdm_transfer_t*t){
  (void)h;s->isrStat=AM_HAL_PDM_INT_DCMP;t->ui32BufferWithDataAddr=(unsigned)(uintptr_t)dma;return 0;}
+#else
+unsigned am_hal_pdm_interrupt_service(void*h,uint32_t s,am_hal_pdm_transfer_t*t){
+ (void)h;(void)s;assert(t->ui32TotalCount==last_dma_count);return 0;}
+#endif
 
 static void cb(nsx_audio_config_t*c,void*b,uint32_t n){(void)c;assert(b==pcm);assert(n==16);callback_count++;}
 int main(int argc,char**argv){
@@ -76,11 +81,7 @@ int main(int argc,char**argv){
  if(!strcmp(test,"24bit"))for(unsigned i=0;i<256;i++)dma[i]=(i+100)<<8;
  am_pdm0_isr();
  assert(callback_count==1);
-#ifdef TEST_APOLLO3
- assert(dma_calls==1); /* Apollo3 HAL interrupt_service owns auto-restart. */
-#else
- assert(dma_calls==2);
-#endif
+ assert(dma_calls==1); /* HAL service owns continuous DMA on both backends. */
  assert(last_dma_count==frame);
  assert(last_dma_base==(unsigned)(uintptr_t)dma);
  assert(last_dma_reverse==last_dma_base+frame);

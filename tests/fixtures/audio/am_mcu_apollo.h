@@ -53,6 +53,7 @@ unsigned am_hal_clkmgr_clock_config(unsigned,unsigned,void*);
 #define AM_HAL_PDM_INT_DERR 2u
 #define AM_HAL_PDM_INT_OVF 8u
 #define AM_HAL_PDM_INT_UNDFL 4u
+#define AM_HAL_PDM_INT_THR 16u
 #define AM_HAL_PDM_MCLKDIV_1 33u
 #define AM_HAL_PDM_MCLKDIV_3 34u
 #define AM_HAL_PDM_PDMA_CLKO_DIV14 35u
@@ -67,7 +68,11 @@ unsigned am_hal_clkmgr_clock_config(unsigned,unsigned,void*);
 #define AM_IRQ_PRIORITY_DEFAULT 44u
 
 typedef struct { unsigned isrStat; } am_hal_interupt_service_msg_t;
+#ifdef TEST_APOLLO3
 unsigned am_hal_pdm_interrupt_service(void*,am_hal_interupt_service_msg_t*,am_hal_pdm_transfer_t*);
+#else
+unsigned am_hal_pdm_interrupt_service(void*,uint32_t,am_hal_pdm_transfer_t*);
+#endif
 unsigned am_hal_pdm_dma_get_buffer(void*);
 #define AM_HAL_PDM_CLK_750KHZ 45u
 #define AM_HAL_PDM_CLK_1_5MHZ 46u
