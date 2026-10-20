@@ -106,7 +106,10 @@ typedef struct {
     nsx_audio_pdm_gain_e    right_gain;    /**< Right channel gain */
 } nsx_audio_pdm_config_t;
 
-/** Main audio configuration. */
+/** Main audio configuration.
+ * Keep this object and both buffers alive and unchanged from successful init
+ * until stop returns. Serialize init/start/stop with capture and callbacks.
+ */
 struct nsx_audio_config {
     nsx_audio_source_e      source;        /**< Audio source (PDM only) */
     uint8_t                 num_channels;  /**< 1 = mono, 2 = stereo */
@@ -115,7 +118,8 @@ struct nsx_audio_config {
     nsx_audio_pdm_config_t  pdm;           /**< PDM-specific config */
 
     /** DMA sample buffer — must be 32-byte aligned. Size must be at least
-     *  num_samples * num_channels * sample_width * 2 (double-buffered). */
+     *  num_samples * num_channels * sample_width * 4 bytes (two DMA frames).
+     *  Each frame is limited by the selected part's DMATOTCOUNT field. */
     uint32_t               *dma_buffer;
     uint32_t                dma_buffer_size; /**< Total size in bytes */
 
@@ -131,7 +135,8 @@ struct nsx_audio_config {
 
     /* --- internal state (set by nsx_audio_init, do not modify) --- */
     void                   *_pdm_handle;
-    uint8_t                 _started;
+    volatile uint8_t        _started;
+    volatile uint32_t       _last_error;
 };
 
 /** Default PDM configuration for the active SDK/SoC family. */
@@ -156,6 +161,13 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg);
  * @return 0 on success.
  */
 uint32_t nsx_audio_start(nsx_audio_config_t *cfg);
+
+/** Return the last lifecycle/ISR status for an initialized, owned instance.
+ * Returns NSX_STATUS_INVALID_HANDLE before init or after successful stop.
+ * A nonzero capture error requires stop, then init before another start.
+ * Keep buffers alive until stop succeeds; retry stop if teardown fails.
+ */
+uint32_t nsx_audio_get_status(const nsx_audio_config_t *cfg);
 
 /**
  * Stop audio sampling and power down PDM.
