@@ -262,3 +262,69 @@ def test_smoke_rejects_shifted_ram_load(firmware: tuple[Path, Path], tmp_path: P
     broken.write_bytes(data)
     with pytest.raises(ValueError, match="startup copy source"):
         inspect_firmware(broken, script)
+
+
+@pytest.mark.parametrize("section_name,start_name,end_name", (
+    (".data", "_sdata", "_edata"), (".shared", "_ssdata", "_sedata"),
+    (".itcm_text", "_s_itcm_text", "_e_itcm_text"),
+    (".dtcm_text", "_s_dtcm_text", "_e_dtcm_text"),
+))
+@pytest.mark.parametrize("fault", ("empty", "short", "shift-start"))
+def test_smoke_rejects_wrong_copy_bounds(firmware: tuple[Path, Path], tmp_path: Path,
+        section_name: str, start_name: str, end_name: str, fault: str) -> None:
+    binary, script = firmware
+    if script.suffix == ".sct":
+        pytest.skip("ArmClang scatter copies do not use GNU destination symbols")
+    data = bytearray(binary.read_bytes())
+    shoff = struct.unpack_from("<I", data, 32)[0]
+    shsize, shnum, names_index = struct.unpack_from("<3H", data, 46)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_sec = sections[names_index]
+    names = data[names_sec[4]:names_sec[4] + names_sec[5]]
+    section = next((s for s in sections if names[s[0]:names.find(0, s[0])] == section_name.encode() and s[5]), None)
+    if section is None:
+        pytest.skip(f"{section_name} not present in this board image")
+    target = start_name if fault == "shift-start" else end_name
+    value = section[3] if fault == "empty" else section[3] + (4 if fault == "shift-start" else section[5] - 2)
+    changed = False
+    for symtab in sections:
+        if symtab[1] != 2:
+            continue
+        strings = sections[symtab[6]]
+        strings = data[strings[4]:strings[4] + strings[5]]
+        for offset in range(symtab[4], symtab[4] + symtab[5], 16):
+            name = struct.unpack_from("<I", data, offset)[0]
+            if strings[name:strings.find(0, name)] == target.encode():
+                struct.pack_into("<I", data, offset + 4, value)
+                changed = True
+    assert changed
+    broken = tmp_path / "bounds.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError, match="startup copy destination"):
+        inspect_firmware(broken, script)
+
+
+def test_smoke_rejects_nobits_code(firmware: tuple[Path, Path], tmp_path: Path) -> None:
+    binary, script = firmware
+    evidence = inspect_firmware(binary, script)
+    data = bytearray(binary.read_bytes())
+    phoff, shoff = struct.unpack_from("<II", data, 28)
+    phsize, phnum, shsize, shnum = struct.unpack_from("<4H", data, 42)
+    last = max(value & ~1 for value in evidence.symbols.values())
+    changed = False
+    for i in range(shnum):
+        offset = shoff + i * shsize
+        section = struct.unpack_from("<10I", data, offset)
+        if section[2] & 6 == 6 and section[3] <= last < section[3] + section[5]:
+            struct.pack_into("<I", data, offset + 4, 8)
+            changed = True
+    assert changed
+    for i in range(phnum):
+        offset = phoff + i * phsize
+        seg = struct.unpack_from("<8I", data, offset)
+        if seg[0] == 1 and seg[2] <= last < seg[2] + seg[4]:
+            struct.pack_into("<I", data, offset + 16, last - seg[2] + 2)
+    broken = tmp_path / "nobits-code.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError):
+        inspect_firmware(broken, script)

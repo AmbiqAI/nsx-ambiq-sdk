@@ -36,9 +36,13 @@ class Symbol:
 
 def check_section_loads(data: bytes, sections: list[Section], segments: list[Segment],
                         regions: dict[str, tuple[int, int]], scatter: bool, definitions: dict[str, Symbol]) -> None:
-    copy_sources = {".data": "_init_data", ".shared": "_init_data_sram",
-                    ".itcm_text": "_init_itcm_text", ".dtcm_text": "_init_dtcm_text",
-                    ".tcm": "_init_tcm"}
+    copy_ranges = {
+        ".data": ("_init_data", "_sdata", "_edata"),
+        ".shared": ("_init_data_sram", "_ssdata", "_sedata"),
+        ".itcm_text": ("_init_itcm_text", "_s_itcm_text", "_e_itcm_text"),
+        ".dtcm_text": ("_init_dtcm_text", "_s_dtcm_text", "_e_dtcm_text"),
+        ".tcm": ("_init_tcm", "_stcm", "_etcm"),
+    }
     for section in sections:
         if not section.flags & 2 or not section.size or section.kind == 8:  # SHF_ALLOC, SHT_NOBITS
             continue
@@ -56,8 +60,14 @@ def check_section_loads(data: bytes, sections: list[Section], segments: list[Seg
         else:
             candidates = [seg for seg in candidates
                           if section.address == seg.address + section.offset - seg.offset]
-        if not scatter and section.name in copy_sources:
-            source = definitions.get(copy_sources[section.name])
+        if not scatter and section.name in copy_ranges:
+            source_name, start_name, end_name = copy_ranges[section.name]
+            source = definitions.get(source_name)
+            start, end = definitions.get(start_name), definitions.get(end_name)
+            if start is None or end is None or (start.address, end.address) != (
+                section.address, section.address + section.size
+            ):
+                raise ValueError(f"Firmware range disagrees with startup copy destination: {section.name}")
             if source is None or not candidates or any(
                 seg.physical + section.offset - seg.offset != source.address for seg in candidates
             ):
@@ -192,7 +202,7 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
         if not 0 < definition.section < len(sections):
             raise ValueError(f"Firmware symbol has no code section: {symbol}")
         section = allocated_sections[definition.section]
-        if section.flags & 6 != 6 or not (section.address <= address
+        if section.kind == 8 or section.flags & 6 != 6 or not (section.address <= address
             and address + max(1, definition.size) <= section.address + section.size):
             raise ValueError(f"Firmware symbol extends outside executable section: {symbol}")
         if not any(seg.flags & 1 and seg.address <= address < seg.address + seg.file_size for seg in segments):
