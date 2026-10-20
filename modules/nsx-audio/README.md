@@ -94,3 +94,13 @@ callbacks by taking native bits 23:8. The width setting does not change the
 DMA word size or callback type. Reserve `num_samples * num_channels * 8` bytes
 for the two DMA frames. Stereo frames contain both channels in hardware order.
 Apollo3 continues to accept only `NSX_AUDIO_PDM_16BIT`.
+
+### Apollo5 DMA cache ownership
+
+Apollo5 frames must each occupy whole 32-byte cache lines: the total sample
+count (`num_samples * num_channels`) must be a multiple of eight. The adapter
+cleans and invalidates both frames before starting DMA and invalidates each
+completed frame before reading it. The caller must leave DMA storage alone
+until capture stops and consume the PCM callback buffer instead. This prevents
+stale samples and dirty cache lines overwriting incoming DMA data without
+discarding adjacent application data. Cache maintenance also runs on restart.

@@ -89,3 +89,6 @@ void test_irq_disable(unsigned);
 #define NVIC_EnableIRQ(n) test_irq_enable(n)
 #define NVIC_DisableIRQ(n) test_irq_disable(n)
 #endif
+
+void SCB_CleanInvalidateDCache_by_Addr(volatile void *, int32_t);
+void SCB_InvalidateDCache_by_Addr(volatile void *, int32_t);
