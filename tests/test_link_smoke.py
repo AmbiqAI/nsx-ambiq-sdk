@@ -328,3 +328,31 @@ def test_smoke_rejects_nobits_code(firmware: tuple[Path, Path], tmp_path: Path) 
     broken.write_bytes(data)
     with pytest.raises(ValueError):
         inspect_firmware(broken, script)
+
+
+@pytest.mark.parametrize("section_name", (".data", ".shared", ".itcm_text", ".dtcm_text"))
+def test_smoke_rejects_nobits_copy(firmware: tuple[Path, Path], tmp_path: Path, section_name: str) -> None:
+    binary, script = firmware
+    if script.suffix == ".sct":
+        pytest.skip("ArmClang does not use GNU startup copy sections")
+    data = bytearray(binary.read_bytes())
+    phoff, shoff = struct.unpack_from("<II", data, 28)
+    phsize, phnum, shsize, shnum, names_index = struct.unpack_from("<5H", data, 42)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_sec = sections[names_index]
+    names = data[names_sec[4]:names_sec[4] + names_sec[5]]
+    found = next(((i, s) for i, s in enumerate(sections)
+                  if names[s[0]:names.find(0, s[0])] == section_name.encode() and s[5]), None)
+    if found is None:
+        pytest.skip(f"{section_name} not present in this board image")
+    index, section = found
+    struct.pack_into("<I", data, shoff + index * shsize + 4, 8)  # SHT_NOBITS
+    for i in range(phnum):
+        offset = phoff + i * phsize
+        seg = struct.unpack_from("<8I", data, offset)
+        if seg[0] == 1 and seg[1] <= section[4] and section[4] + section[5] <= seg[1] + seg[4]:
+            struct.pack_into("<I", data, offset, 0)  # Remove the initializer load.
+    broken = tmp_path / "nobits-copy.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError):
+        inspect_firmware(broken, script)

@@ -44,7 +44,11 @@ def check_section_loads(data: bytes, sections: list[Section], segments: list[Seg
         ".tcm": ("_init_tcm", "_stcm", "_etcm"),
     }
     for section in sections:
-        if not section.flags & 2 or not section.size or section.kind == 8:  # SHF_ALLOC, SHT_NOBITS
+        if not section.flags & 2 or not section.size:  # SHF_ALLOC
+            continue
+        if section.kind == 8:  # SHT_NOBITS
+            if not scatter and section.name in copy_ranges:
+                raise ValueError(f"Firmware startup copy section has no initializer bytes: {section.name}")
             continue
         take(data, section.offset, section.size)
         candidates = [seg for seg in segments if seg.offset <= section.offset
