@@ -50,6 +50,20 @@ def name_at(strings: bytes, offset: int) -> str:
     return strings[offset:end].decode("utf-8", errors="replace")
 
 
+def memory_regions(linker_script: Path) -> dict[str, tuple[int, int]]:
+    """Read the literal memory declarations in the supported board scripts."""
+    script = re.sub(r"/\*.*?\*/|//[^\n]*", "", linker_script.read_text(), flags=re.S)
+    number = r"(?:0[xX][\da-fA-F]+|\d+)"
+    if linker_script.suffix == ".sct":
+        script = re.sub(r";[^\n]*", "", script)
+        names = r"MCU_MRAM|MCU_ITCM|MCU_TCM|SHARED_SRAM|ARM_LIB_HEAP|ARM_LIB_STACK"
+        matches = re.findall(rf"^\s*({names})\s+({number})\s+(?:EMPTY\s+)?(-\s*)?({number})\b", script, re.M)
+        return {name: (int(a, 0) - int(n, 0) if negative else int(a, 0), int(n, 0))
+                for name, a, negative, n in matches}
+    matches = re.findall(rf"^\s*(\w+)\s*\([^)]*\)\s*:\s*ORIGIN\s*=\s*({number}),\s*LENGTH\s*=\s*({number})\b", script, re.M)
+    return {name: (int(a, 0), int(n, 0)) for name, a, n in matches}
+
+
 def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
     data = elf.read_bytes()
     header = unpack(data, 0, "<16sHHIIIIIHHHHHH")
@@ -92,18 +106,29 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
             raise ValueError(f"Firmware symbol is outside loaded executable code: {symbol}")
     if not entry & 1 or entry & ~1 != symbols["Reset_Handler"] & ~1:
         raise ValueError("Firmware entry does not select Thumb Reset_Handler")
-    script = linker_script.read_text()
-    if linker_script.suffix == ".sct":
-        region = re.search(r"\bMCU_MRAM\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)", script)
-        ram = [(int(a, 0), int(n, 0)) for a, n in re.findall(r"\b(?:MCU_TCM|SHARED_SRAM)\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)", script)]
-        stack_tops = [int(a, 0) for a in re.findall(r"\bARM_LIB_STACK\s+(0x[\da-fA-F]+)\s+EMPTY\s+-", script)]
-    else:
-        region = re.search(r"MCU_MRAM\s*\([^)]*\)\s*:\s*ORIGIN\s*=\s*(\w+),\s*LENGTH\s*=\s*(\w+)", script)
-        ram = [(int(a, 0), int(n, 0)) for a, n in re.findall(r"(?:MCU_TCM|SHARED_SRAM)\s*\([^)]*\)\s*:\s*ORIGIN\s*=\s*(\w+),\s*LENGTH\s*=\s*(\w+)", script)]
-        stack_tops = []
-    if region is None:
+    regions = memory_regions(linker_script)
+    if "MCU_MRAM" not in regions:
         raise ValueError("Cannot identify the selected application NVM aperture")
-    origin, size = int(region[1], 0), int(region[2], 0)
+    origin, size = regions["MCU_MRAM"]
+    ram = [span for name, span in regions.items() if name not in ("MCU_MRAM", "MCU_ITCM")]
+    if not origin <= (entry & ~1) < origin + size:
+        raise ValueError("Firmware Reset_Handler must execute from application NVM before RAM initialization")
+    # A load segment may cover adjacent scatter data/heap/stack regions.
+    # Merge only touching/overlapping declarations, preserving any holes.
+    extents: list[tuple[int, int]] = []
+    for address, length in sorted(regions.values()):
+        end = address + length
+        if address < 0 or not length or end > 2**32:
+            raise ValueError("Invalid declared firmware memory region")
+        if extents and address <= extents[-1][1]:
+            extents[-1] = (extents[-1][0], max(extents[-1][1], end))
+        else:
+            extents.append((address, end))
+    runtime_spans = [(seg.address, seg.memory_size) for seg in segments]
+    runtime_spans += [(section[3], section[5]) for section in sections if section[2] & 2]
+    if any(length and not any(start <= address and address + length <= end for start, end in extents)
+           for address, length in runtime_spans):
+        raise ValueError("Firmware runtime span extends outside declared memory regions")
     vector_names = [name for name in ("__Vectors", "__VECTOR_TABLE") if name in symbols]
     if len(vector_names) != 1 or symbols[vector_names[0]] != origin:
         raise ValueError("Firmware vector table is missing or misplaced")
@@ -117,7 +142,7 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
     stack, reset = unpack(data, segment.offset + vector - segment.address, "<II")
     if not reset & 1 or reset & ~1 != symbols["Reset_Handler"] & ~1:
         raise ValueError("Firmware reset vector does not select Thumb Reset_Handler")
-    if stack % 8 or not (stack in stack_tops or any(a < stack <= a + n for a, n in ram)):
+    if stack % 8 or not any(a < stack <= a + n for a, n in ram):
         raise ValueError("Firmware initial stack is outside declared RAM or unaligned")
     loads = [seg for seg in segments if seg.file_size]
     if not loads or any(seg.physical < origin or seg.physical + seg.file_size > origin + size for seg in loads):

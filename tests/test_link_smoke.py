@@ -77,7 +77,19 @@ def test_smoke_is_linked_firmware(firmware: tuple[Path, Path]) -> None:
     assert evidence.symbols["SystemInit"]
 
 
-@pytest.mark.parametrize("fault", ("entry", "entry-even", "missing-system", "missing-hal", "reset-vector", "stack", "load-overrun", "vector-load-shift", "load-overlap", "code-load-shift"))
+def append_load(data: bytearray, file_offset: int, address: int, physical: int, file_size: int, memory_size: int, flags: int) -> None:
+    phoff = struct.unpack_from("<I", data, 28)[0]
+    phsize, phnum = struct.unpack_from("<HH", data, 42)
+    headers = bytes(data[phoff:phoff + phsize * phnum])
+    new_phoff = (len(data) + 3) & ~3
+    data.extend(bytes(new_phoff - len(data)))
+    data.extend(headers)
+    data.extend(struct.pack("<8I", 1, file_offset, address, physical, file_size, memory_size, flags, 4))
+    struct.pack_into("<I", data, 28, new_phoff)
+    struct.pack_into("<H", data, 44, phnum + 1)
+
+
+@pytest.mark.parametrize("fault", ("entry", "entry-even", "missing-system", "missing-hal", "reset-vector", "stack", "load-overrun", "vector-load-shift", "load-overlap", "code-load-shift", "reset-in-ram", "runtime-address", "runtime-overrun", "section-overrun"))
 def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: Path, fault: str) -> None:
     binary, script = firmware
     evidence = inspect_firmware(binary, script)
@@ -120,18 +132,40 @@ def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: P
         # ArmClang may combine all file-backed bytes into a single segment.
         # Add a RAM-copy segment whose load bytes collide with the vectors,
         # without changing any existing segment or vector VMA.
-        headers = bytes(data[phoff:phoff + phsize * phnum])
-        new_phoff = (len(data) + 3) & ~3
-        data.extend(bytes(new_phoff - len(data)))
-        data.extend(headers)
-        data.extend(struct.pack("<8I", 1, vector_offset, 0x20000000,
-                                evidence.nvm_origin, 4, 4, 6, 4))
-        struct.pack_into("<I", data, 28, new_phoff)
-        struct.pack_into("<H", data, 44, phnum + 1)
-    else:
+        append_load(data, vector_offset, 0x20000000, evidence.nvm_origin, 4, 4, 6)
+    elif fault == "code-load-shift":
         assert code_header is not None
         physical = struct.unpack_from("<I", data, code_header + 12)[0]
         struct.pack_into("<I", data, code_header + 12, physical + 0x100)
+    elif fault == "runtime-address":
+        append_load(data, vector_offset, 0x30000000, (evidence.load_end + 3) & ~3, 4, 4, 6)
+    elif fault == "runtime-overrun":
+        append_load(data, 0, 0x20000000, 0, 0, 0x80000000, 6)
+    else:
+        shoff = struct.unpack_from("<I", data, 32)[0]
+        shsize, shnum = struct.unpack_from("<HH", data, 46)
+        sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+        if fault == "section-overrun":
+            index = next(i for i, section in enumerate(sections) if section[1] == 8 and section[2] & 2 and section[5])
+            struct.pack_into("<I", data, shoff + index * shsize + 20, 0x80000000)
+        else:
+            assert fault == "reset-in-ram"
+            ram_entry = 0x20002001
+            changed = False
+            for section in sections:
+                if section[1] != 2:
+                    continue
+                strings = sections[section[6]]
+                names = data[strings[4]:strings[4] + strings[5]]
+                for offset in range(section[4], section[4] + section[5], 16):
+                    name = struct.unpack_from("<I", data, offset)[0]
+                    if names[name:names.find(0, name)] == b"Reset_Handler":
+                        struct.pack_into("<I", data, offset + 4, ram_entry)
+                        changed = True
+            assert changed
+            struct.pack_into("<I", data, 24, ram_entry)
+            struct.pack_into("<I", data, vector_offset + 4, ram_entry)
+            append_load(data, vector_offset, ram_entry & ~1, (evidence.load_end + 3) & ~3, 4, 4, 5)
     broken = tmp_path / "broken.elf"
     broken.write_bytes(data)
     with pytest.raises(ValueError):
