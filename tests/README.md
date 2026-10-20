@@ -106,3 +106,8 @@ link. GCC is required in cross-compile CI; ATfE/ArmClang cases run when installe
 validates entry/vector/stack/vendor symbols and ELF physical load bounds. It
 rejects missing startup and corrupted firmware evidence. GCC is required by
 the cross-compile job; unavailable optional compilers skip explicitly.
+
+Firmware mutations also remove initialized-data loads, truncate an executable
+load inside a required function, shift section file mappings, and move MSP to
+the stack limit or below its expected top. All 12 board/compiler images remain
+positive controls for GNU copy-down and ArmClang scatter loading.

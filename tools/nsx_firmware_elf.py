@@ -18,6 +18,73 @@ class Segment:
 
 
 @dataclass(frozen=True)
+class Section:
+    name: str
+    kind: int
+    flags: int
+    address: int
+    offset: int
+    size: int
+
+
+@dataclass(frozen=True)
+class Symbol:
+    address: int
+    size: int
+    section: int
+
+
+def check_section_loads(data: bytes, sections: list[Section], segments: list[Segment],
+                        regions: dict[str, tuple[int, int]], scatter: bool) -> None:
+    for section in sections:
+        if not section.flags & 2 or not section.size or section.kind == 8:  # SHF_ALLOC, SHT_NOBITS
+            continue
+        take(data, section.offset, section.size)
+        candidates = [seg for seg in segments if seg.offset <= section.offset
+                      and section.offset + section.size <= seg.offset + seg.file_size]
+        # GNU copy-down segments retain the execution VMA. ArmClang's single
+        # NVM load segment also contains RAM/ITCM scatter-region initializers;
+        # their section VMA deliberately differs from the segment mapping.
+        scatter_copy = scatter and section.name in regions and section.name != "MCU_MRAM"
+        if scatter_copy:
+            start, size = regions[section.name]
+            candidates = [seg for seg in candidates if start <= section.address
+                          and section.address + section.size <= start + size]
+        else:
+            candidates = [seg for seg in candidates
+                          if section.address == seg.address + section.offset - seg.offset]
+        if not candidates or section.flags & 4 and not any(seg.flags & 1 for seg in candidates):
+            raise ValueError(f"Firmware section lacks complete consistent load coverage: {section.name}")
+
+
+def check_stack(stack: int, sections: list[Section], definitions: dict[str, Symbol],
+                regions: dict[str, tuple[int, int]], scatter: bool) -> None:
+    if scatter:
+        if "ARM_LIB_STACK" not in regions:
+            raise ValueError("Firmware has no declared stack allocation")
+        bottom, size = regions["ARM_LIB_STACK"]
+        limits = ("Image$$ARM_LIB_STACK$$ZI$$Base", "Image$$ARM_LIB_STACK$$ZI$$Limit")
+        if any(name not in definitions for name in limits) or (
+            definitions[limits[0]].address, definitions[limits[1]].address
+        ) != (bottom, bottom + size):
+            raise ValueError("Firmware scatter stack symbols disagree with allocation")
+        allocated = [sec for sec in sections if sec.name == "ARM_LIB_STACK"
+                     and sec.address == bottom and sec.size == size]
+    else:
+        symbol = definitions.get("g_pui32Stack")
+        if symbol is None or not 0 < symbol.section < len(sections):
+            raise ValueError("Firmware has no startup stack object")
+        bottom, size = symbol.address, symbol.size
+        section = sections[symbol.section]
+        allocated = [section] if (section.name == ".stack" and section.address <= bottom
+                                  and bottom + size <= section.address + section.size) else []
+    if size < 8 or stack != bottom + size or stack % 8 or not any(
+        sec.kind == 8 and sec.flags & 3 == 3 for sec in allocated
+    ):
+        raise ValueError("Firmware initial stack does not select the allocated startup stack top")
+
+
+@dataclass(frozen=True)
 class FirmwareEvidence:
     entry: int
     vector: int
@@ -84,7 +151,15 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
                 raise ValueError("Invalid firmware ELF load span")
             segments.append(Segment(address, physical, offset, filesz, memsz, flags))
     sections = [unpack(data, shoff + index * shsize, "<10I") for index in range(shnum)]
+    names_index = header[13]
+    if not 0 < names_index < len(sections):
+        raise ValueError("Invalid firmware ELF section-name table")
+    names_section = sections[names_index]
+    names = take(data, names_section[4], names_section[5])
+    allocated_sections = [Section(name_at(names, sec[0]), sec[1], sec[2], sec[3], sec[4], sec[5])
+                          for sec in sections]
     symbols: dict[str, int] = {}
+    definitions: dict[str, Symbol] = {}
     for section in sections:
         if section[1] != 2:  # SHT_SYMTAB
             continue
@@ -94,14 +169,23 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
         strings = take(data, strings_section[4], strings_section[5])
         table = take(data, section[4], section[5])
         for offset in range(0, len(table), 16):
-            name, value, _, _, _, defined = unpack(table, offset, "<IIIBBH")
+            name, value, size, _, _, defined = unpack(table, offset, "<IIIBBH")
             if defined:
-                symbols[name_at(strings, name)] = value
+                symbol_name = name_at(strings, name)
+                symbols[symbol_name] = value
+                definitions[symbol_name] = Symbol(value, size, defined)
     required = ("Reset_Handler", "SystemInit", "main", "am_hal_pdm_configure", "am_bsp_low_power_init")
     for symbol in required:
         if symbol not in symbols:
             raise ValueError(f"Firmware is missing required definition: {symbol}")
-        address = symbols[symbol] & ~1
+        definition = definitions[symbol]
+        address = definition.address & ~1
+        if not 0 < definition.section < len(sections):
+            raise ValueError(f"Firmware symbol has no code section: {symbol}")
+        section = allocated_sections[definition.section]
+        if section.flags & 6 != 6 or not (section.address <= address
+            and address + max(1, definition.size) <= section.address + section.size):
+            raise ValueError(f"Firmware symbol extends outside executable section: {symbol}")
         if not any(seg.flags & 1 and seg.address <= address < seg.address + seg.file_size for seg in segments):
             raise ValueError(f"Firmware symbol is outside loaded executable code: {symbol}")
     if not entry & 1 or entry & ~1 != symbols["Reset_Handler"] & ~1:
@@ -144,6 +228,8 @@ def inspect_firmware(elf: Path, linker_script: Path) -> FirmwareEvidence:
         raise ValueError("Firmware reset vector does not select Thumb Reset_Handler")
     if stack % 8 or not any(a < stack <= a + n for a, n in ram):
         raise ValueError("Firmware initial stack is outside declared RAM or unaligned")
+    check_stack(stack, allocated_sections, definitions, regions, linker_script.suffix == ".sct")
+    check_section_loads(data, allocated_sections, segments, regions, linker_script.suffix == ".sct")
     loads = [seg for seg in segments if seg.file_size]
     if not loads or any(seg.physical < origin or seg.physical + seg.file_size > origin + size for seg in loads):
         raise ValueError("Firmware load bytes extend outside the application NVM aperture")

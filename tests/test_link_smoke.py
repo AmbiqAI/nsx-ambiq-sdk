@@ -198,3 +198,41 @@ def test_invalid_elf_is_actionable(repo_root: Path, tmp_path: Path, contents: by
     binary.write_bytes(contents)
     with pytest.raises(ValueError):
         inspect_firmware(binary, repo_root / "modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld")
+
+
+@pytest.mark.parametrize("fault", ("stack-limit", "stack-below-top", "missing-data-load", "truncated-function", "section-file-mismatch"))
+def test_smoke_rejects_incomplete_load_or_stack(firmware: tuple[Path, Path], tmp_path: Path, fault: str) -> None:
+    binary, script = firmware
+    evidence = inspect_firmware(binary, script)
+    data = bytearray(binary.read_bytes())
+    phoff, shoff = struct.unpack_from("<II", data, 28)
+    phsize, phnum, shsize, shnum, names_index = struct.unpack_from("<5H", data, 42)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_section = sections[names_index]
+    names = data[names_section[4]:names_section[4] + names_section[5]]
+    loads = [(phoff + i * phsize, struct.unpack_from("<8I", data, phoff + i * phsize)) for i in range(phnum)]
+    loads = [(offset, seg) for offset, seg in loads if seg[0] == 1 and seg[4]]
+    if fault.startswith("stack-"):
+        stack_section = next(s for s in sections if names[s[0]:names.find(0, s[0])] in (b".stack", b"ARM_LIB_STACK"))
+        new_stack = stack_section[3] if fault == "stack-limit" else evidence.stack - 8
+        _, vector_seg = next((offset, seg) for offset, seg in loads if seg[2] <= evidence.vector < seg[2] + seg[4])
+        struct.pack_into("<I", data, vector_seg[1] + evidence.vector - vector_seg[2], new_stack)
+    elif fault == "missing-data-load":
+        section = next(s for s in sections if s[1] == 1 and s[2] & 2 and s[3] >= 0x20000000 and s[5])
+        offset, seg = next((offset, seg) for offset, seg in loads if seg[1] <= section[4] and section[4] + section[5] <= seg[1] + seg[4])
+        if script.suffix == ".sct":
+            # ArmClang groups scatter load bytes into one NVM segment.
+            struct.pack_into("<I", data, offset + 16, section[4] - seg[1])
+        else:
+            struct.pack_into("<I", data, offset, 0)  # Remove initialized RAM PT_LOAD.
+    elif fault == "truncated-function":
+        last_function = max(value & ~1 for value in evidence.symbols.values())
+        offset, seg = next((offset, seg) for offset, seg in loads if seg[2] <= last_function < seg[2] + seg[4])
+        struct.pack_into("<I", data, offset + 16, last_function - seg[2] + 2)
+    else:
+        index = next(i for i, s in enumerate(sections) if s[2] & 2 and s[3] == evidence.vector)
+        struct.pack_into("<I", data, shoff + index * shsize + 16, sections[index][4] + 4)
+    broken = tmp_path / "broken.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError):
+        inspect_firmware(broken, script)

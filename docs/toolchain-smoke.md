@@ -114,3 +114,12 @@ For local devcontainer use, export `ARMLM_ACTIVATION_CODE` in the shell that
 runs `devcontainer up`. `.devcontainer/devcontainer.json` passes the value
 through without storing it in the repo or image, and `.devcontainer/post-create.sh`
 activates the license for the root user with `armlm activate -code ...`.
+
+The ELF checks require every allocated, file-backed section to be fully covered
+by a load segment, with matching file-offset/execution-address mappings for
+GNU copy-down and execute-in-place sections. ArmClang scatter RAM/ITCM
+initializers are checked within their declared execution regions and the
+combined NVM file-backed load. Required function extents must fit executable
+sections. Initial MSP must equal the actual startup stack top: the GNU
+`g_pui32Stack` allocation or ArmClang's declared stack and matching linker
+symbols. An arbitrary aligned RAM address is insufficient.
