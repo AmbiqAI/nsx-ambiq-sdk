@@ -1,0 +1,140 @@
+"""Compile real vendor-facing types using standalone SDK consumer flags."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+
+import pytest
+
+from test_cmake_contract import configure_contract_project
+from test_small_m55_memory import compiler_for_test
+
+
+@pytest.mark.parametrize("family", ("gcc", "atfe", "armclang"))
+@pytest.mark.parametrize("language", ("C", "CXX"))
+@pytest.mark.parametrize("selection", ("default", "atfe", "conflicting-global"))
+def test_vendor_layout_from_sdk_target(repo_root: Path, tmp_path: Path, family: str, language: str, selection: str) -> None:
+    if family == "armclang":
+        executable = shutil.which("armclang")
+        if not executable:
+            pytest.skip("ArmClang unavailable")
+        compiler = Path(executable)
+    else:
+        compiler = compiler_for_test(family)
+    artifact = "atfe" if selection == "atfe" else "acfe" if family == "armclang" else "gcc"
+    short = artifact != "atfe"
+    expected_enum, expected_wchar = (1 if short else 4), (2 if artifact == "acfe" else 4)
+    source = tmp_path / ("abi.cpp" if language == "CXX" else "abi.c")
+    assertion = "static_assert" if language == "CXX" else "_Static_assert"
+    source.write_text(f'''#include "am_mcu_apollo.h"
+#include <stddef.h>
+{assertion}(sizeof(am_hal_pdm_mclkdiv_e) == {expected_enum}, "selected vendor enum ABI");
+{assertion}(sizeof(wchar_t) == {expected_wchar}, "selected vendor wchar ABI");
+{assertion}(sizeof(am_hal_pdm_config_t) == {28 if short else 56}, "real PDM layout");
+{assertion}(offsetof(am_hal_pdm_config_t, ui32DecimationRate) == {8 if short else 20}, "real PDM offset");
+uint32_t vendor_call(void *handle) {{
+    static am_hal_pdm_config_t config;
+    return am_hal_pdm_configure(handle, &config);
+}}
+''')
+    prelude = ["set(CMAKE_EXPORT_COMPILE_COMMANDS ON)"]
+    if language == "CXX":
+        prelude.append("enable_language(CXX)")
+    if selection == "atfe":
+        prelude.append("set(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN atfe)")
+    if selection == "conflicting-global":
+        prelude.append(f'set(CMAKE_{language}_FLAGS "-fno-short-enums -fshort-wchar")')
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", family,
+        prelude=tuple(prelude), post_board_include=(
+            f'add_library(abi OBJECT "{source.as_posix()}")',
+            "target_link_libraries(abi PRIVATE nsx::ambiq_hal)",))
+    assert result.returncode == 0, result.stdout
+    build = tmp_path / family / "apollo510_evb/build"
+    entries = json.loads((build / "compile_commands.json").read_text())
+    selected = [entry for entry in entries if entry["file"] == str(source)]
+    assert len(selected) == 1
+    command = shlex.split(selected[0]["command"])
+    command[0] = str(compiler.parent / "arm-none-eabi-g++") if family == "gcc" and language == "CXX" else str(compiler)
+    obj = tmp_path / "abi.o"
+    command[command.index("-o") + 1] = str(obj)
+    result = subprocess.run(command, cwd=selected[0]["directory"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    # Use the selected real archive, force its PDM implementation into a
+    # relocatable ELF and require ABI warnings to be fatal. No MMIO executes.
+    gcc = compiler_for_test("gcc")
+    archive = repo_root / f"modules/nsx-ambiqsuite/sdk/lib/{artifact}/apollo510/libam_hal.a"
+    linked = tmp_path / "vendor-linked.o"
+    result = subprocess.run([str(gcc.parent / "arm-none-eabi-ld"), "-r", "--fatal-warnings", "-z", "noexecstack",
+        "-u", "am_hal_pdm_configure", str(obj), str(archive), "-o", str(linked)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    symbols = subprocess.check_output([str(gcc.parent / "arm-none-eabi-nm"), str(linked)], text=True)
+    assert " T am_hal_pdm_configure" in symbols
+
+
+def test_late_artifact_change_is_rejected(repo_root: Path, tmp_path: Path) -> None:
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "atfe",
+        post_board_include=("set(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN atfe)",))
+    assert result.returncode != 0
+    assert "selection changed after SoC ABI flags" in result.stdout
+
+
+def test_reconfigure_does_not_keep_incompatible_cached_libraries(repo_root: Path, tmp_path: Path) -> None:
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "atfe")
+    assert result.returncode == 0, result.stdout
+    source = tmp_path / "atfe/apollo510_evb"
+    build = source / "build"
+    command = ["cmake", "-S", str(source), "-B", str(build), "-DNSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN=atfe"]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "selects gcc artifacts" in result.stdout + result.stderr
+    assert "Clear the CMake cache" in " ".join((result.stdout + result.stderr).split())
+    # Explicit cache cleanup permits the new, internally consistent selection.
+    result = subprocess.run([*command, "-UNSX_HAL_LIB", "-UNSX_BSP_LIB"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    cache = (build / "CMakeCache.txt").read_text()
+    assert f"NSX_HAL_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/libam_hal.a" in cache
+    assert f"NSX_BSP_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a" in cache
+
+
+@pytest.mark.parametrize("wrong_library", (False, True))
+def test_ancestor_directory_cannot_classify_archive_abi(repo_root: Path, tmp_path: Path, wrong_library: bool) -> None:
+    ancestor = "atfe" if wrong_library else "gcc"
+    alias = tmp_path / "lib" / ancestor / "sdk"
+    alias.parent.mkdir(parents=True)
+    try:
+        alias.symlink_to(repo_root, target_is_directory=True)
+    except OSError:
+        pytest.skip("Directory symlinks unavailable")
+    prelude = ["set(NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN atfe)"]
+    if wrong_library:
+        prelude.append(f'set(NSX_HAL_LIB "{alias}/modules/nsx-ambiqsuite/sdk/lib/gcc/apollo510/libam_hal.a" CACHE FILEPATH "override")')
+    result = configure_contract_project(alias, tmp_path / "project", "apollo510_evb", "atfe", prelude=tuple(prelude))
+    if wrong_library:
+        assert result.returncode != 0
+        assert "selects gcc artifacts" in result.stdout
+    else:
+        assert result.returncode == 0, result.stdout
+
+
+def test_hal_only_does_not_validate_unused_bsp_cache(repo_root: Path, tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    (source / "CMakeLists.txt").write_text(f'''cmake_minimum_required(VERSION 3.20)
+project(hal_only C)
+include(GNUInstallDirs)
+set(NSX_ROOT "{repo_root}")
+set(NSX_CMAKE_DIR "${{NSX_ROOT}}/cmake")
+set(NSX_SDK_PROVIDER ambiqsuite)
+set(NSX_TOOLCHAIN_FAMILY atfe)
+set(NSX_AMBIQSUITE_VERSION stable-2026.06.18)
+set(NSX_AMBIQSUITE_ROOT "${{NSX_ROOT}}/modules/nsx-ambiqsuite/sdk")
+include("${{NSX_ROOT}}/boards/apollo510_evb/board.cmake")
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-cmsis-core" cmsis)
+add_subdirectory("${{NSX_ROOT}}/modules/nsx-ambiq-hal" hal)
+''')
+    unused_bsp = repo_root / "modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a"
+    result = subprocess.run(["cmake", "-S", str(source), "-B", str(tmp_path / "build"), f"-DNSX_BSP_LIB={unused_bsp}"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -147,6 +147,39 @@ function(nsx_validate_prebuilt_abi)
     if(DEFINED NSX_FLOAT_ABI AND NOT NSX_FLOAT_ABI STREQUAL "hard")
         message(FATAL_ERROR "AmbiqSuite prebuilt artifacts require hard-float ABI; got NSX_FLOAT_ABI='${NSX_FLOAT_ABI}'.")
     endif()
+    # FILEPATH cache entries survive reconfiguration. A new artifact selector
+    # must not silently leave yesterday's GCC paths paired with today's ATfE
+    # flags. Known staged paths have an explicit artifact-family directory.
+    foreach(nsx_library_var IN LISTS ARGN)
+        if(DEFINED ${nsx_library_var})
+            get_filename_component(nsx_library_path "${${nsx_library_var}}" REALPATH
+                BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+            file(TO_CMAKE_PATH "${nsx_library_path}" nsx_library_path)
+            if("${nsx_library_var}" STREQUAL "NSX_HAL_LIB")
+                set(nsx_family_pattern "/lib/(gcc|atfe|acfe)/[^/]+/libam_hal[.]a$")
+            elseif("${nsx_library_var}" STREQUAL "NSX_BSP_LIB")
+                set(nsx_family_pattern "/lib/(gcc|atfe|acfe)/[^/]+/[^/]+/libam_bsp[.]a$")
+            else()
+                message(FATAL_ERROR "Unknown vendor library role: ${nsx_library_var}")
+            endif()
+            if(nsx_library_path MATCHES "${nsx_family_pattern}")
+                if(NOT CMAKE_MATCH_1 STREQUAL NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+                    message(FATAL_ERROR
+                        "${nsx_library_var} selects ${CMAKE_MATCH_1} artifacts, but the selected ABI is "
+                        "${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}. Clear the CMake cache or set "
+                        "${nsx_library_var} to the matching artifact path.")
+                endif()
+            endif()
+        endif()
+    endforeach()
+    if(TARGET nsx::soc_flags)
+        get_target_property(nsx_abi_selected nsx::soc_flags NSX_VENDOR_ABI_ARTIFACT)
+        if(nsx_abi_selected AND NOT nsx_abi_selected STREQUAL NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+            message(FATAL_ERROR
+                "Vendor artifact selection changed after SoC ABI flags were created. "
+                "Set NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN before including the board/SoC descriptor.")
+        endif()
+    endif()
 endfunction()
 
 # Single source of truth for the "ATFE links the GCC prebuilt vendor archives"
@@ -229,6 +262,29 @@ function(nsx_apply_toolchain_flags target)
     else()
         message(FATAL_ERROR "Unsupported NSX_TOOLCHAIN_FAMILY='${NSX_TOOLCHAIN_FAMILY}'.")
     endif()
+
+    # ABI follows the archive actually selected, including the ATfE -> GCC
+    # fallback. Do not infer it from the compiler executing this function.
+    if(DEFINED NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
+        set(nsx_abi_artifact "${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}")
+    else()
+        nsx_resolve_ambiqsuite_artifact_toolchain(nsx_abi_artifact)
+    endif()
+    nsx_require_enum_value(nsx_abi_artifact gcc atfe acfe)
+    set_property(TARGET ${target} PROPERTY NSX_VENDOR_ABI_ARTIFACT "${nsx_abi_artifact}")
+    if(nsx_abi_artifact STREQUAL "atfe")
+        set(nsx_enum_flag -fno-short-enums)
+    else()
+        set(nsx_enum_flag -fshort-enums)
+    endif()
+    if(nsx_abi_artifact STREQUAL "acfe")
+        set(nsx_wchar_flag -fshort-wchar)
+    else()
+        set(nsx_wchar_flag -fno-short-wchar)
+    endif()
+    target_compile_options(${target} INTERFACE
+        "$<$<COMPILE_LANGUAGE:C,CXX>:${nsx_enum_flag}>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:${nsx_wchar_flag}>")
 
     target_compile_options(${target} INTERFACE ${nsx_compile_flags})
     if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang" AND nsx_armclang_asm)

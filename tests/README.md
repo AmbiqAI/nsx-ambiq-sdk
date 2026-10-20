@@ -98,6 +98,10 @@ these checks locally; missing history skips locally and fails in CI.
 4. Validate capability facts from CMake cache output or generated manifest.
 5. Run optional hardware smoke tests for UART, timer, sleep, reset, and PMU.
 
+`test_vendor_abi.py` compiles standalone SDK consumers using real PDM headers
+in C/C++ and extracts the selected vendor implementation into a relocatable
+link. GCC is required in cross-compile CI; ATfE/ArmClang cases run when installed.
+
 `test_scatter_load_bounds.py` exercises all 18 scatter profiles with real
 `armlink`: valid small/exact-boundary images and RO/aggregate-load overflow.
 The linker is optional for ordinary host CI but mandatory for release
