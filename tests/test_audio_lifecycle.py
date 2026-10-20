@@ -31,7 +31,7 @@ CASES = [("init", step) for step in ("clock", "initialize", "power-on", "configu
 CASES += [("start", step) for step in ("enable", "dma-start")]
 CASES += [("stop", step) for step in ("irq-disable", "irq-clear", "dma-stop", "disable", "power-off", "deinit")]
 CASES += [("isr", step) for step in ("status", "irq-clear", "service", "dma-start")]
-CASES += [("ownership", "none"), ("callback-stop", "none")]
+CASES += [("ownership", "none"), ("callback-stop", "none"), ("callback-restart", "none")]
 
 
 @pytest.mark.parametrize("phase,fault", CASES)

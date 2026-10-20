@@ -7,9 +7,10 @@
 extern void am_pdm0_isr(void);
 static const char *failure;
 static unsigned failures, calls, init_calls, dma_calls, callbacks, irq_enabled;
-static bool powered, callback_stop;
+static bool powered, callback_stop, callback_restart;
 static nsx_audio_config_t *active;
 static _Alignas(32) uint32_t dma[32];
+static _Alignas(32) uint32_t small_dma[8];
 static int16_t pcm[16];
 
 static unsigned operation(const char *name) {
@@ -43,7 +44,8 @@ unsigned am_hal_pdm_enable(void*h) {(void)h;assert(powered);return operation("en
 unsigned am_hal_pdm_disable(void*h) {(void)h;assert(powered);return operation("disable");}
 unsigned am_hal_pdm_deinitialize(void*h) {(void)h;assert(!powered);return operation("deinit");}
 unsigned am_hal_pdm_dma_start(void*h,am_hal_pdm_transfer_t*t) {
-    (void)h;assert(powered);assert(t->ui32TotalCount==64);dma_calls++;
+    (void)h;assert(powered);assert(t->ui32TotalCount==active->num_samples*4);
+    assert(t->ui32TotalCount*2<=active->dma_buffer_size);dma_calls++;
     return operation("dma-start");
 }
 unsigned am_hal_pdm_dma_stop(void*h) {(void)h;assert(powered);return operation("dma-stop");}
@@ -58,6 +60,13 @@ unsigned am_hal_pdm_interrupt_service(void*h,am_hal_interupt_service_msg_t*s,am_
 static void callback(nsx_audio_config_t*c,void*b,uint32_t n) {
     assert(b==pcm && n==16);callbacks++;
     if(callback_stop)assert(nsx_audio_stop(c)==0);
+    if(callback_restart) {
+        assert(nsx_audio_stop(c)==0);
+        c->num_samples=4;
+        c->dma_buffer=small_dma;
+        c->dma_buffer_size=sizeof small_dma;
+        assert(nsx_audio_init(c)==0 && nsx_audio_start(c)==0);
+    }
 }
 
 int main(int argc,char **argv) {
@@ -124,6 +133,13 @@ int main(int argc,char **argv) {
         nsx_audio_config_t other=cfg;
         assert(nsx_audio_init(&other)!=0 && nsx_audio_start(&other)!=0 && nsx_audio_stop(&other)!=0);
         assert(nsx_audio_start(&cfg)!=0 && calls==before && cfg._started);
+        assert(nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
+    if(!strcmp(phase,"callback-restart")) {
+        callback_restart=true;
+        am_pdm0_isr();
+        assert(callbacks==1 && cfg._started && irq_enabled && powered && dma_calls==2);
         assert(nsx_audio_stop(&cfg)==0);
         return 0;
     }

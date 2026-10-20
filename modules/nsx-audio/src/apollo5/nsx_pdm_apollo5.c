@@ -44,6 +44,9 @@ static bool g_powered[NSX_PDM_MAX_INSTANCES];
 static bool g_power_requested[NSX_PDM_MAX_INSTANCES];
 static bool g_enable_attempted[NSX_PDM_MAX_INSTANCES];
 static bool g_pins_enabled[NSX_PDM_MAX_INSTANCES];
+/* Stop invalidates the currently executing callback's capture, even when
+ * that callback reinitializes the same config address before returning. */
+static bool g_callback_stopped[NSX_PDM_MAX_INSTANCES];
 
 static bool nsx_audio_owns(const nsx_audio_config_t *cfg) {
     return cfg != NULL && (uint32_t)cfg->pdm.mic < NSX_PDM_MAX_INSTANCES &&
@@ -104,12 +107,14 @@ static void pdm_isr_handler(uint32_t mic_idx) {
             }
         }
 
+        g_callback_stopped[mic_idx] = false;
         if (cfg->callback) {
             cfg->callback(cfg, pcm, n);
         }
 
-        /* A callback may have stopped the owning instance. */
-        if (g_pdm_cfgs[mic_idx] != cfg || !cfg->_started) {
+        /* Do not rearm a stopped or replacement capture using this ISR's
+         * old layout. Check the stop flag before dereferencing cfg again. */
+        if (g_callback_stopped[mic_idx] || g_pdm_cfgs[mic_idx] != cfg || !cfg->_started) {
             return;
         }
         /* Re-trigger DMA for continuous capture. */
@@ -419,6 +424,7 @@ uint32_t nsx_audio_stop(nsx_audio_config_t *cfg) {
     }
     uint32_t mic_idx = (uint32_t)cfg->pdm.mic;
     NVIC_DisableIRQ(g_pdm_irqs[mic_idx]);
+    g_callback_stopped[mic_idx] = true;
     cfg->_started = 0;
     if (g_powered[mic_idx]) {
         if (am_hal_pdm_interrupt_disable(cfg->_pdm_handle, 0xFFFFFFFF) != AM_HAL_STATUS_SUCCESS ||
