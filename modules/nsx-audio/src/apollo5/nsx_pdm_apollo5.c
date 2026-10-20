@@ -146,7 +146,8 @@ void am_pdm3_isr(void) { pdm_isr_handler(3); }
 
 const nsx_audio_pdm_config_t nsx_audio_pdm_default = {
     /* HFRC2_ADJ: calibrates HFRC2 to 196.608 MHz, so HFRC2/8 = 24.576 MHz.
-     * With CLKO_DIV15 + DecimationRate=48 this gives exactly 16 kHz.
+     * With DIVMCLKQ=1, CLKO_DIV15 and SINCRATE=24, the target is 16 kHz.
+     * The reference clock must actually be available and selected.
      * (PLL path calls am_hal_clkmgr_clock_config(SYSPLL) which blocks
      * indefinitely if crystal is not available.) */
     .clock        = NSX_AUDIO_CLK_HFRC2_ADJ,
@@ -247,20 +248,18 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
-    /* Frequency config — FIXED: proper if/else-if chain (legacy had missing else).
-     * HFRC2_ADJ on Apollo510: after calibrating HFRC2 to 196.608 MHz,
-     * HFRC2/8 = 24.576 MHz. With CLKO_DIV15 (÷32) + DecimationRate=48:
-     *   24.576 MHz / 32 / 48 = 16 000 Hz exactly.
-     * HFRC clocks run at 24 MHz; CLKO_DIV15 + Dec=24 gives the same
-     * 24 MHz / 32 / 24 = 31 250 Hz — but user typically selects HFRC2_ADJ
-     * for 16 kHz target.  The 1.5 MHz path doubles the PDM clock. */
+    /* Apollo5 register contract: Fs = Fpdmclk / (DIVMCLKQ + 1)
+     * / (MCLKDIV + 1) / (2 * SINCRATE). The HAL's ui32DecimationRate
+     * writes SINCRATE directly; it is half the oversampling ratio.
+     * For adjusted HFRC2/8 = 24.576 MHz, either microphone clock setting
+     * targets 16 kHz. Other sources retain their existing divider choices. */
     if (cfg->pdm.clock == NSX_AUDIO_CLK_HFRC2_ADJ) {
         if (cfg->pdm.clock_freq == NSX_AUDIO_PDM_CLK_750KHZ) {
             pdm_hal.ePDMAClkOutDivder  = AM_HAL_PDM_PDMA_CLKO_DIV15;
-            pdm_hal.ui32DecimationRate = 48;   /* 24.576 MHz / 32 / 48 = 16 000 Hz */
+            pdm_hal.ui32DecimationRate = 24;   /* 24.576 MHz / 2 / 16 / (2 * 24) */
         } else {
             pdm_hal.ePDMAClkOutDivder  = AM_HAL_PDM_PDMA_CLKO_DIV7;
-            pdm_hal.ui32DecimationRate = 96;
+            pdm_hal.ui32DecimationRate = 48;
         }
     } else if (cfg->pdm.clock == NSX_AUDIO_CLK_HFRC) {
         if (cfg->pdm.clock_freq == NSX_AUDIO_PDM_CLK_750KHZ) {
@@ -322,16 +321,9 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
         }
 #endif
     } else if (cfg->pdm.clock == NSX_AUDIO_CLK_HFRC2_ADJ) {
-        /* Calibrate HFRC2 to exactly 196.608 MHz.  HFRC2/8 then yields
-         * 24.576 MHz — an exact audio-standard frequency.  With the
-         * 750 kHz divider chain (CLKO_DIV15 + DecimationRate=48) this
-         * produces exactly 16 000 Hz sample rate:
-         *   24.576 MHz / 32 / 48 = 16 000 Hz.
-         *
-         * NOTE: am_hal_clkmgr_clock_config() blocks until the FLL locks.
-         * This was previously omitted because it was confused with the
-         * SYSPLL hang (which is a separate issue).
-         */
+        /* Request HFRC2 at 196.608 MHz. The clock manager defers applying
+         * this configuration until a consumer requests the clock. Success
+         * records the request; it does not prove reference presence or lock. */
 #if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO5B)
         if (am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC2,
                                    AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ, NULL) != AM_HAL_STATUS_SUCCESS) {

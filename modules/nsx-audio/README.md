@@ -104,3 +104,17 @@ completed frame before reading it. The caller must leave DMA storage alone
 until capture stops and consume the PCM callback buffer instead. This prevents
 stale samples and dirty cache lines overwriting incoming DMA data without
 discarding adjacent application data. Cache maintenance also runs on restart.
+
+### Apollo5 sample rate
+
+For Apollo5, the register relationship is
+`Fs = Fpdmclk / (DIVMCLKQ + 1) / (MCLKDIV + 1) / (2 * SINCRATE)`.
+The HAL writes `ui32DecimationRate` directly to `SINCRATE`; it is half the
+oversampling ratio. The HFRC2_ADJ configuration targets 16 kHz with either
+microphone clock setting, provided HFRC2 actually reaches 196.608 MHz.
+A successful clock configuration call alone does not establish that frequency.
+
+Other clock selections retain their divider settings: HFRC nominally produces
+15.625 kHz, PLL at 24.576 MHz produces 32 kHz, and HFXTAL produces its source
+frequency divided by 2880. The actual source frequency determines the rate;
+the API's microphone-clock names are nominal selections, not measured rates.

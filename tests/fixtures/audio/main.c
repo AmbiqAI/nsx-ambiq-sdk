@@ -6,10 +6,11 @@
 #include "am_mcu_apollo.h"
 extern void am_pdm0_isr(void);
 static void before_dma_start(void);
+static am_hal_pdm_config_t configured;
 static unsigned init_clock_error,enable_error,dma_error,dma_calls,last_dma_count,last_dma_base,last_dma_reverse,init_calls,callback_count,last_packing;
 unsigned am_hal_pdm_initialize(unsigned n,void **h){(void)n;init_calls++;*h=(void*)1;return 0;}
 unsigned am_hal_pdm_power_control(void*h,unsigned p,bool r){(void)h;(void)p;(void)r;return 0;}
-unsigned am_hal_pdm_configure(void*h,am_hal_pdm_config_t*c){(void)h;last_packing=c->bDataPacking;return 0;}
+unsigned am_hal_pdm_configure(void*h,am_hal_pdm_config_t*c){(void)h;last_packing=c->bDataPacking;configured=*c;return 0;}
 unsigned am_hal_pdm_fifo_flush(void*h){(void)h;return 0;}
 unsigned am_hal_pdm_fifo_threshold_setup(void*h,unsigned n){(void)h;(void)n;return 0;}
 unsigned am_hal_pdm_interrupt_enable(void*h,unsigned n){(void)h;(void)n;return 0;}
@@ -67,7 +68,7 @@ int main(int argc,char**argv){
  for(unsigned i=0;i<256;i++)dma[i]=i+100;
  for(unsigned i=0;i<128;i++)pcm[i]=-1;
  const char *test=argv[1];
- bool valid=!strcmp(test,"valid") || !strcmp(test,"stereo") || !strcmp(test,"24bit") || !strcmp(test,"count-limit") || !strcmp(test,"packing") || !strcmp(test,"pcm16-boundaries") || !strcmp(test,"pcm24-boundaries");
+ bool valid=!strcmp(test,"valid") || !strcmp(test,"stereo") || !strcmp(test,"24bit") || !strcmp(test,"count-limit") || !strcmp(test,"hfrc2-low") || !strcmp(test,"hfrc2-high") || !strcmp(test,"packing") || !strcmp(test,"pcm16-boundaries") || !strcmp(test,"pcm24-boundaries");
  if(!strcmp(test,"overflow"))cfg.num_samples=0x80000001u;
  if(!strcmp(test,"channel-overflow"))cfg.num_samples=0x80000001u,cfg.num_channels=2;
  if(!strcmp(test,"zero"))cfg.num_samples=0;
@@ -96,9 +97,25 @@ int main(int argc,char**argv){
  if(cfg.pdm.sample_width==NSX_AUDIO_PDM_24BIT)valid=false;
  if(!strcmp(test,"frame-align"))return 0;
 #endif
+ #ifdef TEST_APOLLO3
+ if(!strncmp(test,"hfrc2-",6))return 0;
+#else
+ if(!strncmp(test,"hfrc2-",6)){
+  cfg.pdm.clock=NSX_AUDIO_CLK_HFRC2_ADJ;
+  cfg.pdm.clock_freq=!strcmp(test,"hfrc2-high")?NSX_AUDIO_PDM_CLK_1_5MHZ:NSX_AUDIO_PDM_CLK_750KHZ;
+ }
+#endif
  unsigned init=nsx_audio_init(&cfg);
  if(!valid){assert(init!=0);assert(init_calls==0);return 0;}
  assert(init==0);assert(init_calls==1);
+ if(!strncmp(test,"hfrc2-",6)){
+  assert(configured.eClkDivider==AM_HAL_PDM_MCLKDIV_1);
+  assert(configured.ePDMClkSpeed==AM_HAL_PDM_CLK_HFRC2_31MHZ);
+  bool high=!strcmp(test,"hfrc2-high");
+  assert(configured.ePDMAClkOutDivder==(high?AM_HAL_PDM_PDMA_CLKO_DIV7:AM_HAL_PDM_PDMA_CLKO_DIV15));
+  assert(configured.ui32DecimationRate==(high?48:24));
+ }
+
  if(!strcmp(test,"count-limit"))return 0;
  assert(nsx_audio_start(&cfg)==0);
  assert(dma_calls==1);
