@@ -122,7 +122,10 @@ struct nsx_audio_config {
 
     /** DMA sample buffer — must be 32-byte aligned. Size must be at least
      *  num_samples * num_channels * 8 bytes (two frames of 32-bit words).
-     *  Each frame is limited by the selected part's DMATOTCOUNT field. */
+     *  Each frame is limited by the selected part's DMATOTCOUNT field.
+     *  On Apollo5, num_samples * num_channels must be a multiple of 8
+     *  (32-byte frames). Do not access DMA storage during capture; consume
+     *  the PCM callback buffer instead. */
     uint32_t               *dma_buffer;
     uint32_t                dma_buffer_size; /**< Total size in bytes */
 
