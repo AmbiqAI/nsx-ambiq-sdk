@@ -34,6 +34,7 @@ Keep these files short and factual. If a note no longer guides a maintainer acti
 
 - [vendor-abi.md](vendor-abi.md) — selected archive ABI and standalone consumer checks.
 
+
 - [scatter-load-bounds.md](scatter-load-bounds.md) — aggregate NVM scatter load bounds and real-linker checks.
 
 - [shared-startup.md](shared-startup.md) — shared/resource startup copy windows and validation.

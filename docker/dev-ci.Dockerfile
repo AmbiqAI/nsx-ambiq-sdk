@@ -71,6 +71,14 @@ RUN set -eux; \
     cp -a "${extracted}/." "${ATFE_ROOT}/"; \
     test -x "${ATFE_ROOT}/bin/clang"; \
     test -x "${ATFE_ROOT}/bin/llvm-ar"; \
+    overlay="ATfE-newlib-overlay-${ATFE_VERSION}.tar.xz"; \
+    overlay_url="https://github.com/arm/arm-toolchain/releases/download/${ATFE_RELEASE_TAG}/${overlay}"; \
+    curl -fsSL "${overlay_url}" -o "${overlay}"; \
+    curl -fsSL "${overlay_url}.sha256" -o "${overlay}.sha256"; \
+    sha256sum -c "${overlay}.sha256"; \
+    tar -xJf "${overlay}" -C "${ATFE_ROOT}"; \
+    test -f "${ATFE_ROOT}/bin/newlib.cfg"; \
+    test -d "${ATFE_ROOT}/lib/clang-runtimes/newlib"; \
     rm -rf /tmp/atfe
 
 RUN set -eux; \
