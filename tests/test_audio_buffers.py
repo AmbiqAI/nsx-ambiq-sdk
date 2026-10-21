@@ -33,8 +33,8 @@ def audio_binary(request: pytest.FixtureRequest, repo_root: Path, tmp_path_facto
     return binary
 
 
-@pytest.mark.parametrize("scenario", ("valid", "stereo", "24bit", "overflow", "channel-overflow",
-    "zero", "channels", "width", "unknown-width", "high-address", "dma-short", "pcm-short", "dma-align", "pcm-align",
+@pytest.mark.parametrize("scenario", ("valid", "stereo", "24bit", "packing", "pcm16-boundaries", "pcm24-boundaries", "overflow", "channel-overflow",
+    "zero", "frame-align", "channels", "width", "unknown-width", "high-address", "dma-short", "pcm-short", "dma-align", "pcm-align",
     "address-wrap", "instance", "count-too-large", "count-limit"))
 def test_audio_buffer_bounds(audio_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(audio_binary), scenario], capture_output=True, text=True)
@@ -62,4 +62,22 @@ def test_audio_real_headers(repo_root: Path, tmp_path: Path, board: str, family:
     command[0] = str(compiler)
     command[command.index("-o") + 1] = str(tmp_path / "audio.o")
     result = subprocess.run(command, cwd=selected[0]["directory"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("scenario", ("pcm16-boundaries", "pcm24-boundaries"))
+def test_audio_dma_cache_views(repo_root: Path, tmp_path: Path, scenario: str) -> None:
+    compiler = shutil.which("cc")
+    assert compiler
+    fixture = repo_root / "tests/fixtures/audio"
+    binary = tmp_path / "cache"
+    env = os.environ.copy()
+    env.pop("GCC_ROOT", None)  # Cross-toolchain root also affects host GCC headers.
+    result = subprocess.run([compiler, "-std=c11", "-g", "-O1", "-DTEST_CACHE", "-fno-pie", "-no-pie",
+        "-fsanitize=address,undefined", f"-I{fixture}",
+        f"-I{repo_root / 'modules/nsx-audio/includes-api'}",
+        str(repo_root / "modules/nsx-audio/src/apollo5/nsx_pdm_apollo5.c"),
+        str(fixture / "main.c"), "-o", str(binary)], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    result = subprocess.run([str(binary), scenario], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

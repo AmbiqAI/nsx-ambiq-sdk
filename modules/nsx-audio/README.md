@@ -46,12 +46,12 @@ uint32_t nsx_audio_stop(nsx_audio_config_t *cfg);
 
 Keep the configuration and its buffers alive and unchanged between successful
 init and stop; serialize lifecycle operations with the ISR/callback. Each DMA
-frame preserves the existing backend convention of `samples * channels * width * 2`
-bytes, with two frames reserved. PCM needs `samples * channels * sizeof(int16_t)`
+frame uses `samples * channels * sizeof(uint32_t)` bytes, with two frames reserved. PCM needs `samples * channels * sizeof(int16_t)`
 bytes. Validation rejects arithmetic/address overflow, invalid widths, unaligned
 buffers and frames exceeding the part's 20-bit DMATOTCOUNT field before hardware
 setup. The HAL's threshold/count divisibility requirements still apply. This
-bounds work does not change packing, audio conversion or clock selection.
+buffer validation does not establish the actual sample rate; that also depends
+on the clock source and decimation settings.
 
 ## Failure handling
 
@@ -85,3 +85,22 @@ Callbacks run after HAL service and PCM conversion. A callback can stop the
 capture, or stop and initialize a replacement capture; the ISR does not access
 the previous configuration after the callback returns. As with other DMA
 capture paths, the callback must finish before hardware reuses its frame.
+
+### Apollo5 native samples
+
+Apollo5 PDM produces signed 24-bit samples in 32-bit DMA words (unpacked).
+Both `NSX_AUDIO_PDM_16BIT` and `NSX_AUDIO_PDM_24BIT` produce signed PCM16 in
+callbacks by taking native bits 23:8. The width setting does not change the
+DMA word size or callback type. Reserve `num_samples * num_channels * 8` bytes
+for the two DMA frames. Stereo frames contain both channels in hardware order.
+Apollo3 continues to accept only `NSX_AUDIO_PDM_16BIT`.
+
+### Apollo5 DMA cache ownership
+
+Apollo5 frames must each occupy whole 32-byte cache lines: the total sample
+count (`num_samples * num_channels`) must be a multiple of eight. The adapter
+cleans and invalidates both frames before starting DMA and invalidates each
+completed frame before reading it. The caller must leave DMA storage alone
+until capture stops and consume the PCM callback buffer instead. This prevents
+stale samples and dirty cache lines overwriting incoming DMA data without
+discarding adjacent application data. Cache maintenance also runs on restart.

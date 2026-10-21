@@ -41,6 +41,14 @@ static const IRQn_Type g_pdm_irqs[] = {PDM0_IRQn, PDM1_IRQn, PDM2_IRQn, PDM3_IRQ
 static const IRQn_Type g_pdm_irqs[] = {PDM0_IRQn};
 #endif
 
+/* Each frame owns complete cache lines so invalidating completed DMA cannot
+ * discard an unrelated CPU write or touch the frame currently being filled. */
+static bool nsx_pdm_buffer_layout(const nsx_audio_config_t *cfg,
+                                  nsx_audio_buffer_layout_t *layout) {
+    return nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, layout)
+        && (layout->frame_bytes % 32U) == 0;
+}
+
 static bool g_powered[NSX_PDM_MAX_INSTANCES];
 static bool g_power_requested[NSX_PDM_MAX_INSTANCES];
 static bool g_enable_attempted[NSX_PDM_MAX_INSTANCES];
@@ -74,7 +82,7 @@ static void pdm_isr_handler(uint32_t mic_idx) {
     }
 
     nsx_audio_buffer_layout_t layout;
-    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
+    if (!nsx_pdm_buffer_layout(cfg, &layout)) {
         return;
     }
 
@@ -103,19 +111,18 @@ static void pdm_isr_handler(uint32_t mic_idx) {
             nsx_audio_capture_failed(cfg);
             return;
         }
+        /* The packaged HAL accessor only returns an address. DMA bypasses
+         * the CPU cache, including lines refilled speculatively during capture. */
+        SCB_InvalidateDCache_by_Addr((void *)completed, (int32_t)layout.frame_bytes);
         uint32_t *raw = (uint32_t *)completed;
         uint32_t n = layout.samples;
         int16_t *pcm = cfg->pcm_buffer;
 
-        if (cfg->pdm.sample_width == NSX_AUDIO_PDM_16BIT) {
-            for (uint32_t i = 0; i < n; i++) {
-                pcm[i] = (int16_t)(raw[i] & 0xFFFF);
-            }
-        } else {
-            /* 24-bit: take upper 16 bits */
-            for (uint32_t i = 0; i < n; i++) {
-                pcm[i] = (int16_t)((raw[i] >> 8) & 0xFFFF);
-            }
+        /* Apollo5 PDM only supports 24-bit unpacked samples. Both API
+         * width selections deliver PCM16: retain bits 23:8, including sign,
+         * rather than wrapping at bit 16 by taking the low halfword. */
+        for (uint32_t i = 0; i < n; i++) {
+            pcm[i] = (int16_t)((raw[i] >> 8) & 0xFFFFU);
         }
 
         /* The callback may stop and replace this capture. Do not touch cfg
@@ -182,7 +189,7 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
      * DMA buffer must hold 2× (double-buffered) the sample frame.
      * PCM buffer must hold the deinterleaved samples. */
     nsx_audio_buffer_layout_t layout;
-    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
+    if (!nsx_pdm_buffer_layout(cfg, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
@@ -207,7 +214,7 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
         .ui32HighPassCutoff = 0x3,
         .eLeftGain          = (am_hal_pdm_gain_e)cfg->pdm.left_gain,
         .eRightGain         = (am_hal_pdm_gain_e)cfg->pdm.right_gain,
-        .bDataPacking       = 1,
+        .bDataPacking       = 0,
         .bPDMSampleDelay    = AM_HAL_PDM_CLKOUT_PHSDLY_NONE,
         .ui32GainChangeDelay = AM_HAL_PDM_CLKOUT_DELAY_NONE,
         .bSoftMute          = 0,
@@ -388,7 +395,7 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     nsx_audio_buffer_layout_t layout;
-    if (!nsx_audio_buffer_layout(cfg, NSX_PDM_MAX_INSTANCES, NSX_PDM_COUNT_LIMIT, &layout)) {
+    if (!nsx_pdm_buffer_layout(cfg, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
@@ -397,6 +404,10 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
         nsx_audio_capture_failed(cfg);
         return NSX_STATUS_FAILURE;
     }
+
+    /* Transfer ownership of both complete frames to DMA before its first
+     * write. Dirty CPU lines must never be evicted over incoming samples. */
+    SCB_CleanInvalidateDCache_by_Addr(cfg->dma_buffer, (int32_t)(layout.frame_bytes * 2U));
 
     /* Trigger the first DMA transfer. */
     uint32_t mic_idx = (uint32_t)cfg->pdm.mic;

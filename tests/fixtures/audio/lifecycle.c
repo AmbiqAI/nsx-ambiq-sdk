@@ -21,7 +21,7 @@ static am_hal_pdm_transfer_t transfer;
 #endif
 static nsx_audio_config_t *active;
 static _Alignas(32) uint32_t dma[32];
-static _Alignas(32) uint32_t small_dma[8];
+static _Alignas(32) uint32_t small_dma[16];
 static int16_t pcm[16];
 
 static unsigned operation(const char *name) {
@@ -111,7 +111,7 @@ static void callback(nsx_audio_config_t*c,void*b,uint32_t n) {
     if(callback_stop)assert(nsx_audio_stop(c)==0);
     if(callback_restart) {
         assert(nsx_audio_stop(c)==0);
-        c->num_samples=4;
+        c->num_samples=8;
         c->dma_buffer=small_dma;
         c->dma_buffer_size=sizeof small_dma;
         assert(nsx_audio_init(c)==0 && nsx_audio_start(c)==0);
@@ -180,7 +180,7 @@ int main(int argc,char **argv) {
         check_samples=true;
         for(unsigned frame=0;frame<6;frame++){
             uint32_t *raw=(uint32_t *)(uintptr_t)next_buffer;
-            for(unsigned i=0;i<16;i++)raw[i]=(frame+1)*100+i;
+            for(unsigned i=0;i<16;i++)raw[i]=((frame+1)*100+i)<<8;
             irq_status=AM_HAL_PDM_INT_DCMP;
             am_pdm0_isr();
             assert(cfg._started && irq_enabled && nsx_audio_get_status(&cfg)==0);
@@ -267,4 +267,15 @@ int main(int argc,char **argv) {
     am_pdm0_isr();
     assert(callbacks==1 && !cfg._started && !irq_enabled && !powered && dma_calls==1);
     return 0;
+}
+
+void SCB_CleanInvalidateDCache_by_Addr(volatile void *p,int32_t n) {
+ assert(p==active->dma_buffer && n==(int32_t)(active->num_samples*8));
+}
+void SCB_InvalidateDCache_by_Addr(volatile void *p,int32_t n) {
+#ifndef TEST_APOLLO3
+ assert(!serviced && (uintptr_t)p==completed_buffer && n==(int32_t)transfer.ui32TotalCount);
+#else
+ (void)p;(void)n;
+#endif
 }

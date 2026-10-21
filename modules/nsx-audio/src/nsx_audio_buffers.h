@@ -21,11 +21,12 @@ static inline bool nsx_audio_buffer_layout(const nsx_audio_config_t *cfg,
         ((uintptr_t)cfg->pcm_buffer % _Alignof(int16_t)) != 0) {
         return false;
     }
-    /* Preserve the backend's transfer convention: width * 2 bytes per
-     * sample per DMA frame, with two frames reserved in the allocation.
+    /* One native 32-bit DMA word per sample; two frames per allocation.
+     * Apollo5 stores signed 24-bit PCM in each word for either API width.
+     * Apollo3's accepted 16-bit configuration retains its existing layout.
      * Bound division happens before any product, including channel count.
      * count_limit comes from the selected part's DMATOTCOUNT field. */
-    uint32_t bytes_per_sample = (uint32_t)cfg->pdm.sample_width * 2U;
+    const uint32_t bytes_per_sample = sizeof(uint32_t);
     if (cfg->num_samples > count_limit / bytes_per_sample / cfg->num_channels) {
         return false;
     }
