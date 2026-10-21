@@ -57,6 +57,14 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
         // Configuration can be deferred until an audio/peripheral user
         // requests HFRC2. The CPU mode switch does not apply HF2ADJ itself.
         // A pending adjusted setting is not the free-running CPU clock.
+#if defined(AM_PART_APOLLO510)
+        // Audio adjustment can retune the shared HP CPU oscillator. Its
+        // enable bit does not prove lock or qualify another CPU frequency.
+        if (CLKGEN->HF2ADJ0_b.HF2ADJEN == CLKGEN_HF2ADJ0_HF2ADJEN_EN &&
+            core_hz == AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ) {
+            return AM_HAL_STATUS_INVALID_OPERATION;
+        }
+#endif
         if (CLKGEN->HF2ADJ0_b.HF2ADJEN != CLKGEN_HF2ADJ0_HF2ADJEN_EN) {
             core_hz = AM_HAL_CLKGEN_FREQ_HP250_HZ;
         }

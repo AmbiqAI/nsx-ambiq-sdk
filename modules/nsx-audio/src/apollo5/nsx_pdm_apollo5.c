@@ -146,10 +146,9 @@ void am_pdm3_isr(void) { pdm_isr_handler(3); }
 
 const nsx_audio_pdm_config_t nsx_audio_pdm_default = {
     /* HFRC2_ADJ: calibrates HFRC2 to 196.608 MHz, so HFRC2/8 = 24.576 MHz.
-     * With DIVMCLKQ=1, CLKO_DIV15 and SINCRATE=24, the target is 16 kHz.
-     * The reference clock must actually be available and selected.
-     * (PLL path calls am_hal_clkmgr_clock_config(SYSPLL) which blocks
-     * indefinitely if crystal is not available.) */
+     * DIVMCLKQ=1, CLKO_DIV15 and SINCRATE=24 target 16 kHz.
+     * Requires a working reference and LP CPU mode on Apollo510/B.
+     * A configuration request alone does not prove the resulting rate. */
     .clock        = NSX_AUDIO_CLK_HFRC2_ADJ,
     .clock_freq   = NSX_AUDIO_PDM_CLK_750KHZ,
     .mic          = NSX_AUDIO_PDM_MIC0,
@@ -161,6 +160,25 @@ const nsx_audio_pdm_config_t nsx_audio_pdm_default = {
 /* ------------------------------------------------------------------ */
 /* Init / Start / Stop                                                 */
 /* ------------------------------------------------------------------ */
+
+/* Serialize audio lifecycle and performance-mode changes. HFRC2 is also
+ * the Apollo510 HP CPU source; audio adjustment requires the LP CPU source. */
+static uint32_t nsx_pdm_clock_policy(const nsx_audio_config_t *cfg) {
+#if defined(AM_PART_APOLLO510) && !defined(APOLLO5_FPGA)
+    if (cfg->pdm.clock == NSX_AUDIO_CLK_HFRC2_ADJ) {
+        am_hal_pwrctrl_mcu_mode_e mode;
+        if (am_hal_pwrctrl_mcu_mode_status(&mode) != AM_HAL_STATUS_SUCCESS) {
+            return NSX_STATUS_FAILURE;
+        }
+        if (mode != AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER) {
+            return NSX_STATUS_INVALID_CONFIG;
+        }
+    }
+#else
+    (void)cfg;
+#endif
+    return NSX_STATUS_SUCCESS;
+}
 
 uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
     if (cfg == NULL) {
@@ -192,6 +210,11 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
     nsx_audio_buffer_layout_t layout;
     if (!nsx_pdm_buffer_layout(cfg, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
+    }
+
+    uint32_t policy = nsx_pdm_clock_policy(cfg);
+    if (policy != NSX_STATUS_SUCCESS) {
+        return policy;
     }
 
     uint32_t mic_idx = (uint32_t)cfg->pdm.mic;
@@ -314,7 +337,7 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
             return NSX_STATUS_INIT_FAILED;
         }
         am_util_delay_us(500);
-#elif defined(AM_PART_APOLLO5B)
+#elif defined(AM_PART_APOLLO5B) && !defined(AM_PART_APOLLO510)
         if (am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC2,
                                    AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ, NULL) != AM_HAL_STATUS_SUCCESS) {
             return NSX_STATUS_INIT_FAILED;
@@ -389,6 +412,11 @@ uint32_t nsx_audio_start(nsx_audio_config_t *cfg) {
     nsx_audio_buffer_layout_t layout;
     if (!nsx_pdm_buffer_layout(cfg, &layout)) {
         return NSX_STATUS_INVALID_CONFIG;
+    }
+
+    uint32_t policy = nsx_pdm_clock_policy(cfg);
+    if (policy != NSX_STATUS_SUCCESS) {
+        return policy;
     }
 
     g_enable_attempted[(uint32_t)cfg->pdm.mic] = true;

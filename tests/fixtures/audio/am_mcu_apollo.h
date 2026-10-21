@@ -92,3 +92,13 @@ void test_irq_disable(unsigned);
 
 void SCB_CleanInvalidateDCache_by_Addr(volatile void *, int32_t);
 void SCB_InvalidateDCache_by_Addr(volatile void *, int32_t);
+
+#ifndef TEST_APOLLO3
+typedef enum { AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER=1,
+    AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE=2 } am_hal_pwrctrl_mcu_mode_e;
+extern unsigned test_cpu_mode, test_cpu_query_rc;
+static inline unsigned am_hal_pwrctrl_mcu_mode_status(am_hal_pwrctrl_mcu_mode_e *mode) {
+    *mode=(am_hal_pwrctrl_mcu_mode_e)test_cpu_mode;
+    return test_cpu_query_rc;
+}
+#endif

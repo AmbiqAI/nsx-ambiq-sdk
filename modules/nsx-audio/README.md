@@ -115,6 +115,17 @@ microphone clock setting, provided HFRC2 actually reaches 196.608 MHz.
 A successful clock configuration call alone does not establish that frequency.
 
 Other clock selections retain their divider settings: HFRC nominally produces
-15.625 kHz, PLL at 24.576 MHz produces 32 kHz, and HFXTAL produces its source
-frequency divided by 2880. The actual source frequency determines the rate;
+15.625 kHz. The Apollo510/B PLL path requests 12.288 MHz and targets 16 kHz;
+the Apollo330P/Apollo510L PLL path requests 24.576 MHz and targets 32 kHz.
+HFXTAL produces its source frequency divided by 2880. The actual source frequency determines the rate;
 the API's microphone-clock names are nominal selections, not measured rates.
+
+### Apollo510/B CPU modes
+
+HFRC2_ADJ audio requires the CPU to remain in 96 MHz LP mode. Both init and
+start check this before touching the audio clock; query failure or HP mode
+returns an error. Select LP and retry. `nsx_power` rejects HP/MAX while the
+196.608 MHz adjustment is enabled. Serialize audio lifecycle and performance
+changes; direct HAL calls bypass this policy. Plain-HFRC audio leaves HFRC2
+configuration unchanged. These checks do not prove clock lock or qualify PLL
+audio. See [CPU clock synchronization](../../docs/core-clock.md).
