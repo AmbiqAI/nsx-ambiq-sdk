@@ -55,7 +55,8 @@ Physical load spans must not overlap, vector bytes must load at the application
 origin, and NVM execution addresses must match their physical load addresses.
 GNU/ATfE data, shared-SRAM and TCM initializer loads must also match the
 source symbols used by startup copying; destination symbols must cover the entire
-initialized section. Required functions must have file-backed code sections.
+initialized section and fit wholly within a declared RAM/TCM region, never NVM.
+Required functions must have file-backed code sections.
 Smoke images seed shared data and TCM
 code so these paths are present in the linked image.
 Both the ELF entry and reset vector must select Thumb Reset_Handler.

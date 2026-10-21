@@ -398,3 +398,72 @@ def test_smoke_rejects_scatter_nobits_code(firmware: tuple[Path, Path], tmp_path
     broken.write_bytes(data)
     with pytest.raises(ValueError, match="executable.*NOBITS"):
         inspect_firmware(broken, script)
+
+
+@pytest.mark.parametrize("destination", ("ram", "nvm"))
+def test_smoke_copy_destination_memory(firmware: tuple[Path, Path], tmp_path: Path, destination: str) -> None:
+    binary, script = firmware
+    if script.suffix == ".sct":
+        pytest.skip("GNU/ATfE copy destination regression")
+    if destination == "ram":
+        inspect_firmware(binary, script)
+        return
+    data = bytearray(binary.read_bytes())
+    phoff, shoff = struct.unpack_from("<II", data, 28)
+    phsize, phnum, shsize, shnum, names_index = struct.unpack_from("<5H", data, 42)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_sec = sections[names_index]
+    names = data[names_sec[4]:names_sec[4] + names_sec[5]]
+    index, section = next((i, s) for i, s in enumerate(sections)
+                          if names[s[0]:names.find(0, s[0])] == b".data" and s[5])
+    loads = [(phoff + i * phsize, struct.unpack_from("<8I", data, phoff + i * phsize)) for i in range(phnum)]
+    offset, seg = next((o, s) for o, s in loads if s[0] == 1 and s[1] <= section[4]
+                       and section[4] + section[5] <= s[1] + s[4])
+    target = seg[3] + section[4] - seg[1]
+    # Keep the initializer and its physical load unchanged, but consistently
+    # move the destination section, segment VMA and copy symbols into NVM.
+    struct.pack_into("<I", data, offset + 8, seg[3])
+    struct.pack_into("<I", data, shoff + index * shsize + 12, target)
+    changed = set()
+    for symtab in sections:
+        if symtab[1] != 2:
+            continue
+        strings_sec = sections[symtab[6]]
+        strings = data[strings_sec[4]:strings_sec[4] + strings_sec[5]]
+        for offset in range(symtab[4], symtab[4] + symtab[5], 16):
+            name = struct.unpack_from("<I", data, offset)[0]
+            symbol = strings[name:strings.find(0, name)]
+            if symbol in (b"_sdata", b"_edata"):
+                struct.pack_into("<I", data, offset + 4, target + (section[5] if symbol == b"_edata" else 0))
+                changed.add(bytes(symbol))
+    assert changed == {b"_sdata", b"_edata"}
+    broken = tmp_path / "copy-into-nvm.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError, match="startup copy destination.*RAM/TCM"):
+        inspect_firmware(broken, script)
+
+
+@pytest.mark.parametrize("section_name,source,start,end", (
+    (".data", "_init_data", "_sdata", "_edata"),
+    (".shared", "_init_data_sram", "_ssdata", "_sedata"),
+    (".itcm_text", "_init_itcm_text", "_s_itcm_text", "_e_itcm_text"),
+    (".dtcm_text", "_init_dtcm_text", "_s_dtcm_text", "_e_dtcm_text"),
+    (".tcm", "_init_tcm", "_stcm", "_etcm"),
+))
+@pytest.mark.parametrize("address,valid", ((0, True), (0x2000000C, True), (0x20080000, True),
+                                          (0x410000, False), (0x2000000E, False), (0x30000000, False)))
+def test_copy_destination_regions(section_name: str, source: str, start: str, end: str,
+                                  address: int, valid: bool) -> None:
+    from tools.nsx_firmware_elf import Section, Segment, Symbol, check_section_loads
+
+    regions = {"MCU_MRAM": (0x410000, 16), "MCU_ITCM": (0, 16),
+               "MCU_TCM": (0x20000000, 16), "SHARED_SRAM": (0x20080000, 16)}
+    definitions = {name: Symbol(value, 0, 1) for name, value in
+                   ((source, 0x410000), (start, address), (end, address + 4))}
+    sections = [Section(section_name, 1, 3, address, 0, 4)]
+    segments = [Segment(address, 0x410000, 0, 4, 4, 6)]
+    if valid:
+        check_section_loads(b"data", sections, segments, regions, False, definitions)
+    else:
+        with pytest.raises(ValueError, match="startup copy destination.*RAM/TCM"):
+            check_section_loads(b"data", sections, segments, regions, False, definitions)
