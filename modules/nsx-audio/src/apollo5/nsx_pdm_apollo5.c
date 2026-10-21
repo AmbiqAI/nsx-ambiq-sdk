@@ -107,15 +107,11 @@ static void pdm_isr_handler(uint32_t mic_idx) {
         uint32_t n = layout.samples;
         int16_t *pcm = cfg->pcm_buffer;
 
-        if (cfg->pdm.sample_width == NSX_AUDIO_PDM_16BIT) {
-            for (uint32_t i = 0; i < n; i++) {
-                pcm[i] = (int16_t)(raw[i] & 0xFFFF);
-            }
-        } else {
-            /* 24-bit: take upper 16 bits */
-            for (uint32_t i = 0; i < n; i++) {
-                pcm[i] = (int16_t)((raw[i] >> 8) & 0xFFFF);
-            }
+        /* Apollo5 PDM only supports 24-bit unpacked samples. Both API
+         * width selections deliver PCM16: retain bits 23:8, including sign,
+         * rather than wrapping at bit 16 by taking the low halfword. */
+        for (uint32_t i = 0; i < n; i++) {
+            pcm[i] = (int16_t)((raw[i] >> 8) & 0xFFFFU);
         }
 
         /* The callback may stop and replace this capture. Do not touch cfg
@@ -207,7 +203,7 @@ uint32_t nsx_audio_init(nsx_audio_config_t *cfg) {
         .ui32HighPassCutoff = 0x3,
         .eLeftGain          = (am_hal_pdm_gain_e)cfg->pdm.left_gain,
         .eRightGain         = (am_hal_pdm_gain_e)cfg->pdm.right_gain,
-        .bDataPacking       = 1,
+        .bDataPacking       = 0,
         .bPDMSampleDelay    = AM_HAL_PDM_CLKOUT_PHSDLY_NONE,
         .ui32GainChangeDelay = AM_HAL_PDM_CLKOUT_DELAY_NONE,
         .bSoftMute          = 0,

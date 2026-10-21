@@ -42,7 +42,10 @@ typedef enum {
     NSX_AUDIO_PDM_MIC3 = 3,  /**< PDM module 3 */
 } nsx_audio_pdm_mic_e;
 
-/** PDM sample width. */
+/** PDM sample width compatibility selection.
+ * Apollo3 accepts only 16BIT. Apollo5 accepts either value and always converts
+ * its native signed 24-bit DMA words to PCM16; callbacks never contain PCM24.
+ */
 typedef enum {
     NSX_AUDIO_PDM_16BIT = 2,
     NSX_AUDIO_PDM_24BIT = 3,
@@ -101,7 +104,7 @@ typedef struct {
     nsx_audio_clk_e         clock;         /**< Clock source */
     nsx_audio_pdm_clock_e   clock_freq;    /**< PDM clock frequency */
     nsx_audio_pdm_mic_e     mic;           /**< Microphone / PDM module index */
-    nsx_audio_pdm_sample_width_e sample_width; /**< 16-bit or 24-bit */
+    nsx_audio_pdm_sample_width_e sample_width; /**< See width compatibility rules above */
     nsx_audio_pdm_gain_e    left_gain;     /**< Left channel gain */
     nsx_audio_pdm_gain_e    right_gain;    /**< Right channel gain */
 } nsx_audio_pdm_config_t;
@@ -118,7 +121,7 @@ struct nsx_audio_config {
     nsx_audio_pdm_config_t  pdm;           /**< PDM-specific config */
 
     /** DMA sample buffer — must be 32-byte aligned. Size must be at least
-     *  num_samples * num_channels * sample_width * 4 bytes (two DMA frames).
+     *  num_samples * num_channels * 8 bytes (two frames of 32-bit words).
      *  Each frame is limited by the selected part's DMATOTCOUNT field. */
     uint32_t               *dma_buffer;
     uint32_t                dma_buffer_size; /**< Total size in bytes */
