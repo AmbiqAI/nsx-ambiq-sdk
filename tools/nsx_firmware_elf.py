@@ -87,6 +87,8 @@ def check_section_loads(data: bytes, sections: list[Section], segments: list[Seg
                 section.address, section.address + section.size
             ):
                 raise ValueError(f"Firmware range disagrees with startup copy destination: {section.name}")
+            if section.size % 4:
+                raise ValueError(f"Firmware startup copy must contain whole words: {section.name}")
             if not any(
                 name in ("MCU_ITCM", "MCU_TCM", "SHARED_SRAM")
                 and address <= start.address and end.address <= address + size

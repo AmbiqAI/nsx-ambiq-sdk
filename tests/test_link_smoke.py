@@ -467,3 +467,22 @@ def test_copy_destination_regions(section_name: str, source: str, start: str, en
     else:
         with pytest.raises(ValueError, match="startup copy destination.*RAM/TCM"):
             check_section_loads(b"data", sections, segments, regions, False, definitions)
+
+
+@pytest.mark.parametrize("size", (1, 2, 3, 4, 5, 6, 7, 8))
+@pytest.mark.parametrize("boundary", ("source", "destination"))
+def test_startup_copy_word_extent(size: int, boundary: str) -> None:
+    from tools.nsx_firmware_elf import Section, Segment, Symbol, check_section_loads
+
+    source = 0x410010 - size if boundary == "source" else 0x410000
+    destination = 0x20000010 - size if boundary == "destination" else 0x20000000
+    regions = {"MCU_MRAM": (0x410000, 16), "MCU_TCM": (0x20000000, 16)}
+    definitions = {name: Symbol(value, 0, 1) for name, value in
+                   (("_init_data", source), ("_sdata", destination), ("_edata", destination + size))}
+    sections = [Section(".data", 1, 3, destination, 0, size)]
+    segments = [Segment(destination, source, 0, size, size, 6)]
+    if size % 4:
+        with pytest.raises(ValueError, match="startup copy.*whole words"):
+            check_section_loads(bytes(size), sections, segments, regions, False, definitions)
+    else:
+        check_section_loads(bytes(size), sections, segments, regions, False, definitions)
