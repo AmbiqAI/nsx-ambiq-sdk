@@ -9,13 +9,13 @@ platform implementations.
 
 | Part | LOW | HIGH | MAX |
 | --- | --- | --- | --- |
-| Apollo510 / Apollo510B | HAL LP constant (nominal 96 MHz) | Active adjusted HFRC2 rate (250 or 196.608 MHz), otherwise nominal free-running 250 MHz | Same as HIGH |
+| Apollo510 / Apollo510B | HAL LP constant (nominal 96 MHz) | Nominal 250 MHz; rejected during 196.608 MHz audio adjustment | Same as HIGH |
 | Apollo330P / Apollo510L | HAL LP constant (nominal 96 MHz) | HAL HP1 constant (nominal 192 MHz) | Configured PLLVCO rate, 192–250 MHz on silicon |
 
 On silicon, the HFRC2 or HP2 PLLVCO query runs before the mode switch. A
 failed query or an invalid rate returns an error before changing the CPU
 mode: Apollo510 accepts the HAL's free-running 250 MHz sentinel (zero),
-adjusted 250 MHz or adjusted 196.608 MHz; Apollo330P/510L require 192–250 MHz
+adjusted 250 MHz, or a pending inactive 196.608 MHz setting; Apollo330P/510L require 192–250 MHz
 for HP2. The free-running sentinel is normalized to nominal hertz.
 Apollo510 also checks the HF2ADJ enable register: clock-manager configuration
 can be deferred until a peripheral requests HFRC2, and entering HP does not
@@ -26,6 +26,27 @@ which are not the FPGA execution rates. A failed HAL switch propagates its statu
 frequency. As with the HAL itself, a failed hardware transition is not a
 guarantee that the hardware remains in a known state; callers must handle the
 error rather than continuing on an assumed frequency.
+
+## Apollo510 CPU/audio clock compatibility
+
+Apollo510/B documents 96 MHz LP and 250 MHz HP CPU modes. HFRC2 can be
+adjusted to 196.608 MHz for audio, but that does not establish a supported
+196.608 MHz HP CPU operating point. The performance selector rejects HP/MAX
+while that adjustment is enabled, without switching mode or publishing a new
+`SystemCoreClock`. LP remains available. The enable bit is used as a conservative
+conflict check, not as evidence of frequency lock.
+
+Adjusted-HFRC2 audio init and start each require a successful HAL query showing
+LP CPU mode. Checking start also catches LP init followed by a switch to HP.
+A rejected init/start does not configure or enable the audio clock; the caller
+can select LP and retry. After audio stops and adjustment is disabled, HP is
+available again. Plain-HFRC audio does not queue an unrelated HFRC2 adjustment.
+
+Serialize performance changes with audio lifecycle calls. Direct HAL clock or
+power calls bypass these guards. Other consumers that retune HFRC2 also need
+compatible ownership; this is not a general shared-clock arbiter. PLL audio is
+not qualified by these guards: the AP510B test currently times out waiting for
+PLL lock. No automatic CPU downshift or alternate-source fallback is performed.
 
 ## Evidence and conflicting sources
 
@@ -44,6 +65,9 @@ error rather than continuing on an assumed frequency.
   `am_hal_clkgen_private_hf2adj_disable()` control `CLKGEN.HF2ADJ0.HF2ADJEN`.
   `nsx_audio_init()` configures the clock before `nsx_audio_start()` enables
   PDM, so that deferred state is reachable through the NSX API.
+- **Apollo510B SoC Datasheet**, DS-A510B-1p1p0, Table 9: LP CPU uses
+  96 MHz HFRC and HP CPU uses 250 MHz HFRC2. Section 7.2.2 describes HFRC2
+  adjustment for audio; it does not specify a 196.608 MHz HP CPU mode.
 - **Apollo510 MCU Datasheet**, DS-A510-1p1p0, section 7.2.2 and Table 8,
   identifies HFRC2 as the HP CPU clock source.
 - The same revision's `mcu/apollo330P_510L/hal/am_hal_pwrctrl.c` checks the

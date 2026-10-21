@@ -104,3 +104,13 @@ completed frame before reading it. The caller must leave DMA storage alone
 until capture stops and consume the PCM callback buffer instead. This prevents
 stale samples and dirty cache lines overwriting incoming DMA data without
 discarding adjacent application data. Cache maintenance also runs on restart.
+
+### Apollo510/B CPU modes
+
+HFRC2_ADJ audio requires the CPU to remain in 96 MHz LP mode. Both init and
+start check this before touching the audio clock; query failure or HP mode
+returns an error. Select LP and retry. `nsx_power` rejects HP/MAX while the
+196.608 MHz adjustment is enabled. Serialize audio lifecycle and performance
+changes; direct HAL calls bypass this policy. Plain-HFRC audio leaves HFRC2
+configuration unchanged. These checks do not prove clock lock or qualify PLL
+audio. See [CPU clock synchronization](../../docs/core-clock.md).

@@ -17,7 +17,7 @@ def lifecycle_binary(request: pytest.FixtureRequest, repo_root: Path, tmp_path_f
     fixture = repo_root / "tests/fixtures/audio"
     source = repo_root / f"modules/nsx-audio/src/{request.param}/nsx_pdm_{request.param}.c"
     binary = dest / "lifecycle"
-    flags = ["-DTEST_APOLLO3"] if request.param == "apollo3" else []
+    flags = ["-DTEST_APOLLO3"] if request.param == "apollo3" else ["-DAM_PART_APOLLO5B"]
     env = os.environ.copy()
     env.pop("GCC_ROOT", None)
     result = subprocess.run([compiler, "-std=c11", "-g", "-O1", "-DTEST_LIFECYCLE", "-fno-pie", "-no-pie",
@@ -34,6 +34,7 @@ CASES += [("isr", step) for step in ("status", "irq-clear", "service")]
 CASES += [("ping-pong", "none"), ("bad-buffer", "none"), ("threshold-error", "none")]
 CASES += [("ownership", "none"), ("callback-stop", "none"), ("callback-restart", "none")]
 CASES += [("init-cleanup", step) for step in ("power-on/power-off", "configure/power-off", "configure/deinit")]
+CASES += [("clock-policy", fault) for fault in ("init-hp", "start-hp", "init-query", "start-query", "hfrc-hp")]
 CASES += [("hardware-error", bit + suffix) for bit in ("derr", "undfl", "ovf") for suffix in ("", "+dcmp")]
 
 
@@ -42,7 +43,7 @@ def test_audio_lifecycle_failure(lifecycle_binary: tuple[Path, str], phase: str,
     binary, backend = lifecycle_binary
     if backend == "apollo3" and (fault in ("clock", "dma-stop") or phase == "isr" and fault != "service"):
         pytest.skip("Operation belongs to the Apollo5 HAL contract")
-    if backend == "apollo3" and phase in ("ping-pong", "bad-buffer", "threshold-error"):
+    if backend == "apollo3" and phase in ("ping-pong", "bad-buffer", "threshold-error", "clock-policy"):
         pytest.skip("Operation belongs to the Apollo5 HAL contract")
     result = subprocess.run([str(binary), phase, fault], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

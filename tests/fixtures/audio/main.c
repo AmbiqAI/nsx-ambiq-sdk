@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "nsx_audio.h"
 #include "am_mcu_apollo.h"
+unsigned test_cpu_mode=1, test_cpu_query_rc;
 extern void am_pdm0_isr(void);
 static void before_dma_start(void);
 static unsigned init_clock_error,enable_error,dma_error,dma_calls,last_dma_count,last_dma_base,last_dma_reverse,init_calls,callback_count,last_packing;

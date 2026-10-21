@@ -28,6 +28,7 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t);
 #include <stddef.h>
 #define AM_HAL_STATUS_SUCCESS 0u
 #define AM_HAL_STATUS_INVALID_ARG 1u
+#define AM_HAL_STATUS_INVALID_OPERATION 7u
 #if defined(APOLLO5_FPGA)
 #define AM_HAL_CLKGEN_FREQ_MAX_HZ (APOLLO5_FPGA * 1000000u)
 #define AM_HAL_CLKGEN_FREQ_HP250_HZ 20000000u
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
     if (!strcmp(test,"audio-then-free") || !strcmp(test,"released-audio")) {
         hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ;
         mock_clkgen.HF2ADJ0_b.HF2ADJEN=1;
-        assert(nsx_power_set_performance_mode(mode)==0 && SystemCoreClock==196608000);
+        assert(nsx_power_set_performance_mode(mode)==AM_HAL_STATUS_INVALID_OPERATION && selects==0 && SystemCoreClock==777);
         SystemCoreClock=777; selects=queries=0;
         mock_clkgen.HF2ADJ0_b.HF2ADJEN=0;
         if (!strcmp(test,"audio-then-free")) hfrc2_hz=AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ;
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
 #if defined(APOLLO5_FPGA)
     unsigned bad_source=0;
 #else
-    unsigned bad_source=query_status || (HAS_HP2 ? pll_hz < 192000000 || pll_hz > 250000000 : (hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ));
+    unsigned bad_source=(!HAS_HP2 && mock_clkgen.HF2ADJ0_b.HF2ADJEN && hfrc2_hz==196608000) || query_status || (HAS_HP2 ? pll_hz < 192000000 || pll_hz > 250000000 : (hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ && hfrc2_hz != AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ));
 #endif
     if (bad_source) {
         assert(result != 0 && selects == 0 && SystemCoreClock == 777);
