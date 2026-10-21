@@ -43,10 +43,25 @@ def check_section_loads(data: bytes, sections: list[Section], segments: list[Seg
         ".dtcm_text": ("_init_dtcm_text", "_s_dtcm_text", "_e_dtcm_text"),
         ".tcm": ("_init_tcm", "_stcm", "_etcm"),
     }
+    if not scatter:
+        # Startup uses the symbols even if the corresponding section/load was
+        # omitted. Validate nonempty copy ranges before walking sections.
+        for name, (_, start_name, end_name) in copy_ranges.items():
+            start, end = definitions.get(start_name), definitions.get(end_name)
+            if start is None and end is None:
+                continue
+            if start is None or end is None or end.address < start.address:
+                raise ValueError(f"Firmware has invalid startup copy bounds: {name}")
+            if start.address != end.address and not any(
+                section.name == name and section.flags & 2 and section.size for section in sections
+            ):
+                raise ValueError(f"Firmware startup copy range lacks an allocated section: {name}")
     for section in sections:
         if not section.flags & 2 or not section.size:  # SHF_ALLOC
             continue
         if section.kind == 8:  # SHT_NOBITS
+            if section.flags & 4:
+                raise ValueError(f"Firmware executable section is NOBITS: {section.name}")
             if not scatter and section.name in copy_ranges:
                 raise ValueError(f"Firmware startup copy section has no initializer bytes: {section.name}")
             continue

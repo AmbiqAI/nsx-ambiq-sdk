@@ -158,17 +158,31 @@ def test_smoke_rejects_invalid_firmware(firmware: tuple[Path, Path], tmp_path: P
                 strings = sections[section[6]]
                 names = data[strings[4]:strings[4] + strings[5]]
                 for offset in range(section[4], section[4] + section[5], 16):
-                    name = struct.unpack_from("<I", data, offset)[0]
+                    name, value, size, _, _, index = struct.unpack_from("<IIIBBH", data, offset)
                     if names[name:names.find(0, name)] == b"Reset_Handler":
+                        code = sections[index]
+                        start = code[4] + (value & ~1) - code[3]
+                        payload = bytes(data[start:start + size])
+                        assert size and len(payload) == size
                         struct.pack_into("<I", data, offset + 4, ram_entry)
+                        struct.pack_into("<H", data, offset + 14, len(sections))
                         changed = True
             assert changed
             struct.pack_into("<I", data, 24, ram_entry)
             struct.pack_into("<I", data, vector_offset + 4, ram_entry)
-            append_load(data, vector_offset, ram_entry & ~1, (evidence.load_end + 3) & ~3, 4, 4, 5)
+            data.extend(b"\0" * (-len(data) % 4))
+            payload_offset = len(data)
+            data.extend(payload)
+            append_load(data, payload_offset, ram_entry & ~1,
+                        (evidence.load_end + 3) & ~3, len(payload), len(payload), 5)
+            sections.append((0, 1, 6, ram_entry & ~1, payload_offset, len(payload), 0, 0, 4, 0))
+            struct.pack_into("<I", data, 32, len(data))
+            struct.pack_into("<H", data, 48, len(sections))
+            for section in sections:
+                data.extend(struct.pack("<10I", *section))
     broken = tmp_path / "broken.elf"
     broken.write_bytes(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must execute from application NVM" if fault == "reset-in-ram" else None):
         inspect_firmware(broken, script)
 
 
@@ -331,7 +345,8 @@ def test_smoke_rejects_nobits_code(firmware: tuple[Path, Path], tmp_path: Path) 
 
 
 @pytest.mark.parametrize("section_name", (".data", ".shared", ".itcm_text", ".dtcm_text"))
-def test_smoke_rejects_nobits_copy(firmware: tuple[Path, Path], tmp_path: Path, section_name: str) -> None:
+@pytest.mark.parametrize("missing_section", (False, True))
+def test_smoke_rejects_nobits_copy(firmware: tuple[Path, Path], tmp_path: Path, section_name: str, missing_section: bool) -> None:
     binary, script = firmware
     if script.suffix == ".sct":
         pytest.skip("ArmClang does not use GNU startup copy sections")
@@ -346,7 +361,10 @@ def test_smoke_rejects_nobits_copy(firmware: tuple[Path, Path], tmp_path: Path, 
     if found is None:
         pytest.skip(f"{section_name} not present in this board image")
     index, section = found
-    struct.pack_into("<I", data, shoff + index * shsize + 4, 8)  # SHT_NOBITS
+    if missing_section:
+        struct.pack_into("<10I", data, shoff + index * shsize, *([0] * 10))
+    else:
+        struct.pack_into("<I", data, shoff + index * shsize + 4, 8)  # SHT_NOBITS
     for i in range(phnum):
         offset = phoff + i * phsize
         seg = struct.unpack_from("<8I", data, offset)
@@ -355,4 +373,28 @@ def test_smoke_rejects_nobits_copy(firmware: tuple[Path, Path], tmp_path: Path, 
     broken = tmp_path / "nobits-copy.elf"
     broken.write_bytes(data)
     with pytest.raises(ValueError):
+        inspect_firmware(broken, script)
+
+
+def test_smoke_rejects_scatter_nobits_code(firmware: tuple[Path, Path], tmp_path: Path) -> None:
+    binary, script = firmware
+    if script.suffix != ".sct":
+        pytest.skip("ArmClang scatter executable-section regression")
+    data = bytearray(binary.read_bytes())
+    shoff = struct.unpack_from("<I", data, 32)[0]
+    shsize, shnum, names_index = struct.unpack_from("<3H", data, 46)
+    sections = [struct.unpack_from("<10I", data, shoff + i * shsize) for i in range(shnum)]
+    names_sec = sections[names_index]
+    names = data[names_sec[4]:names_sec[4] + names_sec[5]]
+    found = next(((i, s) for i, s in enumerate(sections)
+                  if names[s[0]:names.find(0, s[0])] == b"MCU_ITCM" and s[5]), None)
+    if found is None:
+        pytest.skip("This scatter image does not place executable code in MCU_ITCM")
+    index, section = found
+    assert section[2] & 6 == 6
+    struct.pack_into("<I", data, shoff + index * shsize + 4, 8)
+    data[section[4]:section[4] + section[5]] = bytes(section[5])
+    broken = tmp_path / "scatter-nobits-code.elf"
+    broken.write_bytes(data)
+    with pytest.raises(ValueError, match="executable.*NOBITS"):
         inspect_firmware(broken, script)
