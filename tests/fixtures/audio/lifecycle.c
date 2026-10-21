@@ -3,11 +3,13 @@
 #include <string.h>
 #include "nsx_audio.h"
 #include "am_mcu_apollo.h"
+unsigned test_cpu_mode=1, test_cpu_query_rc;
 
 extern void am_pdm0_isr(void);
 static const char *failure;
 static const char *cleanup_failure;
 static unsigned cleanup_failures;
+static unsigned clock_calls;
 static unsigned failures, calls, init_calls, dma_calls, callbacks, irq_enabled;
 static uint32_t irq_status=AM_HAL_PDM_INT_DCMP;
 static am_hal_pdm_transfer_t *serviced_transfer;
@@ -74,7 +76,7 @@ unsigned am_hal_pdm_dma_stop(void*h) {
 #endif
     return rc;
 }
-unsigned am_hal_clkmgr_clock_config(unsigned id,unsigned hz,void*c) {(void)id;(void)hz;(void)c;return operation("clock");}
+unsigned am_hal_clkmgr_clock_config(unsigned id,unsigned hz,void*c) {(void)id;(void)hz;(void)c;clock_calls++;return operation("clock");}
 void am_bsp_pdm_pins_enable(unsigned n) {(void)n;}
 void am_bsp_pdm_pins_disable(unsigned n) {(void)n;}
 #ifdef TEST_APOLLO3
@@ -131,6 +133,27 @@ int main(int argc,char **argv) {
     assert(nsx_audio_get_status(NULL)!=0);
     assert(nsx_audio_get_status(&cfg)!=0);
     const char *phase=argv[1], *fault=argv[2];
+#ifndef TEST_APOLLO3
+    if(!strcmp(phase,"clock-policy")) {
+        bool at_start=strstr(fault,"start")!=NULL;
+        if(at_start)assert(nsx_audio_init(&cfg)==0);
+        unsigned before=calls;
+        if(strstr(fault,"query"))test_cpu_query_rc=91;
+        else test_cpu_mode=AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE;
+        if(!strcmp(fault,"hfrc-hp")) {
+            cfg.pdm.clock=NSX_AUDIO_CLK_HFRC;
+            assert(nsx_audio_init(&cfg)==0 && clock_calls==0);
+            assert(nsx_audio_start(&cfg)==0 && nsx_audio_stop(&cfg)==0);
+            return 0;
+        }
+        assert((at_start?nsx_audio_start(&cfg):nsx_audio_init(&cfg))!=0);
+        assert(calls==before && dma_calls==0 && !irq_enabled && !cfg._started);
+        test_cpu_mode=AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;test_cpu_query_rc=0;
+        if(!at_start)assert(nsx_audio_init(&cfg)==0);
+        assert(nsx_audio_start(&cfg)==0 && nsx_audio_stop(&cfg)==0);
+        return 0;
+    }
+#endif
     if(!strcmp(phase,"init-cleanup")) {
         failure=!strcmp(fault,"power-on/power-off")?"power-on":"configure";
         cleanup_failure=!strcmp(fault,"configure/deinit")?"deinit":"power-off";
