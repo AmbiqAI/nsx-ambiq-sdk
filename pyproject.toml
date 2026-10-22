@@ -12,6 +12,10 @@ ci = [
     "tomli>=2; python_version < '3.11'",
 ]
 
+hardware = ["pytest>=8", "pylink-square>=1.2,<3"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+markers = ["hardware: opt-in physical board qualification", "smoke: minimal boot/runtime checks"]

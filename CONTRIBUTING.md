@@ -36,3 +36,9 @@ uv run --group ci python -m pytest
 - `docs/` contains maintainer notes for platform coverage, SDK intake, and boundary decisions.
 
 Prefer concise user-facing docs. Put rationale, survey notes, and future work in maintainer docs.
+
+## Physical board tests
+
+See [local hardware tests](docs/local-hardware-tests.md) for the opt-in
+pytest/Unity startup harness, local commands, hardware ownership requirements,
+and evidence limitations. No GitHub runner is required.

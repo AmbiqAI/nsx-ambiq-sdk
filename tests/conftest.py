@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+pytest_plugins = ["tools.hardware.pytest_plugin"]
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULES_DIR = REPO_ROOT / "modules"

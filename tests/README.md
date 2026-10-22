@@ -134,3 +134,10 @@ must be serviced without producing a callback. They also exercise service
 failure, invalid completed-buffer addresses, and capture replacement from a
 callback, including the replacement's next frame. Actual AP510B runs are
 recorded separately from the host HAL model.
+
+## Opt-in board execution
+
+The local pytest/Unity startup PoC is documented in
+[`docs/local-hardware-tests.md`](../docs/local-hardware-tests.md). Ordinary test
+runs never access hardware. Explicit build-only runs do not count as hardware
+passes. Shared-lab allocation remains a prerequisite to physical execution.
