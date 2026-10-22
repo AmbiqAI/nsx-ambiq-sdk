@@ -13,7 +13,7 @@ def pytest_addoption(parser):
     group.addoption('--hardware', action='store_true', help='Explicitly enable board execution')
     group.addoption('--build-only', action='store_true', help='Build firmware without opening a probe')
     group.addoption('--board', choices=BOARDS)
-    group.addoption('--fault-injection', choices=('none', 'assertion', 'timeout'), default='none',
+    group.addoption('--fault-injection', choices=('none', 'assertion', 'timeout', 'omit-data', 'omit-bss', 'omit-constructors'), default='none',
                     help='Harness self-check: deliberately produce a failing hardware run')
     group.addoption('--probe', help='Exact J-Link serial, never auto-select')
     group.addoption('--device', help='Optional check against descriptor SEGGER device; never an override')

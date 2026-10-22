@@ -2,13 +2,18 @@
 import argparse
 from dataclasses import asdict
 import json
+import signal
 from pathlib import Path
 
+from .startup import poison_sentinels
 from .protocol import RESULT_SIZE, QualificationError, wait_for_result
 
 
 def main() -> None:
+    # The parent blocks cancellation while spawning; unblock in the child.
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM, signal.SIGINT})
     parser = argparse.ArgumentParser()
+    parser.add_argument('--sentinels', nargs=3, type=int, required=True)
     parser.add_argument('--elf', type=Path, required=True)
     parser.add_argument('--probe', type=int, required=True)
     parser.add_argument('--device', required=True)
@@ -32,6 +37,8 @@ def main() -> None:
         probe.memory_write8(args.address, [0] * RESULT_SIZE)
         if bytes(probe.memory_read8(args.address, RESULT_SIZE)) != bytes(RESULT_SIZE):
             raise RuntimeError('Could not clear stale results')
+        seeded = poison_sentinels(probe, tuple(args.sentinels))
+        (args.output / 'seeded.json').write_text(json.dumps(seeded, indent=2) + '\n')
         probe.restart()
 
         def read() -> bytes:

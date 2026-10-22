@@ -7,6 +7,7 @@ import subprocess
 import uuid
 
 from .protocol import RESULT_SIZE
+from .startup import SENTINELS, OMISSIONS, make_mutant
 
 BOARDS = ('apollo3_evb', 'apollo3p_evb', 'apollo4p_evb', 'apollo4b_evb',
           'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')
@@ -33,6 +34,7 @@ class Firmware:
     board: str
     device: str
     speed: int
+    sentinels: tuple[int, ...] = ()
 
 
 def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "none") -> Firmware:
@@ -44,18 +46,27 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "no
     cxx = gcc_root / 'bin/arm-none-eabi-g++'
     build_id = uuid.uuid4().hex
     (output / 'identity.h').write_text(f'#define NSX_TEST_BUILD_ID "{build_id}"\n')
+    extra = []
+    if fault in OMISSIONS:
+        extra = [f'-DNSX_TEST_STARTUP_OVERRIDE={make_mutant(repo, output, board, fault)}']
     command(['cmake', '-S', str(repo / 'tests/hardware/firmware'), '-B', str(output),
              '-G', 'Ninja', '-DCMAKE_SYSTEM_NAME=Generic',
              '-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY',
              f'-DCMAKE_C_COMPILER={cc}', f'-DCMAKE_CXX_COMPILER={cxx}',
              f'-DCMAKE_ASM_COMPILER={cc}', f'-DNSX_TEST_SDK_ROOT={repo}',
-             f'-DNSX_TEST_BOARD={board}', f'-DNSX_TEST_FAULT={fault}', '-DCMAKE_BUILD_TYPE=Debug'], log)
+             f'-DNSX_TEST_BOARD={board}', f'-DNSX_TEST_FAULT={fault}', '-DCMAKE_BUILD_TYPE=Debug'] + extra, log)
     command(['cmake', '--build', str(output)], log)
     elf = output / 'startup_test.elf'
     symbols = command([str(gcc_root / 'bin/arm-none-eabi-nm'), '-S', str(elf)], log)
     symbol = [line.split() for line in symbols.splitlines() if line.endswith(' nsx_test_result')]
     if len(symbol) != 1 or int(symbol[0][1], 16) != RESULT_SIZE:
         raise RuntimeError('Result symbol missing or protocol layout differs')
+    sentinel_addresses = []
+    for name in SENTINELS:
+        matches = [line.split() for line in symbols.splitlines() if line.endswith(' ' + name)]
+        if len(matches) != 1 or int(matches[0][1], 16) != 4:
+            raise RuntimeError(f'Missing or malformed startup sentinel {name}')
+        sentinel_addresses.append(int(matches[0][0], 16))
     inputs = [Path(p) for p in (output / 'inputs.txt').read_text().splitlines()]
     sources = list((repo / 'tests/hardware/firmware').glob('*'))
     vendor = list((repo / 'tests/hardware/vendor/unity').glob('*'))
@@ -67,9 +78,10 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "no
         'sdk_revision': command(['git', '-C', str(repo), 'rev-parse', 'HEAD'], log).strip(),
         'sdk_dirty': bool(command(['git', '-C', str(repo), 'status', '--porcelain'], log).strip()),
         'device': device, 'swd_speed_khz': int(speed),
+        'sentinels': dict(zip(SENTINELS, sentinel_addresses)),
         'compiler': command([str(cc), '--version'], log).splitlines()[0],
         'elf_sha256': digest(elf),
-        'inputs_sha256': {str(p.relative_to(repo)): digest(p) for p in inputs + sources + vendor},
+        'inputs_sha256': {str(p): digest(p) for p in inputs + sources + vendor},
     }
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    return Firmware(elf, int(symbol[0][0], 16), build_id, board, device, int(speed))
+    return Firmware(elf, int(symbol[0][0], 16), build_id, board, device, int(speed), tuple(sentinel_addresses))

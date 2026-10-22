@@ -106,7 +106,7 @@ def test_worker_failure_releases_probe_and_never_passes(tmp_path, monkeypatch, b
             (tmp_path / 'result.json').write_text('{}')
             (tmp_path / 'last-result.bin').write_bytes(packet(state=1))
 
-    monkeypatch.setattr(runner.subprocess, 'run', fake_run)
+    monkeypatch.setattr(runner, 'run_worker', fake_run)
     with pytest.raises(RuntimeError):
         runner.execute(firmware, '999999998', 'test-device', 1, tmp_path)
     assert json.loads((tmp_path / 'execution.json').read_text())['status'] != 'passed'
@@ -126,6 +126,6 @@ def test_device_mismatch_refused_before_transport(tmp_path, monkeypatch):
     firmware = Firmware(tmp_path / 'test.elf', 0, IDENTITY, 'apollo3p_evb', 'expected', 4000)
     def forbidden(*args, **kwargs):
         pytest.fail('Touched transport for a mismatched device')
-    monkeypatch.setattr(runner.subprocess, 'run', forbidden)
+    monkeypatch.setattr(runner, 'run_worker', forbidden)
     with pytest.raises(ValueError, match='disagrees'):
         runner.execute(firmware, '123', 'wrong', 1, tmp_path)

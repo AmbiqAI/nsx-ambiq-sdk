@@ -3,17 +3,17 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 from typing import Iterator
 
+from .process import RunCancelled, run_worker
 from .build import Firmware
 from .protocol import decode, QualificationError
 
 
 @contextmanager
-def probe_lock(serial: str) -> Iterator[None]:
+def probe_lock(serial: str) -> Iterator[int]:
     if not serial.isdecimal():
         raise ValueError('Probe serial must contain only decimal digits')
     # Linux is the initial supported host; hardware-free tests remain portable.
@@ -24,10 +24,9 @@ def probe_lock(serial: str) -> Iterator[None]:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RuntimeError(f'Probe {serial} already held by another SDK test') from exc
-        try:
-            yield
-        finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
+        # Close only our descriptor on leaving this context. An inherited worker
+        # descriptor retains the same flock if the parent dies without cleanup.
+        yield stream.fileno()
 
 
 def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, output: Path) -> None:
@@ -39,20 +38,25 @@ def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, 
                 'debugger_connected': True, 'cold_boot': False,
                 'status': 'infrastructure_error'}
     try:
-        with probe_lock(probe):
+        with probe_lock(probe) as lease_fd:
             with (output / 'transport.log').open('w') as log:
-                subprocess.run([
+                run_worker([
                     sys.executable, '-m', 'tools.hardware.jlink_worker',
                     '--elf', str(firmware.elf), '--probe', probe, '--device', device,
                     '--speed', str(firmware.speed), '--address', str(firmware.address), '--build-id', firmware.build_id,
                     '--timeout', str(timeout), '--output', str(output),
-                ], stdout=log, stderr=subprocess.STDOUT, check=True, timeout=timeout + 60,
+                    '--sentinels', *(str(a) for a in firmware.sentinels),
+                ], log=log, lease_fd=lease_fd, timeout=timeout + 60,
                    cwd=Path(__file__).resolve().parents[2])
             if not (output / 'result.json').is_file():
                 raise RuntimeError('Worker exited without result evidence')
             if decode((output / 'last-result.bin').read_bytes(), firmware.build_id) is None:
                 raise QualificationError('Worker exited with incomplete evidence')
             metadata['status'] = 'passed'
+    except RunCancelled as exc:
+        metadata['status'] = 'cancelled'
+        metadata['error'] = str(exc)
+        raise
     except Exception as exc:
         failure = output / 'failure.json'
         if failure.is_file():
