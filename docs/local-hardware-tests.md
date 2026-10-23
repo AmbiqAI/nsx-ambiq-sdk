@@ -77,7 +77,8 @@ its own artifact directory; the result includes a new build identity.
 
 ## Execution and evidence
 
-The worker flashes an ELF using SEGGER, resets and halts, clears/verifies the
+The worker resets and halts before programming an ELF using SEGGER, resets and
+halts again, clears/verifies the
 result buffer, poisons and reads back all three startup probe variables, and
 resumes normal reset entry. It never sets the PC to `main`
 or `Reset_Handler`. Stale SRAM is not accepted as a fresh result.
@@ -86,7 +87,9 @@ Firmware asserts initialized data, zeroed BSS, and a C++ constructor's effect.
 Their starting values are deliberately wrong, so retained correct RAM cannot
 satisfy these assertions. Sentinel addresses come from the built ELF and are
 recorded in its manifest; `seeded.json` records verified pre-execution values.
-Unity output and counts are stored in a bounded SRAM record. The host requires
+Unity output and counts are stored in a bounded SRAM record. The host first
+reads the aligned completion word, then reads the payload only after completion,
+so bytewise reads cannot race the producer while it publishes the header. The host requires
 the expected protocol, matching build identity, all three named cases exactly
 once, zero failures/ignores, a Unity summary, and final completion. Output
 overflow, missing completion, or a transport disconnect cannot pass.
@@ -326,3 +329,9 @@ The local session API resolves execution output paths against the caller's worki
 directory before starting the worker. Unity initialization receives the suite's
 source filename explicitly, so failures point to the assertion's source file
 rather than the shared reporter.
+
+Apollo510B selects the SEGGER `AP510BFA-CBR` device profile; Apollo510 continues
+to select `AP510NFA-CBR`. Their programming profiles are not interchangeable.
+The explicit reset before programming establishes a known state for the flash
+loader even when an earlier application or failed programming attempt left the
+core in a different state.

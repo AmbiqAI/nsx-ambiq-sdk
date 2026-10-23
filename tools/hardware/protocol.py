@@ -12,6 +12,7 @@ VERSION = 1
 TEXT_SIZE = 4096
 HEADER = struct.Struct('<8I64s')
 RESULT_SIZE = HEADER.size + TEXT_SIZE
+STATE_OFFSET = struct.calcsize("<2I")
 
 
 class QualificationError(RuntimeError):

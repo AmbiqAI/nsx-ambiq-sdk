@@ -11,7 +11,7 @@ from tools.hardware.api import BoardRequest, BuildRequest, build_firmware, open_
 from tools.hardware.build import Firmware
 from tools.hardware import jlink_worker
 from tools.hardware.preparation import MemorySeed
-from tools.hardware.protocol import HEADER, MAGIC, VERSION, RESULT_SIZE, QualificationError, decode
+from tools.hardware.protocol import HEADER, MAGIC, VERSION, RESULT_SIZE, STATE_OFFSET, QualificationError, decode
 from tools.hardware.suites import Seed, Suite
 from test_small_m55_memory import compiler_for_test
 
@@ -42,11 +42,16 @@ class FakeProbe:
     def restart(self):
         self.events.append('run')
         self.running = True
-    def memory_write8(self, address, values): self.cleared = bytes(values)
+    def memory_write8(self, address, values):
+        self.result_address = address
+        self.cleared = bytes(values)
     def memory_read8(self, address, count):
         return packet(SECOND.cases) if self.running else self.cleared
     def memory_write32(self, address, values): self.words[address] = values[0]
-    def memory_read32(self, address, count): return [self.words[address]]
+    def memory_read32(self, address, count):
+        if address == self.result_address + STATE_OFFSET:
+            return [2 if self.running else 0]
+        return [self.words[address]]
 
 
 @pytest.mark.parametrize('relative_output', [False, True])
@@ -106,3 +111,33 @@ def test_build_refuses_cached_options(repo_root, tmp_path):
     with pytest.raises(ValueError, match='new or empty'):
         build_firmware(BuildRequest(repo_root, tmp_path, 'apollo3p_evb', Path('/unused'), SECOND))
     assert (tmp_path / 'CMakeCache.txt').read_text() == 'old startup omission option'
+
+
+def test_capture_waits_for_atomic_completion(tmp_path):
+    class PublishingProbe(FakeProbe):
+        def __init__(self):
+            super().__init__()
+            self.states = iter((0, 1, 2))
+            self.state = 0
+        def memory_read32(self, address, count):
+            if self.running and address == self.result_address + STATE_OFFSET:
+                self.state = next(self.states)
+                return [self.state]
+            return super().memory_read32(address, count)
+        def memory_read8(self, address, count):
+            if self.running:
+                assert self.state == 2, 'Bulk read raced the producer'
+            return super().memory_read8(address, count)
+    image = Firmware(tmp_path / 'test.elf', 32, 'synthetic', 'board', 'device', 1000, SECOND.cases)
+    probe = PublishingProbe()
+    assert jlink_worker.capture(probe, image, 1, tmp_path).total == 2
+    assert probe.events[:4] == ['halt', ('reset', True), ('flash', str(image.elf)), ('reset', True)]
+
+
+def test_capture_rejects_fault_completion(tmp_path):
+    class FailedProbe(FakeProbe):
+        def memory_read32(self, address, count):
+            return [3]
+    image = Firmware(tmp_path / 'test.elf', 32, 'synthetic', 'board', 'device', 1000, SECOND.cases)
+    with pytest.raises(QualificationError, match='Invalid completion'):
+        jlink_worker.capture(FailedProbe(), image, 1, tmp_path)

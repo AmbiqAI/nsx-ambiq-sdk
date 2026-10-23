@@ -7,12 +7,13 @@ from pathlib import Path
 
 from .preparation import MemorySeed, seed_memory
 from .build import Firmware
-from .protocol import Result, RESULT_SIZE, QualificationError, wait_for_result
+from .protocol import Result, RESULT_SIZE, STATE_OFFSET, QualificationError, wait_for_result
 
 
 def capture(probe, firmware: Firmware, timeout: float, output: Path) -> Result:
     """Run one suite through a connected debugger; caller owns connection lifetime."""
     probe.halt()
+    probe.reset(halt=True)
     probe.flash_file(str(firmware.elf), 0)
     probe.reset(halt=True)
     # Erase previous evidence before execution; never accept retained SRAM.
@@ -24,6 +25,13 @@ def capture(probe, firmware: Firmware, timeout: float, output: Path) -> Result:
     probe.restart()
 
     def read() -> bytes:
+        # The producer publishes completion only after all payload writes.
+        # Bytewise reads while it is running can otherwise tear the header.
+        state = probe.memory_read32(firmware.address + STATE_OFFSET, 1)[0]
+        if state in (0, 1):
+            return bytes(RESULT_SIZE)
+        if state != 2:
+            raise QualificationError(f'Invalid completion state {state}')
         data = bytes(probe.memory_read8(firmware.address, RESULT_SIZE))
         (output / 'last-result.bin').write_bytes(data)
         return data

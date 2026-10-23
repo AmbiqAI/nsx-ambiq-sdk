@@ -49,7 +49,7 @@ set(NSX_SOC_COMPILE_DEFINITIONS
 # a -KXR vs -KBR part). NSX_SEGGER_CPUFREQ is the TPIU *trace clock*, used by the
 # SWO viewer to derive the baud scaler, not the CPU clock.
 set(NSX_SEGGER_CPU "Cortex-M55")
-set(NSX_SEGGER_DEVICE "AP510NFA-CBR")
+set(NSX_SEGGER_DEVICE "AP510BFA-CBR")
 set(NSX_SEGGER_IF_SPEED "4000")
 set(NSX_SEGGER_PF_ADDR "0x00410000")
 set(NSX_SEGGER_CPUFREQ "96000000")
