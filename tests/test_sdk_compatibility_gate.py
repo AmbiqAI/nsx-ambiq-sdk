@@ -94,3 +94,20 @@ def test_cli_refuses_reused_evidence_and_selection_overrides(repo_root: Path, tm
     assert result.returncode == 2
     assert ('PYTEST_ADDOPTS' if extra_options else 'new directory') in result.stderr
     assert prior.read_text() == 'preserved evidence'
+
+
+def test_same_abi_count_cannot_hide_missing_combinations():
+    requirement = GCC[0]
+    gate = Gate((requirement,))
+    items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',
+             callspec=SimpleNamespace(params={'family': 'gcc', 'language': 'C', 'selection': 'default'}))
+             for i in range(6)]
+    config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
+    gate.pytest_collection_modifyitems(config, items)
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    report = gate.report(0)
+    assert report['status'] == 'incomplete'
+    assert len(report['missing_variants'][requirement.selector]) == 5
+    for node, variant in zip(gate.selected, requirement.variants):
+        gate.parameters[node] = dict(zip(requirement.parameters, variant))
+    assert gate.report(0)['status'] == 'passed'

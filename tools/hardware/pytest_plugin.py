@@ -5,7 +5,10 @@ import uuid
 
 import pytest
 
-from tools.hardware.build import BOARDS, build
+from dataclasses import dataclass
+
+from tools.hardware.inventory import BOARDS
+from tools.hardware.api import BuildRequest, BoardRequest, build_firmware, open_board
 from tools.hardware.qualification import PROFILES, Qualification
 
 
@@ -27,8 +30,18 @@ def pytest_addoption(parser):
     group.addoption('--hardware-timeout', type=float, default=15.0)
 
 
+@dataclass(frozen=True)
+class RunConfig:
+    board: str
+    gcc_root: Path
+    hardware: bool
+    artifacts: Path
+    fault: str
+    board_request: BoardRequest | None
+
+
 @pytest.fixture
-def startup_firmware(request, repo_root):
+def run_config(request):
     config = request.config
     hardware = config.getoption('--hardware')
     build_only = config.getoption('--build-only')
@@ -41,7 +54,8 @@ def startup_firmware(request, repo_root):
         raise pytest.UsageError('--board is required')
     if hardware and not config.getoption('--probe'):
         raise pytest.UsageError('--hardware requires explicit --probe')
-    if not math.isfinite(config.getoption('--hardware-timeout')) or config.getoption('--hardware-timeout') <= 0:
+    timeout = config.getoption('--hardware-timeout')
+    if not math.isfinite(timeout) or timeout <= 0:
         raise pytest.UsageError('--hardware-timeout must be positive')
     root = config.getoption('--gcc-root')
     if root is None:
@@ -49,11 +63,36 @@ def startup_firmware(request, repo_root):
         if not cc:
             raise pytest.UsageError('Install Arm GCC or supply --gcc-root')
         root = Path(cc).resolve().parent.parent
-    output = (config.getoption('--hardware-artifacts') / board / uuid.uuid4().hex).resolve()
-    if _QUALIFICATION in config.stash:
-        config.stash[_QUALIFICATION].evidence['startup'] = str(output)
-    firmware = build(repo_root, output, board, root.resolve(), config.getoption('--fault-injection'))
-    return firmware, output
+    try:
+        board_request = BoardRequest(config.getoption('--probe'), config.getoption('--device'), timeout) if hardware else None
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc
+    return RunConfig(board, root.resolve(), hardware, config.getoption('--hardware-artifacts'),
+                     config.getoption('--fault-injection'), board_request)
+
+
+@pytest.fixture
+def firmware(request, repo_root, run_config, suite_spec):
+    output = (run_config.artifacts / run_config.board / uuid.uuid4().hex).resolve()
+    if _QUALIFICATION in request.config.stash:
+        request.config.stash[_QUALIFICATION].evidence[suite_spec.name] = str(output)
+    return build_firmware(BuildRequest(repo_root, output, run_config.board,
+                                      run_config.gcc_root, suite_spec, run_config.fault)), output
+
+
+@pytest.fixture
+def board_session(run_config, firmware):
+    # Building happens first; build-only mode never acquires a probe lease.
+    if not run_config.hardware:
+        pytest.skip(f'Build succeeded; hardware execution not requested. Evidence: {firmware[1]}')
+    with open_board(run_config.board_request) as session:
+        yield session
+
+
+@pytest.fixture
+def suite_result(firmware, board_session):
+    image, output = firmware
+    return board_session.run(image, output)
 
 
 _QUALIFICATION = pytest.StashKey[Qualification]()

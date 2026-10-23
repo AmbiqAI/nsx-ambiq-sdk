@@ -4,18 +4,8 @@ import json
 from pathlib import Path
 
 from .inventory import BOARDS
-
-
-@dataclass(frozen=True)
-class Suite:
-    name: str
-    nodeid: str
-    cases: tuple[str, ...]
-
-
-STARTUP = Suite('startup', 'tests/hardware/test_startup.py::test_startup',
-                ('initialized_data', 'zeroed_bss', 'cpp_constructor'))
-SUITES = (STARTUP,)
+from .suites import Suite, STARTUP, SUITES
+from tools.test_evidence import phase_status, completion
 
 
 @dataclass(frozen=True)
@@ -44,18 +34,11 @@ class Qualification:
         results = []
         for suite in self.profile.suites:
             phases = self.phases.get(suite.nodeid, {})
-            if 'failed' in phases.values():
-                status = 'failed'
-            elif hardware and all(phases.get(p) == 'passed' for p in ('setup', 'call', 'teardown')):
-                status = 'passed'
-            else:
-                status = 'incomplete'
+            status = phase_status(phases, executed=hardware)
             results.append({'suite': suite.name, 'expected_cases': suite.cases,
                             'status': status, 'phases': phases,
                             'evidence_directory': self.evidence.get(suite.name)})
-        status = ('failed' if any(r['status'] == 'failed' for r in results) else
-                  'passed' if session_ok and all(r['status'] == 'passed' for r in results)
-                  else 'incomplete')
+        status = completion((r['status'] for r in results), session_ok=session_ok)
         return {'schema_version': 1, 'profile': self.profile.name,
                 'board': self.profile.board, 'toolchain': self.profile.toolchain,
                 'status': status, 'suites': results}

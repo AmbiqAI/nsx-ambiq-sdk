@@ -176,8 +176,9 @@ The profile supplies the board; an explicit conflicting `--board` is rejected.
 Profiles exist for each selectable descriptor listed above, named
 `<descriptor>-gcc-startup`. Their existence does not mean a board has passed.
 This first profile requires only the startup suite, not full SDK qualification.
-The typed suite registry records expected firmware cases; future suites must
-add their own firmware build/transport integration as well as a profile entry.
+The typed suite registry records expected firmware cases; future suites supply
+a suite specification and firmware sources using the shared builder/reporter,
+then add an explicit profile entry. New transport requirements need separate work.
 
 A fresh JSON report lists required suites, pytest setup/call/teardown outcomes,
 and evidence directories. Skipped, deselected, uncollected or interrupted cases
@@ -265,3 +266,52 @@ patches that upstream has absorbed, and deliberately update release-baseline
 expectations where appropriate. Do not delete a failing patch check simply to
 make an update pass. Run current and candidate with the same test definitions
 and toolchain; automated comparison and board aggregation remain later work.
+
+## Test infrastructure boundaries
+
+`tools/hardware/api.py` is the local Python entry point. `BuildRequest` describes
+one explicit suite/board/toolchain build and returns a typed `Firmware` artifact.
+Build output must be new or empty, so prior CMake options cannot leak into a run.
+`open_board(BoardRequest(...))` owns a local probe lease for a scoped session;
+`session.run(firmware, output)` returns a decoded `Result`. Closing the session
+prevents subsequent use. Worker cancellation/reaping remains inside the runner,
+and the child inherits the lease until it exits. Shared-lab reservation is still
+the caller's responsibility.
+
+The pytest adapter separates responsibilities into function-scoped fixtures:
+
+- `run_config`: validate invocation and resolve the toolchain.
+- `firmware`: build the selected `suite_spec` and register its evidence path.
+- `board_session`: acquire/release access after building; skip before acquiring
+  anything in build-only mode.
+- `suite_result`: run once and return validated target evidence.
+
+The startup test supplies its suite definition from the hardware tests' conftest.
+The shared builder/transport does not choose a startup suite by default. A suite
+specifies its source directory, ELF name, expected Unity cases, optional memory
+seeds and narrowly scoped build preparation. Addresses are resolved from ELF
+symbols. The startup suite alone defines its three poison values and AP3P-only
+omission controls. Suite case names must be nonempty, unique C identifiers.
+
+`tests/hardware/common/firmware.cmake` provides the shared SDK/CMake target setup.
+`result_reporter.cpp` owns the bounded result buffer, Unity output and completion
+publication. Each suite owns assertions and Unity setup/teardown. The SRAM wire
+protocol remains version 1; build manifests are version 2 and record generic
+`seeds` and `expected_cases`, replacing the startup-specific sentinel map.
+
+Hardware qualification and the host compatibility gate share the pure completion
+rules in `tools/test_evidence.py`. Their evidence formats and orchestration remain
+separate. Compatibility requirements now include exact ABI parameter combinations,
+not just a minimum count; adaptation of the existing firmware fixture tuple to
+named dimensions is isolated in `case_parameters`.
+
+`tests/fixtures/hardware_second` is a synthetic infrastructure check, not another
+board qualification suite. It builds C firmware with two cases, one seed and a different ELF
+name, alongside the C++ startup suite. Host tests exercise the worker CLI, simulated probe, parser, parent validation
+and session cleanup with this contract, including execution with zero seeds.
+They establish reusable plumbing, not physical behavior of the second suite.
+
+Board/silicon facts continue to come from SDK descriptors. The explicit board
+allowlist and required matrices define reviewed coverage rather than discovering
+whatever happens to be available. Additional families, compiler support, transports
+and lab allocation integration require explicit implementation and validation.

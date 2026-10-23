@@ -7,9 +7,12 @@ import sys
 
 import pytest
 
-from tools.hardware.protocol import (CASES, HEADER, MAGIC, RESULT_SIZE, VERSION,
+from tools.hardware.protocol import (HEADER, MAGIC, RESULT_SIZE, VERSION,
                                      QualificationError, decode, wait_for_result)
 from tools.hardware.runner import probe_lock
+from tools.hardware.suites import STARTUP
+
+CASES = STARTUP.cases
 
 IDENTITY = 'a' * 32
 
@@ -25,7 +28,7 @@ def packet(*, state=2, total=3, failed=0, ignored=0, identity=IDENTITY, output=N
 
 
 def test_valid_result():
-    assert decode(packet(), IDENTITY).total == 3
+    assert decode(packet(), IDENTITY, CASES).total == 3
 
 
 @pytest.mark.parametrize('kwargs', [
@@ -36,28 +39,28 @@ def test_valid_result():
 ])
 def test_rejects_invalid_evidence(kwargs):
     with pytest.raises(QualificationError):
-        decode(packet(**kwargs), IDENTITY)
+        decode(packet(**kwargs), IDENTITY, CASES)
 
 
 def test_truncated_and_unknown_protocol():
     with pytest.raises(QualificationError, match='Truncated'):
-        decode(packet()[:-1], IDENTITY)
+        decode(packet()[:-1], IDENTITY, CASES)
     data = bytearray(packet())
     struct.pack_into('<I', data, 4, 100)
     with pytest.raises(QualificationError, match='protocol'):
-        decode(bytes(data), IDENTITY)
+        decode(bytes(data), IDENTITY, CASES)
 
 
 def test_pending_then_completion():
     packets = iter([bytes(RESULT_SIZE), packet(state=1), packet()])
-    result = wait_for_result(lambda: next(packets), IDENTITY, 1, sleep=lambda _: None)
+    result = wait_for_result(lambda: next(packets), IDENTITY, 1, CASES, sleep=lambda _: None)
     assert result.build_id == IDENTITY
 
 
 def test_missing_completion_times_out():
     ticks = iter([0, 0.1, 0.2, 1.1])
     with pytest.raises(QualificationError, match='Timed out'):
-        wait_for_result(lambda: packet(state=1), IDENTITY, 1,
+        wait_for_result(lambda: packet(state=1), IDENTITY, 1, CASES,
                         clock=lambda: next(ticks), sleep=lambda _: None)
 
 
@@ -65,7 +68,7 @@ def test_disconnect_is_not_pass():
     def disconnected():
         raise OSError('probe disconnected')
     with pytest.raises(OSError, match='disconnected'):
-        wait_for_result(disconnected, IDENTITY, 1)
+        wait_for_result(disconnected, IDENTITY, 1, CASES)
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason='Initial hardware host is Linux')
@@ -95,7 +98,7 @@ def test_worker_failure_releases_probe_and_never_passes(tmp_path, monkeypatch, b
     from tools.hardware.build import Firmware
     from tools.hardware import runner
 
-    firmware = Firmware(tmp_path / 'test.elf', 0x10000000, IDENTITY, 'apollo3p_evb', 'test-device', 4000)
+    firmware = Firmware(tmp_path / 'test.elf', 0x10000000, IDENTITY, 'apollo3p_evb', 'test-device', 4000, CASES)
 
     def fake_run(*args, **kwargs):
         if behavior == 'timeout':
@@ -117,13 +120,13 @@ def test_worker_failure_releases_probe_and_never_passes(tmp_path, monkeypatch, b
 @pytest.mark.parametrize('timeout', [0, -1, float('nan'), float('inf')])
 def test_timeout_must_be_bounded(timeout):
     with pytest.raises(ValueError):
-        wait_for_result(lambda: packet(), IDENTITY, timeout)
+        wait_for_result(lambda: packet(), IDENTITY, timeout, CASES)
 
 
 def test_device_mismatch_refused_before_transport(tmp_path, monkeypatch):
     from tools.hardware.build import Firmware
     from tools.hardware import runner
-    firmware = Firmware(tmp_path / 'test.elf', 0, IDENTITY, 'apollo3p_evb', 'expected', 4000)
+    firmware = Firmware(tmp_path / 'test.elf', 0, IDENTITY, 'apollo3p_evb', 'expected', 4000, CASES)
     def forbidden(*args, **kwargs):
         pytest.fail('Touched transport for a mismatched device')
     monkeypatch.setattr(runner, 'run_worker', forbidden)

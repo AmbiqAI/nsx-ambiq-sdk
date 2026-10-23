@@ -150,3 +150,7 @@ complete without skips. Use a fresh output directory for each invocation.
 The `payload` profile omits the target cross-compilation matrix. See the local hardware guide
 above for matrix boundaries and evidence interpretation. Neither profile
 accesses boards or claims physical qualification.
+
+The shared hardware API and fixture boundaries are described in the local
+hardware guide. `test_hardware_architecture.py` exercises a second synthetic
+suite through the shared build and simulated transport; it does not flash a board.

@@ -9,8 +9,9 @@ import time
 
 import pytest
 
+from tools.hardware.preparation import MemorySeed, seed_memory
 from tools.hardware.runner import probe_lock
-from tools.hardware.startup import OMISSIONS, POISON, SENTINELS, mutant, poison_sentinels
+from tools.hardware.startup import OMISSIONS, POISON, SENTINELS, mutant
 
 
 def wait_until(predicate, timeout=10):
@@ -46,7 +47,7 @@ def substitute(command, **kwargs):
     kwargs['timeout'] = {1 if action == 'timeout' else 30}
     return original([sys.executable, '-c', {child!r}], **kwargs)
 runner.run_worker = substitute
-runner.execute(Firmware(Path('unused'), 0, 'id', 'board', 'device', 4000),
+runner.execute(Firmware(Path('unused'), 0, 'id', 'board', 'device', 4000, ('check',)),
                {serial!r}, 'device', 1, Path({str(tmp_path)!r}))
 '''
     worker_pid = None
@@ -110,11 +111,11 @@ class FakeMemory:
 
 def test_sentinels_require_verified_poison():
     memory = FakeMemory()
-    assert poison_sentinels(memory, (4, 8, 12)) == dict(zip(SENTINELS, POISON))
+    assert seed_memory(memory, tuple(MemorySeed(n, a, v) for n, a, v in zip(SENTINELS, (4, 8, 12), POISON))) == dict(zip(SENTINELS, POISON))
     with pytest.raises(RuntimeError, match='Could not seed'):
-        poison_sentinels(FakeMemory(drop_write=True), (4, 8, 12))
+        seed_memory(FakeMemory(drop_write=True), (MemorySeed("probe", 4, 42),))
     with pytest.raises(ValueError):
-        poison_sentinels(memory, (4, 4, 8))
+        seed_memory(memory, (MemorySeed("a", 4, 1), MemorySeed("b", 4, 2)))
 
 
 @pytest.mark.parametrize('omission', OMISSIONS)
