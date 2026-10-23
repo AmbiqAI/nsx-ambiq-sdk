@@ -385,11 +385,15 @@ selected suite before building rather than maintained in a shared CLI list.
 | 1160001491 | Apollo4 Blue Plus / KBR and KXR descriptors | Both configurations passed; physical package remains unconfirmed |
 | 1160002255 | Apollo510 / `apollo510_evb` | Startup and runtime passed after the pre-flash reset fix |
 | 1160002954 | Apollo510B / `apollo510b_evb` | Startup and runtime passed with corrected probe profile/reset/completion read; SVC negative control failed as expected |
-| 1160003058 | Apollo330 Plus / `apollo330mP_evb` | Builds pass; execution blocked before programming because installed J-Link 9.50 does not recognize descriptor device `AP330MPA-CBR` |
+| 1160003058 | Apollo330 Plus / `apollo330mP_evb` | Startup and runtime passed using J-Link 9.88 with Ambiq overlay `JLink_Apollo330P_510L_20251015.zip` and descriptor device `AP330MPA-CBR` |
 
 These are debugger-connected GCC runs. Both AP4 configurations passing does not
 identify the physical KBR/KXR package or qualify their differing peripheral wiring.
-The AP330 descriptor/device-pack mismatch needs a separate verified resolution;
-no substitute device profile was silently used. No cold-boot, timing accuracy,
+The initial AP330 attempt stopped before programming because its device pack was
+missing. Installing Ambiq's `JLink_Apollo330P_510L_20251015.zip` into a separate
+J-Link 9.88 installation resolved device recognition without changing the SDK
+descriptor or substituting a device profile. All seven cases then passed. The
+run selected that installation with `LD_LIBRARY_PATH`; the system J-Link 9.50
+installation remained unchanged. No cold-boot, timing accuracy,
 DMA/cache, sleep or peripheral qualification is claimed. Successful final runs
 leave test firmware on the tested boards; claims are released afterward.
