@@ -58,7 +58,7 @@ class Gate:
         for item in items:
             params = getattr(getattr(item, 'callspec', None), 'params', {})
             # Only compiler-bearing checks in GCC use these parameters. Do not
-            # filter unrelated CMake configuration tests (they execute no compiler).
+            # filter unrelated CMake configuration tests (they do not use the target compiler).
             compiler_check = any(belongs(item.nodeid, r.selector) for r in GCC)
             family = params.get('family')
             if 'firmware' in params:
