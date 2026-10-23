@@ -2,7 +2,7 @@
 
 ## Distribution Version
 
-`5.2.26` is the current `nsx-ambiq-sdk` distribution release version. The
+`5.2.27` is the current `nsx-ambiq-sdk` distribution release version. The
 root package and every manifest under `modules/` use this version because the
 repository is released as one coordinated distribution.
 
@@ -29,7 +29,7 @@ manifest is authoritative.
 
 Public module API versions are independent of the distribution version. For
 example, `NSX_PSRAM_V1_0_0` identifies the `nsx-psram` API contract; it does
-not become `5.2.26` and does not create another distribution version axis.
+not become `5.2.27` and does not create another distribution version axis.
 Board descriptor manifests also version independently and intentionally remain
 at `0.1.0`; that version describes the descriptor contract, not the bundled
 SDK distribution implementation.
