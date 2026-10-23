@@ -278,8 +278,33 @@ The `gcc` profile includes those checks and additionally requires:
 | Audio adapter against real headers: AP3, AP3P and four M55 variants | 6 |
 | Performance adapter against real HAL headers: four M55 variants | 4 |
 
-The matrix follows existing tests; it does not yet cover complete AP3/AP4
-firmware linking. ATfE/ArmClang execution is outside this GCC profile and is
+The GCC profile also requires the following existing integration regressions:
+
+| Integration boundary | Required minimum cases |
+| --- | ---: |
+| AP3P/AP4 KBR/AP4 KXR startup plus retained real HAL/BSP implementations | 3 |
+| Runtime/heap/SVC firmware: AP3P, AP4 KBR/KXR, AP330P, AP510, AP510B | 6 |
+| Apollo2/3/3P constructors, default and application CRT | 6 |
+| Audio buffer/packing models, Apollo3 and Apollo5 | 48 |
+| Audio cache-view model | 2 |
+| Applicable Apollo3/Apollo5 lifecycle fault scenarios | 66 |
+| Clock/performance model: six targets, sixteen scenarios each | 96 |
+
+The AP3P/AP4 link fixture reuses the hardware startup source and shared builder.
+It retains a link-only probe that pulls actual PDM HAL and low-power BSP
+implementations into the ELF; merely naming libraries in CMake is insufficient.
+The probe is never called. No microphone, probe, external wiring, or device pack
+is required. These builds do not qualify physical PDM or BSP operation.
+
+Audio lifecycle cases are collected only for applicable backend operations;
+there is no acceptance exception for skipped tests. Their module-scoped
+parametrization builds one sanitizer executable per backend. Audio backend/scenario
+and backend/phase/fault combinations, clock target/scenario combinations, and
+constructor/CRT combinations are required explicitly, in addition to minimum
+counts and required boards. Acceptance matrices are kept independent of test
+parametrization so replacing a test with a duplicate cannot hide lost coverage. The payload-only profile remains unchanged.
+
+ATfE/ArmClang execution is outside this GCC profile and is
 listed explicitly as excluded, not reported as passed. Selecting an ATfE
 *archive* in a GCC ABI check does not mean the ATfE compiler was exercised.
 

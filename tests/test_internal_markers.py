@@ -159,8 +159,27 @@ def test_every_atomiq110_marker_is_a_retained_kept_block_fence(repo_root: Path, 
     assert retained == ATOMIQ110_RETAINED_MARKERS
 
 
+def repo_scan_options(markers) -> dict:
+    # Retained intake test copies are evidence, not the repository payload.
+    # Keep this exclusion at the checkout-test boundary, not the intake scanner.
+    return {'excluded_relative_prefixes': (*markers.EXCLUDED_RELATIVE_PREFIXES,
+                                           ('artifacts', 'compatibility'))}
+
+
+def test_repo_scan_excludes_only_root_compatibility_evidence(tmp_path: Path, markers) -> None:
+    paths = ('artifacts/compatibility/run/copy.h',
+             'modules/artifacts/compatibility/source.h', 'artifacts/other/source.h')
+    for name in paths:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('// #### INTERNAL BEGIN ####\n')
+    assert {hit.path for hit in markers.scan_tree(tmp_path, **repo_scan_options(markers))} == set(paths[1:])
+    assert {name for name, _ in markers.find_unparseable_fences(tmp_path, **repo_scan_options(markers))} == set(paths[1:])
+    assert {hit.path for hit in markers.scan_tree(tmp_path)} == set(paths)
+
+
 def test_repo_wide_markers_do_not_exceed_recorded_baseline(repo_root: Path, markers) -> None:
-    counts = markers.marker_counts(markers.scan_tree(repo_root))
+    counts = markers.marker_counts(markers.scan_tree(repo_root, **repo_scan_options(markers)))
     comparison = markers.compare_to_baseline(counts, markers.load_baseline())
     assert comparison.ok, (
         "new INTERNAL engineering content relative to "
@@ -171,7 +190,7 @@ def test_repo_wide_markers_do_not_exceed_recorded_baseline(repo_root: Path, mark
 def test_baseline_never_over_allows(repo_root: Path, markers) -> None:
     """A stale entry would silently re-open room for internal content to come
     back in a later drop, so the ratchet is regenerated after every scrub."""
-    counts = markers.marker_counts(markers.scan_tree(repo_root))
+    counts = markers.marker_counts(markers.scan_tree(repo_root, **repo_scan_options(markers)))
     comparison = markers.compare_to_baseline(counts, markers.load_baseline())
     assert comparison.stale == ()
 
@@ -190,7 +209,7 @@ def test_baseline_pins_the_scrubbed_tree_to_its_retained_fences(repo_root: Path,
 def test_unparseable_fence_exemptions_are_exact(repo_root: Path, markers) -> None:
     """The fence-shape ratchet is regenerated alongside the counts: a stale
     exemption would let a genuinely broken fence in under an old file's name."""
-    found = {path for path, _message in markers.find_unparseable_fences(repo_root)}
+    found = {path for path, _message in markers.find_unparseable_fences(repo_root, **repo_scan_options(markers))}
     assert found == set(markers.load_fence_exemptions())
 
 
