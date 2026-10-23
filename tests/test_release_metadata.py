@@ -337,6 +337,10 @@ def test_consumer_upgrade_paths_cover_the_versions_consumers_move_from(repo_root
             assert change["id"] and change["summary"].strip(), (version, change)
             for path in change["paths"]:
                 assert (repo_root / path).exists(), (version, change["id"], path)
+            for path in change.get("removed_paths", []):
+                assert not (repo_root / path).exists(), (version, change["id"], path)
+                require_full_history(repo_root)
+                assert git(repo_root, "cat-file", "-e", f"{entry['from_commit']}:{path}").returncode == 0, path
     assert paths[superseded["distribution"]["version"]]["from_commit"] == release["distribution"]["supersedes"]["commit"]
 
 
@@ -404,6 +408,7 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
         files: set[str] = set()
         trees: set[str] = set()
         for change in entry["changes"]:
+            files.update(change.get("removed_paths", []))
             scope = change.get("path_scope", "files")
             assert scope in ("files", "tree"), (entry["from_version"], change["id"], scope)
             for path in change["paths"]:

@@ -78,7 +78,7 @@ consumer_upgrade:
   - id: startup-linker-abi-5-2-27
     summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
       fixes.
-    paths: &id002
+    paths:
     - cmake/nsx_toolchain_flags.cmake
     - cmake/socs/apollo330P.cmake
     - cmake/socs/apollo510L.cmake
@@ -92,10 +92,8 @@ consumer_upgrade:
     - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
     - modules/nsx-core/src/apollo3/gcc/linker_script.ld
     - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
-    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
     - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
     - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
-    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
     - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
     - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
     - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
@@ -113,10 +111,8 @@ consumer_upgrade:
     - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
     - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
     - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
-    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
     - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
     - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
-    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
     - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
     - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
     - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
@@ -140,9 +136,14 @@ consumer_upgrade:
     - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
     - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
     - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
   - id: audio-power-5-2-27
     summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
-    paths: &id003
+    paths: &id002
     - modules/nsx-audio/README.md
     - modules/nsx-audio/includes-api/nsx_audio.h
     - modules/nsx-audio/nsx-module.yaml
@@ -159,7 +160,7 @@ consumer_upgrade:
   - id: qualification-infrastructure-5-2-27
     summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
       and integration regression tests.
-    paths: &id004
+    paths: &id003
     - tests/README.md
     - tests/conftest.py
     - tests/fixtures/audio/am_bsp.h
@@ -380,14 +381,76 @@ consumer_upgrade:
   - id: startup-linker-abi-5-2-27
     summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
       fixes.
-    paths: *id002
+    paths:
+    - cmake/nsx_toolchain_flags.cmake
+    - cmake/socs/apollo330P.cmake
+    - cmake/socs/apollo510L.cmake
+    - cmake/socs/facts/apollo510b.cmake
+    - modules/nsx-ambiq-bsp/CMakeLists.txt
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4l/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4l/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4l/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4p/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/startup_gcc.c
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
   - id: audio-power-5-2-27
     summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
-    paths: *id003
+    paths: *id002
   - id: qualification-infrastructure-5-2-27
     summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
       and integration regression tests.
-    paths: *id004
+    paths: *id003
 - from_version: 5.2.24
   from_tag: v5.2.24
   from_commit: a9f4ec25a162f6f3700623feb691423bb5a51132
@@ -607,14 +670,76 @@ consumer_upgrade:
   - id: startup-linker-abi-5-2-27
     summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
       fixes.
-    paths: *id002
+    paths:
+    - cmake/nsx_toolchain_flags.cmake
+    - cmake/socs/apollo330P.cmake
+    - cmake/socs/apollo510L.cmake
+    - cmake/socs/facts/apollo510b.cmake
+    - modules/nsx-ambiq-bsp/CMakeLists.txt
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4l/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4l/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4l/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4p/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/startup_gcc.c
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
   - id: audio-power-5-2-27
     summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
-    paths: *id003
+    paths: *id002
   - id: qualification-infrastructure-5-2-27
     summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
       and integration regression tests.
-    paths: *id004
+    paths: *id003
 upstream:
   provider: ambiqsuite
   snapshot_identity: stable-2026.09.01
