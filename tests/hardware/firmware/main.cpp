@@ -30,7 +30,7 @@ static void cpp_constructor(void) {
     TEST_ASSERT_EQUAL_HEX32(0xEDCBA987, nsx_probe_constructor);
 }
 int main(void) {
-    nsx_test_begin();
+    nsx_test_begin(__FILE__);
     RUN_TEST(initialized_data);
     RUN_TEST(zeroed_bss);
     RUN_TEST(cpp_constructor);

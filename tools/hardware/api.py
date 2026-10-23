@@ -49,7 +49,7 @@ class BoardSession:
         if not self._open:
             raise RuntimeError('Board session is closed')
         return execute(firmware, self.request.probe, self.request.device,
-                       self.request.timeout, output, lease_fd=self._lease_fd)
+                       self.request.timeout, output.resolve(), lease_fd=self._lease_fd)
 
 
 @contextmanager

@@ -24,14 +24,14 @@ __attribute__((noreturn)) void _exit(int) {
     for (;;) __asm volatile("nop");
 }
 }
-void nsx_test_begin(void) {
+void nsx_test_begin(const char *suite_file) {
     nsx_test_result.version = 1;
     const char id[] = NSX_TEST_BUILD_ID;
     for (unsigned i = 0; i < sizeof(id); ++i) nsx_test_result.identity[i] = id[i];
     nsx_test_result.state = 1;
     __asm volatile("dmb" ::: "memory");
     nsx_test_result.magic = 0x4E535854;
-    UNITY_BEGIN();
+    UnityBegin(suite_file);
 }
 
 void nsx_test_finish(void) {

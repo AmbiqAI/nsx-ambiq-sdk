@@ -49,24 +49,30 @@ class FakeProbe:
     def memory_read32(self, address, count): return [self.words[address]]
 
 
+@pytest.mark.parametrize('relative_output', [False, True])
 @pytest.mark.parametrize('seeds', [(), (MemorySeed('second_seed', 4, 123),)])
-def test_second_suite_capture_and_parent_validation(tmp_path, monkeypatch, seeds):
+def test_second_suite_capture_and_parent_validation(tmp_path, monkeypatch, seeds, relative_output):
     from tools.hardware import runner
     firmware = Firmware(tmp_path / 'second_suite.elf', 32, 'synthetic', 'board', 'device', 1000, SECOND.cases, seeds)
+    output = tmp_path / 'evidence'
+    output.mkdir()
+    monkeypatch.chdir(tmp_path)
     probe = FakeProbe()
     monkeypatch.setitem(sys.modules, 'pylink', SimpleNamespace(
         JLink=lambda: probe, enums=SimpleNamespace(JLinkInterfaces=SimpleNamespace(SWD=1))))
     def worker(command, **kwargs):
         assert command[command.index('--cases') + 1:command.index('--cases') + 3] == list(SECOND.cases)
-        monkeypatch.setattr(sys, 'argv', ['worker', *command[3:]])
-        jlink_worker.main()
+        with monkeypatch.context() as worker_context:
+            worker_context.chdir(kwargs['cwd'])
+            worker_context.setattr(sys, 'argv', ['worker', *command[3:]])
+            jlink_worker.main()
     monkeypatch.setattr(runner, 'run_worker', worker)
     with open_board(BoardRequest('999999991', timeout=1)) as session:
-        assert session.run(firmware, tmp_path).total == 2
-    assert json.loads((tmp_path / 'seeded.json').read_text()) == {s.symbol: s.value for s in seeds}
+        assert session.run(firmware, Path('evidence') if relative_output else output).total == 2
+    assert json.loads((output / 'seeded.json').read_text()) == {s.symbol: s.value for s in seeds}
     assert probe.events[-2:] == ['run', 'close']
     with pytest.raises(RuntimeError, match='closed'):
-        session.run(firmware, tmp_path)
+        session.run(firmware, Path('evidence') if relative_output else output)
     with pytest.raises(QualificationError):
         decode(packet(SECOND.cases), 'synthetic', ('initialized_data', 'zeroed_bss', 'cpp_constructor'))
 

@@ -74,10 +74,15 @@ def run_config(request):
 @pytest.fixture
 def firmware(request, repo_root, run_config, suite_spec):
     output = (run_config.artifacts / run_config.board / uuid.uuid4().hex).resolve()
-    if _QUALIFICATION in request.config.stash:
-        request.config.stash[_QUALIFICATION].evidence[suite_spec.name] = str(output)
-    return build_firmware(BuildRequest(repo_root, output, run_config.board,
-                                      run_config.gcc_root, suite_spec, run_config.fault)), output
+    qualification = request.config.stash.get(_QUALIFICATION, None)
+    if qualification is not None and qualification.require_suite(request.node.nodeid, suite_spec):
+        qualification.evidence[suite_spec.name] = str(output)
+    image = build_firmware(BuildRequest(repo_root, output, run_config.board,
+                                       run_config.gcc_root, suite_spec, run_config.fault))
+    if qualification is not None:
+        qualification.built(request.node.nodeid, suite_spec, image, output)
+    return image, output
+
 
 
 @pytest.fixture
@@ -90,9 +95,12 @@ def board_session(run_config, firmware):
 
 
 @pytest.fixture
-def suite_result(firmware, board_session):
+def suite_result(request, firmware, board_session):
     image, output = firmware
-    return board_session.run(image, output)
+    result = board_session.run(image, output)
+    if _QUALIFICATION in request.config.stash:
+        request.config.stash[_QUALIFICATION].executed(request.node.nodeid, result)
+    return result
 
 
 _QUALIFICATION = pytest.StashKey[Qualification]()

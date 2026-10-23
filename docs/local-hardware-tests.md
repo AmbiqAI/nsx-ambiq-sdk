@@ -315,3 +315,14 @@ Board/silicon facts continue to come from SDK descriptors. The explicit board
 allowlist and required matrices define reviewed coverage rather than discovering
 whatever happens to be available. Additional families, compiler support, transports
 and lab allocation integration require explicit implementation and validation.
+
+Qualification reports use schema version 2. A required test's suite specification
+must exactly match its profile before building. Success also requires a bound
+build and matching successful execution metadata plus a complete raw result for
+that build identity and case set. Passing pytest phases alone are incomplete.
+Reports include the bound build ID alongside the evidence directory.
+
+The local session API resolves execution output paths against the caller's working
+directory before starting the worker. Unity initialization receives the suite's
+source filename explicitly, so failures point to the assertion's source file
+rather than the shared reporter.

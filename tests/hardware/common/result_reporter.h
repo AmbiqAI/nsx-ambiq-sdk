@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void nsx_test_begin(void);
+void nsx_test_begin(const char *suite_file);
 __attribute__((noreturn)) void nsx_test_finish(void);
 #ifdef __cplusplus
 }
