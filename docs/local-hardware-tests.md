@@ -41,7 +41,7 @@ reported as a **skipped execution**, with an evidence path, never a hardware
 pass. Compile errors fail the run. Missing requested tools are errors, not skips.
 
 The initial selectable boards are `apollo3_evb`, `apollo3p_evb`, `apollo4p_evb`,
-`apollo4b_evb`, `apollo330mP_evb`, `apollo510_evb`, and `apollo510b_evb`. These are
+`apollo4p_blue_kxr_evb`, `apollo4p_blue_kbr_evb`, `apollo330mP_evb`, `apollo510_evb`, and `apollo510b_evb`. These are
 exact SDK descriptor names, not a claim that all have been physically qualified.
 CMake consumes the existing board/SoC definitions; the test does not duplicate
 pin, clock, memory or compiler-flag tables. Only GCC is implemented initially.
@@ -335,3 +335,65 @@ to select `AP510NFA-CBR`. Their programming profiles are not interchangeable.
 The explicit reset before programming establishes a known state for the flash
 loader even when an earlier application or failed programming attempt left the
 core in a different state.
+
+## Core runtime qualification
+
+Use `<descriptor>-gcc-core` to require both startup and runtime suites (seven
+Unity cases total). Existing `-gcc-startup` profiles still require only startup.
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware \
+  --hardware --qualification-profile apollo510b_evb-gcc-core \
+  --probe YOUR_SERIAL --gcc-root /usr/local/arm-gnu-toolchain \
+  --qualification-report artifacts/hardware/core-report.json
+```
+
+The runtime suite checks:
+
+- MSP alignment at an ABI call boundary and a local variable within the linked
+  `.stack` section. Stack bounds come from linker expressions, not copied maps.
+- Two small malloc allocations: bounds within `__HeapBase`/`__HeapLimit`, required
+  alignment, writable independent contents, and separation from the stack.
+- The NSX `_sbrk` boundary: an over-limit request fails with `ENOMEM` without
+  advancing the break. This is not a heap-exhaustion stress test.
+- The SVC vector points to the test handler, the real `svc` instruction dispatches
+  through that vector, and the handler observes the expected exception number.
+  Interrupt masks are restored before assertions. No peripheral wiring is needed.
+
+`tests/hardware/runtime` owns these cases. Common build/report/transport code is
+unchanged by the suite definition. Build evidence also hashes the source files
+listed by CMake's compile database, including the NSX heap implementation.
+
+For a negative control on a reserved board:
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware/test_runtime.py \
+  --hardware --board apollo3p_evb --probe YOUR_SERIAL \
+  --gcc-root /usr/local/arm-gnu-toolchain --fault-injection runtime-no-svc
+```
+
+This suppresses the handler's observation while preserving actual dispatch;
+the SVC assertion must fail. Do not supply a qualification profile for deliberate
+fault injection. Finish with a normal run. Fault names are validated by the
+selected suite before building rather than maintained in a shared CLI list.
+
+### Physical evidence from 2026-10-23
+
+| Probe | Configuration | Result |
+| --- | --- | --- |
+| 1160000172 | Apollo3 Blue Plus / `apollo3p_evb` | Startup and runtime passed; SVC negative control failed the expected assertion |
+| 1160001491 | Apollo4 Blue Plus / KBR and KXR descriptors | Both configurations passed; physical package remains unconfirmed |
+| 1160002255 | Apollo510 / `apollo510_evb` | Startup and runtime passed after the pre-flash reset fix |
+| 1160002954 | Apollo510B / `apollo510b_evb` | Startup and runtime passed with corrected probe profile/reset/completion read; SVC negative control failed as expected |
+| 1160003058 | Apollo330 Plus / `apollo330mP_evb` | Startup and runtime passed using J-Link 9.88 with Ambiq overlay `JLink_Apollo330P_510L_20251015.zip` and descriptor device `AP330MPA-CBR` |
+
+These are debugger-connected GCC runs. Both AP4 configurations passing does not
+identify the physical KBR/KXR package or qualify their differing peripheral wiring.
+The initial AP330 attempt stopped before programming because its device pack was
+missing. Installing Ambiq's `JLink_Apollo330P_510L_20251015.zip` into a separate
+J-Link 9.88 installation resolved device recognition without changing the SDK
+descriptor or substituting a device profile. All seven cases then passed. The
+run selected that installation with `LD_LIBRARY_PATH`; the system J-Link 9.50
+installation remained unchanged. No cold-boot, timing accuracy,
+DMA/cache, sleep or peripheral qualification is claimed. Successful final runs
+leave test firmware on the tested boards; claims are released afterward.
