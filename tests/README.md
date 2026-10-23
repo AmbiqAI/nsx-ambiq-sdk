@@ -141,3 +141,12 @@ The local pytest/Unity startup PoC is documented in
 [`docs/local-hardware-tests.md`](../docs/local-hardware-tests.md). Ordinary test
 runs never access hardware. Explicit build-only runs do not count as hardware
 passes. Shared-lab allocation remains a prerequisite to physical execution.
+
+## SDK update acceptance
+
+`uv run --group ci python -m tools.sdk_compatibility --profile gcc --output artifacts/compatibility/RUN_NAME`
+requires the payload checks plus the reviewed GCC header/ABI/link matrix to
+complete without skips. Use a fresh output directory for each invocation.
+The `payload` profile omits compiler execution. See the local hardware guide
+above for matrix boundaries and evidence interpretation. Neither profile
+accesses boards or claims physical qualification.

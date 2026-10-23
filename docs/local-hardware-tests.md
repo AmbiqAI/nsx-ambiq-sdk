@@ -216,3 +216,52 @@ Extend these existing checks before introducing overlapping test suites:
 This inventory identifies existing tests, not a claim that they exhaustively
 cover each boundary. The next PR should audit their assertions against prior
 fixes and candidate SDK changes, and specify required versus optional tools.
+
+## Hardware-free SDK compatibility gate
+
+Before scheduling board tests, run from the candidate SDK checkout root:
+
+```sh
+uv run --group ci python -m tools.sdk_compatibility \
+  --profile gcc --output artifacts/compatibility/candidate-gcc
+```
+
+The output directory must be new. Preserve it as evidence; choose a different
+name for each attempt. Install Arm GCC using the same `GCC_ROOT`/PATH discovery
+as the existing SDK tests. Git, CMake, Ninja and the usual host-test dependencies
+must be available. Unset `PYTEST_ADDOPTS`; acceptance must not inherit test
+selection or execution options from a developer shell.
+
+The `payload` profile checks the artifact hash/inventory baseline, committed
+patches and release-baseline reconstruction, intake behavior, CMake contracts
+and module manifests. It requires full release history/tags for reconstruction.
+The `gcc` profile includes those checks and additionally requires:
+
+| Real compiler check | Required minimum cases |
+| --- | ---: |
+| Vendor type ABI: C/C++, default/ATfE artifact selection/conflicting flags | 6 |
+| Complete linked firmware: AP330MP, AP510, AP510B, AP510DL | 4 |
+| Audio adapter against real headers: AP3, AP3P and four M55 variants | 6 |
+| Performance adapter against real HAL headers: four M55 variants | 4 |
+
+The matrix follows existing tests; it does not yet cover complete AP3/AP4
+firmware linking. ATfE/ArmClang execution is outside this GCC profile and is
+listed explicitly as excluded, not reported as passed. Selecting an ATfE
+*archive* in a GCC ABI check does not mean the ATfE compiler was exercised.
+
+Every selected case must pass setup, execution and teardown. Skips (including
+missing compilers/history), collection errors, empty coverage and reduced
+required matrix counts prevent qualification. Existing normal pytest behavior
+is unchanged. Report consumers must require both process exit zero and
+`status: passed` in this invocation's `compatibility.json`.
+
+Evidence includes the candidate revision/dirty state, SDK identity hashes,
+compiler identity for GCC, exact cases, exclusions, requirements, JUnit XML,
+and retained pytest build directories. This is a compatibility check of the
+checkout, not physical board qualification or approval to promote an SDK.
+
+For the next intake, stage the candidate in an isolated checkout, review any
+patches that upstream has absorbed, and deliberately update release-baseline
+expectations where appropriate. Do not delete a failing patch check simply to
+make an update pass. Run current and candidate with the same test definitions
+and toolchain; automated comparison and board aggregation remain later work.
