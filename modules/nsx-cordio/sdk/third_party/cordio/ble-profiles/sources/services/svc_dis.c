@@ -57,7 +57,7 @@
 #define DIS_DEFAULT_SERIAL_NUM_LEN  7
 
 /*! Default firmware revision */
-#define DIS_DEFAULT_FW_REV          "5.2.26"
+#define DIS_DEFAULT_FW_REV          "5.2.27"
 
 /*! Length of default firmware revision */
 #define DIS_DEFAULT_FW_REV_LEN      6
