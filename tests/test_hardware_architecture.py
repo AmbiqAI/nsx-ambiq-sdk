@@ -27,6 +27,7 @@ def packet(cases):
 
 
 class FakeProbe:
+    version = '9.50'
     def __init__(self):
         self.words = {}
         self.running = False

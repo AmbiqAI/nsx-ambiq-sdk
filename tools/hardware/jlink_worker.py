@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .preparation import MemorySeed, seed_memory
 from .build import Firmware
+from .device_pack import configure as configure_device_pack
 from .protocol import Result, RESULT_SIZE, STATE_OFFSET, QualificationError, wait_for_result
 
 
@@ -63,6 +64,9 @@ def main() -> None:
     import pylink
     probe = pylink.JLink()
     try:
+        pack = configure_device_pack(probe, args.device)
+        (args.output / 'jlink.json').write_text(json.dumps(
+            {'version': probe.version, 'device': args.device, 'device_pack': pack}, indent=2) + '\n')
         probe.open(serial_no=args.probe)
         probe.set_tif(pylink.enums.JLinkInterfaces.SWD)
         probe.connect(args.device, speed=args.speed)

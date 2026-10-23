@@ -28,6 +28,36 @@ checks. Builds never download dependencies. Python versions are resolved by
 optional Nix shell must preserve these same commands and account for the
 separately installed SEGGER/ATfE tools.
 
+### Apollo330 Plus / Apollo510 Lite device pack
+
+These devices require Ambiq's interim `JLink_Apollo330P_510L_20251015.zip`
+and J-Link 8.40 or later. Obtain the archive from the SharePoint tools folder
+linked by [Ambiq's installation guide](https://ambiqmicro.atlassian.net/wiki/spaces/C/pages/3286630710),
+then provision it once for the user running the tests:
+
+```sh
+uv run --group hardware python -m tools.hardware.device_pack \
+  --archive /path/to/JLink_Apollo330P_510L_20251015.zip
+```
+
+The public repository contains the source reference, supported device names,
+and archive/file SHA-256 pins in `tools/hardware/device-pack.json`. The supplied
+archive contains no redistribution license, so its vendor binaries are not
+committed or relicensed here. Provisioning extracts only pinned members into
+`${XDG_CACHE_HOME:-~/.cache}/nsx-sdk/device-packs/<archive-sha256>`.
+An existing cache entry must verify; remove a damaged entry before reprovisioning.
+
+Before opening a probe for an affected device, the worker verifies every pack
+file and selects the directory using SEGGER's `JLinkDevicesXMLPath` command.
+It does not modify the SEGGER installation or user-wide device database, change
+device names, or download anything during a test. Missing packs fail with the
+provisioning command. Other devices require no pack. Each hardware run writes
+`jlink.json` with the library version and selected pack path/checksums.
+
+Local hosts and future board-farm runners use the same provisioning command;
+runners can obtain the pinned ZIP from an internal artifact store. Changing a
+pack is an explicit manifest update followed by hardware qualification.
+
 ## Build without hardware
 
 ```sh
@@ -397,3 +427,8 @@ run selected that installation with `LD_LIBRARY_PATH`; the system J-Link 9.50
 installation remained unchanged. No cold-boot, timing accuracy,
 DMA/cache, sleep or peripheral qualification is claimed. Successful final runs
 leave test firmware on the tested boards; claims are released afterward.
+
+A follow-up AP330 run passed all seven cases with the unchanged system J-Link
+9.50 library and the checksum-pinned cache pack selected by the worker. Its
+`jlink.json` records version 9.50 and the archive/file hashes; no installed
+AP330 part-name definition or `LD_LIBRARY_PATH` override was required.
