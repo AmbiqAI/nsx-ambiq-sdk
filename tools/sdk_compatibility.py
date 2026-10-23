@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 from tools.nsx_npu_compile_check import find_gcc
+from tools.test_evidence import phase_status, completion
 
 import pytest
 
@@ -20,6 +21,9 @@ class Requirement:
     selector: str
     minimum: int = 1
     boards: tuple[str, ...] = ()
+    parameters: tuple[str, ...] = ()
+    variants: tuple[tuple[str, ...], ...] = ()
+    compiler: str | None = None
 
 
 PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
@@ -29,13 +33,16 @@ PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
 # Minimum counts deliberately describe the reviewed matrix, independently of
 # the test parametrization. Removing coverage must not silently weaken the gate.
 GCC = (
-    Requirement('tests/test_vendor_abi.py::test_vendor_layout_from_sdk_target', 6),
+    Requirement('tests/test_vendor_abi.py::test_vendor_layout_from_sdk_target', 6,
+                parameters=('language', 'selection'),
+                variants=tuple((language, selection) for language in ('C', 'CXX')
+                               for selection in ('default', 'atfe', 'conflicting-global')), compiler='gcc'),
     Requirement('tests/test_link_smoke.py::test_smoke_is_linked_firmware', 4,
-                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb')),
+                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_audio_buffers.py::test_audio_real_headers', 6,
-                ('apollo3_evb', 'apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb')),
+                ('apollo3_evb', 'apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 4,
-                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb')),
+                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
 PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC}
 
@@ -44,12 +51,22 @@ def belongs(nodeid: str, selector: str) -> bool:
     return nodeid == selector or nodeid.startswith(selector + '::') or nodeid.startswith(selector + '[')
 
 
+def case_parameters(params: dict) -> dict:
+    """Adapt the existing link-smoke fixture's tuple to named matrix dimensions."""
+    result = dict(params)
+    if 'firmware' in result:
+        family, board = result.pop('firmware')
+        result.update(family=family, board=board)
+    return result
+
+
 class Gate:
     def __init__(self, requirements: tuple[Requirement, ...]):
         self.requirements = requirements
         self.selected: list[str] = []
         self.excluded: list[str] = []
         self.boards: dict[str, str] = {}
+        self.parameters: dict[str, dict] = {}
         self.phases: dict[str, dict[str, str]] = {}
 
     @pytest.hookimpl(trylast=True)
@@ -59,17 +76,15 @@ class Gate:
             params = getattr(getattr(item, 'callspec', None), 'params', {})
             # Only compiler-bearing checks in GCC use these parameters. Do not
             # filter unrelated CMake configuration tests (they do not use the target compiler).
-            compiler_check = any(belongs(item.nodeid, r.selector) for r in GCC)
-            family = params.get('family')
-            if 'firmware' in params:
-                family = params['firmware'][0]
-            if compiler_check and family != 'gcc':
+            required_compilers = {r.compiler for r in self.requirements
+                                  if belongs(item.nodeid, r.selector) and r.compiler}
+            params = case_parameters(params)
+            if required_compilers and params.get('family') not in required_compilers:
                 excluded.append(item)
             else:
                 retained.append(item)
+                self.parameters[item.nodeid] = params
                 board = params.get("board")
-                if "firmware" in params:
-                    board = params["firmware"][1]
                 if board:
                     self.boards[item.nodeid] = board
         items[:] = retained
@@ -87,17 +102,23 @@ class Gate:
             self.boards.get(n) for n in self.selected if belongs(n, r.selector)})
             for r in self.requirements if r.boards}
         missing_boards = {selector: boards for selector, boards in missing_boards.items() if boards}
-        incomplete = [n for n in self.selected if any(
-            self.phases.get(n, {}).get(phase) != 'passed'
-            for phase in ('setup', 'call', 'teardown'))]
-        failed = any('failed' in phases.values() for phases in self.phases.values())
-        status = ('failed' if failed else 'passed' if exit_code == 0 and self.selected
-                  and not missing and not missing_boards and not incomplete else 'incomplete')
+        missing_variants = {}
+        for requirement in self.requirements:
+            observed = {tuple(self.parameters.get(n, {}).get(p) for p in requirement.parameters)
+                        for n in self.selected if belongs(n, requirement.selector)}
+            absent = [v for v in requirement.variants if v not in observed]
+            if absent:
+                missing_variants[requirement.selector] = absent
+        statuses = {n: phase_status(self.phases.get(n, {})) for n in self.selected}
+        incomplete = [n for n, status in statuses.items() if status != 'passed']
+        status = completion(statuses.values(), session_ok=exit_code == 0,
+                            requirements_met=not (missing or missing_boards or missing_variants))
         return {'status': status, 'pytest_exit_code': int(exit_code),
-                'missing_requirements': missing, 'missing_boards': missing_boards, 'incomplete_cases': incomplete,
+                'missing_requirements': missing, 'missing_boards': missing_boards, 'missing_variants': missing_variants, 'incomplete_cases': incomplete,
                 'selected_count': len(self.selected), 'cases': self.phases,
                 'excluded_other_compilers': self.excluded,
-                'requirements': [{'selector': r.selector, 'minimum': r.minimum, 'boards': r.boards}
+                'requirements': [{'selector': r.selector, 'minimum': r.minimum, 'boards': r.boards,
+                                  'parameters': r.parameters, 'variants': r.variants, 'compiler': r.compiler}
                                  for r in self.requirements]}
 
 

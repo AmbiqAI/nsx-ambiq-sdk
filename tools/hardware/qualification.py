@@ -4,18 +4,10 @@ import json
 from pathlib import Path
 
 from .inventory import BOARDS
-
-
-@dataclass(frozen=True)
-class Suite:
-    name: str
-    nodeid: str
-    cases: tuple[str, ...]
-
-
-STARTUP = Suite('startup', 'tests/hardware/test_startup.py::test_startup',
-                ('initialized_data', 'zeroed_bss', 'cpp_constructor'))
-SUITES = (STARTUP,)
+from .build import Firmware
+from .protocol import Result, decode
+from .suites import Suite, STARTUP, SUITES
+from tools.test_evidence import phase_status, completion
 
 
 @dataclass(frozen=True)
@@ -35,6 +27,40 @@ class Qualification:
     profile: Profile
     phases: dict[str, dict[str, str]] = field(default_factory=dict)
     evidence: dict[str, str] = field(default_factory=dict)
+    builds: dict[str, tuple[Firmware, Path]] = field(default_factory=dict)
+    completed: set[str] = field(default_factory=set)
+
+    def require_suite(self, nodeid: str, suite: Suite) -> bool:
+        expected = next((s for s in self.profile.suites if s.nodeid == nodeid), None)
+        if expected is None:
+            return False
+        if suite != expected:
+            raise ValueError(f'Suite for {nodeid} does not match qualification profile {self.profile.name}')
+        return True
+
+    def built(self, nodeid: str, suite: Suite, firmware: Firmware, output: Path) -> None:
+        if not self.require_suite(nodeid, suite):
+            return
+        if firmware.board != self.profile.board or firmware.cases != suite.cases:
+            raise ValueError('Built firmware does not match the qualification contract')
+        self.evidence[suite.name] = str(output.resolve())
+        self.builds[nodeid] = (firmware, output.resolve())
+        self.completed.discard(nodeid)
+
+    def executed(self, nodeid: str, result: Result) -> None:
+        if nodeid not in {s.nodeid for s in self.profile.suites}:
+            return
+        if nodeid not in self.builds:
+            raise ValueError('Qualification execution has no bound build')
+        firmware, output = self.builds[nodeid]
+        metadata = json.loads((output / 'execution.json').read_text())
+        if metadata.get('status') != 'passed' or metadata.get('board') != firmware.board:
+            raise ValueError('Qualification requires matching successful execution evidence')
+        decoded = decode((output / 'last-result.bin').read_bytes(), firmware.build_id, firmware.cases)
+        if decoded is None or decoded != result:
+            raise ValueError('Execution result does not match complete firmware evidence')
+        self.completed.add(nodeid)
+
 
     def record(self, nodeid: str, when: str, outcome: str) -> None:
         if nodeid in {suite.nodeid for suite in self.profile.suites}:
@@ -44,19 +70,13 @@ class Qualification:
         results = []
         for suite in self.profile.suites:
             phases = self.phases.get(suite.nodeid, {})
-            if 'failed' in phases.values():
-                status = 'failed'
-            elif hardware and all(phases.get(p) == 'passed' for p in ('setup', 'call', 'teardown')):
-                status = 'passed'
-            else:
-                status = 'incomplete'
+            status = phase_status(phases, executed=hardware and suite.nodeid in self.completed)
             results.append({'suite': suite.name, 'expected_cases': suite.cases,
                             'status': status, 'phases': phases,
-                            'evidence_directory': self.evidence.get(suite.name)})
-        status = ('failed' if any(r['status'] == 'failed' for r in results) else
-                  'passed' if session_ok and all(r['status'] == 'passed' for r in results)
-                  else 'incomplete')
-        return {'schema_version': 1, 'profile': self.profile.name,
+                            'evidence_directory': self.evidence.get(suite.name),
+                            'build_id': self.builds[suite.nodeid][0].build_id if suite.nodeid in self.builds else None})
+        status = completion((r['status'] for r in results), session_ok=session_ok)
+        return {'schema_version': 2, 'profile': self.profile.name,
                 'board': self.profile.board, 'toolchain': self.profile.toolchain,
                 'status': status, 'suites': results}
 

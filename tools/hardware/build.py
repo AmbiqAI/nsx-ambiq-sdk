@@ -6,8 +6,9 @@ from pathlib import Path
 import subprocess
 import uuid
 
-from .protocol import RESULT_SIZE
-from .startup import SENTINELS, OMISSIONS, make_mutant
+from .protocol import RESULT_SIZE, validate_cases
+from .suites import Suite
+from .preparation import MemorySeed
 
 from .inventory import BOARDS
 
@@ -33,54 +34,63 @@ class Firmware:
     board: str
     device: str
     speed: int
-    sentinels: tuple[int, ...] = ()
+    cases: tuple[str, ...]
+    seeds: tuple[MemorySeed, ...] = ()
+
+    def __post_init__(self):
+        validate_cases(self.cases)
 
 
-def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "none") -> Firmware:
+def build(repo: Path, output: Path, board: str, gcc_root: Path, suite: Suite, fault: str = "none") -> Firmware:
     if board not in BOARDS:
         raise ValueError(f'Unsupported PoC board: {board}')
+    if output.exists() and any(output.iterdir()):
+        raise ValueError('Firmware output must be a new or empty directory')
     output.mkdir(parents=True, exist_ok=True)
     log = output / 'build.log'
     cc = gcc_root / 'bin/arm-none-eabi-gcc'
     cxx = gcc_root / 'bin/arm-none-eabi-g++'
     build_id = uuid.uuid4().hex
     (output / 'identity.h').write_text(f'#define NSX_TEST_BUILD_ID "{build_id}"\n')
-    extra = []
-    if fault in OMISSIONS:
-        extra = [f'-DNSX_TEST_STARTUP_OVERRIDE={make_mutant(repo, output, board, fault)}']
-    command(['cmake', '-S', str(repo / 'tests/hardware/firmware'), '-B', str(output),
+    if not suite.source_dir:
+        raise ValueError('Suite requires a firmware source directory')
+    extra = suite.configure(repo, output, board, fault)
+    command(['cmake', '-S', str(repo / suite.source_dir), '-B', str(output),
              '-G', 'Ninja', '-DCMAKE_SYSTEM_NAME=Generic',
              '-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY',
              f'-DCMAKE_C_COMPILER={cc}', f'-DCMAKE_CXX_COMPILER={cxx}',
              f'-DCMAKE_ASM_COMPILER={cc}', f'-DNSX_TEST_SDK_ROOT={repo}',
              f'-DNSX_TEST_BOARD={board}', f'-DNSX_TEST_FAULT={fault}', '-DCMAKE_BUILD_TYPE=Debug'] + extra, log)
     command(['cmake', '--build', str(output)], log)
-    elf = output / 'startup_test.elf'
+    elf = output / suite.elf_name
     symbols = command([str(gcc_root / 'bin/arm-none-eabi-nm'), '-S', str(elf)], log)
     symbol = [line.split() for line in symbols.splitlines() if line.endswith(' nsx_test_result')]
     if len(symbol) != 1 or int(symbol[0][1], 16) != RESULT_SIZE:
         raise RuntimeError('Result symbol missing or protocol layout differs')
-    sentinel_addresses = []
-    for name in SENTINELS:
+    seeds = []
+    for seed in suite.seeds:
+        name = seed.symbol
         matches = [line.split() for line in symbols.splitlines() if line.endswith(' ' + name)]
         if len(matches) != 1 or int(matches[0][1], 16) != 4:
-            raise RuntimeError(f'Missing or malformed startup sentinel {name}')
-        sentinel_addresses.append(int(matches[0][0], 16))
+            raise RuntimeError(f'Missing or malformed suite seed {name}')
+        seeds.append(MemorySeed(name, int(matches[0][0], 16), seed.value))
     inputs = [Path(p) for p in (output / 'inputs.txt').read_text().splitlines()]
-    sources = list((repo / 'tests/hardware/firmware').glob('*'))
+    sources = [p for root in (repo / suite.source_dir, repo / 'tests/hardware/common')
+               for p in root.rglob('*') if p.is_file()]
     vendor = list((repo / 'tests/hardware/vendor/unity').glob('*'))
     device, speed = (output / 'probe.txt').read_text().splitlines()
     if not device or int(speed) <= 0:
         raise RuntimeError('Board descriptor lacks valid SEGGER defaults')
     manifest = {
-        'schema_version': 1, 'board': board, 'build_id': build_id, 'fault_injection': fault,
+        'schema_version': 2, 'board': board, 'build_id': build_id, 'fault_injection': fault,
         'sdk_revision': command(['git', '-C', str(repo), 'rev-parse', 'HEAD'], log).strip(),
         'sdk_dirty': bool(command(['git', '-C', str(repo), 'status', '--porcelain'], log).strip()),
         'device': device, 'swd_speed_khz': int(speed),
-        'sentinels': dict(zip(SENTINELS, sentinel_addresses)),
+        'seeds': [dict(symbol=s.symbol, address=s.address, value=s.value) for s in seeds],
+        'expected_cases': suite.cases,
         'compiler': command([str(cc), '--version'], log).splitlines()[0],
         'elf_sha256': digest(elf),
-        'suite': 'startup', 'toolchain': 'gcc',
+        'suite': suite.name, 'toolchain': 'gcc',
         'sdk_identity_sha256': {str(p.relative_to(repo)): digest(p) for p in (
             repo / 'modules/nsx-ambiqsuite/nsx-module.yaml',
             repo / 'modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml',
@@ -88,4 +98,4 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "no
         'inputs_sha256': {str(p): digest(p) for p in inputs + sources + vendor},
     }
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    return Firmware(elf, int(symbol[0][0], 16), build_id, board, device, int(speed), tuple(sentinel_addresses))
+    return Firmware(elf, int(symbol[0][0], 16), build_id, board, device, int(speed), suite.cases, tuple(seeds))
