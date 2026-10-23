@@ -34,7 +34,7 @@ def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, 
         raise ValueError(f'Device {device} disagrees with board descriptor {firmware.device}')
     device = firmware.device
     metadata = {'schema_version': 1, 'board': firmware.board, 'probe': probe,
-                'device': device, 'swd_speed_khz': firmware.speed, 'reset': 'jlink-reset-halt-then-run',
+                'device': device, 'swd_speed_khz': firmware.speed, 'reset': 'jlink-reset-before-flash-reset-halt-then-run',
                 'debugger_connected': True, 'cold_boot': False,
                 'status': 'infrastructure_error'}
     try:
