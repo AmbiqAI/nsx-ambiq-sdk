@@ -139,3 +139,53 @@ def test_clock_gate_requires_each_target_scenario():
     # Preserve the count while losing one actual target/scenario combination.
     gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
     assert gate.report(0)['status'] == 'incomplete'
+
+
+@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[0], ADAPTER_REGRESSIONS[2]),
+                         ids=('audio-buffers', 'audio-lifecycle'))
+def test_audio_gate_requires_every_scenario(requirement):
+    assert len(requirement.variants) == requirement.minimum
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    for index, variant in enumerate(requirement.variants):
+        node = gate.selected[index]
+        original = gate.parameters[node]
+        # Duplicate another case from the same backend, preserving counts and backends.
+        replacement = next(v for v in requirement.variants if v[0] == variant[0] and v != variant)
+        gate.parameters[node] = dict(zip(requirement.parameters, replacement))
+        report = gate.report(0)
+        assert report['status'] == 'incomplete'
+        assert report['missing_variants'][requirement.selector] == [variant]
+        gate.parameters[node] = original
+
+
+def test_lifecycle_reuses_backend_builds(repo_root: Path, tmp_path: Path):
+    script = '''
+from collections import Counter
+import json
+from pathlib import Path
+import pytest
+import sys
+class Builds:
+    def __init__(self):
+        self.counts = Counter()
+    def pytest_fixture_setup(self, fixturedef, request):
+        if fixturedef.argname == 'lifecycle_binary':
+            self.counts[request.param] += 1
+plugin = Builds()
+code = pytest.main(['-q', '-o', 'addopts=', 'tests/test_audio_lifecycle.py',
+                   '--basetemp=' + sys.argv[1]], plugins=[plugin])
+Path(sys.argv[2]).write_text(json.dumps(plugin.counts))
+raise SystemExit(code)
+'''
+    env = os.environ.copy()
+    env.pop('PYTEST_ADDOPTS', None)
+    report = tmp_path / 'builds.json'
+    result = subprocess.run([sys.executable, '-c', script, str(tmp_path / 'work'), str(report)],
+                            cwd=repo_root, env=env, capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}

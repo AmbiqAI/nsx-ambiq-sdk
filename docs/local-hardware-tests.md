@@ -297,9 +297,12 @@ The probe is never called. No microphone, probe, external wiring, or device pack
 is required. These builds do not qualify physical PDM or BSP operation.
 
 Audio lifecycle cases are collected only for applicable backend operations;
-there is no acceptance exception for skipped tests. Clock target/scenario and
+there is no acceptance exception for skipped tests. Their module-scoped
+parametrization builds one sanitizer executable per backend. Audio backend/scenario
+and backend/phase/fault combinations, clock target/scenario combinations, and
 constructor/CRT combinations are required explicitly, in addition to minimum
-counts and required boards. The payload-only profile remains unchanged.
+counts and required boards. Acceptance matrices are kept independent of test
+parametrization so replacing a test with a duplicate cannot hide lost coverage. The payload-only profile remains unchanged.
 
 ATfE/ArmClang execution is outside this GCC profile and is
 listed explicitly as excluded, not reported as passed. Selecting an ATfE

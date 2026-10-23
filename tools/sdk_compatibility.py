@@ -44,15 +44,44 @@ GCC = (
     Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 4,
                 ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
+# Acceptance matrices are deliberately independent of test parametrization so
+# replacing a scenario in the tests cannot silently replace the requirement.
+_AUDIO_BUFFER_SCENARIOS = (
+    'valid', 'hfrc2-low', 'hfrc2-high', 'stereo', '24bit', 'packing',
+    'pcm16-boundaries', 'pcm24-boundaries', 'overflow', 'channel-overflow',
+    'zero', 'frame-align', 'channels', 'width', 'unknown-width', 'high-address',
+    'dma-short', 'pcm-short', 'dma-align', 'pcm-align', 'address-wrap',
+    'instance', 'count-too-large', 'count-limit',
+)
+_AUDIO_LIFECYCLE_COMMON = (
+    *(('init', fault) for fault in ('initialize', 'power-on', 'configure', 'flush',
+                                   'threshold', 'irq-clear', 'irq-enable')),
+    *(('start', fault) for fault in ('enable', 'dma-start')),
+    *(('stop', fault) for fault in ('irq-disable', 'irq-clear', 'disable', 'power-off', 'deinit')),
+    ('isr', 'service'),
+    *((phase, 'none') for phase in ('ownership', 'callback-stop', 'callback-restart')),
+    *(('init-cleanup', fault) for fault in ('power-on/power-off', 'configure/power-off', 'configure/deinit')),
+    *(('hardware-error', bit + suffix) for bit in ('derr', 'undfl', 'ovf') for suffix in ('', '+dcmp')),
+)
+_AUDIO_LIFECYCLE_APOLLO5 = (
+    ('init', 'clock'), ('stop', 'dma-stop'), ('isr', 'status'), ('isr', 'irq-clear'),
+    *((phase, 'none') for phase in ('ping-pong', 'bad-buffer', 'threshold-error')),
+    *(('clock-policy', fault) for fault in ('init-hp', 'start-hp', 'init-query', 'start-query', 'hfrc-hp')),
+)
 # Host fault models exercise NSX adapters without microphones or probe access.
 # Counts and backend requirements are acceptance criteria, not discovered from tests.
 ADAPTER_REGRESSIONS = (
     Requirement('tests/test_audio_buffers.py::test_audio_buffer_bounds', 48,
-                parameters=('audio_binary',), variants=(('apollo3',), ('apollo5',))),
+                parameters=('audio_binary', 'scenario'),
+                variants=tuple((backend, scenario) for backend in ('apollo3', 'apollo5')
+                               for scenario in _AUDIO_BUFFER_SCENARIOS)),
     Requirement('tests/test_audio_buffers.py::test_audio_dma_cache_views', 2,
                 parameters=('scenario',), variants=(('pcm16-boundaries',), ('pcm24-boundaries',))),
     Requirement('tests/test_audio_lifecycle.py::test_audio_lifecycle_failure', 66,
-                parameters=('lifecycle_binary',), variants=(('apollo3',), ('apollo5',))),
+                parameters=('lifecycle_binary', 'phase', 'fault'),
+                variants=tuple((backend, phase, fault) for backend in ('apollo3', 'apollo5')
+                               for phase, fault in _AUDIO_LIFECYCLE_COMMON)
+                         + tuple(('apollo5', phase, fault) for phase, fault in _AUDIO_LIFECYCLE_APOLLO5)),
     Requirement('tests/test_power_core_clock.py::test_performance_updates_core_clock', 96,
                 parameters=('clock_harness', 'scenario'),
                 variants=tuple((target, scenario)

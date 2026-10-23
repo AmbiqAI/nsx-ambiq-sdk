@@ -51,7 +51,7 @@ def applicable(backend: str, phase: str, fault: str) -> bool:
 @pytest.mark.parametrize("lifecycle_binary,phase,fault", [
     (backend, phase, fault) for backend in ("apollo3", "apollo5")
     for phase, fault in CASES if applicable(backend, phase, fault)
-], indirect=["lifecycle_binary"])
+], indirect=["lifecycle_binary"], scope="module")
 def test_audio_lifecycle_failure(lifecycle_binary: tuple[Path, str], phase: str, fault: str) -> None:
     binary, backend = lifecycle_binary
     result = subprocess.run([str(binary), phase, fault], capture_output=True, text=True)
