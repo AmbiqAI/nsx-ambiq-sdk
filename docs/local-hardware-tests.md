@@ -412,13 +412,16 @@ selected suite before building rather than maintained in a shared CLI list.
 | Probe | Configuration | Result |
 | --- | --- | --- |
 | 1160000172 | Apollo3 Blue Plus / `apollo3p_evb` | Startup and runtime passed; SVC negative control failed the expected assertion |
-| 1160001491 | Apollo4 Blue Plus / KBR and KXR descriptors | Both configurations passed; physical package remains unconfirmed |
+| 1160001491 | Apollo4 Blue Plus / KBR and KXR descriptors | Both configurations passed core tests; repeated NSX UART hello identifies KXR wiring (GPIO12 TX), with no UART output under KBR (GPIO60 TX) |
 | 1160002255 | Apollo510 / `apollo510_evb` | Startup and runtime passed after the pre-flash reset fix |
 | 1160002954 | Apollo510B / `apollo510b_evb` | Startup and runtime passed with corrected probe profile/reset/completion read; SVC negative control failed as expected |
 | 1160003058 | Apollo330 Plus / `apollo330mP_evb` | Startup and runtime passed using J-Link 9.88 with Ambiq overlay `JLink_Apollo330P_510L_20251015.zip` and descriptor device `AP330MPA-CBR` |
 
-These are debugger-connected GCC runs. Both AP4 configurations passing does not
-identify the physical KBR/KXR package or qualify their differing peripheral wiring.
+These are debugger-connected GCC runs. Core tests alone do not distinguish AP4
+variants. A separate NSX UART hello diagnostic on probe 1160001491 produced five
+messages with KXR (GPIO12 TX) and none with KBR (GPIO60 TX), repeated twice.
+Both variants returned successful initialization status. Use `apollo4p_blue_kxr_evb`
+for this board; this verifies the console routing, not every peripheral mapping.
 The initial AP330 attempt stopped before programming because its device pack was
 missing. Installing Ambiq's `JLink_Apollo330P_510L_20251015.zip` into a separate
 J-Link 9.88 installation resolved device recognition without changing the SDK
@@ -432,3 +435,13 @@ A follow-up AP330 run passed all seven cases with the unchanged system J-Link
 9.50 library and the checksum-pinned cache pack selected by the worker. Its
 `jlink.json` records version 9.50 and the archive/file hashes; no installed
 AP330 part-name definition or `LD_LIBRARY_PATH` override was required.
+
+### Fresh-checkout baseline
+
+A separate clean checkout at `3a466ade04eb526dc7e2c78e3e90c7d679df4dcf` with a new
+virtual environment and empty device-pack cache passed locked dependency setup,
+AP330 build-only checks, the missing-pack diagnostic, archive provisioning, and
+all seven AP330 hardware cases. The GCC compatibility gate passed 288 checks
+with 40 other-compiler cases deselected. Reports, binaries, UART diagnostic
+sources/captures and `board-baseline.json` are retained in the lab evidence
+directory `artifacts/nsx/sdk-core-qualification-2026-10-23` outside this repo.
