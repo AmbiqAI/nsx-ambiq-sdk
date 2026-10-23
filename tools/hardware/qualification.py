@@ -6,7 +6,7 @@ from pathlib import Path
 from .inventory import BOARDS
 from .build import Firmware
 from .protocol import Result, decode
-from .suites import Suite, STARTUP, SUITES
+from .suites import Suite, STARTUP, RUNTIME
 from tools.test_evidence import phase_status, completion
 
 
@@ -18,8 +18,10 @@ class Profile:
     suites: tuple[Suite, ...]
 
 
-PROFILES = {f'{board}-gcc-startup': Profile(f'{board}-gcc-startup', board, 'gcc', SUITES)
+PROFILES = {f'{board}-gcc-startup': Profile(f'{board}-gcc-startup', board, 'gcc', (STARTUP,))
             for board in BOARDS}
+PROFILES.update({f'{board}-gcc-core': Profile(f'{board}-gcc-core', board, 'gcc', (STARTUP, RUNTIME))
+                 for board in BOARDS})
 
 
 @dataclass

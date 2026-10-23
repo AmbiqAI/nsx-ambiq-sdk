@@ -47,4 +47,14 @@ STARTUP = Suite('startup', 'tests/hardware/test_startup.py::test_startup',
                 ('initialized_data', 'zeroed_bss', 'cpp_constructor'),
                 'tests/hardware/firmware', 'startup_test.elf',
                 tuple(Seed(n, v) for n, v in zip(SENTINELS, POISON)), startup_options)
-SUITES = (STARTUP,)
+
+def runtime_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+    if fault not in ('none', 'runtime-no-svc'):
+        raise ValueError(f'Unknown runtime fault mode: {fault}')
+    return []
+
+
+RUNTIME = Suite('runtime', 'tests/hardware/test_runtime.py::test_runtime',
+                ('stack_bounds_alignment', 'heap_allocation', 'heap_limit_rejection', 'svc_dispatch'),
+                'tests/hardware/runtime', 'runtime_test.elf', configure=runtime_options)
+SUITES = (STARTUP, RUNTIME)

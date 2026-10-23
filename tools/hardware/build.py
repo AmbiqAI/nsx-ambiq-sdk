@@ -56,7 +56,7 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, suite: Suite, fa
         raise ValueError('Suite requires a firmware source directory')
     extra = suite.configure(repo, output, board, fault)
     command(['cmake', '-S', str(repo / suite.source_dir), '-B', str(output),
-             '-G', 'Ninja', '-DCMAKE_SYSTEM_NAME=Generic',
+             '-G', 'Ninja', '-DCMAKE_SYSTEM_NAME=Generic', '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',
              '-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY',
              f'-DCMAKE_C_COMPILER={cc}', f'-DCMAKE_CXX_COMPILER={cxx}',
              f'-DCMAKE_ASM_COMPILER={cc}', f'-DNSX_TEST_SDK_ROOT={repo}',
@@ -77,6 +77,8 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, suite: Suite, fa
     inputs = [Path(p) for p in (output / 'inputs.txt').read_text().splitlines()]
     sources = [p for root in (repo / suite.source_dir, repo / 'tests/hardware/common')
                for p in root.rglob('*') if p.is_file()]
+    compiled = [Path(entry['file']) for entry in json.loads((output / 'compile_commands.json').read_text())]
+    sources = sorted(set(sources + compiled))
     vendor = list((repo / 'tests/hardware/vendor/unity').glob('*'))
     device, speed = (output / 'probe.txt').read_text().splitlines()
     if not device or int(speed) <= 0:
