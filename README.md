@@ -71,7 +71,7 @@ uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py
 uv run --group ci python -m pytest
 ```
 
-CI runs these checks on pull requests and pushes to `main`.
+CI runs these checks on pull requests and pushes to `main`. Optional [board tests](docs/local-hardware-tests.md) also run locally.
 
 ## Repository Layout
 
