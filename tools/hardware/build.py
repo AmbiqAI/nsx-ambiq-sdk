@@ -9,8 +9,7 @@ import uuid
 from .protocol import RESULT_SIZE
 from .startup import SENTINELS, OMISSIONS, make_mutant
 
-BOARDS = ('apollo3_evb', 'apollo3p_evb', 'apollo4p_evb', 'apollo4b_evb',
-          'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')
+from .inventory import BOARDS
 
 
 def digest(path: Path) -> str:
@@ -81,6 +80,11 @@ def build(repo: Path, output: Path, board: str, gcc_root: Path, fault: str = "no
         'sentinels': dict(zip(SENTINELS, sentinel_addresses)),
         'compiler': command([str(cc), '--version'], log).splitlines()[0],
         'elf_sha256': digest(elf),
+        'suite': 'startup', 'toolchain': 'gcc',
+        'sdk_identity_sha256': {str(p.relative_to(repo)): digest(p) for p in (
+            repo / 'modules/nsx-ambiqsuite/nsx-module.yaml',
+            repo / 'modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml',
+            repo / 'modules/nsx-ambiqsuite/sdk/mcu/am_sdk_version.h')},
         'inputs_sha256': {str(p): digest(p) for p in inputs + sources + vendor},
     }
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

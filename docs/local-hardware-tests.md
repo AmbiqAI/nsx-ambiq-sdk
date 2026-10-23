@@ -160,3 +160,59 @@ These controls exist solely to verify the runner, not to qualify SDK behavior.
 
 Do not interpret the initial startup result as qualification of every linked
 HAL/BSP driver, all runtime memory regions, or peripheral behavior.
+
+## Required qualification profiles
+
+For an update acceptance run, select an exact board/GCC startup profile:
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware \
+  --qualification-profile apollo3p_evb-gcc-startup \
+  --qualification-report artifacts/hardware/ap3p-qualification.json \
+  --hardware --probe YOUR_SERIAL --gcc-root /usr/local/arm-gnu-toolchain
+```
+
+The profile supplies the board; an explicit conflicting `--board` is rejected.
+Profiles exist for each selectable descriptor listed above, named
+`<descriptor>-gcc-startup`. Their existence does not mean a board has passed.
+This first profile requires only the startup suite, not full SDK qualification.
+The typed suite registry records expected firmware cases; future suites must
+add their own firmware build/transport integration as well as a profile entry.
+
+A fresh JSON report lists required suites, pytest setup/call/teardown outcomes,
+and evidence directories. Skipped, deselected, uncollected or interrupted cases
+are incomplete. Failed assertions or fixture teardown fail qualification.
+Build-only runs remain useful, but cannot satisfy a hardware profile. Missing
+coverage returns nonzero even when ordinary pytest would accept skips. Fault
+injection is deliberately refused in qualification mode. Each invocation needs
+its own report path when running concurrently. Automation must require a zero
+process exit status and a passing report from that invocation; a report file
+alone is not acceptance evidence. Argument parsing can fail before report
+initialization. An uncatchable process kill may
+leave the initial incomplete report; it cannot establish qualification.
+
+Firmware manifests also hash the packaged SDK provider metadata, artifact
+manifest and SDK version header. Together with linked-input hashes, these tie
+results to the candidate SDK instead of just a release label.
+
+These are ordinary local pytest commands. A future board-farm workflow should
+reserve hardware, invoke the same commands and upload evidence; it should not
+implement separate acceptance logic. The existing manual lab reservation
+requirement still applies.
+
+### SDK update coverage inventory
+
+Extend these existing checks before introducing overlapping test suites:
+
+| Boundary | Existing coverage | Remaining physical/update evidence |
+| --- | --- | --- |
+| Vendor ABI and artifact selection | `test_vendor_abi.py`, `test_artifact_baseline.py` | Candidate toolchain/board matrix with required-tool enforcement |
+| Intake and maintained patches | `test_sdk_intake.py`, `test_intake_workflow.py`, `test_committed_intake_patches.py`, `test_intake_patches_byte_for_byte.py` | Current/candidate comparison and reviewed patch disposition |
+| Startup/linker integration | `test_cpp_startup.py`, `test_shared_startup.py`, `test_scatter_load_bounds.py`, `test_link_smoke.py` | Startup profile execution on each exact required EVB |
+| Clock/performance adapter | `test_power_core_clock.py` | Supported mode transitions on silicon; independent frequency evidence separately |
+| Audio adapter | `test_audio_buffers.py`, `test_audio_lifecycle.py` | Target integration where needed; microphone checks remain optional |
+| Memory configuration | `test_small_m55_memory.py`, `test_psram_api.py` | Relevant target placement/runtime checks; no blanket PSRAM qualification |
+
+This inventory identifies existing tests, not a claim that they exhaustively
+cover each boundary. The next PR should audit their assertions against prior
+fixes and candidate SDK changes, and specify required versus optional tools.
