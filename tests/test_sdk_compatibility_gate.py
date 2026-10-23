@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.sdk_compatibility import Gate, Requirement, belongs, GCC
+from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS
 
 
 @pytest.mark.parametrize('node,expected', [
@@ -111,3 +111,31 @@ def test_same_abi_count_cannot_hide_missing_combinations():
     for node, variant in zip(gate.selected, requirement.variants):
         gate.parameters[node] = dict(zip(requirement.parameters, variant))
     assert gate.report(0)['status'] == 'passed'
+
+
+@pytest.mark.parametrize('requirement', CORE_BUILDS[:2], ids=('runtime', 'startup'))
+def test_core_build_gate_rejects_repeated_board(requirement):
+    gate = Gate((requirement,))
+    items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',
+             callspec=SimpleNamespace(params={'board': requirement.boards[0]}))
+             for i in range(requirement.minimum)]
+    config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
+    gate.pytest_collection_modifyitems(config, items)
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'incomplete'
+    for node, board in zip(gate.selected, requirement.boards):
+        gate.boards[node] = board
+    assert gate.report(0)['status'] == 'passed'
+
+
+def test_clock_gate_requires_each_target_scenario():
+    requirement = ADAPTER_REGRESSIONS[-1]
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    # Preserve the count while losing one actual target/scenario combination.
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'

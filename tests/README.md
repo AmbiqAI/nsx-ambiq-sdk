@@ -145,7 +145,8 @@ passes. Shared-lab allocation remains a prerequisite to physical execution.
 ## SDK update acceptance
 
 `uv run --group ci python -m tools.sdk_compatibility --profile gcc --output artifacts/compatibility/RUN_NAME`
-requires the payload checks plus the reviewed GCC header/ABI/link matrix to
+requires the payload checks, reviewed GCC header/ABI/link matrix, core firmware
+builds and audio/clock adapter fault models to
 complete without skips. Use a fresh output directory for each invocation.
 The `payload` profile omits the target cross-compilation matrix. See the local hardware guide
 above for matrix boundaries and evidence interpretation. Neither profile
@@ -154,3 +155,10 @@ accesses boards or claims physical qualification.
 The shared hardware API and fixture boundaries are described in the local
 hardware guide. `test_hardware_architecture.py` exercises a second synthetic
 suite through the shared build and simulated transport; it does not flash a board.
+
+The required GCC intake gate includes AP3 Blue Plus and AP4 KBR/KXR startup
+images with retained real HAL/BSP implementations, six runtime firmware builds,
+and Apollo2/3/3P constructor/CRT variants. These reuse the shared hardware build
+API without opening probes. Host audio lifecycle coverage collects only applicable
+backend operations; skipped applicable cases still make qualification incomplete.
+AP3 acoustic testing remains paused and is not an intake-gate prerequisite.

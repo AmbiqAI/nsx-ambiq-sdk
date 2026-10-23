@@ -9,7 +9,7 @@ import subprocess
 import pytest
 
 
-@pytest.fixture(scope="module", params=("apollo3", "apollo5"))
+@pytest.fixture(scope="module")
 def lifecycle_binary(request: pytest.FixtureRequest, repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str]:
     compiler = shutil.which("cc")
     assert compiler
@@ -38,12 +38,21 @@ CASES += [("clock-policy", fault) for fault in ("init-hp", "start-hp", "init-que
 CASES += [("hardware-error", bit + suffix) for bit in ("derr", "undfl", "ovf") for suffix in ("", "+dcmp")]
 
 
-@pytest.mark.parametrize("phase,fault", CASES)
+def applicable(backend: str, phase: str, fault: str) -> bool:
+    if backend != "apollo3":
+        return True
+    if fault in ("clock", "dma-stop") or phase == "isr" and fault != "service":
+        return False
+    return phase not in ("ping-pong", "bad-buffer", "threshold-error", "clock-policy")
+
+
+# Unsupported operations are outside this backend's matrix, not skipped tests.
+# Any skip in a selected, applicable case must still fail intake qualification.
+@pytest.mark.parametrize("lifecycle_binary,phase,fault", [
+    (backend, phase, fault) for backend in ("apollo3", "apollo5")
+    for phase, fault in CASES if applicable(backend, phase, fault)
+], indirect=["lifecycle_binary"])
 def test_audio_lifecycle_failure(lifecycle_binary: tuple[Path, str], phase: str, fault: str) -> None:
     binary, backend = lifecycle_binary
-    if backend == "apollo3" and (fault in ("clock", "dma-stop") or phase == "isr" and fault != "service"):
-        pytest.skip("Operation belongs to the Apollo5 HAL contract")
-    if backend == "apollo3" and phase in ("ping-pong", "bad-buffer", "threshold-error", "clock-policy"):
-        pytest.skip("Operation belongs to the Apollo5 HAL contract")
     result = subprocess.run([str(binary), phase, fault], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

@@ -44,7 +44,37 @@ GCC = (
     Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 4,
                 ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
-PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC}
+# Host fault models exercise NSX adapters without microphones or probe access.
+# Counts and backend requirements are acceptance criteria, not discovered from tests.
+ADAPTER_REGRESSIONS = (
+    Requirement('tests/test_audio_buffers.py::test_audio_buffer_bounds', 48,
+                parameters=('audio_binary',), variants=(('apollo3',), ('apollo5',))),
+    Requirement('tests/test_audio_buffers.py::test_audio_dma_cache_views', 2,
+                parameters=('scenario',), variants=(('pcm16-boundaries',), ('pcm24-boundaries',))),
+    Requirement('tests/test_audio_lifecycle.py::test_audio_lifecycle_failure', 66,
+                parameters=('lifecycle_binary',), variants=(('apollo3',), ('apollo5',))),
+    Requirement('tests/test_power_core_clock.py::test_performance_updates_core_clock', 96,
+                parameters=('clock_harness', 'scenario'),
+                variants=tuple((target, scenario)
+                    for target in ('apollo510', 'apollo330P', 'apollo510L',
+                                   'apollo510-fpga', 'apollo330P-fpga', 'apollo510L-fpga')
+                    for scenario in ('low', 'high', 'max', 'not-set', 'select-fails', 'query-fails',
+                                     'zero-source', 'excessive-source', 'low-source', 'audio-high',
+                                     'audio-max', 'adjusted-250', 'unsupported-source', 'audio-then-free',
+                                     'pending-audio', 'released-audio'))),
+)
+CORE_BUILDS = (
+    Requirement('tests/test_runtime_suite.py::test_runtime_links_real_handlers_and_heap', 6,
+                ('apollo3p_evb', 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
+                 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
+    Requirement('tests/test_runtime_suite.py::test_startup_links_real_sdk', 3,
+                ('apollo3p_evb', 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb')),
+    Requirement('tests/test_cpp_startup.py::test_cpp_constructor_image', 6,
+                parameters=('soc', 'crt_overrides'),
+                variants=tuple((soc, override) for soc in ('apollo2', 'apollo3', 'apollo3p')
+                               for override in (False, True)), compiler='gcc'),
+)
+PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS}
 
 
 def belongs(nodeid: str, selector: str) -> bool:
