@@ -6,12 +6,14 @@ import struct
 import time
 from typing import Callable
 
+from .qualification import STARTUP
+
 MAGIC = 0x4E535854
 VERSION = 1
 TEXT_SIZE = 4096
 HEADER = struct.Struct('<8I64s')
 RESULT_SIZE = HEADER.size + TEXT_SIZE
-CASES = ('initialized_data', 'zeroed_bss', 'cpp_constructor')
+CASES = STARTUP.cases
 
 
 class QualificationError(RuntimeError):
