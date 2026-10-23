@@ -1,0 +1,27 @@
+{
+  "name": "apollo330p-510l-20251015",
+  "archive_sha256": "8ee6a79fb74968dfe9e41a5999c7e645a4b02887d748e3fbff2b92f89d0b5846",
+  "archive_prefix": "JLink_Apollo330P_510L_20251015/",
+  "minimum_jlink": "8.40",
+  "devices": [
+    "AP330NPA-CCR",
+    "AP330NPA-CBR",
+    "AP330BPA-CCR",
+    "AP330BPA-CBR",
+    "AP330MPA-CCR",
+    "AP330MPA-CBR",
+    "AP510NLA-CCR",
+    "AP510NLA-CBR",
+    "AP510BLA-CCR",
+    "AP510BLA-CBR",
+    "AP510DLA-CCR",
+    "AP510DLA-CBR"
+  ],
+  "files": {
+    "JLinkDevices.xml": "2af5752bb995f53b604523887a3931b926a31e3977143d9a341e2978abfb8fa1",
+    "Apollo330P_510L_README.txt": "431270e131abd3f1a8f42241e7c5782dd99d806c6690fa7ee5569cc050834908",
+    "Devices/AmbiqMicro/Apollo330P_510L.JLinkScript": "78cb7c2f91bc11628f4c83d7505e6eec49a4bad2bd8def5ba0ea408bdd5057af",
+    "Devices/AmbiqMicro/Apollo330P_510L.elf": "6a7809fac0a791561b63b632160a561dc84f6c131a2d7da293600ac366d9e32e"
+  },
+  "source": "https://ambiqmicro.atlassian.net/wiki/spaces/C/pages/3286630710"
+}
