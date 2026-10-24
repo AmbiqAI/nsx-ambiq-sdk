@@ -40,3 +40,5 @@ Keep these files short and factual. If a note no longer guides a maintainer acti
 - [scatter-load-bounds.md](scatter-load-bounds.md) — aggregate NVM scatter load bounds and real-linker checks.
 
 - [shared-startup.md](shared-startup.md) — shared/resource startup copy windows and validation.
+
+- [i2c-combined-transfers.md](i2c-combined-transfers.md) — repeated-START wrapper mapping, limits, failure handling and validation.

@@ -87,4 +87,4 @@ CI runs these checks on pull requests and pushes to `main`. Optional [board test
 | `tests/` | Static and CMake contract tests |
 | `docs/` | Maintainer notes for intake, scope, and platform coverage |
 
-For contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For repeated-START sensor reads, see the [I2C API](modules/nsx-i2c/README.md#combined-writeread-with-repeated-start).

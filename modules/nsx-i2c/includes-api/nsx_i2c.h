@@ -97,7 +97,7 @@ uint32_t nsx_i2c_read(nsx_i2c_config_t *cfg, const void *buf, uint32_t size, uin
 uint32_t nsx_i2c_write(nsx_i2c_config_t *cfg, const void *buf, uint32_t size, uint16_t addr);
 
 /**
- * @brief Perform low-level I2C write followed by immediate read
+ * @brief Legacy write then read, with STOP between the two operations.
  * @param cfg I2C configuration
  * @param writeBuf Write buffer
  * @param numWrite Number of bytes to write
@@ -108,6 +108,38 @@ uint32_t nsx_i2c_write(nsx_i2c_config_t *cfg, const void *buf, uint32_t size, ui
 uint32_t nsx_i2c_write_read(
     nsx_i2c_config_t *cfg, uint16_t addr, const void *writeBuf, size_t numWrite, void *readBuf,
     size_t numRead);
+
+/** Maximum prefix and receive lengths for the combined operation on this SoC. */
+#define NSX_I2C_COMBINED_MAX_WRITE_SIZE AM_HAL_IOM_MAX_OFFSETSIZE
+#define NSX_I2C_COMBINED_MAX_READ_SIZE AM_HAL_IOM_MAX_TXNSIZE_I2C
+
+/**
+ * @brief Write a short command, repeated START, then read in one IOM transaction.
+ *
+ * Wire sequence: START, addr+W, writeBuf[0..numWrite-1], repeated START,
+ * addr+R, numRead bytes (last byte NACK), STOP. No STOP separates the phases.
+ * Prefix bytes retain their supplied order. Longer commands are rejected, not
+ * split: Apollo3/3p support 1..3 bytes, newer supported IOMs support 1..5.
+ * Both lengths must be nonzero and within the limits above. addr is an unshifted
+ * 7-bit address. readBuf must be uint32_t-aligned and writable for numRead bytes;
+ * writeBuf may be byte-aligned. Buffers are borrowed only until return.
+ *
+ * Requires an initialized I2C cfg. The caller serializes the entire operation
+ * against all users of this IOM, including queued/DMA users; this API does not
+ * acquire an RTOS lock and is not ISR-safe. IOM timeout/error recovery is owned
+ * by the blocking HAL; this function adds neither retries nor a software-held
+ * continuation. A failed operation may consume device data and partially write
+ * readBuf. Do not assume a failed command is safe to replay.
+ *
+ * Returns AM_HAL_STATUS_SUCCESS, HAL INVALID_HANDLE/INVALID_ARG for malformed
+ * inputs, HAL OUT_OF_RANGE for unsupported lengths, HAL INVALID_OPERATION for
+ * a non-I2C cfg, or the original blocking HAL failure code. Unlike legacy I2C
+ * helpers, this function preserves native HAL diagnostics. Invalid requests
+ * fail before any bus activity, even if HAL API validation is disabled.
+ */
+uint32_t nsx_i2c_write_read_combined(
+    nsx_i2c_config_t *cfg, uint16_t addr, const void *writeBuf, size_t numWrite,
+    void *readBuf, size_t numRead);
 
 /**
  * @brief Perform sequence of low-level I2C transfers (similar to Linux)
