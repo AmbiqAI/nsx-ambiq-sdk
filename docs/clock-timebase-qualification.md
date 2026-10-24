@@ -229,9 +229,11 @@ Record both revisions/dirty states and hashes separately. No implicit sibling
 resolution and no silent import of candidate tests. Keep the existing default
 of testing this checkout compatible for normal standalone use.
 
-The current builder uses one root for both purposes. This separation needs an
-explicit API change plus build/provenance regression tests before baseline versus
-candidate claims; it is not implemented by this contract PR.
+The implementation provides this boundary through `BuildRequest.sdk_root`
+and [the fixed-harness comparison command](sdk-harness-comparison.md). Its
+regression tests reject candidate-owned test code and require candidate production
+headers to be consumed. Clock comparison remains experimental pending reference
+evidence and error-budget approval.
 
 ## Completion criteria
 

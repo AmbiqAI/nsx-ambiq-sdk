@@ -480,3 +480,5 @@ qualification profile or new physical evidence.
 
 Experimental AP510B/AP330 clock and SysTick work is documented in
 [Clock lab tests](clock-lab-tests.md); it is not part of the core qualification profiles.
+
+Use [fixed-harness comparison](sdk-harness-comparison.md) to build and run the same tests against two explicit SDK checkouts.
