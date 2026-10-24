@@ -138,14 +138,14 @@ static void capture(unsigned row, uint32_t hz) {
         b=snapshot();
         TEST_ASSERT_LESS_THAN_UINT32_MESSAGE(300000000, b.after-a.after, "Cycle acquisition bound");
     }
+    uint32_t irq=b.irq-a.irq;
+    log_sample(row,b.after-a.after,b.ref-a.ref,irq);
     TEST_ASSERT_EQUAL_UINT32(AM_HAL_STIMER_XTAL_32KHZ, STIMER->STCFG);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(0, budget, "Capture stalled");
     TEST_ASSERT_LESS_OR_EQUAL_UINT32(MAX_APERTURE_CYCLES, a.after-a.before);
     TEST_ASSERT_LESS_OR_EQUAL_UINT32(MAX_APERTURE_CYCLES, b.after-b.before);
     nsx_clock_sample_t sample;
     TEST_ASSERT_TRUE(nsx_clock_sample(a.after,b.after,a.ref,b.ref,WINDOW_TICKS+8,300000000,32766,&sample));
-    uint32_t irq=b.irq-a.irq;
-    log_sample(row,sample.cpu_cycles,sample.reference_ticks,irq);
     uint32_t reference=REFERENCE_HZ;
 #ifdef CLOCK_WRONG_SCALING
     reference*=2;
