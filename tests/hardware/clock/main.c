@@ -21,13 +21,14 @@ void setUp(void) {}
 void tearDown(void) {
     SysTick->CTRL = 0;
     SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk;
+    uint32_t status = initialized ? nsx_power_set_performance_mode(NSX_POWER_PERF_LOW) : 0;
+    __set_BASEPRI(saved_basepri);
+    __set_PRIMASK(saved_primask);
     if (initialized) {
-        TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, nsx_power_set_performance_mode(NSX_POWER_PERF_LOW), "LOW cleanup failed");
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, status, "LOW cleanup failed");
         TEST_ASSERT_EQUAL_UINT32(96000000, SystemCoreClock);
         TEST_ASSERT_EQUAL_UINT32(1, PWRCTRL->MCUPERFREQ_b.MCUPERFSTATUS);
     }
-    __set_BASEPRI(saved_basepri);
-    __set_PRIMASK(saved_primask);
 }
 
 static void log_sample(unsigned row, uint32_t cycles, uint32_t refs, uint32_t irq) {
@@ -130,12 +131,14 @@ static Snapshot snapshot(void) {
 }
 
 static void capture(unsigned row, uint32_t hz) {
+    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STIMER_XTAL_32KHZ, STIMER->STCFG);
     Snapshot a=snapshot(), b=a;
     unsigned budget=POLL_BUDGET;
     while ((uint32_t)(b.ref-a.ref)<WINDOW_TICKS && --budget) {
         b=snapshot();
         TEST_ASSERT_LESS_THAN_UINT32_MESSAGE(300000000, b.after-a.after, "Cycle acquisition bound");
     }
+    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STIMER_XTAL_32KHZ, STIMER->STCFG);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(0, budget, "Capture stalled");
     TEST_ASSERT_LESS_OR_EQUAL_UINT32(MAX_APERTURE_CYCLES, a.after-a.before);
     TEST_ASSERT_LESS_OR_EQUAL_UINT32(MAX_APERTURE_CYCLES, b.after-b.before);

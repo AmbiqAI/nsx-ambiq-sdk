@@ -40,34 +40,10 @@ HFRC2READY and inactive audio adjustment. AP330 configures a nominal 250 MHz PLL
 with an explicit HFRC192DIV4 reference, then verifies lock, source and divider
 ratio in HP2. The test never requests AP510B CPU operation at 196.608 MHz.
 
-STIMER is explicitly cleared and configured to the 32 kHz crystal, while DWT
-counts CPU cycles. A half-second reference pre-roll is a warm diagnostic policy,
-not proof of cold-start stabilization. A bounded polling loop, a 300-million-
-cycle acquisition ceiling, and the host deadline prevent an unbounded run.
-Snapshots mask interrupts briefly and bracket the STIMER read with DWT reads;
-a snapshot exceeding 2048 cycles is rejected. The firmware enables no interrupt
-source except SysTick. The runner never halts the target during a window, but
-reads its completion word through SWD. Transport/bus effects still need a formal
-error-budget review. These constraints do not cover arbitrary debugger halts.
-
-The provisional physical-rate envelope is ±5.2% around nominal. Its inputs are
-the documented ±5% HFRC/HFRC2 accuracy, an **unverified EVB assumption** that the
-32.768 kHz reference meets the datasheet's ±50 ppm requirement, and rounding
-headroom for endpoint uncertainty. At the slowest supported rate (96 MHz minus
-5%), two 2048-cycle endpoint apertures contribute less than 0.036% over 125 ms;
-two reference-tick quantization intervals contribute less than 0.049%. Combining
-these with reference error fits within the additional 0.2%. AP330's locked PLL
-inherits its HFRC reference accuracy. These are proposed regression limits,
-not a completed fitted-component/temperature/aging or PLL jitter budget. Keep
-`--clock-experimental` and do not add a qualification profile until review of
-those prerequisites is complete. Do not tune bounds to measured board results.
-
-The application reloads SysTick after each mode change. Measured interrupt count
-is checked against independently captured CPU cycles and the **expected** reload,
-allowing two boundary interrupts plus snapshot aperture. This proves reload and
-interrupt accounting; it is not an independent ppm measurement of SysTick's
-clock source. The separate crystal-referenced CPU check establishes its physical
-rate under the provisional assumptions above. Raw cycle/reference/interrupt
+The [clock contract](clock-timebase-qualification.md) defines the reference
+setup, per-window source checks, capture bounds, frequency budget and SysTick
+accounting. The ±5.2% frequency screen assumes an unverified ±50 ppm assembled
+reference; a pass remains conditional/experimental. Raw cycle/reference/interrupt
 counts for all 72 windows are retained in the Unity log.
 
 ## Negative controls and cleanup
