@@ -1,10 +1,8 @@
-# Clock/timebase qualification: first milestone contract
+# Clock/timebase test contract
 
 Work item: [#126](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/126).
-This first increment specifies the two-board measurement contract and adds
-host-executed arithmetic intended for the target suite. Bounded, artifact-only
-board diagnostics now establish reference feasibility below. They do not add a
-hardware qualification profile or complete the transition matrix.
+This contract defines the experimental two-board clock and application-reloaded
+SysTick checks. It does not establish calibrated hardware qualification.
 
 Milestone 1 covers `apollo510b_evb` and `apollo330mP_evb`, nominal CPU modes and
 application-reloaded SysTick. AP3/AP4/AP510 expansion is milestone 2. Delay
@@ -36,119 +34,21 @@ not proof that the shipped prebuilt HAL is identical. In particular,
 `am_hal_stimer_config()` returns a configuration word, **not a HAL status code**;
 check its documented semantics rather than asserting return value zero.
 
-## Reference feasibility checked on 2026-10-24
+## Reference design
 
-Artifact-only firmware linked the shipped HAL/BSP and `nsx::power` from PR127
-head `e1c4278`. It used full BSP initialization, explicitly enabled EXTCLK32K in
-crystal mode through MCUCTRL, cleared/unfroze STIMER and selected
-`AM_HAL_STIMER_XTAL_32KHZ`. Both boards reported crystal mode and STCFG=3.
-DWT CYCCNT was explicitly enabled and advanced. There were three 8192-reference-
-tick windows per requested mode, a bounded acquisition loop, and a 30-second
-host completion deadline. No debugger halt was requested during acquisition.
-The existing runner polled the completion word over SWD.
+The AP510B Rev2.0 and AP330 Plus Rev1.0–3.0 EVB schematics (sheet 4)
+specify Y2, TXC 9HT12-32.768KDZY-T, with two 10 pF load capacitors.
+[TXC 9HT12 revision 1.05](https://txccrystal.com/images/pdf/9ht12.pdf)
+specifies ±20 ppm initial tolerance at 25°C and 7 pF load for this part.
+Assembly substitutions, load pulling, temperature and aging are not bounded
+by schematic identity alone; ±50 ppm below remains a fixture assumption.
 
-These are observations scaled using **nominal** 32768 Hz, not calibrated clock
-accuracy or new pass limits. The diagnostic asserted successful configuration,
-reference/cycle advancement and mode API returns; it logged frequency data and
-readiness registers without applying a frequency tolerance. LOW restoration
-returned success on both boards. Shared lab claims were released afterward.
-
-| Board / probe | Sequence | Observed MHz (three-window range) | Nominal publication |
-| --- | --- | --- | --- |
-| AP510B / 1160002954 | LOW | 95.677–95.683 | 96 MHz |
-| Same | HIGH | 248.956–248.982 | 250 MHz |
-| Same | MAX | 248.963–248.977 | 250 MHz |
-| Same | LOW restoration | 95.689–95.695 | 96 MHz |
-| AP330 Plus / 1160003058 | LOW | 95.924–95.932 | 96 MHz |
-| Same | HIGH | 191.856–191.868 | 192 MHz |
-| Same | MAX | 249.812–249.841 | 250 MHz |
-| Same | LOW restoration | 95.923–95.925 | 96 MHz |
-
-### AP330 PLL resolution
-
-The shipped `am_hal_syspll.h` distinguishes VCO from the divided peripheral
-outputs: `Fvco = Fref * (FBDivInt + FBDivFrac / 2^24) / RefDiv`.
-The CPU HP2 path uses VCO, not POSTDIV. The internal
-[Camaro clock specification](https://ambiqmicro.atlassian.net/wiki/spaces/Camaro/pages/3738664961/Clocking),
-“HP2 Mode and PLL Handling”, explicitly permits 250 MHz without audio and
-explains the temporary 192 MHz execution path while PLL lock is pending.
-Together with datasheet Table 12 and the shipped CLKMGR bounds, this resolves
-whether 250 MHz is an intended HP2 setting. It does not correct Table 11 or
-establish a PLL accuracy specification.
-
-For the measured MAX row, configuration requested 250000000 Hz. The hardware
-readback was PLLSTAT=1, PLLCTL0=0x2000020e, PLLDIV0=0 and PLLDIV1=0x007d0018:
-FREFSEL=HFRC192DIV4, integer feedback=125, reference divider=24. Thus nominal
-48 MHz * 125 / 24 = 250 MHz. **This run used HFRC as the PLL reference, not the
-RF crystal.** Any measured bound must include HFRC source accuracy and PLL/error-
-measurement contributions; crystal-level accuracy cannot be assumed for HP2.
-Do not rely on auto-selection staying the same in a future SDK: establish and
-assert the allowed reference in the eventual qualification fixture.
-
-### Readiness and timeout evidence
-
-Disassembly of the shipped AP510 HAL confirms that the HP path forces HFRC2
-when needed, delays one microsecond, waits for HFRC2READY with a 15-microsecond
-HAL timeout, and checks readiness before changing performance mode. It also
-polls MCUPERFACK and checks MCUPERFSTATUS. This is implementation evidence for
-the ERR024 sequence, not exhaustive erratum validation. The recorded HP rows
-had HFRC2READY set and performance acknowledgement/status matching HP.
-
-The shipped AP330 `am_hal_syspll_lock_wait` calculates its timeout as
-`ceil(lock_cycles * RefDiv / 12)` microseconds, where lock_cycles is 1000 or
-1875 according to VCO selection. Omitting RefDiv would give the wrong timeout.
-The observed HP2 configuration uses RefDiv=24 and the high VCO selection,
-therefore this HAL timeout is 3750 microseconds. PLLSTAT.LOCK and actual
-MCUPERFSTATUS must be checked before an acceptance window, even if the mode API
-returns success. HAL delay-based timeout values are not an independent timing
-oracle; retain a separately bounded target acquisition and host process deadline.
-
-Evidence is retained outside the repository under
-`artifacts/nsx/sdk-clock-contract-2026-10-24/` in the enclosing NSX workspace:
-`reference-probe/` contains diagnostic sources; `ap510b-run2/` and `ap330-run1/`
-contain build manifests, ELF/source/library hashes, raw Unity logs and execution
-metadata. `source-evidence/` contains the inspected archive disassembly. These
-were debugger-attached reset runs, not cold boots, PVT testing, or the complete
-acceptance matrix. The diagnostic does not yet use the arithmetic helper.
-
-## Schematic reference identified on 2026-10-24
-
-The newly available EVB schematics resolve the intended reference part and
-connections. Each lists **Y2 = TXC 9HT12-32.768KDZY-T**, 32.768 kHz, on sheet 4:
-
-| Schematic | Crystal connections | External load capacitors |
-| --- | --- | --- |
-| `AP510BEVB_Rev2.0_Schematic Prints.PDF` | MCU XI/B5 and XO/A4 | C98 and C103, each 10 pF to ground |
-| `AP330MPEVB_Rev1.0_Schematic Prints.PDF` | MCU XI/A6 and XO/A7 | C51 and C52, each 10 pF to ground |
-| `AP330MPEVB_Rev2.0_Schematic Prints.PDF` | Same | Same |
-| `AP330MPEVB_Rev3.0_Schematic Prints.PDF` | Same | Same |
-
-These files are under `~/OneDrive/Ambiq/sws/schematics/`, in
-`apollo5/apollo510b/` and `apollo330/plus/`. File hashes are retained in the
-workspace artifact directory `sdk-clock-contract-2026-10-24/schematic-evidence/`.
-This identifies the board design; it does not independently inspect assembly
-substitutions on the connected boards. The reference circuit is unchanged among
-the three available AP330 revisions.
-
-[TXC 9HT12 datasheet, revision 1.05](https://txccrystal.com/images/pdf/9ht12.pdf),
-pages 1–2, decodes **D** as ±20 ppm initial tolerance at 25°C and **Y** as 7 pF
-specified load. It specifies turnover temperature 25°C ±5°C, temperature
-coefficient −0.04 ppm/°C² maximum and first-year aging ±3 ppm at 25°C ±3°C.
-It does not specify startup time for the assembled MCU oscillator.
-
-Two 10 pF capacitors contribute 5 pF in series; pin and PCB parasitics contribute
-to the remaining effective load. This is consistent with a 7 pF design target,
-but the schematic alone does not bound load pulling. In particular, the crystal's
-±20 ppm initial tolerance is **not** a complete EVB frequency-error specification.
-For an explicitly assumed 20–30°C crystal temperature, the listed temperature
-curve contributes at most 4 ppm; adding initial tolerance and the specified
-first-year aging figure gives 27 ppm before load error and other effects.
-That illustration does not establish board age, actual temperature, or a total
-±50 ppm guarantee. Do not extrapolate it to the full device temperature range.
-
-The part-identity gap is closed. The contract below distinguishes a useful SDK
-regression screen from an assembled-oscillator accuracy claim. It does not infer
-a calibrated reference from the schematic or tune limits to observed samples.
+AP330 HP2 uses PLL VCO, not a divided peripheral output. Configure 250 MHz
+with HFRC192DIV4 explicitly and verify lock and the divider ratio:
+`Fvco = 48 MHz * (FBDivInt + FBDivFrac / 2^24) / RefDiv`.
+Do not infer crystal accuracy for this HFRC-derived clock or rely on automatic
+reference selection. Table 12 and shipped CLKMGR bounds support this setting;
+Table 11's typical PLL rate is not the CPU maximum.
 
 ## Acceptance scope and lab conditions
 
@@ -310,7 +210,7 @@ products. Its example bounds are synthetic arithmetic inputs, not EVB policy.
 The same test module also cross-compiles the helper for Cortex-M55 with GCC.
 Run locally with `uv run --group ci pytest -q tests/test_clock_measurement.py`.
 
-The firmware PR must additionally verify application-reloaded SysTick. For each
+The firmware must verify application-reloaded SysTick. For each
 window compare the interrupt count times the expected CPU cycles per tick
 (`nominal_hz / 1000`) with measured DWT cycles, allowing two boundary interrupts
 plus 4096 endpoint cycles. This checks reload/interrupt accounting; SysTick and
@@ -321,7 +221,7 @@ measurement scaling. A normal restoration run follows controls.
 
 ## Fixed harness versus candidate SDK
 
-The future comparison entry point must take two explicit roots: an immutable
+The comparison entry point must take two explicit roots: an immutable
 test-harness checkout and the selected candidate SDK checkout. Resolve firmware,
 Unity, reporter, acceptance definitions and test preparation from the harness;
 resolve production board/CMake/provider/module inputs from the selected SDK.
@@ -333,19 +233,11 @@ The current builder uses one root for both purposes. This separation needs an
 explicit API change plus build/provenance regression tests before baseline versus
 candidate claims; it is not implemented by this contract PR.
 
-## Completion and review
+## Completion criteria
 
-This PR supplies a concrete, reviewable contract: source-backed modes, explicit
-lab/reference assumptions, a calculated frequency screen, readiness/capture and
-cleanup rules, and tested arithmetic. It is ready for review when these checks
-pass; no new calibrated-reference claim is required to finish this contract.
-It is **not** milestone-1 hardware completion or approval to promote an experimental
-clock profile. PR128 implements the executable matrix and must be reviewed for
-conformance to this contract; PR129 implements the fixed-harness comparison.
-Preserve existing startup/core profiles. In particular, reports must retain the
-conditional reference qualification until independent evidence supports more.
-
-Milestone 1 requires AP510B and AP330 results for every required row, tick checks,
-negative controls, cleanup and fixed-harness comparison evidence. Family
-expansion remains milestone 2; unavailable expansion boards do not block the
-first milestone. Independent review and user approval precede merges.
+Require AP510B and AP330 results for every transition row, tick checks,
+negative controls, cleanup and fixed-harness comparison. Preserve existing
+startup/core profiles and the conditional reference qualification until
+independent evidence supports promotion. Family expansion is a separate step.
+Store dated lab observations, captures and review records with run artifacts
+and PR evidence rather than this contract.
