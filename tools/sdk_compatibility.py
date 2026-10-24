@@ -29,6 +29,7 @@ class Requirement:
 PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
     'test_artifact_baseline', 'test_committed_intake_patches',
     'test_intake_patches_byte_for_byte', 'test_sdk_intake', 'test_intake_workflow',
+    'test_sdk_intake_review',
     'test_cmake_contract', 'test_manifests'))
 # Minimum counts deliberately describe the reviewed matrix, independently of
 # the test parametrization. Removing coverage must not silently weaken the gate.
