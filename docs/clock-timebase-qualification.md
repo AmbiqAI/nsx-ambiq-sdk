@@ -11,7 +11,7 @@ application-reloaded SysTick. AP3/AP4/AP510 expansion is milestone 2. Delay
 helpers, RTOS scheduling, sleep/cold boot, audio clock adjustment and generated
 neuralspotx applications remain separate work.
 
-## Source evidence and unresolved prerequisites
+## Source evidence
 
 The inspected SDK baseline is `cab4033dfffa809e95eb075df73b29252bd23809`.
 The source documents below are identified by revision and section rather than
@@ -146,31 +146,98 @@ first-year aging figure gives 27 ppm before load error and other effects.
 That illustration does not establish board age, actual temperature, or a total
 ±50 ppm guarantee. Do not extrapolate it to the full device temperature range.
 
-The part-identity gap is now closed. The remaining review concerns are the
-assembled reference error budget and startup/stabilization policy; clock tests
-remain experimental until those are addressed. No frequency bounds were changed
-merely to match the previously observed hardware samples.
+The part-identity gap is closed. The contract below distinguishes a useful SDK
+regression screen from an assembled-oscillator accuracy claim. It does not infer
+a calibrated reference from the schematic or tune limits to observed samples.
 
-## Remaining acceptance prerequisites
+## Acceptance scope and lab conditions
 
-Before hardware acceptance implementation, resolve and record:
+This milestone tests SDK integration on awake EVBs in an ordinary indoor lab,
+with an ambient target of 20–30°C, normal board supply, no audio adjustment and
+no external workload. Record board/probe identity, firmware/SDK revisions,
+reset method, debugger attachment and whether lab temperature was observed or
+merely assumed. Do not describe these runs as temperature/voltage qualification,
+cold-start qualification, precision frequency calibration or full ERR024 coverage.
 
-- The assembled reference’s total accuracy on each EVB (load pulling,
-  temperature/aging assumptions), and startup stabilization policy. The schematics
-  now identify the intended crystal; crystal-mode readback and advancing samples
-  establish feasibility, not calibrated accuracy or a complete error budget.
-- Preserve explicit DWT enable/advancement and clock-source readback checks in
-  the executable fixture; the feasibility results cover running, awake CPUs only.
-- HAL mode acknowledgement and settling for each transition, including ERR024
-  disposition, with a deadline independent of the clock under test.
-- Specify the AP330 PLL reference explicitly and derive the acceptance bound
-  from that reference; verify lock and divider readback for every HP2 entry.
-- Reference capture aperture, polling/interrupt overhead and debugger/SRAM-read
-  effects. No debugger halts during windows; completion polling policy must be
-  justified or adapted before claiming timing accuracy.
+There are three distinct conclusions:
 
-These are explicit gates for the next PR, not unspecified tolerances to be
-filled with values that happen to make a board pass.
+| Check | Acceptance | What a pass establishes |
+| --- | --- | --- |
+| SDK mode and publication | Successful API return; actual mode/readiness/source matches the requested supported mode; exact nominal `SystemCoreClock` | Correct SDK selection and reporting on this run |
+| Application SysTick | Expected reload and bounded interrupt accounting across each transition | The application can keep its tick correct when changing CPU speed |
+| Physical-rate screen | Each valid capture is within ±5.2% of the selected nominal rate, under the reference assumptions below | A coarse clock regression screen, conditional on the stated measurement model |
+
+The reference budget for the screen is **±50 ppm total assembled-reference
+error**, including load, temperature and aging. This is a declared fixture
+assumption, **not a proven property of these boards**. The source tolerance,
+crystal part, mode/source readbacks and capture checks are evidence; they do not
+independently prove that assumption. A report without independent reference
+validation must say **conditional/experimental**, record the assumption, and
+must not claim calibrated frequency accuracy or unconditional clock qualification.
+This does not prevent completing the SDK functional checks or reviewing this PR.
+If absolute-frequency qualification is required later, supply a traceable
+reference measurement/error budget covering the actual board and conditions;
+self-comparison of DWT with the same crystal is not that evidence.
+
+### Frequency budget and limits
+
+Use the documented ±5% source allowance for HFRC/HFRC2 and the HFRC-derived,
+locked AP330 PLL path. The latter also requires exact source/divider validation:
+a broad frequency screen alone cannot distinguish 245.76 MHz from 250 MHz.
+For a 4096-tick window, budget two reference ticks of combined endpoint
+uncertainty and up to 2048 DWT cycles per endpoint read. Reject larger capture
+apertures; do not expand the allowed error to accommodate a slow read.
+
+Let `F` be nominal CPU Hz, `N` the measured reference interval, `R=32768`,
+`e_cpu=±0.05`, `e_ref=±0.000050`, `d_ref=±2` ticks and `d_cpu=±4096` cycles.
+The worst-case estimated rate under this model is:
+
+```text
+estimated_hz = F * (1 + e_cpu) * (N + d_ref) / (N * (1 + e_ref))
+               + d_cpu * R / N
+```
+
+At the shortest accepted window (`N=4096`), evaluating all endpoint/error signs
+with exact rational arithmetic gives these outward-rounded deviations from nominal:
+
+| Nominal | Lowest estimate | Highest estimate | Screen limits (Hz) |
+| --- | --- | --- | --- |
+| 96 MHz | −5.08527% | +5.09066% | 91,008,000–100,992,000 |
+| 192 MHz | −5.06821% | +5.07359% | 182,016,000–201,984,000 |
+| 250 MHz | −5.06425% | +5.06963% | 237,000,000–263,000,000 |
+
+Thus ±5.2% covers the combined stated budget without using the measured EVB
+results to choose the limit. `tests/test_clock_contract.py` checks every sign
+combination, counter-wrap bounds and separation of adjacent nominal modes.
+The bound applies to an averaged frequency, not instantaneous PLL jitter.
+Violating the model's assumptions invalidates that interpretation of the screen;
+a passing arithmetic test does not establish real-world reference accuracy.
+
+### Startup, transition and capture rules
+
+| Stage | Required behavior | Bound / failure behavior |
+| --- | --- | --- |
+| Reference setup | Explicitly enable XTAL mode; clear/unfreeze STIMER; read back the XTAL-32K source and verify DWT enable/advancement | Any setup/readback failure invalidates the run; no implicit HFRC fallback |
+| Warm pre-roll | Discard the first 16,384 advancing reference ticks before taking samples | About 0.5 s nominal; at most 2,000,000 polls. This is a test policy, not a manufacturer startup guarantee |
+| Mode switch | Check API status, MCUPERFACK and actual MCUPERFSTATUS; AP510B HP also needs HFRC2READY and inactive audio adjustment; AP330 HP2 needs PLL lock and exact configured source/ratio | Additional readiness observation is bounded by 327 reference ticks (about 10 ms) and 2,000,000 polls. A stuck HAL call is covered by the host deadline |
+| Acquisition | Three separate windows per row; read back the reference source; bracket reference reads with DWT; use no interrupt other than the tested SysTick | Each window 4096–4104 reference ticks; endpoint aperture ≤2048 cycles; stop at 300,000,000 elapsed DWT cycles or 2,000,000 polls |
+| Counter validity | Check the cycle deadline on every acquisition poll; do not reset/reconfigure counters mid-window, sleep, single-step or halt the target | Reject stalls, invalid windows, unexpected source state or evidence of interruption; never reuse a previous sample |
+| Host supervision | No target halts while measuring; poll only completion state until the target publishes its result | 40 s firmware-completion deadline; existing parent worker cap adds 60 s for transport/setup. Neither is a measurement reference or a sub-window wrap proof |
+| Cleanup | Disable/clear SysTick; restore interrupt masks and LOW mode; verify return status, nominal publication and actual LOW status | Cleanup failure invalidates the run even when prior assertions passed |
+
+The cycle-wrap proof additionally assumes bounded execution between polls: no
+uncontrolled ISR, breakpoint or stalled bus operation hidden between snapshots.
+The coarse host deadline alone cannot prove this. If those conditions cannot be
+maintained, discard the capture and use a separately bounded acquisition method.
+The half-second pre-roll proves only reference progress; it does not certify
+crystal cold-start settling. An unstable or interrupted run fails the regression
+check rather than triggering a longer, unreviewed delay or wider limit.
+
+SWD completion polling is permitted for these debugger-attached functional runs.
+Read-aperture checks bound its effect at the endpoints; DWT counts CPU cycles
+including execution stalls between them. Do not use these results as throughput,
+sleep or debugger-free timing measurements. A claim about those environments
+requires a separate test design.
 
 ## Required nominal transition matrix
 
@@ -204,8 +271,8 @@ and HAL failures. Only add an on-target rejection row once its setup and exact
 return code are supported; no unsafe source setting is needed just to trigger an
 error.
 Repeat the full nominal sequence after returning to LOW. For every measured
-mode use at least three independently captured windows. Row-specific readiness
-and maximum settling bounds remain prerequisites above, not implicit delays.
+mode use at least three independently captured windows. The readiness and observation bounds above apply to every row; no additional
+unrecorded settling delay is implied.
 HP at 196.608 MHz on AP510B is not a test case. Pending/active/released audio
 adjustment interactions remain identified gaps in #72; this milestone cannot
 close all of #72 by itself.
@@ -216,10 +283,10 @@ Maintain two independent verdicts:
 
 1. API publication: `SystemCoreClock` equals the nominal value for the selected
    supported source/mode. This check does not measure oscillator accuracy.
-2. Physical rate: measured CPU cycles over independently sourced reference ticks
-   fall within reviewed bounds. Account for oscillator/reference accuracy and
-   endpoint uncertainty separately; do not derive expected elapsed time from
-   `SystemCoreClock` or host USB timing.
+2. Conditional physical-rate screen: measured CPU cycles over independently
+   sourced reference ticks fall within the explicit budget above. Record the
+   reference assumption and endpoint uncertainty; do not derive expected elapsed
+   time from `SystemCoreClock` or host USB timing.
 
 `tests/hardware/clock/measurement.h` implements only bounded counter arithmetic:
 unsigned differences allow a counter to cross zero; an independently specified
@@ -243,9 +310,12 @@ products. Its example bounds are synthetic arithmetic inputs, not EVB policy.
 The same test module also cross-compiles the helper for Cortex-M55 with GCC.
 Run locally with `uv run --group ci pytest -q tests/test_clock_measurement.py`.
 
-The firmware PR must additionally verify application-reloaded SysTick against
-the same independent reference, including interrupt-count and endpoint-error
-bounds. It must demonstrate three artifact-only negative controls: stale/wrong
+The firmware PR must additionally verify application-reloaded SysTick. For each
+window compare the interrupt count times the expected CPU cycles per tick
+(`nominal_hz / 1000`) with measured DWT cycles, allowing two boundary interrupts
+plus 4096 endpoint cycles. This checks reload/interrupt accounting; SysTick and
+DWT share a CPU clock and are not independent frequency standards. The separate
+crystal-referenced CPU screen supplies the conditional physical-rate evidence. It must demonstrate three artifact-only negative controls: stale/wrong
 publication, omitted reload across a frequency-changing transition and wrong
 measurement scaling. A normal restoration run follows controls.
 
@@ -265,11 +335,15 @@ candidate claims; it is not implemented by this contract PR.
 
 ## Completion and review
 
-This first PR is complete when the issue scope, traceable matrix, unresolved
-reference gates and arithmetic checks are reviewable and local checks pass.
-It is **not** milestone-1 hardware completion. The next PR resolves reference
-feasibility, readiness/tolerances and the executable per-row matrix before adding
-an additive qualification profile. Preserve existing startup/core profiles.
+This PR supplies a concrete, reviewable contract: source-backed modes, explicit
+lab/reference assumptions, a calculated frequency screen, readiness/capture and
+cleanup rules, and tested arithmetic. It is ready for review when these checks
+pass; no new calibrated-reference claim is required to finish this contract.
+It is **not** milestone-1 hardware completion or approval to promote an experimental
+clock profile. PR128 implements the executable matrix and must be reviewed for
+conformance to this contract; PR129 implements the fixed-harness comparison.
+Preserve existing startup/core profiles. In particular, reports must retain the
+conditional reference qualification until independent evidence supports more.
 
 Milestone 1 requires AP510B and AP330 results for every required row, tick checks,
 negative controls, cleanup and fixed-harness comparison evidence. Family
