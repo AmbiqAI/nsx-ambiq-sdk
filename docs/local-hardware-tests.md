@@ -470,3 +470,10 @@ all seven AP330 hardware cases. The GCC compatibility gate passed 288 checks
 with 40 other-compiler cases deselected. Reports, binaries, UART diagnostic
 sources/captures and `board-baseline.json` are retained in the lab evidence
 directory `artifacts/nsx/sdk-core-qualification-2026-10-23` outside this repo.
+
+## Clock/timebase next increment
+
+The [two-board clock/timebase contract](clock-timebase-qualification.md) records
+the first milestone, source evidence, transition matrix and unresolved reference
+prerequisites. Its host-tested counter arithmetic does not constitute a hardware
+qualification profile or new physical evidence.

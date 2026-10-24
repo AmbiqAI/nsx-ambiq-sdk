@@ -13,6 +13,8 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - `core-clock.md` records the part-specific performance clock sources and the
   boundary between CMSIS clock synchronization and application-owned timing.
 
+- `clock-timebase-qualification.md` specifies the first two-board clock/timebase
+  milestone, reference prerequisites and target counter arithmetic.
 - `local-hardware-tests.md` describes the opt-in local pytest/Unity startup harness.
 
 ## Intake And Scope
