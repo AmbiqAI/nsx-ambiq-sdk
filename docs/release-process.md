@@ -41,7 +41,10 @@ review, and the tag/release steps explicitly.
 7. Run available CMake link smokes from `docs/toolchain-smoke.md` and record
    toolchain/board coverage. A missing licensed or local toolchain is a
    recorded gap, not an implied pass.
-8. Review the complete diff and verify the worktree is clean after approved
+8. Complete the [local intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist)
+   for the declared board matrix. Keep experimental clock evidence separate
+   from calibrated qualification; missing required hardware remains a gap.
+9. Review the complete diff and verify the worktree is clean after approved
    commits.
 
 ## Publish With Approval

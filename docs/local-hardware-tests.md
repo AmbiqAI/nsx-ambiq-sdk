@@ -322,8 +322,10 @@ checkout, not physical board qualification or approval to promote an SDK.
 For the next intake, stage the candidate in an isolated checkout, review any
 patches that upstream has absorbed, and deliberately update release-baseline
 expectations where appropriate. Do not delete a failing patch check simply to
-make an update pass. Run current and candidate with the same test definitions
-and toolchain; automated comparison and board aggregation remain later work.
+make an update pass. Use the [intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist)
+for fixed-harness board comparison and required evidence. The host gate still
+uses each candidate checkout's tests; cross-board intake approval remains a
+reviewer decision.
 
 ## Test infrastructure boundaries
 

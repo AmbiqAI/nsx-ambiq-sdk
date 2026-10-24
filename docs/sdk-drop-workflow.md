@@ -100,7 +100,9 @@ descriptors are the adapter.
 6. Add or update board descriptors only for Ambiq-owned reference boards that
    this repo should expose.
 7. Build or import approved HAL/BSP prebuilt libraries for the release payload.
-8. Run NSX validation tests.
+8. Run the [local intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist):
+   candidate host gate, fixed-harness board comparisons, failure controls and
+   retained evidence for the declared coverage matrix.
 9. Update module metadata and the NSX registry so logical modules resolve to the
    same physical repo revision.
 
