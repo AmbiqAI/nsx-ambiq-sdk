@@ -60,3 +60,27 @@ int main(void) {
     assert result.returncode == 0, result.stdout + result.stderr
     result = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_clock_arithmetic_compiles_for_m55(repo_root: Path, tmp_path: Path):
+    from test_small_m55_memory import compiler_for_test
+
+    compiler = compiler_for_test('gcc')
+    source = tmp_path / 'target.c'
+    source.write_text('''
+#include "measurement.h"
+bool measure(uint32_t c0, uint32_t c1, uint32_t r0, uint32_t r1,
+             uint32_t window, uint32_t maximum, uint32_t minimum,
+             nsx_clock_sample_t *sample) {
+    return nsx_clock_sample(c0, c1, r0, r1, window, maximum, minimum, sample);
+}
+bool within(nsx_clock_sample_t sample, uint32_t reference, uint32_t low, uint32_t high) {
+    return nsx_clock_rate_within(sample, reference, low, high);
+}
+''')
+    result = subprocess.run([str(compiler), '-std=c11', '-mcpu=cortex-m55', '-mthumb',
+                             '-ffreestanding', '-O2', '-Wall', '-Wextra', '-Werror',
+                             '-I' + str(repo_root / 'tests/hardware/clock'), '-c', str(source),
+                             '-o', str(tmp_path / 'target.o')],
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
