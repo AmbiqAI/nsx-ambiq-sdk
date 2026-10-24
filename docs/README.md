@@ -20,6 +20,7 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 ## Hardware testing
 
 - [Experimental clock/SysTick lab checks](clock-lab-tests.md)
+- [Fixed-harness SDK comparison](sdk-harness-comparison.md)
 
 ## Intake And Scope
 

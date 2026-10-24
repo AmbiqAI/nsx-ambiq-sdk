@@ -13,7 +13,7 @@ class Seed:
     value: int
 
 
-def no_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+def no_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Path | None = None) -> list[str]:
     if fault != 'none':
         raise ValueError('This suite has no fault injection modes')
     return []
@@ -27,7 +27,7 @@ class Suite:
     source_dir: str = ''
     elf_name: str = 'test.elf'
     seeds: tuple[Seed, ...] = ()
-    configure: Callable[[Path, Path, str, str], list[str]] = no_options
+    configure: Callable[[Path, Path, str, str, Path], list[str]] = no_options
 
     def __post_init__(self):
         validate_cases(self.cases)
@@ -35,9 +35,9 @@ class Suite:
             raise ValueError('Suite seed symbols must be unique')
 
 
-def startup_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+def startup_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Path | None = None) -> list[str]:
     if fault in OMISSIONS:
-        return [f'-DNSX_TEST_STARTUP_OVERRIDE={make_mutant(repo, output, board, fault)}']
+        return [f'-DNSX_TEST_STARTUP_OVERRIDE={make_mutant(sdk_root or repo, output, board, fault)}']
     if fault not in ('none', 'assertion', 'timeout'):
         raise ValueError(f'Unknown startup fault mode: {fault}')
     return []
@@ -48,7 +48,7 @@ STARTUP = Suite('startup', 'tests/hardware/test_startup.py::test_startup',
                 'tests/hardware/firmware', 'startup_test.elf',
                 tuple(Seed(n, v) for n, v in zip(SENTINELS, POISON)), startup_options)
 
-def runtime_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+def runtime_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Path | None = None) -> list[str]:
     if fault not in ('none', 'runtime-no-svc'):
         raise ValueError(f'Unknown runtime fault mode: {fault}')
     return []
@@ -61,7 +61,7 @@ CLOCK_BOARDS = ('apollo510b_evb', 'apollo330mP_evb')
 CLOCK_FAULTS = ('none', 'clock-stale-publication', 'clock-no-reload', 'clock-wrong-scaling')
 
 
-def clock_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+def clock_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Path | None = None) -> list[str]:
     if board not in CLOCK_BOARDS:
         raise ValueError('Clock diagnostic supports AP510B and AP330 Plus only')
     if fault not in CLOCK_FAULTS:

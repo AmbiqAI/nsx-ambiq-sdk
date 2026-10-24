@@ -28,6 +28,8 @@ def pytest_addoption(parser):
     group.addoption('--probe', help='Exact J-Link serial, never auto-select')
     group.addoption('--device', help='Optional check against descriptor SEGGER device; never an override')
     group.addoption('--gcc-root', type=Path)
+    group.addoption('--candidate-sdk-root', type=Path,
+                    help='Production SDK checkout; tests and runner remain in this harness')
     group.addoption('--hardware-artifacts', type=Path, default=Path('artifacts/hardware'))
     group.addoption('--hardware-timeout', type=float, default=15.0)
 
@@ -40,6 +42,7 @@ class RunConfig:
     artifacts: Path
     fault: str
     board_request: BoardRequest | None
+    sdk_root: Path | None = None
 
 
 @pytest.fixture
@@ -70,7 +73,7 @@ def run_config(request):
     except ValueError as exc:
         raise pytest.UsageError(str(exc)) from exc
     return RunConfig(board, root.resolve(), hardware, config.getoption('--hardware-artifacts'),
-                     config.getoption('--fault-injection'), board_request)
+                     config.getoption('--fault-injection'), board_request, config.getoption('--candidate-sdk-root'))
 
 
 @pytest.fixture
@@ -80,7 +83,7 @@ def firmware(request, repo_root, run_config, suite_spec):
     if qualification is not None and qualification.require_suite(request.node.nodeid, suite_spec):
         qualification.evidence[suite_spec.name] = str(output)
     image = build_firmware(BuildRequest(repo_root, output, run_config.board,
-                                       run_config.gcc_root, suite_spec, run_config.fault))
+                                       run_config.gcc_root, suite_spec, run_config.fault, run_config.sdk_root))
     if qualification is not None:
         qualification.built(request.node.nodeid, suite_spec, image, output)
     return image, output

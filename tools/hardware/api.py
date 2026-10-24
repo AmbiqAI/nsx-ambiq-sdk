@@ -19,6 +19,7 @@ class BuildRequest:
     gcc_root: Path
     suite: Suite
     fault: str = 'none'
+    sdk_root: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,8 @@ class BoardRequest:
 
 def build_firmware(request: BuildRequest) -> Firmware:
     return build(request.repo.resolve(), request.output.resolve(), request.board, request.gcc_root.resolve(),
-                 request.suite, request.fault)
+                 request.suite, request.fault,
+                 sdk_root=request.sdk_root.resolve() if request.sdk_root is not None else None)
 
 
 class BoardSession:
