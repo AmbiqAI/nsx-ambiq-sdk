@@ -1,5 +1,6 @@
 """Separate-root builds and fail-closed comparison orchestration."""
 from contextlib import contextmanager
+from dataclasses import replace
 import json
 from pathlib import Path
 import subprocess
@@ -10,7 +11,7 @@ import pytest
 from tools.hardware.api import BuildRequest, BoardRequest, build_firmware
 from tools.hardware import compare as comparison
 from tools.hardware.compare import ComparisonRequest
-from tools.hardware.suites import CLOCK, STARTUP
+from tools.hardware.suites import CLOCK, STARTUP, no_options
 from tools.hardware.provenance import dependency_inputs, cmake_inputs, classify_inputs
 from test_small_m55_memory import compiler_for_test
 
@@ -171,3 +172,20 @@ def test_production_and_harness_roles_across_checkout_layouts(tmp_path, layout):
     groups = classify_inputs([source, header], harness, sdk, tmp_path/'output')
     assert groups['harness'] == [str(source)]
     assert groups['sdk'] == [str(header)]
+
+
+def test_sdk_link_fixture_uses_harness_tests(repo_root, tmp_path):
+    candidate = tmp_path / 'candidate'
+    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(repo_root), str(candidate)],
+                   check=True, capture_output=True, timeout=60)
+    (candidate / 'tests/hardware/common/firmware.cmake').write_text('message(FATAL_ERROR "candidate tests loaded")\n')
+    (candidate / 'tests/hardware/firmware/main.cpp').write_text('#error candidate_firmware_loaded\n')
+    suite = replace(STARTUP, name='sdk-link', source_dir='tests/fixtures/sdk-link',
+                    elf_name='sdk_link.elf', configure=no_options)
+    compiler = compiler_for_test('gcc')
+    output = tmp_path / 'build'
+    build_firmware(BuildRequest(repo_root, output, 'apollo3p_evb', compiler.parent.parent,
+                                suite, sdk_root=candidate))
+    manifest = json.loads((output/'manifest.json').read_text())
+    assert str(repo_root/'tests/hardware/firmware/main.cpp') in manifest['input_roles']['harness']
+    assert not any('/candidate/tests/' in p for p in manifest['inputs_sha256'])
