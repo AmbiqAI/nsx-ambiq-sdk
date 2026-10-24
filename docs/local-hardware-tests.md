@@ -477,3 +477,6 @@ The [two-board clock/timebase contract](clock-timebase-qualification.md) records
 the first milestone, source evidence, transition matrix and unresolved reference
 prerequisites. Its host-tested counter arithmetic does not constitute a hardware
 qualification profile or new physical evidence.
+
+Experimental AP510B/AP330 clock and SysTick work is documented in
+[Clock lab tests](clock-lab-tests.md); it is not part of the core qualification profiles.

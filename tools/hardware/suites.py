@@ -57,4 +57,19 @@ def runtime_options(repo: Path, output: Path, board: str, fault: str) -> list[st
 RUNTIME = Suite('runtime', 'tests/hardware/test_runtime.py::test_runtime',
                 ('stack_bounds_alignment', 'heap_allocation', 'heap_limit_rejection', 'svc_dispatch'),
                 'tests/hardware/runtime', 'runtime_test.elf', configure=runtime_options)
-SUITES = (STARTUP, RUNTIME)
+CLOCK_BOARDS = ('apollo510b_evb', 'apollo330mP_evb')
+CLOCK_FAULTS = ('none', 'clock-stale-publication', 'clock-no-reload', 'clock-wrong-scaling')
+
+
+def clock_options(repo: Path, output: Path, board: str, fault: str) -> list[str]:
+    if board not in CLOCK_BOARDS:
+        raise ValueError('Clock diagnostic supports AP510B and AP330 Plus only')
+    if fault not in CLOCK_FAULTS:
+        raise ValueError(f'Unknown clock fault mode: {fault}')
+    return []
+
+
+CLOCK = Suite('clock', 'tests/hardware/test_clock.py::test_clock',
+              ('reference_ready', 'clock_transitions', 'restore_low'),
+              'tests/hardware/clock', 'clock_test.elf', configure=clock_options)
+SUITES = (STARTUP, RUNTIME, CLOCK)

@@ -44,3 +44,4 @@ Keep these files short and factual. If a note no longer guides a maintainer acti
 - [shared-startup.md](shared-startup.md) — shared/resource startup copy windows and validation.
 
 - [i2c-combined-transfers.md](i2c-combined-transfers.md) — repeated-START wrapper mapping, limits, failure handling and validation.
+- [Experimental clock/SysTick lab checks](clock-lab-tests.md)
