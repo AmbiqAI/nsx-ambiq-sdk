@@ -134,6 +134,44 @@ uint32_t nsx_i2c_write_read(
     return nsx_i2c_read(cfg, readBuf, numRead, addr);
 }
 
+uint32_t nsx_i2c_write_read_combined(
+    nsx_i2c_config_t *cfg, uint16_t addr, const void *writeBuf, size_t numWrite,
+    void *readBuf, size_t numRead) {
+    if (cfg == NULL || cfg->iomHandle == NULL) return AM_HAL_STATUS_INVALID_HANDLE;
+    if (writeBuf == NULL || readBuf == NULL || numWrite == 0 || numRead == 0 ||
+        addr > 0x7f || ((uintptr_t)readBuf % sizeof(uint32_t)) != 0) {
+        return AM_HAL_STATUS_INVALID_ARG;
+    }
+    if (numWrite > NSX_I2C_COMBINED_MAX_WRITE_SIZE ||
+        numRead > NSX_I2C_COMBINED_MAX_READ_SIZE) return AM_HAL_STATUS_OUT_OF_RANGE;
+    if (cfg->sIomCfg.eInterfaceMode != AM_HAL_IOM_I2C_MODE) {
+        return AM_HAL_STATUS_INVALID_OPERATION;
+    }
+
+    /* The IOM's RX command with an instruction/offset phase generates the
+     * write + repeated START + read. Offset bytes transmit MSB first, so pack
+     * the caller's byte sequence explicitly rather than casting its buffer.
+     * A single terminating command avoids an error between held-bus phases. */
+    const uint8_t *prefix = writeBuf;
+    uint64_t instruction = 0;
+    for (size_t i = 0; i < numWrite; ++i) instruction = (instruction << 8) | prefix[i];
+
+    am_hal_iom_transfer_t transaction = {0};
+    transaction.uPeerInfo.ui32I2CDevAddr = addr;
+    transaction.ui32InstrLen = (uint32_t)numWrite;
+#if defined(AM_PART_APOLLO4L) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    transaction.ui64Instr = instruction;
+#else
+    transaction.ui32Instr = (uint32_t)instruction;
+#endif
+    transaction.eDirection = AM_HAL_IOM_RX;
+    transaction.ui32NumBytes = (uint32_t)numRead;
+    transaction.pui32RxBuffer = readBuf;
+    transaction.ui8Priority = 1;
+    transaction.bContinue = false;
+    return am_hal_iom_blocking_transfer(cfg->iomHandle, &transaction);
+}
+
 /**
  * @brief Perform sequence of low-level I2C transfers (similar to Linux)
  * @param cfg I2C configuration

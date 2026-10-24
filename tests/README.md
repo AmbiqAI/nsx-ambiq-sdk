@@ -162,3 +162,11 @@ and Apollo2/3/3P constructor/CRT variants. These reuse the shared hardware build
 API without opening probes. Host audio lifecycle coverage collects only applicable
 backend operations; skipped applicable cases still make qualification incomplete.
 AP3 acoustic testing remains paused and is not an intake-gate prerequisite.
+
+## I2C wrapper regressions
+
+`python -m pytest tests/test_i2c_api.py` exercises the actual I2C source against
+a recording HAL boundary for Apollo3-style and newer instruction layouts, with
+validation enabled and disabled. It checks combined transaction descriptors,
+input limits, native failures and legacy helper behavior. These host checks do
+not emulate I2C waveforms or qualify vendor HAL recovery.
