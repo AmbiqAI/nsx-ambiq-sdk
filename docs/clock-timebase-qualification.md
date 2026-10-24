@@ -111,14 +111,54 @@ metadata. `source-evidence/` contains the inspected archive disassembly. These
 were debugger-attached reset runs, not cold boots, PVT testing, or the complete
 acceptance matrix. The diagnostic does not yet use the arithmetic helper.
 
+## Schematic reference identified on 2026-10-24
+
+The newly available EVB schematics resolve the intended reference part and
+connections. Each lists **Y2 = TXC 9HT12-32.768KDZY-T**, 32.768 kHz, on sheet 4:
+
+| Schematic | Crystal connections | External load capacitors |
+| --- | --- | --- |
+| `AP510BEVB_Rev2.0_Schematic Prints.PDF` | MCU XI/B5 and XO/A4 | C98 and C103, each 10 pF to ground |
+| `AP330MPEVB_Rev1.0_Schematic Prints.PDF` | MCU XI/A6 and XO/A7 | C51 and C52, each 10 pF to ground |
+| `AP330MPEVB_Rev2.0_Schematic Prints.PDF` | Same | Same |
+| `AP330MPEVB_Rev3.0_Schematic Prints.PDF` | Same | Same |
+
+These files are under `~/OneDrive/Ambiq/sws/schematics/`, in
+`apollo5/apollo510b/` and `apollo330/plus/`. File hashes are retained in the
+workspace artifact directory `sdk-clock-contract-2026-10-24/schematic-evidence/`.
+This identifies the board design; it does not independently inspect assembly
+substitutions on the connected boards. The reference circuit is unchanged among
+the three available AP330 revisions.
+
+[TXC 9HT12 datasheet, revision 1.05](https://txccrystal.com/images/pdf/9ht12.pdf),
+pages 1–2, decodes **D** as ±20 ppm initial tolerance at 25°C and **Y** as 7 pF
+specified load. It specifies turnover temperature 25°C ±5°C, temperature
+coefficient −0.04 ppm/°C² maximum and first-year aging ±3 ppm at 25°C ±3°C.
+It does not specify startup time for the assembled MCU oscillator.
+
+Two 10 pF capacitors contribute 5 pF in series; pin and PCB parasitics contribute
+to the remaining effective load. This is consistent with a 7 pF design target,
+but the schematic alone does not bound load pulling. In particular, the crystal's
+±20 ppm initial tolerance is **not** a complete EVB frequency-error specification.
+For an explicitly assumed 20–30°C crystal temperature, the listed temperature
+curve contributes at most 4 ppm; adding initial tolerance and the specified
+first-year aging figure gives 27 ppm before load error and other effects.
+That illustration does not establish board age, actual temperature, or a total
+±50 ppm guarantee. Do not extrapolate it to the full device temperature range.
+
+The part-identity gap is now closed. The remaining review concerns are the
+assembled reference error budget and startup/stabilization policy; clock tests
+remain experimental until those are addressed. No frequency bounds were changed
+merely to match the previously observed hardware samples.
+
 ## Remaining acceptance prerequisites
 
 Before hardware acceptance implementation, resolve and record:
 
-- The fitted reference crystal’s total accuracy on each EVB (component, load,
-  temperature/aging assumptions), and startup stabilization policy. Crystal-mode
-  readback and advancing samples establish feasibility, not calibrated accuracy.
-  The available quick-start guides do not supply this complete error budget.
+- The assembled reference’s total accuracy on each EVB (load pulling,
+  temperature/aging assumptions), and startup stabilization policy. The schematics
+  now identify the intended crystal; crystal-mode readback and advancing samples
+  establish feasibility, not calibrated accuracy or a complete error budget.
 - Preserve explicit DWT enable/advancement and clock-source readback checks in
   the executable fixture; the feasibility results cover running, awake CPUs only.
 - HAL mode acknowledgement and settling for each transition, including ERR024
