@@ -119,6 +119,7 @@ compiler and UBSan. It covers a simultaneous reference/DWT wrap, nominal 96/250
 MHz examples, stalled counters, ambiguous/excessive windows, wrong reference
 scaling, stale nominal expectations, fractional boundaries and full-width
 products. Its example bounds are synthetic arithmetic inputs, not EVB policy.
+The same test module also cross-compiles the helper for Cortex-M55 with GCC.
 Run locally with `uv run --group ci pytest -q tests/test_clock_measurement.py`.
 
 The firmware PR must additionally verify application-reloaded SysTick against
