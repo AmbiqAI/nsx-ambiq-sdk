@@ -50,6 +50,9 @@ def compare(request: ComparisonRequest) -> dict:
             save()
             images[name] = build_firmware(BuildRequest(HARNESS_ROOT, path, request.board,
                 request.gcc_root, request.suite, sdk_root=roots[name]))
+            manifest = json.loads((path / 'manifest.json').read_text())
+            if manifest.get('harness') != before['harness'] or manifest.get('sdk') != before[name]:
+                raise RuntimeError(f'{name} build provenance differs from initial clean checkouts')
             report['runs'][name].update(status='built', build_id=images[name].build_id)
             save()
         # Build both images before acquiring the local lease. Caller owns the lab claim.

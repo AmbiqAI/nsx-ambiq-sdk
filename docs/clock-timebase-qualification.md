@@ -229,7 +229,7 @@ Record both revisions/dirty states and hashes separately. No implicit sibling
 resolution and no silent import of candidate tests. Keep the existing default
 of testing this checkout compatible for normal standalone use.
 
-The stacked implementation provides this boundary through `BuildRequest.sdk_root`
+The implementation provides this boundary through `BuildRequest.sdk_root`
 and [the fixed-harness comparison command](sdk-harness-comparison.md). Its
 regression tests reject candidate-owned test code and require candidate production
 headers to be consumed. Clock comparison remains experimental pending reference

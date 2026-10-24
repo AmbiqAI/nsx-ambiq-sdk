@@ -44,7 +44,8 @@ files, archives, harness Python tools, Unity and the reporter. Input roles
 separate harness, SDK, generated build files and environment/toolchain files.
 Schema 3 replaces the old flat SDK revision/dirty fields with these two records.
 
-The comparison rechecks all checkout identities/cleanliness after execution.
+The comparison checks each build manifest against the initial clean checkout
+identities before acquiring a probe, and rechecks all checkouts after execution.
 Failure, interruption, a changing checkout, or incomplete evidence cannot leave
 a successful aggregate. An existing nonempty output is refused. A build-only
 result says `built`, never hardware `passed`. Clock runs say `experimental_pass`;

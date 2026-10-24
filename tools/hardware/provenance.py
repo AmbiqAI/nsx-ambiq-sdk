@@ -34,7 +34,7 @@ def cmake_inputs(output: Path) -> list[Path]:
     for item in reply['inputs']:
         path = Path(item['path'])
         if not path.is_absolute():
-            path = Path(reply['paths']['build' if item.get('isGenerated') else 'source']) / path
+            path = Path(reply['paths']['source']) / path
         if path.is_file():
             paths.append(path.resolve())
     return paths
@@ -45,6 +45,8 @@ def classify_inputs(paths: list[Path], harness: Path, sdk: Path, output: Path) -
     for path in sorted(set(p.resolve() for p in paths)):
         if path.is_relative_to(output):
             role = 'generated'
+        elif sdk != harness and sdk.is_relative_to(harness) and path.is_relative_to(sdk):
+            role = 'sdk'
         elif path.is_relative_to(harness) and (harness != sdk or path.relative_to(harness).parts[0] in ('tests', 'tools')):
             role = 'harness'
         elif path.is_relative_to(sdk):
