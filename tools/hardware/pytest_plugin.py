@@ -18,6 +18,8 @@ def pytest_addoption(parser):
                     help='Require every suite in an exact board/toolchain profile')
     group.addoption('--qualification-report', type=Path,
                     help='Fresh aggregate JSON report (required with a profile)')
+    group.addoption('--clock-experimental', action='store_true',
+                    help='Enable clock diagnostic with provisional reference bounds; not qualification')
     group.addoption('--hardware', action='store_true', help='Explicitly enable board execution')
     group.addoption('--build-only', action='store_true', help='Build firmware without opening a probe')
     group.addoption('--board', choices=BOARDS)

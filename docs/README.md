@@ -17,6 +17,10 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
   milestone, reference prerequisites and target counter arithmetic.
 - `local-hardware-tests.md` describes the opt-in local pytest/Unity startup harness.
 
+## Hardware testing
+
+- [Experimental clock/SysTick lab checks](clock-lab-tests.md)
+
 ## Intake And Scope
 
 - `sdk-drop-workflow.md` describes how to ingest a new AmbiqSuite drop and promote approved artifacts.
