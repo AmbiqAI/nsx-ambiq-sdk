@@ -113,7 +113,7 @@ def test_same_abi_count_cannot_hide_missing_combinations():
     assert gate.report(0)['status'] == 'passed'
 
 
-@pytest.mark.parametrize('requirement', CORE_BUILDS[:2], ids=('runtime', 'startup'))
+@pytest.mark.parametrize('requirement', CORE_BUILDS[:3], ids=('power', 'runtime', 'startup'))
 def test_core_build_gate_rejects_repeated_board(requirement):
     gate = Gate((requirement,))
     items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',

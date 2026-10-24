@@ -72,3 +72,21 @@ Apollo330 Plus and Apollo510 Lite datasheet clocking sections. In particular,
 the 192 MHz HP1 mode belongs to Apollo330P/510L; it must not be inferred for
 Apollo510 from a shared enum comment. See `docs/core-clock.md` for the source
 revisions and validation scope.
+
+## Compile/link regression coverage
+
+`tests/test_power_link.py` builds the complete power module with its interrupt
+and timer dependencies against shipped HAL/BSP headers and archives. The GCC
+intake gate requires Apollo3, Apollo3 Plus, Apollo4 Plus, Apollo4 Blue Plus
+KBR/KXR, Apollo330 Plus, Apollo510 and Apollo510B builds. Public monitor,
+configuration, performance and profile entry points are retained in the ELF;
+this check does not execute power changes or drive monitor pins.
+
+Run locally with an Arm GNU toolchain installed:
+
+```bash
+NSX_REQUIRE_ARM_GCC=1 uv run --group ci pytest -q tests/test_power_link.py
+```
+
+The monitor uses Apollo3/3P's `g_AM_HAL_GPIO_OUTPUT` configuration and the
+newer families' `am_hal_gpio_pincfg_output` configuration.
