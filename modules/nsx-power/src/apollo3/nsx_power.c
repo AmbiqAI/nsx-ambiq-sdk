@@ -8,33 +8,33 @@
 #include "am_mcu_apollo.h"
 #include "am_util.h"
 #include "nsx_core.h"
-#include "nsx_power.h"
+#include "nsx_power_internal.h"
 
-
-int32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
+uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
     uint32_t control = AM_HAL_MCUCTRL_SRAM_PREFETCH_DATA;
 
 #ifndef NSX_DISABLE_API_VALIDATION
     if (cfg == NULL) {
         return NSX_STATUS_INVALID_HANDLE;
     }
-    if (nsx_core_check_api(cfg->api, &nsx_power_oldest_supported_version, &nsx_power_current_version)) {
+    if (cfg->api == NULL || nsx_core_check_api(cfg->api, &nsx_power_oldest_supported_version, &nsx_power_current_version)) {
         return NSX_STATUS_INVALID_VERSION;
-    }
-    if (!nsx_core_initialized()) {
-        return NSX_STATUS_INIT_FAILED;
     }
 #endif
 
-    am_bsp_low_power_init();
-    NSX_TRY(nsx_power_set_performance_mode(cfg->perf_mode), "Set CPU Perf mode failed.");
-    am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
-    am_hal_cachectrl_enable();
-    am_hal_mcuctrl_control(AM_HAL_MCUCTRL_CONTROL_SRAM_PREFETCH, &control);
-
-    if (cfg->need_tempco) {
-        nsx_low_power_printf("WARNING TempCo is not wired for the unified Apollo3 power backend.\n");
+    if (cfg->perf_mode != NSX_POWER_PERF_LOW && cfg->perf_mode != NSX_POWER_PERF_HIGH &&
+        cfg->perf_mode != NSX_POWER_PERF_MAX) {
+        return NSX_STATUS_INVALID_CONFIG;
     }
+    if (cfg->need_tempco) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+
+    am_bsp_low_power_init();
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_set_performance_mode(cfg->perf_mode));
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_config(&am_hal_cachectrl_defaults));
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_enable());
+    NSX_POWER_RETURN_IF_ERROR(am_hal_mcuctrl_control(AM_HAL_MCUCTRL_CONTROL_SRAM_PREFETCH, &control));
 
     return AM_HAL_STATUS_SUCCESS;
 }

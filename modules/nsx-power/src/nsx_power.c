@@ -118,7 +118,7 @@ uint32_t nsx_power_configure(const nsx_power_config_t *pCfg) {
         return NSX_STATUS_INVALID_HANDLE;
     }
 
-    if (nsx_core_check_api(
+    if (pCfg->api == NULL || nsx_core_check_api(
             pCfg->api, &nsx_power_oldest_supported_version, &nsx_power_current_version)) {
         return NSX_STATUS_INVALID_VERSION;
     }

@@ -5,6 +5,14 @@
 
 #include "nsx_power.h"
 
+/* Return the first failed operation to the application; do not enter a fail loop. */
+#define NSX_POWER_RETURN_IF_ERROR(operation) do { \
+    uint32_t nsx_power_status = (operation); \
+    if (nsx_power_status != NSX_STATUS_SUCCESS) { \
+        return nsx_power_status; \
+    } \
+} while (0)
+
 /// One row of a platform staged power-profile register table.
 typedef struct {
     volatile uint32_t *addr;
