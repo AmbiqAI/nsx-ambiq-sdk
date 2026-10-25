@@ -34,6 +34,11 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 
 ## nsx_system Quick Start
 
+For AP3/3P and AP4P/L, see the
+[startup ownership proposal](../../docs/power-startup-policy.md) before composing
+system initialization with `nsx_power_configure()`. Both currently invoke BSP
+initialization; the proposal's shared guard is not implemented yet.
+
 ```c
 #include "nsx_system.h"
 

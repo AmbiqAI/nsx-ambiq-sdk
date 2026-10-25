@@ -111,6 +111,11 @@ rates, concurrent callers, sleep, or full platform power configuration.
 
 ## Apollo3/Apollo4 startup failure contract
 
+The [startup policy proposal](../../docs/power-startup-policy.md) separates
+current field behavior from the proposed one-time startup contract. Its ownership,
+repeat-call and memory-layout guards are not implemented yet; the behavior below
+describes the current API.
+
 `nsx_power_configure()` validates its configuration/API before dispatch. AP3/3P
 and AP4 reject invalid performance modes before BSP initialization; TempCo is
 rejected on AP3/3P and AP4L. The core lifecycle initialized flag is not a module
@@ -126,10 +131,9 @@ Successful earlier writes remain in effect after a hardware failure. There is
 no general rollback/retry guarantee: reset or use board-specific recovery
 before retrying. Input validation failures occur before hardware setup. The
 void BSP initializer cannot report its internal failures.
-[TempCo resource cleanup](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/136) and
-[configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
-remain tracked follow-ups;
-this contract is not a claim that every profile field is implemented.
+TempCo resource cleanup is described below.
+[Configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
+remains open; this contract is not a claim that every profile field is implemented.
 
 `tests/test_power_startup.py` calls the real public wrapper, family backend and
 core lifecycle, with HAL calls controlled on the host. It checks invalid inputs,

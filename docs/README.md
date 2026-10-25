@@ -36,6 +36,9 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 
 ## Internal Reviews
 
+- [AP3/AP4 startup policy proposal](power-startup-policy.md) defines the proposed
+  startup ownership and power-field contract for #137; it is not yet enforced.
+
 - Use tests and module READMEs for current module-boundary rules.
 - Put new design notes here only when they describe an active maintainer contract.
 
