@@ -90,3 +90,21 @@ NSX_REQUIRE_ARM_GCC=1 uv run --group ci pytest -q tests/test_power_link.py
 
 The monitor uses Apollo3/3P's `g_AM_HAL_GPIO_OUTPUT` configuration and the
 newer families' `am_hal_gpio_pincfg_output` configuration.
+
+## Apollo3/Apollo4 selector contracts
+
+`tests/test_power_selectors.py` executes the production selectors through the
+public NSX header with a controllable HAL. Apollo3/3P use the shipped burst HAL
+declarations; Apollo4 uses a small host HAL model. The complete eight-board
+power link matrix checks the real family headers and archives separately.
+
+LOW selects normal mode on AP3/3P and LP on AP4; HIGH/MAX select burst or HP.
+Both families reject NOT_SET and unknown modes without touching the HAL and
+leave `SystemCoreClock` unchanged. AP3/3P initializes burst support on its first
+valid request, including LOW. Initialization errors propagate and remain
+retryable; only successful, available initialization is cached. Successful
+initialization remains cached if a later mode transition fails.
+
+The required intake matrix covers translation, invalid inputs, status
+propagation, retries and call ordering. It does not validate physical clock
+rates, concurrent callers, sleep, or full platform power configuration.

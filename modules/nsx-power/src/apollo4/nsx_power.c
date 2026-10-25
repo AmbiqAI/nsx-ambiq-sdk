@@ -13,15 +13,6 @@ uint32_t nsx_power_tempco_enable(void);
 void nsx_power_tempco_prepare_for_sleep(void);
 #endif
 
-uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
-    if ((mode == NSX_POWER_PERF_HIGH) || (mode == NSX_POWER_PERF_MAX)) {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
-    }
-    if (mode == NSX_POWER_PERF_LOW) {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
-    return NSX_STATUS_INVALID_CONFIG;
-}
 
 static void nsx_power_disable_periph(am_hal_pwrctrl_periph_e peripheral) {
     (void)am_hal_pwrctrl_periph_disable(peripheral);

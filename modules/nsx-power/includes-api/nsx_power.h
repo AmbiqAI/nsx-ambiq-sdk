@@ -74,7 +74,7 @@ extern const nsx_core_api_t nsx_power_current_version;
 /// CPU performance / clock-speed mode.
 typedef enum {
     NSX_POWER_PERF_NOT_SET = -1,
-    NSX_POWER_PERF_LOW     = 0, ///< LP 96 MHz (HFRC)
+    NSX_POWER_PERF_LOW     = 0, ///< Family low-power mode.
     NSX_POWER_PERF_HIGH    = 1, ///< Apollo510: configured HFRC2; Apollo330P/510L: HP1 192 MHz.
     NSX_POWER_PERF_MAX     = 2  ///< Apollo330P/510L: configured HP2 PLL rate; otherwise HIGH.
 } nsx_power_perf_mode_t;
@@ -179,6 +179,14 @@ extern void nsx_power_deep_sleep(void);
 
 /**
  * @brief Set CPU performance mode.
+ *
+ * Apollo3/3P maps LOW to normal mode and HIGH/MAX to burst mode; Apollo4
+ * maps LOW to LP and HIGH/MAX to HP. Both reject NOT_SET and unknown values
+ * without a HAL call, propagate HAL errors, and leave SystemCoreClock unchanged.
+ * Apollo3/3P initializes burst support on the first valid request (including
+ * LOW), caches only successful initialization with available burst support,
+ * and retries initialization after failure. The caller owns clock publication
+ * and dependent timing updates on these families.
  *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
  * SystemCoreClock value. Apollo510 HP uses configured HFRC2; Apollo330P/510L
