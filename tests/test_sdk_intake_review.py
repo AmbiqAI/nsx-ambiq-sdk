@@ -280,3 +280,15 @@ def test_ignored_patch_target_cannot_stand_in_for_tracked_payload(checkouts):
     commit(after)
     with pytest.raises(ValueError, match='Patch target must be tracked'):
         review.review(before, after)
+
+
+def test_snapshot_matches_git_keys_with_windows_payload_paths(checkouts, monkeypatch):
+    from pathlib import PureWindowsPath
+
+    before, after = checkouts
+    monkeypatch.setattr(review, 'PAYLOAD', PureWindowsPath(review.PAYLOAD))
+    report = review.review(before, after)
+    assert report['changes'] == []
+    assert report['verified_archive_counts'] == {'baseline': 1, 'candidate': 1}
+    assert review.category(ARCHIVE.as_posix()) == 'archive'
+    assert review.review(before, after, decisions(report))['status'] == 'review-recorded'

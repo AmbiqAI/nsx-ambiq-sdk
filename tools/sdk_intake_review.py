@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
@@ -90,7 +90,7 @@ def clean_revision(root: Path) -> str:
 def category(path: str) -> str:
     if path.startswith('sdk-intake/patches/'):
         return 'patch'
-    if path.endswith('.a') and path.startswith(f'{PAYLOAD}/'):
+    if path.endswith('.a') and path.startswith(f'{PAYLOAD.as_posix()}/'):
         return 'archive'
     if path.endswith(('.h', '.hpp', '.inc')):
         return 'header'  # File-level inventory, not a semantic API/ABI comparison.
@@ -139,7 +139,7 @@ def snapshot(root: Path) -> Snapshot:
             raise ValueError(f'Expected a regular tracked file: {path}')
         files[relative] = FileInput(intake.bas.sha256(path), mode)
     manifest_path = root / PAYLOAD / 'artifact-manifest.yaml'
-    if str(PAYLOAD / 'artifact-manifest.yaml') not in files:
+    if (PAYLOAD / 'artifact-manifest.yaml').as_posix() not in files:
         raise ValueError(f'Missing tracked artifact manifest: {manifest_path}')
     manifest = yaml.safe_load(manifest_path.read_text())
     sdk = manifest.get('sdk', {}) if isinstance(manifest, dict) else {}
@@ -149,8 +149,8 @@ def snapshot(root: Path) -> Snapshot:
     artifacts = intake.verify_artifact_hashes(root / PAYLOAD)
     artifacts.raise_if_not_ok(label=str(root))
     archives = tuple(sorted(artifacts.verified))
-    actual_archives = {str(Path(path).relative_to(PAYLOAD)) for path in files
-                       if path.startswith(f'{PAYLOAD}/') and path.endswith('.a')}
+    actual_archives = {PurePosixPath(path).relative_to(PAYLOAD.as_posix()).as_posix() for path in files
+                       if path.startswith(f'{PAYLOAD.as_posix()}/') and path.endswith('.a')}
     if set(archives) != actual_archives or len(archives) != len(set(archives)):
         raise ValueError(f'{root}: manifest must declare every tracked archive exactly once')
     patches = {}
