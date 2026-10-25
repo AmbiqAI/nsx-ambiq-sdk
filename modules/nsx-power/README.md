@@ -146,7 +146,9 @@ arms the timer last. A failed setup returns its original error and releases
 resources in timer-before-ADC order. A later enable finishes pending cleanup
 before allocating again. Callback access is suppressed during setup/cleanup. A foreign timer owner
 causes ADC resources to be released without touching that timer. Callback
-failures remain observable even when subsequent ADC sleep succeeds.
+failures remain observable even when subsequent ADC sleep succeeds. Failed ADC
+enable attempts sleep cleanup. ADC sleep and its saved-state update preserve the
+caller’s interrupt mask so a timer callback cannot observe a partial transition.
 
 If cleanup fails, resources remain reserved until cleanup succeeds. If ADC
 handle deinitialization fails, reset is required: the HAL can invalidate the

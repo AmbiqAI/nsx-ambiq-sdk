@@ -11,11 +11,24 @@ static unsigned step, fail_step, allocations, releases, operations;
 static bool allocated, powered, enabled, running, irq_enabled, cleanup;
 static bool delivering, allow_capture;
 static uint32_t sample_status;
-static unsigned acknowledgements;
+static unsigned acknowledgements, timer_clears;
+static uint32_t primask;
+static bool pending, sleep_irq;
+
 static bool bad_trim, deinit_poison, trim_read_failure;
 static const char *cleanup_failure;
 static nsx_irq_handler_t handler;
 static void *context;
+static void deliver_pending(void) {
+    if (pending && !primask && handler) {
+        pending = false;
+        delivering = true;
+        handler(context);
+        delivering = false;
+    }
+}
+uint32_t am_hal_interrupt_master_disable(void) { uint32_t old=primask; primask=1; return old; }
+void am_hal_interrupt_master_set(uint32_t mask) { primask=mask; deliver_pending(); }
 static int handle;
 test_adc_t test_adc;
 const nsx_core_api_t nsx_interrupt_current_version = {0};
@@ -24,7 +37,7 @@ extern nsx_timer_config_t *nsx_timer_config[];
 static uint32_t op(const char *name) {
     ++operations;
     /* Even synchronous delivery during setup/release must not use ADC. */
-    if (!s_nsx_power_tempco.initialized && handler && !delivering) {
+    if (!s_nsx_power_tempco.initialized && handler && !delivering && !primask) {
         delivering = true;
         unsigned before = acknowledgements;
         handler(context);
@@ -60,10 +73,13 @@ uint32_t am_hal_adc_power_control(void *h,int mode,bool retain) {
     assert(h == &handle && allocated);
     if (mode == AM_HAL_SYSCTRL_WAKE) {
         /* Old implementation powered the domain internally, too. */
+        assert(powered || retain || !s_nsx_power_tempco.initialized);
         uint32_t s = op("wake"); if (!s) powered = true; return s;
     }
     assert(mode == AM_HAL_SYSCTRL_DEEPSLEEP && retain && powered);
-    uint32_t s = op("sleep"); if (!s) powered = false; return s;
+    uint32_t s = op("sleep"); if (!s) powered = false;
+    if (sleep_irq) { sleep_irq=false; pending=true; deliver_pending(); }
+    return s;
 }
 uint32_t am_hal_adc_configure(void *h,am_hal_adc_config_t *cfg) {
     assert(h == &handle && allocated && powered && cfg->eTrigger == AM_HAL_ADC_TRIGSEL_SOFTWARE);
@@ -92,7 +108,7 @@ uint32_t am_hal_timer_config(uint32_t n,am_hal_timer_config_t *c) {
     assert(n == NSX_TIMER_TEMPCO && c->eInputClock == AM_HAL_TIMER_CLOCK_HFRC_DIV16);
     return op("timer-config");
 }
-uint32_t am_hal_timer_clear(uint32_t n) { assert(n == NSX_TIMER_TEMPCO); return op("timer-clear"); }
+uint32_t am_hal_timer_clear(uint32_t n) { assert(n == NSX_TIMER_TEMPCO); ++timer_clears; return op("timer-clear"); }
 uint32_t am_hal_timer_start(uint32_t n) {
     assert(n == NSX_TIMER_TEMPCO); uint32_t s = op("timer-start"); if (!s) running = true; return s;
 }
@@ -106,15 +122,11 @@ uint32_t am_hal_timer_read(uint32_t n) { (void)n; return 0; }
 uint32_t nsx_irq_register(const nsx_irq_config_t *c) {
     assert(c->irqn == TIMER4_IRQn); uint32_t s = op("register");
     if (!s) { handler = c->handler; context = c->ctx; irq_enabled = true;
-        delivering = true;
-        unsigned before = acknowledgements;
-        handler(context);
-        assert(acknowledgements > before);
-        delivering = false; } return s;
+        pending = true; deliver_pending(); } return s;
 }
 uint32_t nsx_irq_unregister(IRQn_Type n) {
     assert(n == TIMER4_IRQn); uint32_t s = op("unregister");
-    if (!s) { irq_enabled = false; handler = NULL; context = NULL; } return s;
+    if (!s) { irq_enabled = false; pending = false; handler = NULL; context = NULL; } return s;
 }
 uint32_t nsx_irq_clear_pending(IRQn_Type n) { assert(n == TIMER4_IRQn); return op("pending-clear"); }
 uint32_t am_hal_pwrctrl_tempco_sample_handler(uint32_t n,am_hal_adc_sample_t *s) { assert(allow_capture && n == AM_HAL_TEMPCO_NUMSAMPLES && s); return sample_status; }
@@ -143,7 +155,13 @@ int main(int argc,char **argv) {
     setup_success(); unsigned setup_steps = step;
     if (!strcmp(argv[1],"success")) {
         unsigned before = operations; assert(nsx_power_tempco_enable() == 0); assert(operations == before);
-        nsx_power_tempco_prepare_for_sleep(); assert(!powered);
+        allow_capture=true; sleep_irq=true;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(!pending && !powered && !primask);
+        primask=1;
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        assert(primask == 1);
+        primask=0;
     }
     cleanup = true; assert(nsx_power_tempco_disable() == 0); clean();
     if (!strcmp(argv[1],"init-failures")) {
@@ -171,6 +189,7 @@ int main(int argc,char **argv) {
             step=0; fail_step=i; cleanup=false;
             nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
             assert(s_nsx_power_tempco.last_handler_status == FAIL);
+            assert(!powered && s_nsx_power_tempco.suspended);
             assert(nsx_power_tempco_disable() == 0); clean();
         }
     }
@@ -205,15 +224,21 @@ int main(int argc,char **argv) {
     }
     if (!strcmp(argv[1],"timer-reconfigure")) {
         nsx_timer_config_t other=s_nsx_power_tempco_timer;
+        unsigned before_clears=timer_clears;
         assert(nsx_timer_init(&other) == 0);
+        assert(timer_clears == before_clears + 2 && !primask);
         other.periodInMicroseconds = 12000;
+        primask=1;
         assert(nsx_timer_init(&other) == 0);
+        assert(primask == 1);
+        am_hal_interrupt_master_set(0);
         other.enableInterrupt = false;
         other.callback = NULL;
         assert(nsx_timer_init(&other) == 0);
         assert(!irq_enabled && handler == NULL && running);
         cleanup_failure = "timer-stop";
         assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(!primask);
         assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
         cleanup_failure = NULL;
         assert(nsx_timer_init(&other) == 0);
@@ -221,7 +246,10 @@ int main(int argc,char **argv) {
         other.enableInterrupt = true;
         other.callback = nsx_power_tempco_callback;
         cleanup_failure = "timer-start";
+        primask=1;
         assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(primask == 1);
+        am_hal_interrupt_master_set(0);
         assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
         cleanup_failure = NULL;
         assert(nsx_timer_init(&other) == 0);

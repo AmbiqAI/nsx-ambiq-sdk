@@ -59,7 +59,7 @@ static void nsx_timer_irq_handler(void *ctx) {
     if (status != NSX_STATUS_SUCCESS) return status; \
 } while (0)
 
-uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
+static uint32_t nsx_timer_init_locked(nsx_timer_config_t *cfg) {
     if (cfg == NULL || (unsigned)cfg->timer > NSX_TIMER_TEMPCO) {
         return NSX_STATUS_INVALID_CONFIG;
     }
@@ -98,6 +98,14 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
     TIMER_TRY(am_hal_timer_start(cfg->timer));
     s_timer_state[cfg->timer].ready = true;
     return NSX_STATUS_SUCCESS;
+}
+
+uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
+    /* Publish readiness before an enabled compare IRQ can run. */
+    uint32_t mask = am_hal_interrupt_master_disable();
+    uint32_t status = nsx_timer_init_locked(cfg);
+    am_hal_interrupt_master_set(mask);
+    return status;
 }
 
 uint32_t nsx_timer_platform_deinit(nsx_timer_config_t *cfg) {

@@ -56,3 +56,6 @@ uint32_t am_hal_timer_interrupt_enable(uint32_t);
 uint32_t am_hal_timer_interrupt_disable(uint32_t);
 uint32_t am_hal_timer_read(uint32_t);
 #endif
+
+uint32_t am_hal_interrupt_master_disable(void);
+void am_hal_interrupt_master_set(uint32_t mask);

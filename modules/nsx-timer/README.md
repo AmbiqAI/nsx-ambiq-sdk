@@ -17,7 +17,8 @@ settings, so switching to non-interrupt operation releases the previous handler.
 Keep the original configuration object alive and its timer number unchanged
 until release.
 Initialization checks each required HAL operation, and callbacks are suppressed
-until setup completes and throughout teardown. An owned timer interrupt is
+until setup completes and throughout teardown. Setup preserves the caller’s
+interrupt mask and defers IRQ delivery until readiness is published. An owned timer interrupt is
 acknowledged even while its callback is suppressed. Call init/deinit from foreground;
 concurrent lifecycle calls and deinitializing from a callback are unsupported.
 

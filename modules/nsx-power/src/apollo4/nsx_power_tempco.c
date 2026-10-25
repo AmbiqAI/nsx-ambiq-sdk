@@ -174,9 +174,11 @@ void nsx_power_tempco_prepare_for_sleep(void) {
         return;
     }
 
+    uint32_t mask = am_hal_interrupt_master_disable();
     uint32_t sleep_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
     if (sleep_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
     if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->last_handler_status = sleep_status;
+    am_hal_interrupt_master_set(mask);
 }
 
 static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
@@ -191,7 +193,10 @@ static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
     if (state->last_handler_status != AM_HAL_STATUS_SUCCESS) return;
     state->suspended = false;
     state->last_handler_status = am_hal_adc_enable(state->adc_handle);
-    if (state->last_handler_status != AM_HAL_STATUS_SUCCESS) return;
+    if (state->last_handler_status != AM_HAL_STATUS_SUCCESS) {
+        nsx_power_tempco_prepare_for_sleep();
+        return;
+    }
 
     state->last_handler_status = nsx_power_tempco_capture_samples(state, AM_HAL_TEMPCO_NUMSAMPLES, state->samples);
     if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) {
@@ -205,9 +210,7 @@ static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
             (unsigned long)state->samples[0].ui32Sample);
     }
 
-    uint32_t sleep_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
-    if (sleep_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
-    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->last_handler_status = sleep_status;
+    nsx_power_tempco_prepare_for_sleep();
 }
 
 static void nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state) {
