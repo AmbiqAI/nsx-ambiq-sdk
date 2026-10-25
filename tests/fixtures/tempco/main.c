@@ -158,7 +158,12 @@ int main(int argc,char **argv) {
         allow_capture=true; sleep_irq=true;
         nsx_power_tempco_prepare_for_sleep();
         assert(!pending && !powered && !primask);
+        before=operations;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(operations == before && !primask);
         primask=1;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(operations == before && primask == 1);
         nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
         assert(primask == 1);
         primask=0;

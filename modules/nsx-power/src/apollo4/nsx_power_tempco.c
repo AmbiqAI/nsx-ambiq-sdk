@@ -170,11 +170,12 @@ failed:
 void nsx_power_tempco_prepare_for_sleep(void) {
     nsx_power_tempco_state_t *state = &s_nsx_power_tempco;
 
-    if (!state->wanted || !state->initialized || state->adc_handle == NULL) {
+    uint32_t mask = am_hal_interrupt_master_disable();
+    if (!state->wanted || !state->initialized || state->adc_handle == NULL || state->suspended) {
+        am_hal_interrupt_master_set(mask);
         return;
     }
 
-    uint32_t mask = am_hal_interrupt_master_disable();
     uint32_t sleep_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
     if (sleep_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
     if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->last_handler_status = sleep_status;
