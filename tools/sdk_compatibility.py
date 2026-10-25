@@ -93,6 +93,10 @@ ADAPTER_REGRESSIONS = (
                                      'pending-audio', 'released-audio'))),
 )
 CORE_BUILDS = (
+    Requirement('tests/test_power_link.py::test_power_module_links_real_sdk', 8,
+                ('apollo3_evb', 'apollo3p_evb', 'apollo4p_evb',
+                 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
+                 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
     Requirement('tests/test_runtime_suite.py::test_runtime_links_real_handlers_and_heap', 6,
                 ('apollo3p_evb', 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
                  'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
