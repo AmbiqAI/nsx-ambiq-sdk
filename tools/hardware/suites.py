@@ -72,4 +72,6 @@ def clock_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Pa
 CLOCK = Suite('clock', 'tests/hardware/test_clock.py::test_clock',
               ('reference_ready', 'clock_transitions', 'restore_low'),
               'tests/hardware/clock', 'clock_test.elf', configure=clock_options)
-SUITES = (STARTUP, RUNTIME, CLOCK)
+TEMPCO = Suite('tempco-lifecycle', 'tests/hardware/test_tempco.py::test_tempco',
+               ('setup_release_retry',), 'tests/fixtures/tempco-smoke', 'tempco_smoke.elf')
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO)

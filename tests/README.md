@@ -170,3 +170,12 @@ a recording HAL boundary for Apollo3-style and newer instruction layouts, with
 validation enabled and disabled. It checks combined transaction descriptors,
 input limits, native failures and legacy helper behavior. These host checks do
 not emulate I2C waveforms or qualify vendor HAL recovery.
+
+`test_tempco_lifecycle.py` runs the actual AP4 TempCo and timer adapters against
+recording HAL calls. It sweeps initialization failures, exercises cleanup
+failures and retries, rejects timer ownership conflicts, and checks callback
+suppression before setup completes and during release. ADC deinitialization
+failure deliberately requires reset because the vendor HAL may discard its
+handle on error. The `tempco-smoke` fixture provides a bounded AP4 KXR
+setup/release/reallocation check through the shared hardware build/session API;
+it does not validate temperature samples or applied trims.

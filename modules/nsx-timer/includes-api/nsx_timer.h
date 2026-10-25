@@ -76,6 +76,16 @@ typedef struct nsx_timer_config {
 extern uint32_t nsx_timer_init(nsx_timer_config_t *cfg);
 
 /**
+ * @brief Release an Apollo4 timer, including a partially initialized timer.
+ *
+ * Call from foreground with the same configuration object passed to init.
+ * The object must remain alive and unmodified until release succeeds.
+ * Failure retains ownership; retry deinit before reusing the timer. Callbacks
+ * are suppressed during release. Other families return INVALID_CONFIG.
+ */
+extern uint32_t nsx_timer_deinit(nsx_timer_config_t *cfg);
+
+/**
  * @brief Read current value of timer
  *
  * @param cfg
