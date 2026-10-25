@@ -10,28 +10,6 @@
 #include "nsx_core.h"
 #include "nsx_power.h"
 
-static bool s_nsx_power_burst_mode_initialized = false;
-
-uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
-    am_hal_burst_mode_e burst_mode;
-    am_hal_burst_avail_e burst_available;
-
-    if (!s_nsx_power_burst_mode_initialized) {
-        am_hal_burst_mode_initialize(&burst_available);
-        if (burst_available != AM_HAL_BURST_AVAIL) {
-            return NSX_STATUS_FAILURE;
-        }
-        s_nsx_power_burst_mode_initialized = true;
-    }
-
-    if ((mode == NSX_POWER_PERF_HIGH) || (mode == NSX_POWER_PERF_MAX)) {
-        return am_hal_burst_mode_enable(&burst_mode);
-    }
-    if (mode == NSX_POWER_PERF_LOW) {
-        return am_hal_burst_mode_disable(&burst_mode);
-    }
-    return NSX_STATUS_INVALID_CONFIG;
-}
 
 int32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
     uint32_t control = AM_HAL_MCUCTRL_SRAM_PREFETCH_DATA;

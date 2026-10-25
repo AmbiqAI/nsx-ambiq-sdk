@@ -141,7 +141,7 @@ def test_clock_gate_requires_each_target_scenario():
     assert gate.report(0)['status'] == 'incomplete'
 
 
-@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[0], ADAPTER_REGRESSIONS[2]),
+@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[1], ADAPTER_REGRESSIONS[3]),
                          ids=('audio-buffers', 'audio-lifecycle'))
 def test_audio_gate_requires_every_scenario(requirement):
     assert len(requirement.variants) == requirement.minimum
@@ -189,3 +189,15 @@ raise SystemExit(code)
                             cwd=repo_root, env=env, capture_output=True, text=True, timeout=90)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}
+
+
+def test_power_selector_gate_requires_each_family_scenario():
+    requirement = ADAPTER_REGRESSIONS[0]
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'
