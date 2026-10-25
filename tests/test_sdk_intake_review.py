@@ -91,8 +91,8 @@ def test_inventory_requires_review_and_does_not_modify_inputs(checkouts):
     assert report['qualification_complete'] is False
     changes = {entry['path']: entry for entry in report['changes']}
     assert changes['boards/test/board.cmake']['category'] == 'configuration'
-    assert changes[str(review.PAYLOAD / 'new.h')]['category'] == 'header'
-    assert changes[str(MANIFEST)]['change'] == 'modified'
+    assert changes[(review.PAYLOAD / 'new.h').as_posix()]['category'] == 'header'
+    assert changes[MANIFEST.as_posix()]['change'] == 'modified'
     assert report['patches'][PATCH]['expected_action'] == 'retain'
     assert review.review(before, after, decisions(report))['status'] == 'review-recorded'
     assert review.git(before, 'status', '--porcelain') == ''
@@ -239,7 +239,7 @@ def test_removed_header_is_in_inventory(checkouts):
     write(before, review.PAYLOAD / 'removed.h', 'old header')
     commit(before)
     report = review.review(before, after)
-    assert {'path': str(review.PAYLOAD / 'removed.h'), 'category': 'header',
+    assert {'path': (review.PAYLOAD / 'removed.h').as_posix(), 'category': 'header',
             'change': 'removed', 'before_sha256': hashlib.sha256(b'old header').hexdigest(),
             'after_sha256': None, 'before_mode': '100644', 'after_mode': None} in report['changes']
 
@@ -275,8 +275,8 @@ def test_executable_mode_change_is_in_inventory(checkouts):
 
 def test_ignored_patch_target_cannot_stand_in_for_tracked_payload(checkouts):
     before, after = checkouts
-    review.git(after, 'rm', '--cached', str(HEADER))
-    write(after, '.gitignore', str(HEADER) + '\n')
+    review.git(after, 'rm', '--cached', HEADER.as_posix())
+    write(after, '.gitignore', HEADER.as_posix() + '\n')
     commit(after)
     with pytest.raises(ValueError, match='Patch target must be tracked'):
         review.review(before, after)
