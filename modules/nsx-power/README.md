@@ -108,3 +108,33 @@ initialization remains cached if a later mode transition fails.
 The required intake matrix covers translation, invalid inputs, status
 propagation, retries and call ordering. It does not validate physical clock
 rates, concurrent callers, sleep, or full platform power configuration.
+
+## Apollo3/Apollo4 startup failure contract
+
+`nsx_power_configure()` validates its configuration/API before dispatch. AP3/3P
+and AP4 reject invalid performance modes before BSP initialization; TempCo is
+rejected on AP3/3P and AP4L. The core lifecycle initialized flag is not a module
+prerequisite, as specified by `nsx_core.h`.
+
+These adapters return the first failed configuration operation's status and
+stop issuing subsequent operations. Performance and TempCo helper errors return
+to the caller without entering `nsx_core_fail_loop()`. Applications must check
+the returned status before continuing startup; applications that want fatal
+handling must choose it explicitly.
+
+Successful earlier writes remain in effect after a hardware failure. There is
+no general rollback/retry guarantee: reset or use board-specific recovery
+before retrying. Input validation failures occur before hardware setup. The
+void BSP initializer cannot report its internal failures.
+[TempCo resource cleanup](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/136) and
+[configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
+remain tracked follow-ups;
+this contract is not a claim that every profile field is implemented.
+
+`tests/test_power_startup.py` calls the real public wrapper, family backend and
+core lifecycle, with HAL calls controlled on the host. It checks invalid inputs,
+startup without core initialization, supported configuration branches, and
+failure at every observed status-returning step. The core's fatal endpoint is
+replaced with an assertion so accidental fail loops fail the test. Eight
+full-module board links and an additional AP4L real-header compile check cover
+integration; no physical power sequencing is qualified by these host tests.

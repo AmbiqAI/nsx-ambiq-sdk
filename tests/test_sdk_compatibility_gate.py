@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS
+from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS, POWER_STARTUP
 
 
 @pytest.mark.parametrize('node,expected', [
@@ -191,8 +191,9 @@ raise SystemExit(code)
     assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}
 
 
-def test_power_selector_gate_requires_each_family_scenario():
-    requirement = ADAPTER_REGRESSIONS[0]
+@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[0], POWER_STARTUP[0]),
+                         ids=('selector', 'startup'))
+def test_power_gate_requires_each_family_scenario(requirement):
     gate = Gate((requirement,))
     gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
     gate.parameters = {node: dict(zip(requirement.parameters, variant))

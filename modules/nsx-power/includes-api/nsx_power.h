@@ -127,6 +127,17 @@ typedef enum {
  * the common application-facing power cases without forcing apps to manage
  * the lower-level SoC power sequence directly.
  *
+ * On Apollo3/3P and Apollo4, invalid performance modes and unsupported TempCo
+ * requests are rejected before hardware setup. Core initialization is not a
+ * prerequisite. The first failed status-returning configuration operation is
+ * returned to the application; this path does not enter the NSX fail loop.
+ * Callers must check the result before continuing startup.
+ *
+ * Earlier hardware changes are not rolled back on failure. Reset or perform
+ * board-specific recovery before retrying after a hardware error. Input
+ * validation failures have no hardware effects when API validation is enabled.
+ * BSP-internal operations and TempCo resource cleanup are separate concerns.
+ *
  * @param nsx_power_config_t Desired power configuration.
  * @return uint32_t success/failure.
  */

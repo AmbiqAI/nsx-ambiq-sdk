@@ -115,7 +115,17 @@ CORE_BUILDS = (
                 variants=tuple((soc, override) for soc in ('apollo2', 'apollo3', 'apollo3p')
                                for override in (False, True)), compiler='gcc'),
 )
-PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS}
+POWER_STARTUP = (
+    Requirement('tests/test_power_startup.py::test_power_startup_contract', 45,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in ('null', 'null-api', 'bad-api', 'bad-version', 'invalid-mode', 'no-core',
+                                     'success', 'success-keep', 'fail-minimal', 'fail-keep') +
+                                    (('success-tempco', 'fail-tempco') if family == 'apollo4p'
+                                     else ('unsupported-tempco',)))),
+    Requirement('tests/test_power_startup.py::test_apollo4l_power_sources_compile'),
+)
+PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS + POWER_STARTUP}
 
 
 def belongs(nodeid: str, selector: str) -> bool:
