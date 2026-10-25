@@ -125,10 +125,10 @@ POWER_STARTUP = (
                                      else ('unsupported-tempco',)))),
     Requirement('tests/test_power_startup.py::test_apollo4l_power_sources_compile'),
     Requirement('tests/test_tempco_lifecycle.py::test_tempco_smoke_builds'),
-    Requirement('tests/test_tempco_lifecycle.py::test_tempco_lifecycle', 8,
+    Requirement('tests/test_tempco_lifecycle.py::test_tempco_lifecycle', 9,
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('success', 'init-failures', 'cleanup-failures', 'callback-failures', 'unsupported',
-                     'trim-read-failure', 'init-cleanup-failure', 'timer-owner'))),
+                     'trim-read-failure', 'init-cleanup-failure', 'timer-owner', 'timer-reconfigure'))),
 )
 PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS + POWER_STARTUP}
 

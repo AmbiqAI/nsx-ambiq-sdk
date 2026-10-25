@@ -179,6 +179,30 @@ int main(int argc,char **argv) {
         assert(nsx_power_tempco_enable() == CLEAN_FAIL); assert(operations == before);
         return 0;
     }
+    if (!strcmp(argv[1],"timer-reconfigure")) {
+        nsx_timer_config_t other=s_nsx_power_tempco_timer;
+        assert(nsx_timer_init(&other) == 0);
+        other.periodInMicroseconds = 12000;
+        assert(nsx_timer_init(&other) == 0);
+        other.enableInterrupt = false;
+        other.callback = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(!irq_enabled && handler == NULL && running);
+        cleanup_failure = "timer-stop";
+        assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
+        cleanup_failure = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(nsx_timer_deinit(&other) == 0); clean();
+        other.enableInterrupt = true;
+        other.callback = nsx_power_tempco_callback;
+        cleanup_failure = "timer-start";
+        assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
+        cleanup_failure = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(nsx_timer_deinit(&other) == 0); clean();
+    }
     if (!strcmp(argv[1],"timer-owner")) {
         nsx_timer_config_t other=s_nsx_power_tempco_timer;
         assert(nsx_timer_init(&other) == 0);

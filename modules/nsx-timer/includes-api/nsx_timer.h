@@ -79,7 +79,8 @@ extern uint32_t nsx_timer_init(nsx_timer_config_t *cfg);
  * @brief Release an Apollo4 timer, including a partially initialized timer.
  *
  * Call from foreground with the same configuration object passed to init.
- * The object must remain alive and unmodified until release succeeds.
+ * The object must remain alive, with its timer number unchanged, until release
+ * succeeds. Reinitializing with the same object first releases its old setup.
  * Failure retains ownership; retry deinit before reusing the timer. Callbacks
  * are suppressed during release. Other families return INVALID_CONFIG.
  */

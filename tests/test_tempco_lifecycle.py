@@ -27,7 +27,7 @@ def tempco_binary(repo_root, tmp_path_factory):
 
 
 @pytest.mark.parametrize('scenario', ['success', 'init-failures', 'cleanup-failures',
-                                      'callback-failures', 'unsupported', 'trim-read-failure', 'init-cleanup-failure', 'timer-owner'])
+                                      'callback-failures', 'unsupported', 'trim-read-failure', 'init-cleanup-failure', 'timer-owner', 'timer-reconfigure'])
 def test_tempco_lifecycle(tempco_binary, scenario):
     subprocess.run([str(tempco_binary), scenario], check=True, capture_output=True, text=True, timeout=5)
 

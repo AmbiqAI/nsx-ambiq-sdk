@@ -12,7 +12,14 @@
 
 extern nsx_timer_config_t *nsx_timer_config[NSX_TIMER_TEMPCO + 1];
 
-static volatile bool s_timer_ready[NSX_TIMER_TEMPCO + 1];
+typedef struct {
+    volatile bool ready;
+    bool interrupt;
+    nsx_timer_callback_cb callback;
+} nsx_timer_state_t;
+
+static nsx_timer_state_t s_timer_state[NSX_TIMER_TEMPCO + 1];
+uint32_t nsx_timer_platform_deinit(nsx_timer_config_t *cfg);
 
 static IRQn_Type nsx_timer_irqn(nsx_timers_e timer_num) {
     switch (timer_num) {
@@ -31,18 +38,18 @@ static void nsx_timer_irq_handler(void *ctx) {
     nsx_timer_config_t *timer_cfg = (nsx_timer_config_t *)ctx;
     nsx_timers_e timer_num;
 
-    if (timer_cfg == NULL || timer_cfg->callback == NULL) {
+    if (timer_cfg == NULL) {
         return;
     }
 
     timer_num = timer_cfg->timer;
-    if ((unsigned)timer_num > NSX_TIMER_TEMPCO || !s_timer_ready[timer_num] ||
+    if ((unsigned)timer_num > NSX_TIMER_TEMPCO || !s_timer_state[timer_num].ready || s_timer_state[timer_num].callback == NULL ||
         nsx_timer_config[timer_num] != timer_cfg) {
         return;
     }
     am_hal_timer_interrupt_clear(AM_HAL_TIMER_MASK(timer_num, AM_HAL_TIMER_COMPARE1));
     am_hal_timer_clear(timer_num);
-    timer_cfg->callback(timer_cfg);
+    s_timer_state[timer_num].callback(timer_cfg);
 }
 
 #define TIMER_TRY(operation) do { \
@@ -55,10 +62,13 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     if (nsx_timer_config[cfg->timer] != NULL) {
-        return NSX_STATUS_INVALID_CONFIG;
+        if (nsx_timer_config[cfg->timer] != cfg) return NSX_STATUS_INVALID_CONFIG;
+        TIMER_TRY(nsx_timer_platform_deinit(cfg));
     }
     nsx_timer_config[cfg->timer] = cfg;
-    s_timer_ready[cfg->timer] = false;
+    s_timer_state[cfg->timer].ready = false;
+    s_timer_state[cfg->timer].interrupt = cfg->enableInterrupt;
+    s_timer_state[cfg->timer].callback = cfg->enableInterrupt ? cfg->callback : NULL;
     am_hal_timer_config_t timer_config;
     TIMER_TRY(am_hal_timer_default_config_set(&timer_config));
     if (cfg->timer == NSX_TIMER_TEMPCO) {
@@ -84,7 +94,7 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
         TIMER_TRY(nsx_irq_register(&irq_cfg));
     }
     TIMER_TRY(am_hal_timer_start(cfg->timer));
-    s_timer_ready[cfg->timer] = true;
+    s_timer_state[cfg->timer].ready = true;
     return NSX_STATUS_SUCCESS;
 }
 
@@ -94,14 +104,14 @@ uint32_t nsx_timer_platform_deinit(nsx_timer_config_t *cfg) {
     }
     if (nsx_timer_config[cfg->timer] == NULL) return NSX_STATUS_SUCCESS;
     if (nsx_timer_config[cfg->timer] != cfg) return NSX_STATUS_INVALID_CONFIG;
-    s_timer_ready[cfg->timer] = false;
-    if (cfg->enableInterrupt) {
+    s_timer_state[cfg->timer].ready = false;
+    if (s_timer_state[cfg->timer].interrupt) {
         TIMER_TRY(nsx_irq_unregister(nsx_timer_irqn(cfg->timer)));
         TIMER_TRY(am_hal_timer_interrupt_disable(AM_HAL_TIMER_MASK(cfg->timer, AM_HAL_TIMER_COMPARE1)));
     }
     TIMER_TRY(am_hal_timer_stop(cfg->timer));
     TIMER_TRY(am_hal_timer_interrupt_clear(AM_HAL_TIMER_MASK(cfg->timer, AM_HAL_TIMER_COMPARE1)));
-    if (cfg->enableInterrupt) TIMER_TRY(nsx_irq_clear_pending(nsx_timer_irqn(cfg->timer)));
+    if (s_timer_state[cfg->timer].interrupt) TIMER_TRY(nsx_irq_clear_pending(nsx_timer_irqn(cfg->timer)));
     nsx_timer_config[cfg->timer] = NULL;
     return NSX_STATUS_SUCCESS;
 }

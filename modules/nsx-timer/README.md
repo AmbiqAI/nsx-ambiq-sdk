@@ -9,9 +9,12 @@ Public interfaces live in `includes-api/`.
 ## Apollo4 lifecycle
 
 Apollo4 timer initialization reserves the selected timer until
-`nsx_timer_deinit()` succeeds, including when initialization fails. A second
-initialization of a reserved timer is rejected; release it before reconfiguring.
-Keep the original configuration object alive and unchanged until release.
+`nsx_timer_deinit()` succeeds, including when initialization fails. A different configuration object cannot claim a reserved timer. Reinitializing
+with the same object releases the previous setup first, preserving callers such
+as USB that update the period before reinitializing. Cleanup uses saved IRQ
+settings, so switching to non-interrupt operation releases the previous handler.
+Keep the original configuration object alive and its timer number unchanged
+until release.
 Initialization checks each required HAL operation, and callbacks are suppressed
 until setup completes and throughout teardown. Call init/deinit from foreground;
 concurrent lifecycle calls and deinitializing from a callback are unsupported.
