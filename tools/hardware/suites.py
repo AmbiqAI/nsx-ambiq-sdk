@@ -74,4 +74,7 @@ CLOCK = Suite('clock', 'tests/hardware/test_clock.py::test_clock',
               'tests/hardware/clock', 'clock_test.elf', configure=clock_options)
 TEMPCO = Suite('tempco-lifecycle', 'tests/hardware/test_tempco.py::test_tempco',
                ('setup_release_retry',), 'tests/fixtures/tempco-smoke', 'tempco_smoke.elf')
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO)
+OWNERSHIP = Suite('startup-ownership', 'tests/hardware/test_ownership.py::test_ownership',
+                  ('initialize_once', 'reject_reapplication'),
+                  'tests/fixtures/startup-ownership', 'startup_ownership.elf')
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP)

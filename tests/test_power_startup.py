@@ -25,7 +25,8 @@ def startup_binary(request, repo_root, tmp_path):
     fixture = repo_root / 'tests/fixtures/power-startup'
     includes = ['-I', str(fixture), '-I', str(repo_root / 'modules/nsx-power/includes-api'),
                 '-I', str(repo_root / 'modules/nsx-power/src'),
-                '-I', str(repo_root / 'modules/nsx-core/includes-api')]
+                '-I', str(repo_root / 'modules/nsx-core/includes-api'),
+                '-I', str(repo_root / 'modules/nsx-core/includes-internal')]
     flags = ['-std=c11', '-Wall', '-Wextra', '-DAM_PART_' + family.upper()]
     host_env = os.environ.copy()
     host_env.pop('GCC_ROOT', None)
@@ -35,6 +36,8 @@ def startup_binary(request, repo_root, tmp_path):
                    check=True, capture_output=True, text=True, env=host_env)
     binary = tmp_path / 'startup'
     subprocess.run([compiler, *flags, *includes, str(fixture / 'main.c'), str(core),
+                    str(repo_root / 'modules/nsx-core/src/nsx_startup.c'),
+                    str(repo_root / 'modules/nsx-core/src/nsx_system.c'),
                     str(repo_root / 'modules/nsx-power/src/nsx_power.c'),
                     str(repo_root / f'modules/nsx-power/src/{arch}/nsx_power.c'), '-o', str(binary)],
                    check=True, capture_output=True, text=True, env=host_env)
@@ -47,7 +50,11 @@ def startup_binary(request, repo_root, tmp_path):
                                                     else ('unsupported-tempco',))],
                          indirect=['startup_binary'])
 def test_power_startup_contract(startup_binary, scenario):
-    subprocess.run([str(startup_binary), scenario], check=True, capture_output=True, text=True, timeout=5)
+    result = subprocess.run([str(startup_binary), scenario], check=True, capture_output=True, text=True, timeout=5)
+    if scenario.startswith('fail-'):
+        for step in range(1, int(result.stdout.strip()) + 1):
+            subprocess.run([str(startup_binary), scenario, str(step)], check=True,
+                           capture_output=True, text=True, timeout=5)
 
 
 def test_apollo4l_power_sources_compile(repo_root, tmp_path):
@@ -65,3 +72,24 @@ def test_apollo4l_power_sources_compile(repo_root, tmp_path):
         command[0] = str(compiler)
         command[command.index('-o') + 1] = str(tmp_path / f'power-{index}.o')
         subprocess.run(command, cwd=entry['directory'], check=True, capture_output=True, text=True)
+
+
+OWNERSHIP = ('system', 'system-minimal', 'hardware', 'minimal', 'power-first',
+             'reentry', 'system-failure-1', 'system-failure-2', 'system-failure-3',
+             'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure')
+
+
+@pytest.mark.parametrize(('startup_binary', 'scenario'),
+                         [(family, scenario) for family in FAMILIES for scenario in OWNERSHIP],
+                         indirect=['startup_binary'])
+def test_startup_ownership(startup_binary, scenario):
+    subprocess.run([str(startup_binary), 'ownership-' + scenario], check=True,
+                   capture_output=True, text=True, timeout=5)
+
+
+@pytest.mark.parametrize('board', ['apollo3p_evb', 'apollo4p_blue_kxr_evb'])
+def test_ownership_smoke_builds(repo_root, tmp_path, board):
+    from tools.hardware.api import BuildRequest, build_firmware
+    from tools.hardware.suites import OWNERSHIP
+    compiler = compiler_for_test('gcc')
+    build_firmware(BuildRequest(repo_root, tmp_path, board, compiler.parent.parent, OWNERSHIP))

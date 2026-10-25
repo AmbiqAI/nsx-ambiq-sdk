@@ -6,7 +6,7 @@ from pathlib import Path
 from .inventory import BOARDS
 from .build import Firmware
 from .protocol import Result, decode
-from .suites import Suite, STARTUP, RUNTIME, TEMPCO
+from .suites import Suite, STARTUP, RUNTIME, TEMPCO, OWNERSHIP
 from tools.test_evidence import phase_status, completion
 
 
@@ -25,6 +25,9 @@ PROFILES.update({f'{board}-gcc-core': Profile(f'{board}-gcc-core', board, 'gcc',
 
 PROFILES['apollo4p_blue_kxr_evb-gcc-tempco-lifecycle'] = Profile(
     'apollo4p_blue_kxr_evb-gcc-tempco-lifecycle', 'apollo4p_blue_kxr_evb', 'gcc', (TEMPCO,))
+for board in ('apollo3p_evb', 'apollo4p_blue_kxr_evb'):
+    name = f'{board}-gcc-startup-ownership'
+    PROFILES[name] = Profile(name, board, 'gcc', (OWNERSHIP,))
 
 
 @dataclass

@@ -116,6 +116,14 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_power_startup.py::test_startup_ownership', 56,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in ('system', 'system-minimal', 'hardware', 'minimal', 'power-first',
+                                     'reentry', 'system-failure-1', 'system-failure-2', 'system-failure-3',
+                                     'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure'))),
+    Requirement('tests/test_power_startup.py::test_ownership_smoke_builds', 2,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb')),
     Requirement('tests/test_power_startup.py::test_power_startup_contract', 45,
                 parameters=('startup_binary', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')

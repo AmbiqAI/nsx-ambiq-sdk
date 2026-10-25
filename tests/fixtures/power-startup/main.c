@@ -4,9 +4,12 @@
 #include <string.h>
 #include "am_mcu_apollo.h"
 #include "nsx_power.h"
+#include "nsx_system.h"
 
 #define FAILURE 0x41u
 static unsigned calls, fallible, fail_at, performance_calls, tempco_calls;
+static uint32_t mask, expected_mask;
+static bool reenter;
 static bool failed, peripheral[TEST_PERIPHERAL_COUNT];
 static const char *trace[128];
 static nsx_power_config_t config;
@@ -15,6 +18,7 @@ const am_hal_cachectrl_config_t am_hal_cachectrl_defaults = 42;
 const unsigned am_hal_gpio_pincfg_output = 43;
 
 static void event(const char *name) {
+    assert(mask == expected_mask);
     assert(!failed); /* No later operation may run after an injected failure. */
     assert(calls < 128);
     trace[calls++] = name;
@@ -24,7 +28,24 @@ static uint32_t operation(const char *name) {
     if (++fallible == fail_at) { failed = true; return FAILURE; }
     return 0;
 }
-void am_bsp_low_power_init(void) { event("bsp"); }
+uint32_t am_hal_interrupt_master_disable(void) { uint32_t old=mask; mask=1; return old; }
+void am_hal_interrupt_master_set(uint32_t value) { mask=value; }
+void am_bsp_low_power_init(void) {
+    event("bsp");
+    if (reenter) {
+        nsx_system_config_t nested={0};
+        assert(nsx_system_init(&nested) == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_minimal_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_power_configure(&config) == NSX_STATUS_STARTUP_REJECTED);
+    }
+}
+uint32_t nsx_platform_hw_init(void) { am_bsp_low_power_init(); return operation("system-hw"); }
+uint32_t nsx_platform_minimal_hw_init(void) { return operation("minimal-hw"); }
+uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) { (void)mode; return operation("system-perf"); }
+uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) { (void)cfg; return operation("debug"); }
+uint32_t nsx_platform_spot_mgr_profile(void) { return operation("spot"); }
+uint32_t nsx_cache_enable(void) { return operation("system-cache"); }
 void nsx_printf(const char *fmt, ...) { (void)fmt; }
 void nsx_low_power_printf(const char *fmt, ...) { (void)fmt; }
 /* Core lifecycle is compiled separately with its fatal endpoint renamed. */
@@ -89,10 +110,6 @@ uint32_t am_hal_pwrctrl_mcu_memory_config(am_hal_pwrctrl_mcu_memory_config_t *cf
     assert(cfg->eDTCMCfg == AM_HAL_PWRCTRL_DTCM_128K && cfg->eRetainDTCM == AM_HAL_PWRCTRL_DTCM_128K);
     assert(cfg->bEnableNVM0 && !cfg->bRetainNVM0); return operation("mcu-memory");
 }
-static void reset_trace(void) {
-    calls = fallible = performance_calls = tempco_calls = 0;
-    failed = false; memset(peripheral, 0, sizeof peripheral); test_vcomp.PWDKEY = 0;
-}
 static void success_contract(void) {
     assert(calls && !strcmp(trace[0], "bsp") && performance_calls == 1);
 #if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
@@ -110,10 +127,62 @@ static void success_contract(void) {
     assert(tempco_calls == (unsigned)config.need_tempco);
 #endif
 }
+static void all_startups_rejected(void) {
+    unsigned before=calls;
+    nsx_system_config_t system={0};
+    assert(nsx_system_init(&system) == NSX_STATUS_STARTUP_REJECTED);
+    assert(nsx_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+    assert(nsx_minimal_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+    assert(nsx_power_configure(&config) == NSX_STATUS_STARTUP_REJECTED);
+    nsx_core_config_t core={.api=&nsx_core_current_version};
+    assert(nsx_core_init(&core) == 0);
+    assert(nsx_power_configure(&config) == NSX_STATUS_STARTUP_REJECTED);
+    assert(calls == before);
+}
+static void ownership(const char *scenario) {
+    nsx_system_config_t system={.enable_cache=true, .debug={.transport=NSX_DEBUG_ITM}};
+    if (!strcmp(scenario,"preflight")) {
+        system.perf_mode=(nsx_perf_mode_e)99;
+        assert(nsx_system_init(&system) == NSX_STATUS_INVALID_CONFIG);
+        system.perf_mode=NSX_PERF_LOW; system.debug.transport=(nsx_debug_transport_e)99;
+        assert(nsx_system_init(&system) == NSX_STATUS_INVALID_CONFIG);
+        assert(nsx_system_init(NULL) == NSX_STATUS_INVALID_HANDLE);
+        nsx_power_config_t bad=config; bad.perf_mode=NSX_POWER_PERF_NOT_SET;
+        assert(nsx_power_configure(&bad) == NSX_STATUS_INVALID_CONFIG);
+        assert(calls == 0); system.debug.transport=NSX_DEBUG_ITM;
+    }
+    if (!strncmp(scenario,"masked",6)) mask=expected_mask=1;
+    if (!strcmp(scenario,"system-minimal")) system.skip_bsp_init=true;
+    if (!strcmp(scenario,"reentry")) reenter=true;
+    uint32_t status;
+    if (!strcmp(scenario,"hardware")) status=nsx_hw_init();
+    else if (!strcmp(scenario,"minimal") || !strcmp(scenario,"minimal-failure")) {
+        if (!strcmp(scenario,"minimal-failure")) fail_at=1;
+        status=nsx_minimal_hw_init();
+    }
+    else if (!strcmp(scenario,"power-first")) status=nsx_power_configure(&config);
+    else {
+        if (!strncmp(scenario,"system-failure-",15)) fail_at=(unsigned)strtoul(scenario+15,NULL,10);
+        if (!strcmp(scenario,"masked-failure")) fail_at=3;
+        status=nsx_system_init(&system);
+        if (!system.skip_bsp_init && !failed) {
+            assert(!strcmp(trace[0],"bsp") && !strcmp(trace[1],"system-hw"));
+            assert(!strcmp(trace[2],"system-cache") && !strcmp(trace[3],"debug"));
+            assert(!strcmp(trace[4],"system-perf"));
+        }
+    }
+    assert(status == (fail_at ? FAILURE : 0));
+    if (system.skip_bsp_init || !strcmp(scenario,"minimal")) assert(!strcmp(trace[0],"minimal-hw"));
+    assert(mask == expected_mask);
+    all_startups_rejected();
+    assert(mask == expected_mask);
+}
 int main(int argc, char **argv) {
-    assert(argc == 2);
+    assert(argc == 2 || argc == 3);
     const char *scenario = argv[1];
     config = nsx_power_minimal;
+    if (!strncmp(scenario,"ownership-",10)) { ownership(scenario+10); return 0; }
+    if (argc == 3) fail_at=(unsigned)strtoul(argv[2],NULL,10);
     if (strstr(scenario, "keep")) {
         config.need_ssram = config.small_tcm = config.need_iom = config.need_uart = true;
         config.need_crypto = config.need_xtal = config.need_ble = config.need_itm = config.need_audadc = true;
@@ -151,17 +220,14 @@ int main(int argc, char **argv) {
     if (!strcmp(scenario, "unsupported-tempco")) {
         assert(nsx_power_configure(&config) == NSX_STATUS_INVALID_CONFIG); assert(calls == 0); return 0;
     }
-    assert(nsx_power_configure(&config) == NSX_STATUS_SUCCESS);
-    success_contract();
-    unsigned operations = fallible;
-    if (!strncmp(scenario, "fail-", 5)) {
-        for (unsigned i = 1; i <= operations; ++i) {
-            reset_trace(); fail_at = i;
-            assert(nsx_power_configure(&config) == FAILURE);
-            assert(failed && fallible == i);
-        }
+    uint32_t status=nsx_power_configure(&config);
+    if (fail_at) {
+        assert(status == FAILURE && failed && fallible == fail_at);
     } else {
-        reset_trace(); assert(nsx_power_configure(&config) == 0); success_contract();
+        assert(status == NSX_STATUS_SUCCESS);
+        success_contract();
+        if (!strncmp(scenario,"fail-",5)) printf("%u\n",fallible);
     }
+    all_startups_rejected();
     return 0;
 }

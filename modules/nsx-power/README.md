@@ -116,6 +116,15 @@ and AP4 reject invalid performance modes before BSP initialization; TempCo is
 rejected on AP3/3P and AP4L. The core lifecycle initialized flag is not a module
 prerequisite, as specified by `nsx_core.h`.
 
+Startup ownership is shared with `nsx_system_init()`, `nsx_hw_init()` and
+`nsx_minimal_hw_init()` on these families. Choose one entry point per reset,
+then initialize drivers. A second valid request, or re-entry while startup is
+running, returns `NSX_STATUS_STARTUP_REJECTED` without hardware effects. This
+also applies after a reported setup failure; there is no public reset of the
+guard. Core initialization does not clear it. Direct HAL/BSP calls bypass the
+guard. This does not yet fix field semantics or enforce memory-layout bounds;
+those remain tracked in #137.
+
 These adapters return the first failed configuration operation's status and
 stop issuing subsequent operations. Performance and TempCo helper errors return
 to the caller without entering `nsx_core_fail_loop()`. Applications must check
@@ -123,13 +132,13 @@ the returned status before continuing startup; applications that want fatal
 handling must choose it explicitly.
 
 Successful earlier writes remain in effect after a hardware failure. There is
-no general rollback/retry guarantee: reset or use board-specific recovery
-before retrying. Input validation failures occur before hardware setup. The
+no general rollback/retry guarantee: reset before retrying this startup API.
+Input validation failures occur before ownership is claimed and can be corrected.
+The
 void BSP initializer cannot report its internal failures.
-[TempCo resource cleanup](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/136) and
-[configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
-remain tracked follow-ups;
-this contract is not a claim that every profile field is implemented.
+TempCo resource cleanup is described below.
+[Configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
+remains open; this contract is not a claim that every profile field is implemented.
 
 `tests/test_power_startup.py` calls the real public wrapper, family backend and
 core lifecycle, with HAL calls controlled on the host. It checks invalid inputs,
@@ -138,6 +147,12 @@ failure at every observed status-returning step. The core's fatal endpoint is
 replaced with an assertion so accidental fail loops fail the test. Eight
 full-module board links and an additional AP4L real-header compile check cover
 integration; no physical power sequencing is qualified by these host tests.
+
+The `startup-ownership` hardware suite checks one real system initialization and
+rejection of all four subsequent startup entry points on AP3 Blue Plus/AP4 Blue
+KXR. Run `tests/hardware/test_ownership.py` with `--hardware`, `--probe SERIAL`
+and `--qualification-profile BOARD-gcc-startup-ownership`, plus a fresh
+`--qualification-report` path. It does not qualify peripheral or memory profiles.
 
 ## Apollo4 TempCo resource recovery
 
