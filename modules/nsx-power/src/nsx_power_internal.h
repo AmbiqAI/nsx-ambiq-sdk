@@ -13,6 +13,11 @@
     } \
 } while (0)
 
+/* AP4 (except AP4L) foreground lifecycle; timer 4 and ADC0 are exclusive.
+ * Release stops sampling and frees resources; it does not restore HAL trims. */
+uint32_t nsx_power_tempco_enable(void);
+uint32_t nsx_power_tempco_disable(void);
+
 /// One row of a platform staged power-profile register table.
 typedef struct {
     volatile uint32_t *addr;

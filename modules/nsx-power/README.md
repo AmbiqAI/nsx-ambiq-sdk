@@ -138,3 +138,41 @@ failure at every observed status-returning step. The core's fatal endpoint is
 replaced with an assertion so accidental fail loops fail the test. Eight
 full-module board links and an additional AP4L real-header compile check cover
 integration; no physical power sequencing is qualified by these host tests.
+
+## Apollo4 TempCo resource recovery
+
+The AP4 TempCo helper owns ADC0 and timer 4 exclusively. It checks ADC setup and
+arms the timer last. A failed setup returns its original error and releases
+resources in timer-before-ADC order. A later enable finishes pending cleanup
+before allocating again. Callback access is suppressed during setup/cleanup. A foreign timer owner
+causes ADC resources to be released without touching that timer. Callback
+failures remain observable even when subsequent ADC sleep succeeds. Failed ADC
+enable attempts sleep cleanup. ADC sleep and its saved-state update preserve the
+caller’s interrupt mask so a timer callback cannot observe a partial transition.
+
+If cleanup fails, resources remain reserved until cleanup succeeds. If ADC
+handle deinitialization fails, reset is required: the HAL can invalidate the
+handle despite returning an error. This helper recovery does not roll back
+other operations performed by `nsx_power_configure()`.
+
+The private disable helper releases sampling resources; it does not restore
+previous HAL trim settings or coordinate external users of the HAL TempCo
+handler. Lifecycle calls are foreground-only. Host fault tests cover actual
+TempCo and AP4 timer code. The AP4 KXR lifecycle smoke verifies setup, release
+and reallocation; it does not qualify sampling accuracy, timer period, trim
+adjustment, or sleep/wake behavior.
+
+After reserving an AP4 Blue Plus KXR board, run the lifecycle smoke locally:
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware/test_tempco.py \
+  --hardware --qualification-profile apollo4p_blue_kxr_evb-gcc-tempco-lifecycle \
+  --qualification-report artifacts/tempco/report.json --probe YOUR_SERIAL \
+  --gcc-root /usr/local/arm-gnu-toolchain
+```
+
+This flashes the board. Use a fresh report path; the test requires working
+factory TempCo calibration and fails if setup is unsupported. Interrupts are
+masked during the short setup/release checks, so no temperature callback is
+qualified. Period conversion (#139) and bounded capture/error handling (#140)
+remain separate follow-ups.

@@ -30,6 +30,8 @@ extern "C" {
     #define NSX_TIMER_OLDEST_SUPPORTED_VERSION NSX_TIMER_V0_0_1
     #define NSX_TIMER_CURRENT_VERSION NSX_TIMER_V1_0_0
     #define NSX_TIMER_API_ID 0xCA0002
+    /* Apollo4 init rejected a different owner without reserving/touching it. */
+    #define NSX_TIMER_STATUS_IN_USE 0x100u
 
 extern const nsx_core_api_t nsx_timer_V0_0_1;
 extern const nsx_core_api_t nsx_timer_V1_0_0;
@@ -74,6 +76,17 @@ typedef struct nsx_timer_config {
  * @return uint32_t status
  */
 extern uint32_t nsx_timer_init(nsx_timer_config_t *cfg);
+
+/**
+ * @brief Release an Apollo4 timer, including a partially initialized timer.
+ *
+ * Call from foreground with the same configuration object passed to init.
+ * The object must remain alive, with its timer number unchanged, until release
+ * succeeds. Reinitializing with the same object first releases its old setup.
+ * Failure retains ownership; retry deinit before reusing the timer. Callbacks
+ * are suppressed during release. Other families return INVALID_CONFIG.
+ */
+extern uint32_t nsx_timer_deinit(nsx_timer_config_t *cfg);
 
 /**
  * @brief Read current value of timer
