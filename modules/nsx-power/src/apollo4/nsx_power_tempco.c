@@ -152,7 +152,11 @@ uint32_t nsx_power_tempco_enable(void) {
     SETUP(am_hal_adc_enable(state->adc_handle));
     /* Arm last: early callbacks see initialized=false and cannot touch ADC. */
     state->timer_attempted = true;
-    SETUP(nsx_timer_init(&s_nsx_power_tempco_timer));
+    status = nsx_timer_init(&s_nsx_power_tempco_timer);
+    if (status != NSX_STATUS_SUCCESS) {
+        if (status == NSX_TIMER_STATUS_IN_USE) state->timer_attempted = false;
+        goto failed;
+    }
     state->callback_count = 0;
     state->last_handler_status = NSX_STATUS_SUCCESS;
     state->wanted = state->initialized = true;
@@ -170,8 +174,9 @@ void nsx_power_tempco_prepare_for_sleep(void) {
         return;
     }
 
-    state->last_handler_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
-    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
+    uint32_t sleep_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
+    if (sleep_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
+    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->last_handler_status = sleep_status;
 }
 
 static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
@@ -188,7 +193,8 @@ static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
     state->last_handler_status = am_hal_adc_enable(state->adc_handle);
     if (state->last_handler_status != AM_HAL_STATUS_SUCCESS) return;
 
-    if (nsx_power_tempco_capture_samples(state, AM_HAL_TEMPCO_NUMSAMPLES, state->samples) == AM_HAL_STATUS_SUCCESS) {
+    state->last_handler_status = nsx_power_tempco_capture_samples(state, AM_HAL_TEMPCO_NUMSAMPLES, state->samples);
+    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) {
         state->last_handler_status =
             am_hal_pwrctrl_tempco_sample_handler(AM_HAL_TEMPCO_NUMSAMPLES, state->samples);
         state->callback_count++;
@@ -199,8 +205,9 @@ static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
             (unsigned long)state->samples[0].ui32Sample);
     }
 
-    state->last_handler_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
-    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
+    uint32_t sleep_status = am_hal_adc_power_control(state->adc_handle, AM_HAL_SYSCTRL_DEEPSLEEP, true);
+    if (sleep_status == AM_HAL_STATUS_SUCCESS) state->suspended = true;
+    if (state->last_handler_status == AM_HAL_STATUS_SUCCESS) state->last_handler_status = sleep_status;
 }
 
 static void nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state) {

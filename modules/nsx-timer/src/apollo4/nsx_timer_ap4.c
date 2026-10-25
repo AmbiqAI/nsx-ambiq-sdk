@@ -43,11 +43,13 @@ static void nsx_timer_irq_handler(void *ctx) {
     }
 
     timer_num = timer_cfg->timer;
-    if ((unsigned)timer_num > NSX_TIMER_TEMPCO || !s_timer_state[timer_num].ready || s_timer_state[timer_num].callback == NULL ||
-        nsx_timer_config[timer_num] != timer_cfg) {
+    if ((unsigned)timer_num > NSX_TIMER_TEMPCO || nsx_timer_config[timer_num] != timer_cfg) {
         return;
     }
     am_hal_timer_interrupt_clear(AM_HAL_TIMER_MASK(timer_num, AM_HAL_TIMER_COMPARE1));
+    if (!s_timer_state[timer_num].ready || s_timer_state[timer_num].callback == NULL) {
+        return;
+    }
     am_hal_timer_clear(timer_num);
     s_timer_state[timer_num].callback(timer_cfg);
 }
@@ -62,7 +64,7 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     if (nsx_timer_config[cfg->timer] != NULL) {
-        if (nsx_timer_config[cfg->timer] != cfg) return NSX_STATUS_INVALID_CONFIG;
+        if (nsx_timer_config[cfg->timer] != cfg) return NSX_TIMER_STATUS_IN_USE;
         TIMER_TRY(nsx_timer_platform_deinit(cfg));
     }
     nsx_timer_config[cfg->timer] = cfg;

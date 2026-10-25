@@ -144,7 +144,9 @@ integration; no physical power sequencing is qualified by these host tests.
 The AP4 TempCo helper owns ADC0 and timer 4 exclusively. It checks ADC setup and
 arms the timer last. A failed setup returns its original error and releases
 resources in timer-before-ADC order. A later enable finishes pending cleanup
-before allocating again. Callback access is suppressed during setup/cleanup.
+before allocating again. Callback access is suppressed during setup/cleanup. A foreign timer owner
+causes ADC resources to be released without touching that timer. Callback
+failures remain observable even when subsequent ADC sleep succeeds.
 
 If cleanup fails, resources remain reserved until cleanup succeeds. If ADC
 handle deinitialization fails, reset is required: the HAL can invalidate the

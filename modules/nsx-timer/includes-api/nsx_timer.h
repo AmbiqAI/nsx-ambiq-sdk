@@ -30,6 +30,8 @@ extern "C" {
     #define NSX_TIMER_OLDEST_SUPPORTED_VERSION NSX_TIMER_V0_0_1
     #define NSX_TIMER_CURRENT_VERSION NSX_TIMER_V1_0_0
     #define NSX_TIMER_API_ID 0xCA0002
+    /* Apollo4 init rejected a different owner without reserving/touching it. */
+    #define NSX_TIMER_STATUS_IN_USE 0x100u
 
 extern const nsx_core_api_t nsx_timer_V0_0_1;
 extern const nsx_core_api_t nsx_timer_V1_0_0;
