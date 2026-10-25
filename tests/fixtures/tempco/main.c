@@ -13,7 +13,7 @@ static bool delivering, allow_capture;
 static uint32_t sample_status;
 static unsigned acknowledgements, timer_clears;
 static uint32_t primask;
-static bool pending, sleep_irq;
+static bool pending, sleep_irq, readiness_irq;
 
 static bool bad_trim, deinit_poison, trim_read_failure;
 static const char *cleanup_failure;
@@ -28,7 +28,15 @@ static void deliver_pending(void) {
     }
 }
 uint32_t am_hal_interrupt_master_disable(void) { uint32_t old=primask; primask=1; return old; }
-void am_hal_interrupt_master_set(uint32_t mask) { primask=mask; deliver_pending(); }
+void am_hal_interrupt_master_set(uint32_t mask) {
+    if (readiness_irq && s_nsx_power_tempco.initialized) {
+        assert(primask && s_nsx_power_tempco.wanted);
+        readiness_irq=false;
+        pending=true;
+    }
+    primask=mask;
+    deliver_pending();
+}
 static int handle;
 test_adc_t test_adc;
 const nsx_core_api_t nsx_interrupt_current_version = {0};
@@ -169,6 +177,18 @@ int main(int argc,char **argv) {
         primask=0;
     }
     cleanup = true; assert(nsx_power_tempco_disable() == 0); clean();
+    if (!strcmp(argv[1],"success")) {
+        for (unsigned mask=0; mask<=1; ++mask) {
+            primask=mask; readiness_irq=true; allow_capture=true;
+            assert(nsx_power_tempco_enable() == 0);
+            assert(!readiness_irq && primask == mask);
+            if (mask) assert(pending && powered && s_nsx_power_tempco.callback_count == 0);
+            am_hal_interrupt_master_set(0);
+            assert(!pending && !powered && s_nsx_power_tempco.suspended);
+            assert(s_nsx_power_tempco.callback_count == 1);
+            assert(nsx_power_tempco_disable() == 0); clean();
+        }
+    }
     if (!strcmp(argv[1],"init-failures")) {
         for (unsigned i=1;i<=setup_steps;++i) {
             step=0; fail_step=i; cleanup=false;

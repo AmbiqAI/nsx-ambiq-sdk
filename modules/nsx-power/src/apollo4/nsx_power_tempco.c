@@ -159,7 +159,10 @@ uint32_t nsx_power_tempco_enable(void) {
     }
     state->callback_count = 0;
     state->last_handler_status = NSX_STATUS_SUCCESS;
-    state->wanted = state->initialized = true;
+    uint32_t mask = am_hal_interrupt_master_disable();
+    state->wanted = true;
+    state->initialized = true;
+    am_hal_interrupt_master_set(mask);
     return NSX_STATUS_SUCCESS;
 failed:
     (void)nsx_power_tempco_disable();
