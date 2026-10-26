@@ -1,5 +1,8 @@
 #include "am_mcu_apollo.h"
 #include "nsx_system.h"
+#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B)
+#include "nsx_power.h"
+#endif
 #include "unity.h"
 #include "result_reporter.h"
 
@@ -38,6 +41,15 @@ static void output_lifecycle(void) {
     TEST_ASSERT_BITS_HIGH(ITM_TCR_ITMENA_Msk, ITM->TCR);
     nsx_low_power_printf("NSX149:resume\n");
     nsx_delay_us(100000);
+#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B)
+    nsx_power_disable_debug();
+    TEST_ASSERT_BITS_LOW(ITM_TCR_ITMENA_Msk, ITM->TCR);
+    nsx_low_power_printf("NSX149:POWER_SHOULD_NOT_PRINT\n");
+    nsx_itm_printf_enable();
+    TEST_ASSERT_BITS_HIGH(ITM_TCR_ITMENA_Msk, ITM->TCR);
+    nsx_low_power_printf("NSX149:power-resume\n");
+    nsx_delay_us(100000);
+#endif
 }
 
 int main(void) {

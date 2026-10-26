@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "nsx_system.h"
+#include "nsx_power.h"
 #include "am_bsp.h"
 #include "am_util_stdio.h"
 
@@ -10,6 +11,9 @@ static unsigned enable_calls, disable_calls, print_calls, fail_enable, fail_disa
 static nsx_debug_transport_e route;
 const nsx_core_api_t nsx_core_V1_0_0 = {0};
 uint32_t nsx_core_init(nsx_core_config_t *cfg) {(void)cfg; return 0;}
+uint32_t nsx_platform_hw_init(void);
+uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {(void)cfg; return nsx_platform_hw_init();}
+void nsx_power_platform_deep_sleep(void) {}
 uint32_t nsx_cache_enable(void) {return 0;}
 uint32_t nsx_platform_hw_init(void) {assert(route == NSX_DEBUG_NONE); ++bsp_calls; return 0;}
 uint32_t nsx_platform_minimal_hw_init(void) {return 0;}
@@ -95,6 +99,13 @@ int main(int argc, char **argv) {
         fail_disable=0x63;
         assert(nsx_hw_init() == 0x63 && bsp_calls == 0 && disable_calls == 1);
         output(0);
+    } else if (!strcmp(argv[1], "power-release") || !strcmp(argv[1], "power-release-failure")) {
+        assert(nsx_debug_init(&itm) == 0);
+        if (!strcmp(argv[1], "power-release-failure")) fail_disable=0x64;
+        assert(nsx_power_configure(&nsx_power_all_on) == fail_disable);
+        assert(disable_calls == 1 && bsp_calls == (fail_disable ? 0 : 1));
+        output(0);
+        if (!fail_disable) {assert(nsx_debug_init(&itm) == 0); output(1);}
     } else return 2;
     puts("PASS");
 }

@@ -116,10 +116,10 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
-    Requirement('tests/test_debug_state.py::test_debug_transport_contract', 10,
+    Requirement('tests/test_debug_state.py::test_debug_transport_contract', 12,
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
-                     'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure'))),
+                     'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))),
     Requirement('tests/test_system_status.py::test_manual_debug_disable'),
     Requirement('tests/test_debug_state.py::test_apollo2_debug_backend_compiles'),
     Requirement('tests/test_debug_state.py::test_debug_state_real_header_builds', 4,

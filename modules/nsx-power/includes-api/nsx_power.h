@@ -328,7 +328,9 @@ void nsx_power_disable_caches(void);
 /**
  * @brief Disable SWO/ITM debug output and the debug peripheral.
  *
- * Clears MCUCTRL DBGCTRL and powers down the debug domain.
+ * Releases any NSX-managed ITM transport before the platform debug gate.
+ * UART transport ownership is unchanged. A reported ITM teardown failure
+ * suppresses low-power output and is retained by nsx_debug_init until reset.
  * Call before entering measurement — debug logic draws current.
  */
 void nsx_power_disable_debug(void);

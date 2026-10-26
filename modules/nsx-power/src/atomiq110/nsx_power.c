@@ -59,6 +59,7 @@
 #include "am_mcu_apollo.h"
 #include "am_util.h"
 #include "nsx_core.h"
+#include "nsx_debug_internal.h"
 #include "nsx_power.h"
 #include "am_hal_clkmgr.h"
 #include "am_hal_spotmgr.h"
@@ -319,6 +320,7 @@ void nsx_power_disable_caches(void) {
 }
 
 void nsx_power_disable_debug(void) {
+    nsx_debug_disable(NSX_DEBUG_ITM);
     // NOTE: Atomiq110 has no MCUCTRL DBGCTRL register. Disabling the DEBUG
     // power domain is the equivalent step on this target.
     am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG);

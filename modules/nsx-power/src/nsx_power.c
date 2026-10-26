@@ -48,6 +48,7 @@
 #include "nsx_core.h"
 #include "nsx_power.h"
 #include "nsx_startup_internal.h"
+#include "nsx_debug_internal.h"
 
 const nsx_core_api_t nsx_power_V0_0_1 = {.apiId = NSX_POWER_API_ID, .version = NSX_POWER_V0_0_1};
 
@@ -132,6 +133,8 @@ uint32_t nsx_power_configure(const nsx_power_config_t *pCfg) {
 #endif
     ui32ReturnStatus = nsx_startup_claim();
     if (ui32ReturnStatus != NSX_STATUS_SUCCESS) return ui32ReturnStatus;
+    ui32ReturnStatus = nsx_debug_before_hw_init();
+    if (ui32ReturnStatus != NSX_STATUS_SUCCESS) return nsx_startup_finish(ui32ReturnStatus);
     ui32ReturnStatus = nsx_startup_finish(nsx_power_platform_config(pCfg));
 
     return ui32ReturnStatus;
