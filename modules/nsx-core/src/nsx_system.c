@@ -10,6 +10,7 @@
 #include "nsx_core.h"
 #include "nsx_mem.h"
 #include "nsx_startup_internal.h"
+#include "nsx_debug_internal.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -21,7 +22,6 @@
 extern uint32_t nsx_platform_hw_init(void);
 extern uint32_t nsx_platform_minimal_hw_init(void);
 extern uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode);
-extern uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg);
 extern uint32_t nsx_platform_spot_mgr_profile(void);
 
 /* ===================================================================
@@ -31,6 +31,8 @@ extern uint32_t nsx_platform_spot_mgr_profile(void);
 uint32_t nsx_hw_init(void) {
     uint32_t status = nsx_startup_claim();
     if (status != 0) return status;
+    status = nsx_debug_before_hw_init();
+    if (status != 0) return nsx_startup_finish(status);
     return nsx_startup_finish(nsx_platform_hw_init());
 }
 
@@ -53,14 +55,6 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode) {
     return nsx_platform_set_perf_mode(mode);
 }
 
-uint32_t nsx_debug_init(const nsx_debug_config_t *cfg) {
-    if (cfg == NULL || cfg->transport == NSX_DEBUG_NONE) {
-        return 0;
-    }
-    if (!nsx_debug_transport_valid(cfg->transport)) return NSX_STATUS_INVALID_CONFIG;
-    return nsx_platform_debug_init(cfg);
-}
-
 static uint32_t nsx_system_init_impl(const nsx_system_config_t *cfg) {
     uint32_t st;
 
@@ -77,6 +71,8 @@ static uint32_t nsx_system_init_impl(const nsx_system_config_t *cfg) {
     if (cfg->skip_bsp_init) {
         st = nsx_platform_minimal_hw_init();
     } else {
+        st = nsx_debug_before_hw_init();
+        if (st != 0) return st;
         st = nsx_platform_hw_init();
     }
     if (st != 0) return st;

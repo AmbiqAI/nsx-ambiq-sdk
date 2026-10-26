@@ -72,6 +72,7 @@ target_link_libraries(nsx_core_lifecycle PUBLIC nsx_core_includes nsx::compiler 
 # ---- nsx::system — bring-up sequencing + per-SoC backend + newlib retarget/heap ----
 set(NSX_SYSTEM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_system.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_debug.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_startup.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_retarget.c
 )

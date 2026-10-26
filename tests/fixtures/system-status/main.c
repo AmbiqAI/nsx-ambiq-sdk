@@ -9,7 +9,7 @@
 
 enum { CORE = 1, BSP, CACHE_CONFIG, CACHE_ENABLE, CPDLP, SPOT, FPU, STACK,
        CACHE, OTP_ON, CRYPTO_ON, DCU_GET, DCU_UPDATE, CRYPTO_OFF, OTP_OFF,
-       DEBUG, TPIU, GPIO, PRINT, PERF, PROFILE };
+       DEBUG, TPIU, GPIO, PRINT, PERF, PROFILE, ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT };
 static unsigned calls[64], count, failure, secondary_failure, irq_mask;
 static unsigned step(unsigned id) {
     assert(count < sizeof(calls) / sizeof(calls[0]));
@@ -80,9 +80,9 @@ uint32_t am_hal_debug_enable(void) {return step(DEBUG);}
 uint32_t am_hal_tpiu_config(unsigned a,unsigned b,unsigned c,unsigned d,unsigned e) {
     assert(a == 0 && b == 0 && c == 1 && d == 1 && e == 95); return step(TPIU);
 }
-uint32_t am_hal_gpio_pinconfig(unsigned pin,unsigned cfg) {assert(pin == 28 && cfg == 1); return step(GPIO);}
+uint32_t am_hal_gpio_pinconfig(unsigned pin,unsigned cfg) {assert(pin == 28); return step(cfg == 1 ? GPIO : cfg == 2 ? PIN_OUTPUT : PIN_DEFAULT);}
 void am_hal_itm_print(char *s) {(void)s;}
-void am_util_stdio_printf_init(am_util_stdio_print_char_t fn) {assert(fn == am_hal_itm_print); (void)step(PRINT);}
+void am_util_stdio_printf_init(am_util_stdio_print_char_t fn) {assert(fn == NULL || fn == am_hal_itm_print); (void)step(fn ? PRINT : DETACH);}
 
 int main(int argc, char **argv) {
     assert(argc >= 2);
@@ -151,7 +151,26 @@ int main(int argc, char **argv) {
 #else
         (void)debug_pos; (void)perf_pos;
 #endif
+    } else if (!strcmp(argv[1], "disable")) {
+        assert(argc == 3);
+        assert(nsx_debug_init(&cfg.debug) == 0);
+        count=0; failure=(unsigned)atoi(argv[2]);
+        extern void nsx_debug_disable(nsx_debug_transport_e);
+        nsx_debug_disable(NSX_DEBUG_ITM);
+        const unsigned expected[]={ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT};
+        unsigned n=0;
+        do {assert(n < count && calls[n] == expected[n]); ++n;}
+        while (n < sizeof(expected)/sizeof(expected[0]) && expected[n-1] != failure);
+        assert(count == n);
+        if (failure) assert(nsx_debug_init(&cfg.debug) == 0x40+failure);
+        else assert(nsx_debug_init(&cfg.debug) == 0);
     } else return 2;
     puts("PASS");
     return 0;
 }
+
+void am_bsp_itm_printf_disable(void) {}
+void am_bsp_uart_printf_disable(void) {}
+uint32_t am_hal_itm_disable(void) {return step(ITM_OFF);}
+uint32_t am_hal_tpiu_disable(void) {return step(TPIU_OFF);}
+uint32_t am_hal_gpio_state_write(unsigned pin, unsigned state) {assert(pin == 28 && state == 1); return step(PIN_HIGH);}

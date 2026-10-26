@@ -112,4 +112,6 @@ SYSTEM_FULL, SYSTEM_MINIMAL = tuple(
           ('reject_then_start',), 'tests/fixtures/system-status-smoke', 'system_status.elf',
           configure=partial(system_status_options, minimal=minimal))
     for mode, minimal in (('full', False), ('minimal', True)))
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL)
+DEBUG_STATE = Suite('debug-state', 'tests/hardware/test_debug_output.py::test_debug_output',
+                    ('output_lifecycle',), 'tests/fixtures/debug-state-smoke', 'debug_state.elf')
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE)

@@ -45,3 +45,10 @@ uint32_t am_hal_spotmgr_init(void); void am_hal_spotmgr_profile_set(am_hal_spotm
 uint32_t am_hal_debug_enable(void); uint32_t am_hal_tpiu_config(unsigned,unsigned,unsigned,unsigned,unsigned);
 uint32_t am_hal_gpio_pinconfig(unsigned,unsigned); void am_hal_itm_print(char*);
 extern uint32_t SystemCoreClock;
+
+#define AM_HAL_GPIO_OUTPUT_SET 1
+#define am_hal_gpio_pincfg_output 2
+#define am_hal_gpio_pincfg_default 3
+uint32_t am_hal_itm_disable(void);
+uint32_t am_hal_tpiu_disable(void);
+uint32_t am_hal_gpio_state_write(unsigned, unsigned);
