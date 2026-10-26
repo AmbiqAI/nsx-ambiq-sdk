@@ -56,8 +56,10 @@ static uint32_t nsx_power_platform_shutdown_peripherals(const nsx_power_config_t
 #ifndef AM_PART_APOLLO4L
     NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_DISP));
     NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_DISPPHY));
-    NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USB));
-    NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USBPHY));
+    if (!cfg->need_usb) {
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USB));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USBPHY));
+    }
     NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_PDM1));
     NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_PDM2));
     NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_PDM3));

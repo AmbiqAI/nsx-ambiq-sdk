@@ -81,29 +81,32 @@ typedef enum {
 
 /// Power configuration for the common NSX-managed power states.
 ///
+/// On AP4P/L, supported need_* peripheral flags skip optional shutdown;
+/// they do not initialize drivers or undo the mandatory BSP baseline.
+/// AP3/3P do not translate these peripheral flags. See the module support table.
 /// This is the preferred NSX-facing interface for common power flows.
 /// Lower-level AmbiqSuite power APIs remain available underneath when an
 /// application needs finer control than the staged NSX helpers expose.
 typedef struct {
     const nsx_core_api_t *api;       ///< API version
     nsx_power_perf_mode_t perf_mode;       ///< CPU clock mode
-    bool need_audadc;               ///< Keep audio ADC powered
+    bool need_audadc;               ///< Skip optional audio ADC shutdown where supported
     bool need_ssram;                ///< Keep shared SRAM powered
-    bool need_crypto;               ///< Keep crypto block powered
-    bool need_ble;                  ///< Keep BLE powered
-    bool need_usb;                  ///< Keep USB powered
-    bool need_iom;                  ///< Keep IOM interfaces powered
-    bool need_uart;                 ///< Keep alternative UART powered
+    bool need_crypto;               ///< Skip optional crypto shutdown
+    bool need_ble;                  ///< Skip optional BLE GPIO shutdown; BSP reset still applies
+    bool need_usb;                  ///< Skip optional USB/PHY shutdown on AP4P
+    bool need_iom;                  ///< Skip optional IOM shutdown
+    bool need_uart;                 ///< Skip optional UART0/3 shutdown on AP4
     bool small_tcm;                 ///< Use 32K ITCM + 128K DTCM (vs full)
     bool need_tempco;               ///< Enable Apollo4 TempCo where supported
     bool need_itm;                  ///< Keep ITM/SWO debug output
-    bool need_xtal;                 ///< Keep XTAL oscillator
+    bool need_xtal;                 ///< Skip optional XTAL deep-sleep powerdown policy
     bool spotmgr_collapse;          ///< SpotManager STM state collapse (Apollo5 family)
 } nsx_power_config_t;
 
-extern const nsx_power_config_t nsx_power_all_on;   ///< Everything enabled — development/debug
-extern const nsx_power_config_t nsx_power_minimal;   ///< Minimal peripherals — good starting point
-extern const nsx_power_config_t nsx_power_audio;     ///< Audio ADC on, most else off
+extern const nsx_power_config_t nsx_power_all_on;   ///< Development preset; crypto and TempCo remain false
+extern const nsx_power_config_t nsx_power_minimal;   ///< Request supported shutdowns; check memory layout before use
+extern const nsx_power_config_t nsx_power_audio;     ///< Skip supported audio ADC shutdown; drivers still required
 
 /// Two-bit GPIO state exported for external current/energy tools.
 typedef enum {

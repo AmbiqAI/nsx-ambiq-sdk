@@ -1,6 +1,7 @@
 """SDK-owned suite definitions; hardware facts remain in SDK descriptors."""
 from dataclasses import dataclass
 from pathlib import Path
+from functools import partial
 from typing import Callable
 
 from .protocol import validate_cases
@@ -77,4 +78,16 @@ TEMPCO = Suite('tempco-lifecycle', 'tests/hardware/test_tempco.py::test_tempco',
 OWNERSHIP = Suite('startup-ownership', 'tests/hardware/test_ownership.py::test_ownership',
                   ('initialize_once', 'reject_reapplication'),
                   'tests/fixtures/startup-ownership', 'startup_ownership.elf')
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP)
+def usb_options(repo: Path, output: Path, board: str, fault: str,
+                sdk_root: Path | None = None, *, keep: bool) -> list[str]:
+    if board != 'apollo4p_blue_kxr_evb' or fault != 'none':
+        raise ValueError('USB policy smoke requires AP4 Blue KXR without fault injection')
+    return [f'-DNSX_TEST_USB_KEEP={"ON" if keep else "OFF"}']
+
+
+USB_KEEP, USB_OFF = tuple(
+    Suite(f'usb-{mode}', f'tests/hardware/test_usb_policy.py::test_usb_policy[usb-{mode}]',
+          ('usb_policy',), 'tests/fixtures/usb-policy', 'usb_policy.elf',
+          configure=partial(usb_options, keep=keep))
+    for mode, keep in (('keep', True), ('off', False)))
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF)
