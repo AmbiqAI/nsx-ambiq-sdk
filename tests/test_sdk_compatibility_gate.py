@@ -191,8 +191,9 @@ raise SystemExit(code)
     assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}
 
 
-@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[0], POWER_STARTUP[0]),
-                         ids=('selector', 'startup'))
+@pytest.mark.parametrize('requirement',
+                         [r for r in ADAPTER_REGRESSIONS + POWER_STARTUP if len(r.variants) > 1],
+                         ids=lambda r: r.selector.split('::')[-1])
 def test_power_gate_requires_each_family_scenario(requirement):
     gate = Gate((requirement,))
     gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
