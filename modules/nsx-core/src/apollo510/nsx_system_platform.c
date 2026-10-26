@@ -61,7 +61,8 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
 
     if (cfg->transport == NSX_DEBUG_ITM) {
         /* Step 1: Unlock DCU (common to all Apollo5 variants) */
-        nsx_platform_dcu_unlock_swo();
+        uint32_t status = nsx_platform_dcu_unlock_swo();
+        if (status != 0) return status;
 
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
         /* Steps 2-3: BSP helper handles TPIU/ITM/SWO pin/printf.
@@ -72,14 +73,16 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
         /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
          * Trace clock = HFRC_96MHz (fixed, independent of CPU perf mode).
          * JLink SWO viewer: -cpufreq 96000000 -swofreq 1000000 */
-        am_hal_debug_enable();
+        status = am_hal_debug_enable();
+        if (status != 0) return status;
         uint32_t swo_scaler = (96000000u / 1000000u) - 1;  /* 95 → 1 MHz SWO baud */
-        am_hal_tpiu_config(
+        status = am_hal_tpiu_config(
             MCUCTRL_DBGCTRL_DBGTPIUCLKSEL_HFRC_96MHz,
             0,
             TPI_CSPSR_CWIDTH_1BIT,
             TPI_SPPR_TXMODE_UART,
             swo_scaler);
+        if (status != 0) return status;
 
         ITM->TPR = 0xFFFFFFFF;
         ITM->TER = 0xFFFFFFFF;
@@ -93,7 +96,8 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
          * The previous code constructed a pincfg with uFuncSel=0, which is
          * the GPIO function — not SWO — so SWO output never reached the pin
          * even though TPIU/ITM were configured correctly. */
-        am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, g_AM_BSP_GPIO_ITM_SWO);
+        status = am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, g_AM_BSP_GPIO_ITM_SWO);
+        if (status != 0) return status;
 
         am_util_stdio_printf_init((am_util_stdio_print_char_t)am_hal_itm_print);
 #endif

@@ -116,6 +116,19 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_system_status.py::test_system_preflight_and_order', 8,
+                parameters=('system_backend', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p')
+                               for scenario in ('invalid', 'success'))),
+    Requirement('tests/test_system_status.py::test_minimal_failure_stops_setup', 4,
+                parameters=('system_backend',),
+                variants=tuple((family,) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p'))),
+    Requirement('tests/test_system_status.py::test_dcu_cleanup_and_debug_failures', 4,
+                parameters=('system_backend', 'masked'),
+                variants=tuple((family, masked) for family in ('apollo510', 'apollo330p') for masked in (0, 1))),
+    Requirement('tests/test_system_status.py::test_system_status_real_header_builds', 4,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb')),
+
     Requirement('tests/test_power_startup.py::test_memory_preflight_smoke_builds'),
     Requirement('tests/test_power_startup.py::test_memory_preflight_without_api_validation', 16,
                 parameters=('startup_binary', 'scenario', 'api_validation'),

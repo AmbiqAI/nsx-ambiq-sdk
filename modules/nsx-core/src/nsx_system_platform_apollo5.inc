@@ -85,51 +85,48 @@
  * nsx_platform_debug_init() delegates the DCU unlock to the BSP. */
 static uint32_t nsx_platform_dcu_unlock_swo(void) __attribute__((unused));
 static uint32_t nsx_platform_dcu_unlock_swo(void) {
-    uint32_t ui32dcuVal;
-    int32_t  i32RetValue = 0;
-    bool     bOffCryptoOnExit = false;
-    bool     bOffOtpOnExit = false;
+    uint32_t dcu_value = 0;
+    uint32_t status = AM_HAL_STATUS_SUCCESS;
+    uint32_t cleanup_status;
+    bool off_crypto_on_exit = false;
+    bool off_otp_on_exit = false;
 
-    // The crypto/OTP power-up handshake (and the HAL's internal HFRC clock
-    // request for crypto) must run uninterrupted.  An ISR that touches the
-    // clock manager or a power domain mid-sequence can wedge the crypto core,
-    // which on this secure part shows up as a hang inside
-    // am_hal_pwrctrl_periph_enable(CRYPTO).  Match the proven neuralSPOT
-    // sequence: do the whole thing in a critical section, only power up
-    // domains that are currently off, and let the HAL do the idle-wait.
+    /* Keep the OTP/crypto handshake uninterrupted, including cleanup. */
     AM_CRITICAL_BEGIN;
 
     if (NSX_PWRCTRL_PWRSTOTP == 0) {
-        bOffOtpOnExit = true;
-        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
+        off_otp_on_exit = true;
+        status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
+        if (status != AM_HAL_STATUS_SUCCESS) goto cleanup;
     }
-
     if (NSX_PWRCTRL_PWRSTCRYPTO == 0) {
-        bOffCryptoOnExit = true;
-        am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        off_crypto_on_exit = true;
+        status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        if (status != AM_HAL_STATUS_SUCCESS) goto cleanup;
+    }
+    if (NSX_PWRCTRL_PWRSTCRYPTO != 1 || CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE != 1) {
+        status = AM_HAL_STATUS_FAIL;
+        goto cleanup;
+    }
+    status = am_hal_dcu_get(&dcu_value);
+    if (status != AM_HAL_STATUS_SUCCESS) goto cleanup;
+    if ((dcu_value & NSX_DCU_SWO_MASK) != NSX_DCU_SWO_MASK) {
+        status = am_hal_dcu_update(true, NSX_DCU_SWO_MASK);
     }
 
-    if ((NSX_PWRCTRL_PWRSTCRYPTO == 1) &&
-        (CRYPTO->HOSTCCISIDLE_b.HOSTCCISIDLE == 1)) {
-        am_hal_dcu_get(&ui32dcuVal);
-        if (((ui32dcuVal & NSX_DCU_SWO_MASK) != NSX_DCU_SWO_MASK) &&
-            (am_hal_dcu_update(true, NSX_DCU_SWO_MASK) != AM_HAL_STATUS_SUCCESS)) {
-            i32RetValue = -1;
-        }
-    } else {
-        i32RetValue = -1;
+cleanup:
+    /* An enable can fail after changing hardware. Restore only domains
+     * initially off, and retain the first failure while attempting both. */
+    if (off_crypto_on_exit) {
+        cleanup_status = am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        if (status == AM_HAL_STATUS_SUCCESS) status = cleanup_status;
     }
-
-    if (bOffCryptoOnExit) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+    if (off_otp_on_exit) {
+        cleanup_status = am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+        if (status == AM_HAL_STATUS_SUCCESS) status = cleanup_status;
     }
-    if (bOffOtpOnExit) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-    }
-
     AM_CRITICAL_END;
-
-    return (uint32_t)(i32RetValue == 0 ? 0 : 1);
+    return status;
 }
 
 /* ===================================================================
@@ -158,10 +155,12 @@ uint32_t nsx_platform_minimal_hw_init(void) {
         .eElpConfig = AM_HAL_PWRCTRL_ELP_ON,
         .eClpConfig = AM_HAL_PWRCTRL_CLP_ON
     };
-    am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
+    uint32_t status = am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
+    if (status != 0) return status;
 
     /* SpotManager must be initialized before profile_set */
-    am_hal_spotmgr_init();
+    status = am_hal_spotmgr_init();
+    if (status != 0) return status;
 
     /* FPU */
     am_hal_sysctrl_fpu_enable();

@@ -53,6 +53,14 @@ before the tag exists they are checked against HEAD. This keeps later fixes
 out of an older release's qualification claims. Provider and archive integrity
 checks continue to inspect the current payload.
 
+`test_system_status.py` injects HAL failures through actual core family backends,
+checking first-error propagation, DCU cleanup, incoming interrupt masks, and
+invalid requests before startup ownership. Its real-header builds and opt-in
+`tests/hardware/test_system_status_smoke.py` smoke cover full/minimal startup with ITM
+on AP3P, AP4 KXR, AP510B and AP330P. The smoke checks trace registers and reports
+through RTT; it does not establish externally received SWO output or exercise
+vendor nonreturning error paths.
+
 ## Running Tests
 
 ```sh
