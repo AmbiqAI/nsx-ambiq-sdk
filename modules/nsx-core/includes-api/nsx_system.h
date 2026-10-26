@@ -36,7 +36,7 @@
  * in this order:
  *
  * ```c
- * // 1. Core runtime (required first — gates all other NSX calls)
+ * // 1. Core runtime (does not gate other modules)
  * nsx_core_init(&core_cfg);
  *
  * // 2. Low-power hardware init (required for cache, clocks, SIMOBUCK)
@@ -47,11 +47,11 @@
  * // 3. Cache (requires CPDLP from step 2 — will fail without it)
  * nsx_cache_enable();           // from nsx_mem.h
  *
- * // 4. Performance mode (HP clock)
- * nsx_set_perf_mode(NSX_PERF_HIGH);
- *
- * // 5. Debug output (order matters — see gotchas below)
+ * // 4. Debug output (before the performance switch — see gotchas below)
  * nsx_debug_init(&debug_cfg);
+ *
+ * // 5. Performance mode (family-specific)
+ * nsx_set_perf_mode(NSX_PERF_HIGH);
  *
  * // 6. Application-specific peripherals
  * // ... your code ...
@@ -211,9 +211,16 @@ typedef struct {
  *   1. nsx_core_init()
  *   2. Hardware init (BSP or minimal)
  *   3. Cache enable (if requested)
- *   4. Performance mode
- *   5. SpotManager profile (if requested)
- *   6. Debug output (if requested)
+ *   4. Debug output (if requested)
+ *   5. Performance mode
+ *   6. SpotManager profile (if requested)
+ *
+ * AP3/3P and AP4P/L share one startup ownership guard across this function,
+ * nsx_hw_init(), nsx_minimal_hw_init() and nsx_power_configure(). Choose one
+ * per reset, from foreground before drivers. Valid duplicate/re-entrant calls
+ * return NSX_STATUS_STARTUP_REJECTED, including after a reported setup failure.
+ * Preflight errors are retryable. skip_bsp_init selects minimal initialization
+ * and still consumes ownership. Direct HAL/BSP calls bypass this guard.
  *
  * @param cfg  System configuration. Must not be NULL.
  * @return 0 on success, non-zero on failure.

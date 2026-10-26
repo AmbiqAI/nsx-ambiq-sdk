@@ -2,6 +2,8 @@
 #define NSX_TEST_POWER_HAL_H
 #include <stdint.h>
 #include <stdbool.h>
+uint32_t am_hal_interrupt_master_disable(void);
+void am_hal_interrupt_master_set(uint32_t);
 #define AM_HAL_STATUS_SUCCESS 0u
 #define AM_HAL_MCUCTRL_SRAM_PREFETCH_DATA 7u
 #define AM_HAL_MCUCTRL_CONTROL_SRAM_PREFETCH 8u

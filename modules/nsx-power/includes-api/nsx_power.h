@@ -133,9 +133,12 @@ typedef enum {
  * returned to the application; this path does not enter the NSX fail loop.
  * Callers must check the result before continuing startup.
  *
- * Earlier hardware changes are not rolled back on failure. Reset or perform
- * board-specific recovery before retrying after a hardware error. Input
- * validation failures have no hardware effects when API validation is enabled.
+ * On AP3/3P and AP4P/L, startup ownership is shared with nsx_system_init(),
+ * nsx_hw_init() and nsx_minimal_hw_init(). Choose one per reset, before drivers.
+ * A repeated/re-entrant valid request returns NSX_STATUS_STARTUP_REJECTED,
+ * including after a reported hardware failure. Earlier writes are not rolled
+ * back. Reset before retrying; private helper recovery does not clear ownership.
+ * Preflight validation failures do not claim ownership and can be corrected.
  * BSP-internal operations and TempCo resource cleanup are separate concerns.
  *
  * @param nsx_power_config_t Desired power configuration.

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_startup_ownership C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+if(NOT NSX_TEST_BOARD MATCHES "^(apollo3p_evb|apollo4p_blue_kxr_evb)$")
+    message(FATAL_ERROR "Startup ownership smoke supports AP3 Blue Plus and AP4 Blue KXR")
+endif()
+nsx_add_test_firmware(startup_ownership main.c MODULES interrupt timer power)

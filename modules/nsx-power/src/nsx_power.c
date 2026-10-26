@@ -47,6 +47,7 @@
 #include "am_util.h"
 #include "nsx_core.h"
 #include "nsx_power.h"
+#include "nsx_startup_internal.h"
 
 const nsx_core_api_t nsx_power_V0_0_1 = {.apiId = NSX_POWER_API_ID, .version = NSX_POWER_V0_0_1};
 
@@ -124,7 +125,14 @@ uint32_t nsx_power_configure(const nsx_power_config_t *pCfg) {
     }
 #endif
 
-    ui32ReturnStatus = nsx_power_platform_config(pCfg);
+#if NSX_STARTUP_GUARDED
+    extern uint32_t nsx_power_platform_validate_config(const nsx_power_config_t *);
+    ui32ReturnStatus = nsx_power_platform_validate_config(pCfg);
+    if (ui32ReturnStatus != NSX_STATUS_SUCCESS) return ui32ReturnStatus;
+#endif
+    ui32ReturnStatus = nsx_startup_claim();
+    if (ui32ReturnStatus != NSX_STATUS_SUCCESS) return ui32ReturnStatus;
+    ui32ReturnStatus = nsx_startup_finish(nsx_power_platform_config(pCfg));
 
     return ui32ReturnStatus;
 }

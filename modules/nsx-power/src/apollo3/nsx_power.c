@@ -10,9 +10,7 @@
 #include "nsx_core.h"
 #include "nsx_power_internal.h"
 
-uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
-    uint32_t control = AM_HAL_MCUCTRL_SRAM_PREFETCH_DATA;
-
+uint32_t nsx_power_platform_validate_config(const nsx_power_config_t *cfg) {
 #ifndef NSX_DISABLE_API_VALIDATION
     if (cfg == NULL) {
         return NSX_STATUS_INVALID_HANDLE;
@@ -30,6 +28,12 @@ uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 
+    return NSX_STATUS_SUCCESS;
+}
+
+uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
+    uint32_t control = AM_HAL_MCUCTRL_SRAM_PREFETCH_DATA;
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_validate_config(cfg));
     am_bsp_low_power_init();
     NSX_POWER_RETURN_IF_ERROR(nsx_power_set_performance_mode(cfg->perf_mode));
     NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_config(&am_hal_cachectrl_defaults));

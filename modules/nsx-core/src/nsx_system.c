@@ -9,6 +9,7 @@
 #include "nsx_system.h"
 #include "nsx_core.h"
 #include "nsx_mem.h"
+#include "nsx_startup_internal.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -28,11 +29,15 @@ extern uint32_t nsx_platform_spot_mgr_profile(void);
  * =================================================================== */
 
 uint32_t nsx_hw_init(void) {
-    return nsx_platform_hw_init();
+    uint32_t status = nsx_startup_claim();
+    if (status != 0) return status;
+    return nsx_startup_finish(nsx_platform_hw_init());
 }
 
 uint32_t nsx_minimal_hw_init(void) {
-    return nsx_platform_minimal_hw_init();
+    uint32_t status = nsx_startup_claim();
+    if (status != 0) return status;
+    return nsx_startup_finish(nsx_platform_minimal_hw_init());
 }
 
 uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode) {
@@ -46,7 +51,7 @@ uint32_t nsx_debug_init(const nsx_debug_config_t *cfg) {
     return nsx_platform_debug_init(cfg);
 }
 
-uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
+static uint32_t nsx_system_init_impl(const nsx_system_config_t *cfg) {
     uint32_t st;
 
     if (cfg == NULL) {
@@ -60,9 +65,9 @@ uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
 
     /* 2. Hardware init */
     if (cfg->skip_bsp_init) {
-        st = nsx_minimal_hw_init();
+        st = nsx_platform_minimal_hw_init();
     } else {
-        st = nsx_hw_init();
+        st = nsx_platform_hw_init();
     }
     if (st != 0) return st;
 
@@ -96,4 +101,19 @@ uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
     }
 
     return 0;
+}
+
+uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
+    if (cfg == NULL) return NSX_STATUS_INVALID_HANDLE;
+#if NSX_STARTUP_GUARDED
+    if ((cfg->perf_mode != NSX_PERF_LOW && cfg->perf_mode != NSX_PERF_MEDIUM &&
+         cfg->perf_mode != NSX_PERF_HIGH) ||
+        (cfg->debug.transport != NSX_DEBUG_NONE && cfg->debug.transport != NSX_DEBUG_ITM &&
+         cfg->debug.transport != NSX_DEBUG_UART)) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+#endif
+    uint32_t status = nsx_startup_claim();
+    if (status != 0) return status;
+    return nsx_startup_finish(nsx_system_init_impl(cfg));
 }
