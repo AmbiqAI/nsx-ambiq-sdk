@@ -10,6 +10,13 @@
  * context, but callers should normally reach for the NSX helpers first and
  * only drop lower when they need behavior that NSX does not wrap yet.
  *
+ * Startup and standalone performance/debug helpers reject unknown enum values
+ * before hardware changes. nsx_debug_init(NULL) and NSX_DEBUG_NONE remain
+ * successful no-ops. Status-returning setup failures stop subsequent setup;
+ * already completed hardware steps are not rolled back. DCU setup restores
+ * its interrupt mask and attempts cleanup of temporarily powered domains.
+ * Void or nonreturning vendor helpers cannot report failures through this API.
+ *
  * ## Boot Sequence Overview
  *
  * The ARM Cortex-M goes through several stages before reaching main().

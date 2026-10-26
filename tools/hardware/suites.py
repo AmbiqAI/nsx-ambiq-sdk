@@ -100,4 +100,16 @@ def memory_options(repo: Path, output: Path, board: str, fault: str,
 MEMORY_PREFLIGHT = Suite('memory-preflight', 'tests/hardware/test_memory_preflight.py::test_memory_preflight',
                          ('reject_reductions_then_start',), 'tests/fixtures/memory-preflight',
                          'memory_preflight.elf', configure=memory_options)
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT)
+def system_status_options(repo: Path, output: Path, board: str, fault: str,
+                          sdk_root: Path | None = None, *, minimal: bool) -> list[str]:
+    if board not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb') or fault != 'none':
+        raise ValueError('System status smoke supports AP3P, AP4 KXR, AP510B and AP330P without faults')
+    return [f'-DNSX_TEST_MINIMAL={"ON" if minimal else "OFF"}']
+
+
+SYSTEM_FULL, SYSTEM_MINIMAL = tuple(
+    Suite(f'system-{mode}', f'tests/hardware/test_system_status.py::test_system_status[system-{mode}]',
+          ('reject_then_start',), 'tests/fixtures/system-status-smoke', 'system_status.elf',
+          configure=partial(system_status_options, minimal=minimal))
+    for mode, minimal in (('full', False), ('minimal', True)))
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL)

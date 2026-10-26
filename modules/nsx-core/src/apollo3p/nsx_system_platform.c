@@ -32,8 +32,10 @@ uint32_t nsx_platform_hw_init(void) {
 
 uint32_t nsx_platform_minimal_hw_init(void) {
     /* Enable cache with default config. */
-    am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
-    am_hal_cachectrl_enable();
+    uint32_t status = am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
+    if (status != 0) return status;
+    status = am_hal_cachectrl_enable();
+    if (status != 0) return status;
 
     /* FPU */
     am_hal_sysctrl_fpu_enable();
