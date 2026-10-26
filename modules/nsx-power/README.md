@@ -122,8 +122,7 @@ then initialize drivers. A second valid request, or re-entry while startup is
 running, returns `NSX_STATUS_STARTUP_REJECTED` without hardware effects. This
 also applies after a reported setup failure; there is no public reset of the
 guard. Core initialization does not clear it. Direct HAL/BSP calls bypass the
-guard. This does not yet fix field semantics or enforce memory-layout bounds;
-those remain tracked in #137.
+guard. Memory-layout bounds remain tracked in #137.
 
 These adapters return the first failed configuration operation's status and
 stop issuing subsequent operations. Performance and TempCo helper errors return
@@ -137,8 +136,7 @@ Input validation failures occur before ownership is claimed and can be corrected
 The
 void BSP initializer cannot report its internal failures.
 TempCo resource cleanup is described below.
-[Configuration-field support](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/137)
-remains open; this contract is not a claim that every profile field is implemented.
+Peripheral-field support is described below.
 
 `tests/test_power_startup.py` calls the real public wrapper, family backend and
 core lifecycle, with HAL calls controlled on the host. It checks invalid inputs,
@@ -191,3 +189,48 @@ factory TempCo calibration and fails if setup is unsupported. Interrupts are
 masked during the short setup/release checks, so no temperature callback is
 qualified. Period conversion (#139) and bounded capture/error handling (#140)
 remain separate follow-ups.
+
+
+## Apollo3/Apollo4 peripheral policy
+
+Supported `need_*` flags skip optional NSX shutdowns when true. They do not
+power up peripherals, initialize drivers, or undo the mandatory BSP baseline.
+Configure once before drivers; BLE controller startup remains driver-owned,
+including release of the reset asserted by Blue-board BSP initialization.
+
+| Field | AP3/3P | AP4P | AP4L |
+| --- | --- | --- | --- |
+| `need_usb` | Unmanaged | USB and USBPHY | Unmanaged |
+| `need_audadc` | Unmanaged | Audio ADC | Unmanaged |
+| `need_iom` | Unmanaged | IOM0–7 | IOM0–7 |
+| `need_uart` | Unmanaged | UART0/3 only | UART0/3 only |
+| `need_crypto` | Unmanaged | Crypto shutdown | Crypto shutdown |
+| `need_itm` | Unmanaged | DEBUG domain | DEBUG domain |
+| `need_xtal` | Unmanaged | XTAL deep-sleep powerdown policy | Same as AP4P |
+| `need_ble` | Unmanaged | Optional BLE GPIO shutdown | Optional BLE GPIO shutdown |
+| `spotmgr_collapse` | Unmanaged | Unmanaged | Unmanaged |
+
+Unmanaged fields are accepted for shared-preset compatibility. BSP effects still
+apply independently of those fields. AP4 always selects LFRC for RTC and shuts
+down UART1/2, IOS, ADC, MSPI, PDM and I2S blocks regardless of these flags.
+
+`all_on` skips supported peripheral shutdowns except crypto; TempCo is false.
+`audio` skips supported AUDADC shutdown, not PDM/I2S setup. `minimal` requests
+supported shutdowns. Presets retain their existing values and are not guarantees
+of peripheral readiness or minimum current. Check memory requirements separately.
+Host tests exercise each flag independently and all three presets on four families.
+
+The `usb-policy` hardware profile runs two fresh AP4 Blue KXR firmware images.
+A test-only wrapper enables USB/USBPHY after real BSP initialization, then the
+real NSX adapter preserves or shuts down those domains. Hardware status bits
+verify both the initial state and the result; teardown shuts both domains down.
+This checks power policy, not USB clocks, enumeration, or transfers.
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware/test_usb_policy.py \
+  --hardware --qualification-profile apollo4p_blue_kxr_evb-gcc-usb-policy \
+  --qualification-report artifacts/usb-policy/report.json --probe YOUR_SERIAL \
+  --gcc-root /usr/local/arm-gnu-toolchain
+```
+
+Reserve the board before running; this flashes it. Use a fresh report path.

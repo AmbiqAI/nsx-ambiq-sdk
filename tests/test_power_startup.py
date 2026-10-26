@@ -93,3 +93,26 @@ def test_ownership_smoke_builds(repo_root, tmp_path, board):
     from tools.hardware.suites import OWNERSHIP
     compiler = compiler_for_test('gcc')
     build_firmware(BuildRequest(repo_root, tmp_path, board, compiler.parent.parent, OWNERSHIP))
+
+
+PERIPHERAL_FIELDS = ('need_usb', 'need_iom', 'need_uart', 'need_audadc', 'need_crypto',
+                     'need_xtal', 'need_itm', 'need_ble', 'spotmgr_collapse')
+PERIPHERAL_CASES = tuple(f'{field}-{value}' for field in PERIPHERAL_FIELDS for value in (0, 1)) + (
+    'preset-all_on', 'preset-minimal', 'preset-audio')
+
+
+@pytest.mark.parametrize(('startup_binary', 'scenario'),
+                         [(family, scenario) for family in FAMILIES for scenario in PERIPHERAL_CASES],
+                         indirect=['startup_binary'])
+def test_peripheral_policy(startup_binary, scenario):
+    subprocess.run([str(startup_binary), 'policy-' + scenario], check=True,
+                   capture_output=True, text=True, timeout=5)
+
+
+@pytest.mark.parametrize('mode', ('keep', 'off'))
+def test_usb_policy_smoke_builds(repo_root, tmp_path, mode):
+    from tools.hardware.api import BuildRequest, build_firmware
+    from tools.hardware.suites import USB_KEEP, USB_OFF
+    compiler = compiler_for_test('gcc')
+    suite = USB_KEEP if mode == 'keep' else USB_OFF
+    build_firmware(BuildRequest(repo_root, tmp_path, 'apollo4p_blue_kxr_evb', compiler.parent.parent, suite))

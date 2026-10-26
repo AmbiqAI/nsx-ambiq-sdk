@@ -116,6 +116,15 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_power_startup.py::test_usb_policy_smoke_builds', 2,
+                parameters=('mode',), variants=(('keep',), ('off',))),
+    Requirement('tests/test_power_startup.py::test_peripheral_policy', 84,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in tuple(f'{field}-{value}' for field in
+                        ('need_usb', 'need_iom', 'need_uart', 'need_audadc', 'need_crypto',
+                         'need_xtal', 'need_itm', 'need_ble', 'spotmgr_collapse') for value in (0, 1)) +
+                        ('preset-all_on', 'preset-minimal', 'preset-audio'))),
     Requirement('tests/test_power_startup.py::test_startup_ownership', 56,
                 parameters=('startup_binary', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')

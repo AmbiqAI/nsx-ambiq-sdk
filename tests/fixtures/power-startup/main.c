@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -177,10 +178,83 @@ static void ownership(const char *scenario) {
     all_startups_rejected();
     assert(mask == expected_mask);
 }
+static unsigned count_event(const char *name) {
+    unsigned count=0;
+    for (unsigned i=0;i<calls;++i) if (!strcmp(trace[i],name)) ++count;
+    return count;
+}
+static void peripheral_policy(const char *scenario) {
+    struct field { const char *name; size_t offset; };
+    static const struct field fields[] = {
+#define FIELD(name) {#name, offsetof(nsx_power_config_t, name)}
+        FIELD(need_usb), FIELD(need_iom), FIELD(need_uart), FIELD(need_audadc),
+        FIELD(need_crypto), FIELD(need_xtal), FIELD(need_itm), FIELD(need_ble),
+        FIELD(spotmgr_collapse),
+#undef FIELD
+    };
+    if (!strcmp(scenario,"preset-all_on")) {
+        config=nsx_power_all_on;
+        assert(config.need_usb && config.need_ble && config.need_iom && config.need_uart);
+        assert(config.need_audadc && config.need_itm && config.need_xtal);
+        assert(!config.need_crypto && !config.need_tempco);
+    } else if (!strcmp(scenario,"preset-minimal") || !strcmp(scenario,"preset-audio")) {
+        bool audio=!strcmp(scenario,"preset-audio");
+        config=audio ? nsx_power_audio : nsx_power_minimal;
+        assert(config.need_audadc == audio);
+        assert(!config.need_usb && !config.need_ble && !config.need_iom && !config.need_uart);
+        assert(!config.need_crypto && !config.need_itm && !config.need_xtal && !config.need_tempco);
+    }
+    else {
+        unsigned selected=0; char direction, name[32];
+        assert(sscanf(scenario,"%31[^-]-%c",name,&direction) == 2);
+        while (selected < sizeof fields/sizeof fields[0] && strcmp(name,fields[selected].name)) ++selected;
+        assert(selected < sizeof fields/sizeof fields[0]);
+        assert(direction == '0' || direction == '1');
+        bool requested=direction == '1';
+        config=nsx_power_minimal;
+        config.need_ssram=true;
+        for (unsigned i=0;i<sizeof fields/sizeof fields[0];++i)
+            *(bool *)((char *)&config+fields[i].offset) = i == selected ? requested : !requested;
+    }
+    assert(nsx_power_configure(&config) == 0);
+    success_contract();
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+    for (unsigned p=0;p<TEST_PERIPHERAL_COUNT;++p) assert(!peripheral[p]);
+    assert(count_event("crypto") == 0 && count_event("xtal") == 0);
+    assert(count_event("gpio-config") == 0 && count_event("gpio-set") == 0);
+#else
+    for (unsigned p=AM_HAL_PWRCTRL_PERIPH_IOM0;p<=AM_HAL_PWRCTRL_PERIPH_IOM7;++p)
+        assert(peripheral[p] == !config.need_iom);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_IOS]);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_UART0] == !config.need_uart);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_UART3] == !config.need_uart);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_UART1] && peripheral[AM_HAL_PWRCTRL_PERIPH_UART2]);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_DEBUG] == !config.need_itm);
+    assert(count_event("crypto") == (unsigned)!config.need_crypto);
+    assert(count_event("xtal") == (unsigned)!config.need_xtal);
+    assert(count_event("rtc") == 1);
+    assert(count_event("gpio-config") == (unsigned)!config.need_ble);
+    assert(count_event("gpio-clear") == 2u * !config.need_ble);
+    assert(count_event("gpio-set") == (unsigned)!config.need_ble);
+    /* The mandatory BSP baseline is separate from these optional adapter writes. */
+    assert(count_event("bsp") == 1);
+#if defined(AM_PART_APOLLO4L)
+    assert(!peripheral[AM_HAL_PWRCTRL_PERIPH_USB] && !peripheral[AM_HAL_PWRCTRL_PERIPH_USBPHY]);
+    assert(!peripheral[AM_HAL_PWRCTRL_PERIPH_AUDADC]);
+#else
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_USB] == !config.need_usb);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_USBPHY] == !config.need_usb);
+    assert(peripheral[AM_HAL_PWRCTRL_PERIPH_AUDADC] == !config.need_audadc);
+#endif
+#endif
+    assert(count_event("spot") == 0);
+    all_startups_rejected();
+}
 int main(int argc, char **argv) {
     assert(argc == 2 || argc == 3);
     const char *scenario = argv[1];
     config = nsx_power_minimal;
+    if (!strncmp(scenario,"policy-",7)) { peripheral_policy(scenario+7); return 0; }
     if (!strncmp(scenario,"ownership-",10)) { ownership(scenario+10); return 0; }
     if (argc == 3) fail_at=(unsigned)strtoul(argv[2],NULL,10);
     if (strstr(scenario, "keep")) {
