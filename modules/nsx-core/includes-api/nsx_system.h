@@ -90,7 +90,7 @@
  *   1. **DCU unlock** — OTP + Crypto powered temporarily, `am_hal_dcu_update()`
  *      enables SWO/DWT/SWD/TRACE bits, then Crypto/OTP are powered down.
  *      This step is shared by all Apollo5 variants and is handled internally.
- *   2. **TPIU / ITM / SWO pin** — Configured by BSP helper on AP330P/510L,
+ *   2. **TPIU / ITM / SWO pin** — Configured by checked HAL calls on AP330P/510L,
  *      or manually on Apollo510/5B/5A (where `MCUCTRL_DBGCTRL_DBGTPIUCLKSEL_HFRC_96MHz`
  *      is available).
  *   3. **printf backend** — `am_util_stdio_printf_init()` with `am_hal_itm_print`.
