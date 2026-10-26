@@ -17,6 +17,38 @@
 
 #include "../nsx_system_platform_apollo5.inc"
 
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+/* Preserve the BSP's SWO preparation after NSX's broader DCU preparation.
+ * The vendor helper has additional boot/scope rules; it is not redundant. */
+static uint32_t nsx_platform_bsp_swo_prepare(void) {
+    uint32_t status = 0, cleanup_status;
+    bool off_otp = false, off_crypto = false;
+    AM_CRITICAL_BEGIN;
+    if (NSX_PWRCTRL_PWRSTOTP == 0) {
+        off_otp = true;
+        status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
+        if (status != 0) goto cleanup;
+    }
+    if (NSX_PWRCTRL_PWRSTCRYPTO == 0) {
+        off_crypto = true;
+        status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        if (status != 0) goto cleanup;
+    }
+    status = am_hal_dcu_swo_enable();
+cleanup:
+    if (off_crypto) {
+        cleanup_status = am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        if (status == 0) status = cleanup_status;
+    }
+    if (off_otp) {
+        cleanup_status = am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+        if (status == 0) status = cleanup_status;
+    }
+    AM_CRITICAL_END;
+    return status;
+}
+#endif
+
 /* ===================================================================
  * nsx_platform_spot_mgr_profile
  * =================================================================== */
@@ -43,8 +75,8 @@ uint32_t nsx_platform_spot_mgr_profile(void) {
  *   3. printf backend registration
  *
  * Step 2-3 differ by variant:
- *   - Apollo330P/510L: BSP helper (am_bsp_itm_printf_enable) handles
- *     TPIU + ITM + SWO pin + printf. Trace clock = XTAL_HS 48 MHz.
+ *   - Apollo330P/510L: Checked HAL calls preserve BSP TPIU/ITM/pin
+ *     ordering. Trace clock = HFRC 48 MHz.
  *   - Apollo510/5B/5A: Manual TPIU config with HFRC_96MHz because
  *     MCUCTRL_DBGCTRL_DBGTPIUCLKSEL is only available on these parts.
  *     SWO pin (GPIO 28) is configured via the BSP-supplied
@@ -65,10 +97,17 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
         if (status != 0) return status;
 
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
-        /* Steps 2-3: BSP helper handles TPIU/ITM/SWO pin/printf.
-         * Trace clock on these parts = XTAL_HS 48 MHz.
-         * JLink SWO viewer: -cpufreq 48000000 -swofreq 1000000 */
-    return am_bsp_itm_printf_enable();
+        /* Avoid the BSP's fail-stop loops while preserving its HAL sequence.
+         * Underlying HAL waits and unreported errors remain vendor limits. */
+        status = nsx_platform_bsp_swo_prepare();
+        if (status != 0) return status;
+        status = am_hal_tpiu_enable(AM_HAL_TPIU_BAUD_1M);
+        if (status != 0) return status;
+        status = am_hal_itm_enable();
+        if (status != 0) return status;
+        status = am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, g_AM_BSP_GPIO_ITM_SWO);
+        if (status != 0) return status;
+        am_util_stdio_printf_init((am_util_stdio_print_char_t)am_hal_itm_print);
 #else
         /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
          * Trace clock = HFRC_96MHz (fixed, independent of CPU perf mode).
@@ -115,8 +154,12 @@ uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
     }
     if (transport != NSX_DEBUG_ITM) return 0;
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
-    am_bsp_itm_printf_disable();
-    return 0;
+    uint32_t status = am_hal_itm_disable();
+    if (status != 0) return status;
+    status = am_hal_tpiu_disable();
+    if (status != 0) return status;
+    am_util_stdio_printf_init(0);
+    return am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, am_hal_gpio_pincfg_default);
 #else
     /* Pair the manual enable above; BSP transport state was never set.
      * Preserve the BSP's ITM/pin/TPIU ordering and SWO high-level handling. */

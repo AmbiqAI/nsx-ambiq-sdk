@@ -63,12 +63,19 @@ vendor nonreturning error paths.
 
 `test_debug_state.py` tests shared transport ownership through actual runtime
 and system entry points. The `debug-state` board smoke checks ITM disable/resume
-and emits three `NSX149:` markers for optional external SWO capture. Its Unity
+and emits `NSX149:` lifecycle markers for optional external SWO capture. Its Unity
 results travel through debugger memory; passing this smoke alone does not prove
 SWO reception. Startup/debug configuration must be serialized by the caller.
 For an external receiver, build this fixture with `NSX_TEST_SWO_HANDSHAKE=ON`:
 after `nsx_debug_capture_ready` becomes 1, start SWO reception and write 1 to
-`nsx_debug_capture_go`. The default smoke needs no debugger handshake.
+`nsx_debug_capture_go`. The default smoke needs no debugger handshake. The AP330 `debug-failure` suite replaces only
+`am_hal_dcu_swo_enable` with a returning error and verifies that the real adapter
+restores OTP/crypto power and PRIMASK, then latches the failure. Run it locally
+with `pytest tests/hardware/test_debug_failure.py --hardware --board apollo330mP_evb
+--probe SERIAL --gcc-root /usr/local/arm-gnu-toolchain`. This is controlled error
+injection, not an induced hardware fault or proof that vendor HAL waits are bounded.
+AP510L receives host and real-header compile coverage; no physical AP510L coverage
+is claimed.
 
 ## Running Tests
 
