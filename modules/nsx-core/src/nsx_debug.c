@@ -12,8 +12,9 @@ bool nsx_debug_output_enabled(void) {
     return s_active != NSX_DEBUG_NONE && s_error == 0;
 }
 
-void nsx_debug_before_hw_init(void) {
-    s_active = NSX_DEBUG_NONE;
+uint32_t nsx_debug_before_hw_init(void) {
+    nsx_debug_suspend();
+    return s_error;
 }
 
 void nsx_debug_disable(nsx_debug_transport_e transport) {

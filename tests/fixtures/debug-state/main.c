@@ -11,7 +11,7 @@ static nsx_debug_transport_e route;
 const nsx_core_api_t nsx_core_V1_0_0 = {0};
 uint32_t nsx_core_init(nsx_core_config_t *cfg) {(void)cfg; return 0;}
 uint32_t nsx_cache_enable(void) {return 0;}
-uint32_t nsx_platform_hw_init(void) {++bsp_calls; route=NSX_DEBUG_NONE; return 0;}
+uint32_t nsx_platform_hw_init(void) {assert(route == NSX_DEBUG_NONE); ++bsp_calls; return 0;}
 uint32_t nsx_platform_minimal_hw_init(void) {return 0;}
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {(void)mode; return 0;}
 uint32_t nsx_platform_spot_mgr_profile(void) {return 0;}
@@ -84,12 +84,17 @@ int main(int argc, char **argv) {
         nsx_debug_printf_enable(); assert(enable_calls == 1); output(1);
     } else if (!strcmp(argv[1], "hardware-reset")) {
         assert(nsx_debug_init(&itm) == 0); output(1);
-        assert(nsx_hw_init() == 0 && bsp_calls == 1); output(1);
+        assert(nsx_hw_init() == 0 && bsp_calls == 1 && disable_calls == 1); output(1);
         assert(nsx_debug_init(&itm) == 0 && enable_calls == 2); output(2);
     } else if (!strcmp(argv[1], "system-reapply")) {
         assert(nsx_debug_init(&itm) == 0);
         assert(nsx_system_init(&system) == 0);
-        assert(enable_calls == 2); output(1);
+        assert(enable_calls == 2 && disable_calls == 1); output(1);
+    } else if (!strcmp(argv[1], "hardware-release-failure")) {
+        assert(nsx_debug_init(&uart) == 0);
+        fail_disable=0x63;
+        assert(nsx_hw_init() == 0x63 && bsp_calls == 0 && disable_calls == 1);
+        output(0);
     } else return 2;
     puts("PASS");
 }

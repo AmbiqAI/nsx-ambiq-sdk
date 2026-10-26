@@ -31,7 +31,8 @@ extern uint32_t nsx_platform_spot_mgr_profile(void);
 uint32_t nsx_hw_init(void) {
     uint32_t status = nsx_startup_claim();
     if (status != 0) return status;
-    nsx_debug_before_hw_init();
+    status = nsx_debug_before_hw_init();
+    if (status != 0) return nsx_startup_finish(status);
     return nsx_startup_finish(nsx_platform_hw_init());
 }
 
@@ -70,7 +71,8 @@ static uint32_t nsx_system_init_impl(const nsx_system_config_t *cfg) {
     if (cfg->skip_bsp_init) {
         st = nsx_platform_minimal_hw_init();
     } else {
-        nsx_debug_before_hw_init();
+        st = nsx_debug_before_hw_init();
+        if (st != 0) return st;
         st = nsx_platform_hw_init();
     }
     if (st != 0) return st;

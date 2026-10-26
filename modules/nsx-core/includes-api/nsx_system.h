@@ -299,7 +299,12 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  * nsx_low_power_printf output. On a reported setup/disable error, output is
  * suppressed and subsequent setup returns that error until reset; partial
  * hardware changes are not rolled back. Legacy void BSP helpers cannot
- * expose failures. Full BSP initialization invalidates the active state.
+ * expose failures. Full BSP initialization releases the active NSX transport
+ * first and stops if that release reports an error.
+ *
+ * Apollo5 ITM setup/resume retains the existing clock precondition: configure
+ * it while running on HFRC, before switching to a SYSPLL high-performance
+ * source. This helper does not change CPU clock policy on resume.
  *
  * @param cfg Debug configuration. NULL and NONE are successful no-ops.
  * @return 0 on success.

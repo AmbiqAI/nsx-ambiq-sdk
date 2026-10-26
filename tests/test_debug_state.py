@@ -26,7 +26,7 @@ def debug_binary(repo_root, tmp_path_factory):
 
 
 @pytest.mark.parametrize('scenario', ('system', 'resume', 'switch', 'noop', 'setup-failure',
-                                     'switch-failure', 'disable-failure', 'hardware-reset', 'system-reapply'))
+                                     'switch-failure', 'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure'))
 def test_debug_transport_contract(debug_binary, scenario):
     subprocess.run([str(debug_binary), scenario], check=True, capture_output=True, text=True, timeout=5)
 
