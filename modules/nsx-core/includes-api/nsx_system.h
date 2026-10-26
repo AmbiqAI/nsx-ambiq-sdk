@@ -104,7 +104,7 @@
  *   | SoC         | Trace clock source | Freq     | JLink -cpufreq |
  *   |-------------|--------------------|----------|----------------|
  *   | Apollo510   | HFRC_96MHz         | 96 MHz   | 96000000       |
- *   | Apollo330P  | XTAL_HS            | 48 MHz   | 48000000       |
+ *   | Apollo330P  | HFRC_48MHz         | 48 MHz   | 48000000       |
  *
  *   The `nsx view` CLI command and the CMake `<app>_view` target handle
  *   this automatically via the per-SoC `NSX_SEGGER_CPUFREQ` setting in
@@ -289,8 +289,8 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  * Platform-specific behavior:
  *   - Apollo510/5B/5A: DCU unlock + manual TPIU (HFRC_96MHz, 96 MHz trace
  *     clock) + SWO pin (GPIO 28) + printf backend.
- *   - Apollo330P/510L: DCU unlock + am_bsp_itm_printf_enable() (XTAL_HS,
- *     48 MHz trace clock).
+ *   - Apollo330P/510L: DCU preparation + checked HAL ITM/TPIU setup
+ *     (HFRC_48MHz, 48 MHz trace clock).
  *
  * Calls must be serialized by the application. Only NSX-managed transports
  * participate in this bookkeeping; do not mix raw BSP/HAL setup with it.
@@ -299,7 +299,8 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  * nsx_low_power_printf output. On a reported setup/disable error, output is
  * suppressed and subsequent setup returns that error until reset; partial
  * hardware changes are not rolled back. Legacy void BSP helpers cannot
- * expose failures. Full BSP initialization releases the active NSX transport
+ * expose failures. Underlying vendor HAL waits may still be unbounded.
+ * Full BSP initialization releases the active NSX transport
  * first and stops if that release reports an error.
  *
  * Apollo5 ITM setup/resume retains the existing clock precondition: configure
