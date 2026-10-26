@@ -61,6 +61,12 @@ on AP3P, AP4 KXR, AP510B and AP330P. The smoke checks trace registers and report
 through RTT; it does not establish externally received SWO output or exercise
 vendor nonreturning error paths.
 
+`test_debug_state.py` tests shared transport ownership through actual runtime
+and system entry points. The `debug-state` board smoke checks ITM disable/resume
+and emits three `NSX149:` markers for optional external SWO capture. Its Unity
+results travel through debugger memory; passing this smoke alone does not prove
+SWO reception. Startup/debug configuration must be serialized by the caller.
+
 ## Running Tests
 
 ```sh

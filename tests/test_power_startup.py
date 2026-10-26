@@ -45,6 +45,7 @@ def startup_binary(request, repo_root, tmp_path, api_validation):
     subprocess.run([compiler, *flags, *includes, str(fixture / 'main.c'), str(core),
                     str(repo_root / 'modules/nsx-core/src/nsx_startup.c'),
                     str(repo_root / 'modules/nsx-core/src/nsx_system.c'),
+                    str(repo_root / 'modules/nsx-core/src/nsx_debug.c'),
                     str(repo_root / 'modules/nsx-power/src/nsx_power.c'),
                     str(repo_root / f'modules/nsx-power/src/{arch}/nsx_power.c'), '-o', str(binary)],
                    check=True, capture_output=True, text=True, env=host_env)

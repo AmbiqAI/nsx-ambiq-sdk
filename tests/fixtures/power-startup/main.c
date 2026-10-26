@@ -336,3 +336,5 @@ int main(int argc, char **argv) {
     all_startups_rejected();
     return 0;
 }
+
+uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {(void)transport; return 0;}

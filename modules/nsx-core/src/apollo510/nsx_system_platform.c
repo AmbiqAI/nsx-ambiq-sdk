@@ -107,3 +107,28 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
 
     return 0;
 }
+
+uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
+    if (transport == NSX_DEBUG_UART) {
+        am_bsp_uart_printf_disable();
+        return 0;
+    }
+    if (transport != NSX_DEBUG_ITM) return 0;
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    am_bsp_itm_printf_disable();
+    return 0;
+#else
+    /* Pair the manual enable above; BSP transport state was never set.
+     * Preserve the BSP's ITM/pin/TPIU ordering and SWO high-level handling. */
+    uint32_t status = am_hal_itm_disable();
+    if (status != 0) return status;
+    status = am_hal_gpio_state_write(AM_BSP_GPIO_ITM_SWO, AM_HAL_GPIO_OUTPUT_SET);
+    if (status != 0) return status;
+    status = am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, am_hal_gpio_pincfg_output);
+    if (status != 0) return status;
+    status = am_hal_tpiu_disable();
+    if (status != 0) return status;
+    am_util_stdio_printf_init(0);
+    return am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, am_hal_gpio_pincfg_default);
+#endif
+}

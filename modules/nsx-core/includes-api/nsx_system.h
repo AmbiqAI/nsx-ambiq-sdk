@@ -292,7 +292,16 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  *   - Apollo330P/510L: DCU unlock + am_bsp_itm_printf_enable() (XTAL_HS,
  *     48 MHz trace clock).
  *
- * @param cfg  Debug configuration. NULL disables debug output.
+ * Calls must be serialized by the application. Only NSX-managed transports
+ * participate in this bookkeeping; do not mix raw BSP/HAL setup with it.
+ * Re-enabling the active transport is a no-op. Switching first disables the
+ * old transport, then enables the new one. Only successful setup permits
+ * nsx_low_power_printf output. On a reported setup/disable error, output is
+ * suppressed and subsequent setup returns that error until reset; partial
+ * hardware changes are not rolled back. Legacy void BSP helpers cannot
+ * expose failures. Full BSP initialization invalidates the active state.
+ *
+ * @param cfg Debug configuration. NULL and NONE are successful no-ops.
  * @return 0 on success.
  */
 uint32_t nsx_debug_init(const nsx_debug_config_t *cfg);

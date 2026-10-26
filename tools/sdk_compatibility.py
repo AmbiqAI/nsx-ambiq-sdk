@@ -116,6 +116,13 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_debug_state.py::test_debug_transport_contract', 9,
+                parameters=('scenario',), variants=tuple((s,) for s in
+                    ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
+                     'disable-failure', 'hardware-reset', 'system-reapply'))),
+    Requirement('tests/test_system_status.py::test_manual_debug_disable'),
+    Requirement('tests/test_debug_state.py::test_debug_state_real_header_builds', 4,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb')),
     Requirement('tests/test_system_status.py::test_system_preflight_and_order', 8,
                 parameters=('system_backend', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p')

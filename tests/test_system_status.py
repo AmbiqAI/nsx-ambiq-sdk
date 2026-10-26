@@ -21,7 +21,8 @@ def system_backend(request, repo_root, tmp_path_factory):
                     '-DNSX_DISABLE_API_VALIDATION', '-DAM_PART_' + family.upper(),
                     '-I' + str(fixture), '-I' + str(core / 'includes-api'),
                     '-I' + str(core / 'includes-internal'), str(fixture / 'main.c'),
-                    str(core / 'src/nsx_system.c'), str(core / 'src/nsx_startup.c'),
+                    str(core / 'src/nsx_system.c'),
+                    str(core / 'src/nsx_debug.c'), str(core / 'src/nsx_startup.c'),
                     str(core / f'src/{arch}/nsx_system_platform.c'), '-o', str(output)],
                    check=True, capture_output=True, text=True, env=environment)
     return family, output
@@ -70,3 +71,9 @@ def test_system_status_real_header_builds(repo_root, tmp_path, board):
     compiler = compiler_for_test('gcc')
     for suite in (SYSTEM_FULL, SYSTEM_MINIMAL):
         build_firmware(BuildRequest(repo_root, tmp_path / suite.name, board, compiler.parent.parent, suite))
+
+
+@pytest.mark.parametrize('system_backend', ('apollo510',), indirect=True)
+def test_manual_debug_disable(system_backend):
+    for step in (0, 22, 23, 24, 25, 27):
+        run_backend(system_backend, 'disable', step)

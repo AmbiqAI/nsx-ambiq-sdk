@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_debug_state C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+nsx_add_test_firmware(debug_state main.c)
+target_link_libraries(debug_state PRIVATE nsx::runtime)

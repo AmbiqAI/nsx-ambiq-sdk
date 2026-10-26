@@ -33,6 +33,11 @@ void nsx_low_power_printf(const char *fmt, ...);
 void nsx_delay_us(uint32_t usec);
 void nsx_interrupt_master_enable(void);
 void nsx_interrupt_master_disable(void);
+/* Debug helpers share nsx_debug_init ownership. Generic enable resumes the
+ * last successful NSX transport (ITM initially); generic disable suspends it.
+ * Disable of an inactive transport is a no-op. These legacy void wrappers
+ * cannot report setup errors; use nsx_debug_init for status. See its contract
+ * for serialization, partial failure and reset requirements. */
 void nsx_debug_printf_enable(void);
 void nsx_debug_printf_disable(void);
 void nsx_itm_printf_enable(void);

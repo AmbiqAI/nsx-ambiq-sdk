@@ -89,3 +89,9 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
 
     return 0;
 }
+
+uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
+    if (transport == NSX_DEBUG_ITM) am_bsp_itm_printf_disable();
+    else if (transport == NSX_DEBUG_UART) am_bsp_uart_printf_disable();
+    return 0; /* BSP disable helpers do not expose status. */
+}
