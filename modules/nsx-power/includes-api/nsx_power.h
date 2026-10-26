@@ -91,13 +91,13 @@ typedef struct {
     const nsx_core_api_t *api;       ///< API version
     nsx_power_perf_mode_t perf_mode;       ///< CPU clock mode
     bool need_audadc;               ///< Skip optional audio ADC shutdown where supported
-    bool need_ssram;                ///< Keep shared SRAM powered
+    bool need_ssram;                ///< Shared SRAM requirement; AP4P/L requires true, AP3/3P unmanaged
     bool need_crypto;               ///< Skip optional crypto shutdown
     bool need_ble;                  ///< Skip optional BLE GPIO shutdown; BSP reset still applies
     bool need_usb;                  ///< Skip optional USB/PHY shutdown on AP4P
     bool need_iom;                  ///< Skip optional IOM shutdown
     bool need_uart;                 ///< Skip optional UART0/3 shutdown on AP4
-    bool small_tcm;                 ///< Use 32K ITCM + 128K DTCM (vs full)
+    bool small_tcm;                 ///< Reduced TCM request; AP4P/L rejects true, AP3/3P unmanaged
     bool need_tempco;               ///< Enable Apollo4 TempCo where supported
     bool need_itm;                  ///< Keep ITM/SWO debug output
     bool need_xtal;                 ///< Skip optional XTAL deep-sleep powerdown policy
@@ -143,6 +143,12 @@ typedef enum {
  * back. Reset before retrying; private helper recovery does not clear ownership.
  * Preflight validation failures do not claim ownership and can be corrected.
  * BSP-internal operations and TempCo resource cleanup are separate concerns.
+ *
+ * AP4P/L rejects small_tcm=true or need_ssram=false with INVALID_CONFIG before
+ * startup ownership or hardware effects, even when API validation is disabled.
+ * No supported reduced-memory layout/ownership contract exists yet. Copy the
+ * minimal/audio preset and set need_ssram=true; keep small_tcm=false. AP3/3P
+ * leave these two fields unmanaged. Other families retain their own contracts.
  *
  * @param nsx_power_config_t Desired power configuration.
  * @return uint32_t success/failure.

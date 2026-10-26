@@ -90,4 +90,14 @@ USB_KEEP, USB_OFF = tuple(
           ('usb_policy',), 'tests/fixtures/usb-policy', 'usb_policy.elf',
           configure=partial(usb_options, keep=keep))
     for mode, keep in (('keep', True), ('off', False)))
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF)
+def memory_options(repo: Path, output: Path, board: str, fault: str,
+                   sdk_root: Path | None = None) -> list[str]:
+    if board != 'apollo4p_blue_kxr_evb' or fault != 'none':
+        raise ValueError('Memory preflight smoke requires AP4 Blue KXR without fault injection')
+    return []
+
+
+MEMORY_PREFLIGHT = Suite('memory-preflight', 'tests/hardware/test_memory_preflight.py::test_memory_preflight',
+                         ('reject_reductions_then_start',), 'tests/fixtures/memory-preflight',
+                         'memory_preflight.elf', configure=memory_options)
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT)

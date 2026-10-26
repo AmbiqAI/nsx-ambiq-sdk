@@ -17,7 +17,12 @@ FAMILIES = ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
 
 
 @pytest.fixture
-def startup_binary(request, repo_root, tmp_path):
+def api_validation():
+    return True
+
+
+@pytest.fixture
+def startup_binary(request, repo_root, tmp_path, api_validation):
     family = request.param
     arch = 'apollo3' if family.startswith('apollo3') else 'apollo4'
     compiler = shutil.which('cc')
@@ -28,6 +33,8 @@ def startup_binary(request, repo_root, tmp_path):
                 '-I', str(repo_root / 'modules/nsx-core/includes-api'),
                 '-I', str(repo_root / 'modules/nsx-core/includes-internal')]
     flags = ['-std=c11', '-Wall', '-Wextra', '-DAM_PART_' + family.upper()]
+    if not api_validation:
+        flags.append('-DNSX_DISABLE_API_VALIDATION')
     host_env = os.environ.copy()
     host_env.pop('GCC_ROOT', None)
     core = tmp_path / 'core.o'
@@ -116,3 +123,36 @@ def test_usb_policy_smoke_builds(repo_root, tmp_path, mode):
     compiler = compiler_for_test('gcc')
     suite = USB_KEEP if mode == 'keep' else USB_OFF
     build_firmware(BuildRequest(repo_root, tmp_path, 'apollo4p_blue_kxr_evb', compiler.parent.parent, suite))
+
+
+@pytest.mark.parametrize(('startup_binary', 'scenario'),
+                         [(family, f'{small}-{ssram}') for family in FAMILIES
+                          for small in (0, 1) for ssram in (0, 1)], indirect=['startup_binary'])
+def test_memory_preflight(startup_binary, scenario):
+    subprocess.run([str(startup_binary), 'memory-' + scenario], check=True,
+                   capture_output=True, text=True, timeout=5)
+
+
+@pytest.mark.parametrize('api_validation', (False,))
+@pytest.mark.parametrize(('startup_binary', 'scenario'),
+                         [(family, f'{small}-{ssram}') for family in FAMILIES
+                          for small in (0, 1) for ssram in (0, 1)], indirect=['startup_binary'])
+def test_memory_preflight_without_api_validation(startup_binary, scenario, api_validation):
+    subprocess.run([str(startup_binary), 'memory-' + scenario], check=True,
+                   capture_output=True, text=True, timeout=5)
+
+
+def test_memory_preflight_smoke_builds(repo_root, tmp_path):
+    from tools.hardware.api import BuildRequest, build_firmware
+    from tools.hardware.suites import MEMORY_PREFLIGHT
+    compiler = compiler_for_test('gcc')
+    firmware = build_firmware(BuildRequest(repo_root, tmp_path, 'apollo4p_blue_kxr_evb',
+                                          compiler.parent.parent, MEMORY_PREFLIGHT))
+    output = subprocess.run([str(compiler.with_name('arm-none-eabi-nm')), '-n', str(firmware.elf)],
+                            check=True, capture_output=True, text=True).stdout
+    symbols = {parts[-1]: int(parts[0], 16) for line in output.splitlines()
+               if len(parts := line.split()) == 3}
+    assert symbols['__HeapLimit'] == 0x10060000
+    assert symbols['__HeapBase'] < symbols['__HeapLimit']
+    for name in ('shared_initialized', 'shared_zeroed'):
+        assert 0x10060000 <= symbols[name] < 0x10160000

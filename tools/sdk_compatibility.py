@@ -116,6 +116,17 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_power_startup.py::test_memory_preflight_smoke_builds'),
+    Requirement('tests/test_power_startup.py::test_memory_preflight_without_api_validation', 16,
+                parameters=('startup_binary', 'scenario', 'api_validation'),
+                variants=tuple((family, f'{small}-{ssram}', False)
+                    for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for small in (0, 1) for ssram in (0, 1))),
+    Requirement('tests/test_power_startup.py::test_memory_preflight', 16,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, f'{small}-{ssram}')
+                    for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for small in (0, 1) for ssram in (0, 1))),
     Requirement('tests/test_power_startup.py::test_usb_policy_smoke_builds', 2,
                 parameters=('mode',), variants=(('keep',), ('off',))),
     Requirement('tests/test_power_startup.py::test_peripheral_policy', 84,

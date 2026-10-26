@@ -91,14 +91,10 @@ uint32_t am_hal_pwrctrl_control(unsigned control, void *arg) {
     return operation(control == AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN ? "crypto" : "xtal");
 }
 uint32_t am_hal_pwrctrl_sram_config(am_hal_pwrctrl_sram_memcfg_t *cfg) {
-    assert(!config.need_ssram && cfg->eSRAMCfg == AM_HAL_PWRCTRL_SRAM_NONE);
-    assert(cfg->eActiveWithMCU == 0 && cfg->eActiveWithDSP == 0 && cfg->eSRAMRetain == 0);
-    return operation("sram");
+    (void)cfg; assert(!"unexpected SSRAM reduction"); return FAILURE;
 }
 uint32_t am_hal_pwrctrl_dsp_memory_config(unsigned dsp, am_hal_pwrctrl_dsp_memory_config_t *cfg) {
-    assert(dsp == AM_HAL_DSP0 && !cfg->bEnableICache && !cfg->bRetainCache);
-    assert(!cfg->bEnableRAM && !cfg->bActiveRAM && !cfg->bRetainRAM);
-    return operation("dsp-memory");
+    (void)dsp; (void)cfg; assert(!"unexpected DSP memory reduction"); return FAILURE;
 }
 uint32_t am_hal_daxi_config(const am_hal_daxi_config_t *cfg) {
     assert(config.need_ssram && !cfg->bDaxiPassThrough && !cfg->bAgingSEnabled);
@@ -107,9 +103,7 @@ uint32_t am_hal_daxi_config(const am_hal_daxi_config_t *cfg) {
     return operation("daxi");
 }
 uint32_t am_hal_pwrctrl_mcu_memory_config(am_hal_pwrctrl_mcu_memory_config_t *cfg) {
-    assert(config.small_tcm && cfg->eCacheCfg == AM_HAL_PWRCTRL_CACHE_ALL && cfg->bRetainCache);
-    assert(cfg->eDTCMCfg == AM_HAL_PWRCTRL_DTCM_128K && cfg->eRetainDTCM == AM_HAL_PWRCTRL_DTCM_128K);
-    assert(cfg->bEnableNVM0 && !cfg->bRetainNVM0); return operation("mcu-memory");
+    (void)cfg; assert(!"unexpected DTCM reduction"); return FAILURE;
 }
 static void success_contract(void) {
     assert(calls && !strcmp(trace[0], "bsp") && performance_calls == 1);
@@ -118,7 +112,7 @@ static void success_contract(void) {
     assert(!strcmp(trace[2], "cache-config") && !strcmp(trace[3], "cache-enable") && !strcmp(trace[4], "prefetch"));
 #else
     assert(!strcmp(trace[1], "cache-config") && !strcmp(trace[2], "cache-enable"));
-    assert(!strcmp(trace[3], config.need_ssram ? "daxi" : "sram"));
+    assert(!strcmp(trace[3], "daxi"));
     assert(peripheral[AM_HAL_PWRCTRL_PERIPH_IOS]);
     assert(peripheral[AM_HAL_PWRCTRL_PERIPH_IOM0] == !config.need_iom);
     assert(peripheral[AM_HAL_PWRCTRL_PERIPH_UART0] == !config.need_uart);
@@ -216,6 +210,14 @@ static void peripheral_policy(const char *scenario) {
         for (unsigned i=0;i<sizeof fields/sizeof fields[0];++i)
             *(bool *)((char *)&config+fields[i].offset) = i == selected ? requested : !requested;
     }
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+    if (!config.need_ssram) {
+        assert(nsx_power_configure(&config) == NSX_STATUS_INVALID_CONFIG);
+        assert(calls == 0);
+        // Test the preset's peripheral policy with an explicit full-memory copy.
+        config.need_ssram = true;
+    }
+#endif
     assert(nsx_power_configure(&config) == 0);
     success_contract();
 #if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
@@ -250,15 +252,44 @@ static void peripheral_policy(const char *scenario) {
     assert(count_event("spot") == 0);
     all_startups_rejected();
 }
+static void memory_preflight(const char *scenario) {
+    unsigned small, ssram;
+    assert(sscanf(scenario, "%u-%u", &small, &ssram) == 2);
+    assert(small <= 1 && ssram <= 1);
+    config.small_tcm = small;
+    config.need_ssram = ssram;
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+    if (small || !ssram) {
+        for (expected_mask=0; expected_mask<2; ++expected_mask) {
+            mask=expected_mask;
+            assert(nsx_power_configure(&config) == NSX_STATUS_INVALID_CONFIG);
+            assert(calls == 0 && mask == expected_mask);
+            // Direct backend callers must also be rejected before BSP effects.
+            extern uint32_t nsx_power_platform_config(const nsx_power_config_t *);
+            assert(nsx_power_platform_config(&config) == NSX_STATUS_INVALID_CONFIG);
+            assert(calls == 0 && mask == expected_mask);
+        }
+        mask=expected_mask=0;
+        config.small_tcm = false;
+        config.need_ssram = true;
+    }
+#endif
+    assert(nsx_power_configure(&config) == 0);
+    success_contract();
+    all_startups_rejected();
+}
 int main(int argc, char **argv) {
     assert(argc == 2 || argc == 3);
     const char *scenario = argv[1];
     config = nsx_power_minimal;
+    if (!strncmp(scenario,"memory-",7)) { memory_preflight(scenario+7); return 0; }
+    // Non-memory scenarios retain memory so they reach their intended boundary.
+    config.need_ssram = true;
     if (!strncmp(scenario,"policy-",7)) { peripheral_policy(scenario+7); return 0; }
     if (!strncmp(scenario,"ownership-",10)) { ownership(scenario+10); return 0; }
     if (argc == 3) fail_at=(unsigned)strtoul(argv[2],NULL,10);
     if (strstr(scenario, "keep")) {
-        config.need_ssram = config.small_tcm = config.need_iom = config.need_uart = true;
+        config.need_ssram = config.need_iom = config.need_uart = true;
         config.need_crypto = config.need_xtal = config.need_ble = config.need_itm = config.need_audadc = true;
     }
     if (strstr(scenario, "tempco")) config.need_tempco = true;
