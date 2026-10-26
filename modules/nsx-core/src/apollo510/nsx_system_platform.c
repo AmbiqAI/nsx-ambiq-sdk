@@ -73,7 +73,8 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
         /* Steps 2-3: Manual TPIU + ITM + SWO pin + printf.
          * Trace clock = HFRC_96MHz (fixed, independent of CPU perf mode).
          * JLink SWO viewer: -cpufreq 96000000 -swofreq 1000000 */
-        am_hal_debug_enable();
+        status = am_hal_debug_enable();
+        if (status != 0) return status;
         uint32_t swo_scaler = (96000000u / 1000000u) - 1;  /* 95 → 1 MHz SWO baud */
         status = am_hal_tpiu_config(
             MCUCTRL_DBGCTRL_DBGTPIUCLKSEL_HFRC_96MHz,

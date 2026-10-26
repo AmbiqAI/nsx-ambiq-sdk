@@ -42,6 +42,6 @@ uint32_t am_hal_pwrctrl_mcu_mode_select(unsigned); uint32_t am_hal_pwrctrl_perip
 uint32_t am_hal_dcu_get(uint32_t*); uint32_t am_hal_dcu_update(bool,uint32_t);
 uint32_t am_hal_pwrctrl_pwrmodctl_cpdlp_config(am_hal_pwrctrl_pwrmodctl_cpdlp_t);
 uint32_t am_hal_spotmgr_init(void); void am_hal_spotmgr_profile_set(am_hal_spotmgr_profile_t*);
-void am_hal_debug_enable(void); uint32_t am_hal_tpiu_config(unsigned,unsigned,unsigned,unsigned,unsigned);
+uint32_t am_hal_debug_enable(void); uint32_t am_hal_tpiu_config(unsigned,unsigned,unsigned,unsigned,unsigned);
 uint32_t am_hal_gpio_pinconfig(unsigned,unsigned); void am_hal_itm_print(char*);
 extern uint32_t SystemCoreClock;

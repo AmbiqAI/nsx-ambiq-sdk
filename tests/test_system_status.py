@@ -44,11 +44,10 @@ def test_minimal_failure_stops_setup(system_backend):
         run_backend(system_backend, 'minimal', step)
 
 
+@pytest.mark.parametrize('system_backend', ('apollo510', 'apollo330p'), indirect=True)
 @pytest.mark.parametrize('masked', (0, 1))
 def test_dcu_cleanup_and_debug_failures(system_backend, masked):
     family, _ = system_backend
-    if family not in ('apollo510', 'apollo330p'):
-        pytest.skip('Private DCU sequence is Apollo5-class only')
     for step in (0, 10, 11, 12, 13, 14, 15):
         run_backend(system_backend, 'debug', step, 0, 0, masked, 0)
     # Earlier error wins over cleanup failure, but both cleanup calls run.
@@ -59,7 +58,7 @@ def test_dcu_cleanup_and_debug_failures(system_backend, masked):
             run_backend(system_backend, 'debug', step, 0, domains, masked, 0)
     run_backend(system_backend, 'debug', 0, 0, 0, masked, 1)
     if family == 'apollo510':
-        for step in (17, 18):
+        for step in (16, 17, 18):
             run_backend(system_backend, 'debug', step, 0, 0, masked, 0)
 
 

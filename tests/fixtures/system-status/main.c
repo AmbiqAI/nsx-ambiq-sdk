@@ -76,7 +76,7 @@ uint32_t am_hal_spotmgr_init(void) {return step(SPOT);}
 void am_hal_spotmgr_profile_set(am_hal_spotmgr_profile_t *profile) {
     assert(profile->PROFILE_b.COLLAPSESTMANDSTMP); (void)step(PROFILE);
 }
-void am_hal_debug_enable(void) {(void)step(DEBUG);}
+uint32_t am_hal_debug_enable(void) {return step(DEBUG);}
 uint32_t am_hal_tpiu_config(unsigned a,unsigned b,unsigned c,unsigned d,unsigned e) {
     assert(a == 0 && b == 0 && c == 1 && d == 1 && e == 95); return step(TPIU);
 }
@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
         else if (failure != OTP_ON) assert(seen(CRYPTO_ON) == 1 && seen(CRYPTO_OFF) == 1);
         else assert(!seen(CRYPTO_ON) && !seen(CRYPTO_OFF));
         if (failure >= OTP_ON && failure <= OTP_OFF) assert(!seen(DEBUG) && !seen(TPIU));
+        if (failure == DEBUG) assert(!seen(TPIU) && !seen(GPIO) && !seen(PRINT));
         if (failure == TPIU) assert(!seen(GPIO) && !seen(PRINT));
         if (failure == GPIO) assert(!seen(PRINT));
         if (unlocked) assert(!seen(DCU_UPDATE));
