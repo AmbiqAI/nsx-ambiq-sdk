@@ -258,8 +258,9 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode);
  *
  * Disables all device power domains (USB, audio, crypto, IOM, etc.),
  * XTAL oscillator, voltage comparator, and all 16 hardware timers.
- * Does NOT touch memory config, GPIO, or debug — call the dedicated
- * helpers for those.
+ * Releases NSX-managed debug output first; a reported release error stops
+ * shutdown. The HAL all-peripheral gate also disables trace. Memory config
+ * and GPIO are unchanged — use the dedicated helpers for those.
  *
  * Safe to call from any app that no longer needs peripheral I/O.
  *
@@ -337,6 +338,8 @@ void nsx_power_disable_debug(void);
 
 /**
  * @brief Tristate all GPIO pads except specified pins.
+ *
+ * Suspend any transport whose pads will be tristated before calling this.
  *
  * Unconfigured GPIOs can leak current through internal pull
  * resistors.  This sets every pad to disabled (high-impedance)

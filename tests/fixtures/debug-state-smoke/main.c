@@ -49,6 +49,11 @@ static void output_lifecycle(void) {
     TEST_ASSERT_BITS_HIGH(ITM_TCR_ITMENA_Msk, ITM->TCR);
     nsx_low_power_printf("NSX149:power-resume\n");
     nsx_delay_us(100000);
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_power_shutdown_peripherals());
+    nsx_low_power_printf("NSX149:SHUTDOWN_SHOULD_NOT_PRINT\n");
+    nsx_itm_printf_enable();
+    nsx_low_power_printf("NSX149:shutdown-resume\n");
+    nsx_delay_us(100000);
 #endif
 }
 
