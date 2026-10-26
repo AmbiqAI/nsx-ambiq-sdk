@@ -6,7 +6,7 @@ from pathlib import Path
 from .inventory import BOARDS
 from .build import Firmware
 from .protocol import Result, decode
-from .suites import Suite, STARTUP, RUNTIME, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF
+from .suites import Suite, STARTUP, RUNTIME, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT
 from tools.test_evidence import phase_status, completion
 
 
@@ -31,6 +31,9 @@ for board in ('apollo3p_evb', 'apollo4p_blue_kxr_evb'):
 
 PROFILES['apollo4p_blue_kxr_evb-gcc-usb-policy'] = Profile(
     'apollo4p_blue_kxr_evb-gcc-usb-policy', 'apollo4p_blue_kxr_evb', 'gcc', (USB_KEEP, USB_OFF))
+
+PROFILES['apollo4p_blue_kxr_evb-gcc-memory-preflight'] = Profile(
+    'apollo4p_blue_kxr_evb-gcc-memory-preflight', 'apollo4p_blue_kxr_evb', 'gcc', (MEMORY_PREFLIGHT,))
 
 
 @dataclass

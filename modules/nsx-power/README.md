@@ -122,7 +122,8 @@ then initialize drivers. A second valid request, or re-entry while startup is
 running, returns `NSX_STATUS_STARTUP_REJECTED` without hardware effects. This
 also applies after a reported setup failure; there is no public reset of the
 guard. Core initialization does not clear it. Direct HAL/BSP calls bypass the
-guard. Memory-layout bounds remain tracked in #137.
+guard. Memory reductions are rejected as described below; constrained layouts remain
+tracked in #137.
 
 These adapters return the first failed configuration operation's status and
 stop issuing subsequent operations. Performance and TempCo helper errors return
@@ -234,3 +235,51 @@ uv run --group hardware --group ci pytest -q tests/hardware/test_usb_policy.py \
 ```
 
 Reserve the board before running; this flashes it. Use a fresh report path.
+
+
+## Apollo4 memory preflight
+
+AP4P/L currently accepts only `small_tcm=false` and `need_ssram=true` through
+`nsx_power_configure()`. Other combinations return `NSX_STATUS_INVALID_CONFIG`
+before startup ownership, BSP initialization or any HAL operation. Correcting
+the configuration allows a retry. This check also applies with
+`NSX_DISABLE_API_VALIDATION`; custom linker scripts do not bypass it.
+
+The default GCC allocator can use all 384 KiB DTCM; armclang places its stack
+in upper DTCM. Neither default layout supports a 128 KiB reduction. Shared
+sections and constructors are already live before this API runs, and empty
+linked sections cannot prove that application-owned buffers are absent.
+No reduced-memory layout/ownership contract is supported yet. This is a
+conservative rejection, not automatic inspection of arbitrary application RAM.
+
+Preset values remain unchanged. `all_on` satisfies the memory requirement.
+On AP4, copy `minimal` or `audio` and retain shared SRAM explicitly:
+
+```c
+nsx_power_config_t cfg = nsx_power_audio;
+cfg.need_ssram = true;
+uint32_t status = nsx_power_configure(&cfg); // Check before starting drivers.
+```
+
+AP3/3P still leave both memory fields unmanaged. AP330/AP510-family policies
+are unchanged. Accepted AP4 startup retains the mandatory vendor baseline and
+existing DAXI setup; this does not qualify arbitrary pre-startup DMA, runtime
+profile switching, custom allocators or sleep retention. Constrained layouts
+and independent reductions remain a separate follow-up under #137.
+
+The `memory-preflight` AP4 KXR hardware profile checks all three rejected
+combinations with initialized shared data, shared BSS and a heap allocation
+extending above 128 KiB DTCM. It verifies unchanged memory registers and
+sentinels, zero BSP calls on rejection, then successful full-memory startup.
+A test-only wrapper counts and forwards BSP calls; it does not replace the HAL.
+Run after reserving the board, using a fresh report path:
+
+```sh
+uv run --group hardware --group ci pytest -q tests/hardware/test_memory_preflight.py \
+  --hardware --qualification-profile apollo4p_blue_kxr_evb-gcc-memory-preflight \
+  --qualification-report artifacts/memory-preflight/report.json --probe YOUR_SERIAL \
+  --gcc-root /usr/local/arm-gnu-toolchain
+```
+
+This flashes the board. It tests rejection and corrected startup, not operation
+with reduced RAM or physical AP4L behavior.

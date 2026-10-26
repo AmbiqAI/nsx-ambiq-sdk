@@ -87,28 +87,7 @@ static uint32_t nsx_power_platform_shutdown_peripherals(const nsx_power_config_t
     return NSX_STATUS_SUCCESS;
 }
 
-static uint32_t nsx_power_platform_memory_config(const nsx_power_config_t *cfg) {
-    if (!cfg->need_ssram) {
-        am_hal_pwrctrl_sram_memcfg_t sram_cfg = {
-            .eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithDSP = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_NONE,
-        };
-        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_sram_config(&sram_cfg));
-#ifndef AM_PART_APOLLO4L
-        am_hal_pwrctrl_dsp_memory_config_t ext_sram_cfg = {
-            .bEnableICache = false,
-            .bRetainCache = false,
-            .bEnableRAM = false,
-            .bActiveRAM = false,
-            .bRetainRAM = false,
-        };
-        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_dsp_memory_config(AM_HAL_DSP0, &ext_sram_cfg));
-#endif
-        return NSX_STATUS_SUCCESS;
-    }
-
+static uint32_t nsx_power_configure_daxi(void) {
     am_hal_daxi_config_t daxi_cfg = {
         .bDaxiPassThrough = false,
         .bAgingSEnabled = false,
@@ -118,17 +97,6 @@ static uint32_t nsx_power_platform_memory_config(const nsx_power_config_t *cfg) 
     };
     NSX_POWER_RETURN_IF_ERROR(am_hal_daxi_config(&daxi_cfg));
 
-    if (cfg->small_tcm) {
-        am_hal_pwrctrl_mcu_memory_config_t mcu_mem_cfg = {
-            .eCacheCfg = AM_HAL_PWRCTRL_CACHE_ALL,
-            .bRetainCache = true,
-            .eDTCMCfg = AM_HAL_PWRCTRL_DTCM_128K,
-            .eRetainDTCM = AM_HAL_PWRCTRL_DTCM_128K,
-            .bEnableNVM0 = true,
-            .bRetainNVM0 = false,
-        };
-        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_mcu_memory_config(&mcu_mem_cfg));
-    }
     return NSX_STATUS_SUCCESS;
 }
 
@@ -152,6 +120,11 @@ uint32_t nsx_power_platform_validate_config(const nsx_power_config_t *cfg) {
     }
 #endif
 
+    /* No supported reduced-memory linker/ownership contract exists yet. */
+    if (cfg->small_tcm || !cfg->need_ssram) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+
     return NSX_STATUS_SUCCESS;
 }
 
@@ -160,7 +133,7 @@ uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
     am_bsp_low_power_init();
     NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_config(&am_hal_cachectrl_defaults));
     NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_enable());
-    NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_memory_config(cfg));
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_configure_daxi());
     NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_shutdown_peripherals(cfg));
     NSX_POWER_RETURN_IF_ERROR(nsx_power_set_performance_mode(cfg->perf_mode));
 
