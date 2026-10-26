@@ -108,7 +108,7 @@ def system_status_options(repo: Path, output: Path, board: str, fault: str,
 
 
 SYSTEM_FULL, SYSTEM_MINIMAL = tuple(
-    Suite(f'system-{mode}', f'tests/hardware/test_system_status.py::test_system_status[system-{mode}]',
+    Suite(f'system-{mode}', f'tests/hardware/test_system_status_smoke.py::test_system_status[system-{mode}]',
           ('reject_then_start',), 'tests/fixtures/system-status-smoke', 'system_status.elf',
           configure=partial(system_status_options, minimal=minimal))
     for mode, minimal in (('full', False), ('minimal', True)))
