@@ -66,6 +66,9 @@ and system entry points. The `debug-state` board smoke checks ITM disable/resume
 and emits three `NSX149:` markers for optional external SWO capture. Its Unity
 results travel through debugger memory; passing this smoke alone does not prove
 SWO reception. Startup/debug configuration must be serialized by the caller.
+For an external receiver, build this fixture with `NSX_TEST_SWO_HANDSHAKE=ON`:
+after `nsx_debug_capture_ready` becomes 1, start SWO reception and write 1 to
+`nsx_debug_capture_go`. The default smoke needs no debugger handshake.
 
 ## Running Tests
 

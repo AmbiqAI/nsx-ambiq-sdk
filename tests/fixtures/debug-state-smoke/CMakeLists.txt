@@ -3,3 +3,8 @@ project(nsx_debug_state C CXX ASM)
 include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
 nsx_add_test_firmware(debug_state main.c)
 target_link_libraries(debug_state PRIVATE nsx::runtime)
+
+option(NSX_TEST_SWO_HANDSHAKE "Wait for an external SWO receiver before printing" OFF)
+if(NSX_TEST_SWO_HANDSHAKE)
+    target_compile_definitions(debug_state PRIVATE NSX_TEST_SWO_HANDSHAKE=1)
+endif()

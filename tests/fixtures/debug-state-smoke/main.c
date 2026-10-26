@@ -3,19 +3,35 @@
 #include "unity.h"
 #include "result_reporter.h"
 
+#ifdef NSX_TEST_SWO_HANDSHAKE
+volatile uint32_t nsx_debug_capture_ready;
+volatile uint32_t nsx_debug_capture_go;
+#endif
+
 void setUp(void) {}
 void tearDown(void) {}
 
 static void output_lifecycle(void) {
     nsx_system_config_t cfg = {.enable_cache=true, .debug={.transport=NSX_DEBUG_ITM}};
     TEST_ASSERT_EQUAL_UINT32(0, nsx_system_init(&cfg));
+#ifdef NSX_TEST_SWO_HANDSHAKE
+    nsx_debug_capture_ready = 1;
+    while (!nsx_debug_capture_go) __asm volatile("nop");
+#endif
     nsx_low_power_printf("NSX149:system\n");
     nsx_itm_printf_enable();
     nsx_debug_printf_enable();
     nsx_low_power_printf("NSX149:repeat\n");
     nsx_delay_us(100000);
     nsx_debug_printf_disable();
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+    /* AP3 gates trace access and the TPIU clock; gated ITM reads are not
+     * the disable contract. Check the HAL's final clock/trace state. */
+    TEST_ASSERT_BITS_LOW(CoreDebug_DEMCR_TRCENA_Msk, CoreDebug->DEMCR);
+    TEST_ASSERT_EQUAL_UINT32(0, MCUCTRL->TPIUCTRL);
+#else
     TEST_ASSERT_BITS_LOW(ITM_TCR_ITMENA_Msk, ITM->TCR);
+#endif
     nsx_low_power_printf("NSX149:SHOULD_NOT_PRINT\n");
     nsx_delay_us(100000);
     nsx_debug_printf_enable();
