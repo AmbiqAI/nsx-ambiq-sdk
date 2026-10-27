@@ -107,8 +107,8 @@
  *
  * ### C++ Static Constructors
  *   `__libc_init_array()` in the startup code runs C++ global constructors
- *   BEFORE main(). These run with hardware in reset-default state (no
- *   caches, no SIMOBUCK, no clock config). Keep global constructors
+ *   BEFORE main(). Hardware state depends on the bootloader and SystemInit(),
+ *   not the later application startup request. Keep global constructors
  *   lightweight — defer hardware-dependent init to main().
  *   The linker script MUST have `.preinit_array`, `.init_array`, and
  *   `.fini_array` sections or constructors silently won't run.
@@ -185,7 +185,7 @@ typedef struct {
 /**
  * @brief Complete system initialization configuration.
  *
- * Pass to nsx_system_init() for a single-call setup. Every field
+ * Pass to nsx_system_init() for a single-call setup.
  * Zero-initialization selects full BSP initialization, LOW performance and
  * no explicit cache/debug/profile request. It does not select minimal startup
  * or guarantee that the BSP leaves caches/debug domains disabled.
