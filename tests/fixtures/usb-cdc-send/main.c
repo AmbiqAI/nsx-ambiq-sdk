@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     uint32_t expected_status = NSX_STATUS_SUCCESS;
     if (!strcmp(argv[1], "boundary")) len = CAPACITY;
     else if (!strcmp(argv[1], "large")) len = 97;
-    else if (!strcmp(argv[1], "wide-length")) len = 65536;
+    else if (!strcmp(argv[1], "wide-length")) len = MAX_PAYLOAD;
     else if (!strcmp(argv[1], "initial-full")) {
         queued = prefix = CAPACITY;
         memset(fifo, 0xa5, sizeof(fifo));
@@ -92,6 +92,11 @@ int main(int argc, char **argv) {
     if (expected_status == NSX_USB_STATUS_TIMEOUT) assert(delayed == expected_wait);
     else assert(delayed < cfg.timeout_ms);
     if (prefix && expected_status == NSX_STATUS_SUCCESS) assert(delayed >= wait_before_drain);
-    assert(serviced > 0 && flushed >= serviced);
+    assert(serviced > 0);
+#if defined(AM_PART_APOLLO5B)
+    assert(flushed == serviced + 1); /* Preserve the family-specific final flush. */
+#else
+    assert(flushed == serviced);
+#endif
     puts("PASS");
 }
