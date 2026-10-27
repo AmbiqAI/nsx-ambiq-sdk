@@ -127,4 +127,20 @@ DEBUG_FAILURE = Suite('debug-failure', 'tests/hardware/test_debug_failure.py::te
                       ('preparation_failure',), 'tests/fixtures/debug-state-smoke',
                       'debug_state.elf', configure=debug_failure_options)
 
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE)
+TIMER_BOARDS = ('apollo4p_blue_kxr_evb', 'apollo330mP_evb',
+                'apollo510_evb', 'apollo510b_evb')
+
+
+def timer_options(repo: Path, output: Path, board: str, fault: str,
+                  sdk_root: Path | None = None) -> list[str]:
+    if board not in TIMER_BOARDS or fault != 'none':
+        raise ValueError('Timer-period smoke requires an Apollo4/510/330 board without faults')
+    return []
+
+
+TIMER_PERIOD = Suite('timer-period', 'tests/hardware/test_timer.py::test_timer_period',
+                     ('setup_clock', 'period_1ms', 'period_10ms', 'period_50ms'),
+                     'tests/hardware/timer', 'timer_period.elf', configure=timer_options)
+
+
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD)

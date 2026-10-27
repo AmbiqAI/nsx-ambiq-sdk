@@ -29,7 +29,7 @@ class Requirement:
 PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
     'test_artifact_baseline', 'test_committed_intake_patches',
     'test_intake_patches_byte_for_byte', 'test_sdk_intake', 'test_intake_workflow',
-    'test_sdk_intake_review',
+    'test_sdk_intake_review', 'test_timer_period',
     'test_cmake_contract', 'test_manifests'))
 # Minimum counts deliberately describe the reviewed matrix, independently of
 # the test parametrization. Removing coverage must not silently weaken the gate.
@@ -72,6 +72,12 @@ _AUDIO_LIFECYCLE_APOLLO5 = (
 # Host fault models exercise NSX adapters without microphones or probe access.
 # Counts and backend requirements are acceptance criteria, not discovered from tests.
 ADAPTER_REGRESSIONS = (
+    Requirement('tests/test_timer_period.py::test_timer_period', 180),
+    Requirement('tests/test_timer_period.py::test_timer_nonperiodic_and_defaults', 12),
+    Requirement('tests/test_timer_period.py::test_timer_smoke_builds', 4,
+                ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb'), compiler='gcc'),
+    Requirement('tests/test_timer_period.py::test_timer_other_variants_compile', 2,
+                ('apollo4l_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_power_selectors.py::test_family_performance_contract', 30,
                 parameters=('selector_binary', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4')

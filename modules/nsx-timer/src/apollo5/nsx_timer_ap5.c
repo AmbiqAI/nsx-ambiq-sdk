@@ -10,6 +10,7 @@
  */
 
 #include "nsx_timer.h"
+#include "../nsx_timer_hfrc.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -55,18 +56,15 @@ uint32_t nsx_timer_platform_init(nsx_timer_config_t *cfg) {
 
     am_hal_timer_config_t TimerConfig;
 
-    // Set the timer configuration
-    // The default timer configuration is HFRC_DIV16, EDGE, compares=0, no trig.
-    am_hal_timer_default_config_set(&TimerConfig);
-
-    // modify the default
-    if (cfg->timer == NSX_TIMER_TEMPCO) {
-        TimerConfig.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV16;
+    ui32Status = am_hal_timer_default_config_set(&TimerConfig);
+    if (ui32Status != AM_HAL_STATUS_SUCCESS) {
+        return ui32Status;
     }
+    TimerConfig.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV16;
 
     if ((cfg->enableInterrupt)) {
         TimerConfig.eFunction = AM_HAL_TIMER_FN_UPCOUNT;
-        TimerConfig.ui32Compare1 = cfg->periodInMicroseconds / 6; // 6 ticks per uS
+        TimerConfig.ui32Compare1 = cfg->periodInMicroseconds * NSX_TIMER_HFRC_TICKS_PER_US;
     }
 
     ui32Status = am_hal_timer_config(cfg->timer, &TimerConfig);
@@ -104,7 +102,7 @@ uint32_t nsx_timer_us_read(nsx_timer_config_t *cfg) {
         return 0xDEADBEEF;
     }
 #endif
-    return am_hal_timer_read(cfg->timer) / 6; // 6 ticks per uS
+    return am_hal_timer_read(cfg->timer) / NSX_TIMER_HFRC_TICKS_PER_US;
 }
 
 uint32_t nsx_timer_clear(nsx_timer_config_t *cfg) {

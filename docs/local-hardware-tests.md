@@ -482,3 +482,14 @@ Experimental AP510B/AP330 clock and SysTick work is documented in
 [Clock lab tests](clock-lab-tests.md); it is not part of the core qualification profiles.
 
 Use [fixed-harness comparison](sdk-harness-comparison.md) to build and run the same tests against two explicit SDK checkouts.
+
+### Timer-period smoke
+
+`tests/hardware/test_timer.py` uses the `timer-period` suite on AP4 Blue Plus
+KXR, AP330 Plus, AP510 and AP510B. Use the same local `--hardware`, `--board`,
+`--probe`, `--gcc-root` and artifact options as the other suites. It checks
+1/10/50 ms callback intervals against DWT CPU cycles after LOW-mode startup,
+records seven intervals per period, and stops/unregisters the timer afterward.
+A 20% window catches conversion errors without claiming calibrated HFRC
+accuracy. This does not test sleep, cold boot, long callbacks or IRQ load.
+AP4L/AP510L have host-side cross-compile coverage only.

@@ -60,7 +60,11 @@ typedef struct nsx_timer_config {
     const nsx_core_api_t *api;      ///< API prefix
     nsx_timers_e timer;             ///< NSX_TIMER_COUNTER, NSX_TIMER_INTERRUPT, or NSX_TIMER_USB
     bool enableInterrupt;          ///< Will generate interrupts, needs callback
-    uint32_t periodInMicroseconds; ///< For interrupts
+    /** Interrupt period. Apollo4/510/330: 1..715827882 us, nominal HFRC timing.
+     * The ISR clears the counter before calling back: interrupt latency adds to
+     * the period. Keep callbacks short; this is not a phase-locked scheduler.
+     * Ignored for counter-only operation. */
+    uint32_t periodInMicroseconds;
     nsx_timer_callback_cb callback; ///< Invoked when timer ticks
 } nsx_timer_config_t;
 
