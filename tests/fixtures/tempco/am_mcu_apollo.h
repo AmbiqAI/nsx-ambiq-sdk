@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #define AM_HAL_STATUS_SUCCESS 0
-#define AM_HAL_TEMPCO_NUMSAMPLES 4
+#define AM_HAL_TEMPCO_NUMSAMPLES 5
+#define AM_HAL_STATUS_TIMEOUT 4u
+#define AM_HAL_STATUS_HW_ERR 5u
 #define AM_REG_INFO1_TRIM_REV_O 24
 #define AM_HAL_ADC_CLKSEL_HFRC_24MHZ 1
 #define AM_HAL_ADC_TRIGPOL_RISING 2

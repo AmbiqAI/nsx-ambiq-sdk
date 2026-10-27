@@ -35,6 +35,15 @@ Apollo3 and Apollo4 support in the unified repo comes from the retired standalon
 
 On Apollo4, `need_tempco` is implemented as a private `nsx-power` helper layered on top of `nsx::timer` rather than by reviving the legacy timer and harness globals. It is only supported on non-Lite Apollo4 parts whose trim revision reports TempCo support; unsupported parts fail the TempCo request instead of silently enabling partial behavior.
 
+TempCo capture checks every trigger, cache operation and sample read. Each sample
+has a 1,000-iteration trigger/poll budget with a nominal 1 us delay per iteration;
+this bounds NSX polling, not waits inside vendor HAL calls. A failed operation,
+missing sample or unexpected slot aborts the batch without applying trims. The
+callback records the failure internally, reports it with
+`NSX_POWERTEMPCO_DIAGNOSTICS`, and attempts the existing ADC sleep cleanup. A
+later callback can retry; the first capture/handler error is preserved if sleep
+cleanup also fails.
+
 The staged helper surface also absorbs the old `nsx-utils` energy-monitor and
 power-profile dump capabilities without reviving the rest of that mixed utility
 bundle. `nsx-power` now exposes GPIO state signaling for external power tools,

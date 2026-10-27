@@ -32,10 +32,21 @@ def test_tempco_lifecycle(tempco_binary, scenario):
     subprocess.run([str(tempco_binary), scenario], check=True, capture_output=True, text=True, timeout=5)
 
 
-def test_tempco_smoke_builds(repo_root, tmp_path):
+@pytest.mark.parametrize('capture', [False, True], ids=['lifecycle', 'capture'])
+def test_tempco_smoke_builds(repo_root, tmp_path, capture):
     from tools.hardware.api import BuildRequest, build_firmware
-    from tools.hardware.suites import TEMPCO
+    from tools.hardware.suites import TEMPCO, TEMPCO_CAPTURE
     from test_small_m55_memory import compiler_for_test
     compiler = compiler_for_test('gcc')
     build_firmware(BuildRequest(repo_root, tmp_path, 'apollo4p_blue_kxr_evb',
-                                compiler.parent.parent, TEMPCO))
+                                compiler.parent.parent, TEMPCO_CAPTURE if capture else TEMPCO))
+
+
+@pytest.mark.parametrize('fault', range(1, 9), ids=[
+    'fifo-stall', 'trigger-error', 'cache-error', 'read-error',
+    'empty-read', 'oversized-count', 'wrong-slot', 'last-poll-success'])
+@pytest.mark.parametrize('sample', [0, 4], ids=['first-sample', 'partial-batch'])
+@pytest.mark.parametrize('sleep_failure', [0, 1], ids=['sleep-ok', 'sleep-error'])
+def test_tempco_capture(tempco_binary, fault, sample, sleep_failure):
+    subprocess.run([str(tempco_binary), 'capture', str(fault), str(sample), str(sleep_failure)],
+                   check=True, capture_output=True, text=True, timeout=5)

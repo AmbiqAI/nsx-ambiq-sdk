@@ -205,7 +205,11 @@ POWER_STARTUP = (
                                     (('success-tempco', 'fail-tempco') if family == 'apollo4p'
                                      else ('unsupported-tempco',)))),
     Requirement('tests/test_power_startup.py::test_apollo4l_power_sources_compile'),
-    Requirement('tests/test_tempco_lifecycle.py::test_tempco_smoke_builds'),
+    Requirement('tests/test_tempco_lifecycle.py::test_tempco_smoke_builds', 2,
+                parameters=('capture',), variants=((False,), (True,))),
+    Requirement('tests/test_tempco_lifecycle.py::test_tempco_capture', 32,
+                parameters=('fault', 'sample', 'sleep_failure'),
+                variants=tuple((f, s, e) for f in range(1, 9) for s in (0, 4) for e in (0, 1))),
     Requirement('tests/test_tempco_lifecycle.py::test_tempco_lifecycle', 10,
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('success', 'init-failures', 'cleanup-failures', 'callback-failures', 'callback-status', 'unsupported',

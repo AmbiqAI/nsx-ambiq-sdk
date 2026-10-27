@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 #include "nsx_interrupt.h"
 #include "nsx_timer.h"
 #include "nsx_power_tempco.c"
@@ -11,6 +12,8 @@ static unsigned step, fail_step, allocations, releases, operations;
 static bool allocated, powered, enabled, running, irq_enabled, cleanup;
 static bool delivering, allow_capture;
 static uint32_t sample_status;
+static unsigned capture_fault, fault_sample, reads, triggers, delays, cache_calls, trim_calls, sample_triggers;
+static bool inject_capture_fault(void) { return reads == fault_sample; }
 static unsigned acknowledgements, timer_clears;
 static uint32_t primask;
 static bool pending, sleep_irq, readiness_irq;
@@ -137,11 +140,35 @@ uint32_t nsx_irq_unregister(IRQn_Type n) {
     if (!s) { irq_enabled = false; pending = false; handler = NULL; context = NULL; } return s;
 }
 uint32_t nsx_irq_clear_pending(IRQn_Type n) { assert(n == TIMER4_IRQn); return op("pending-clear"); }
-uint32_t am_hal_pwrctrl_tempco_sample_handler(uint32_t n,am_hal_adc_sample_t *s) { assert(allow_capture && n == AM_HAL_TEMPCO_NUMSAMPLES && s); return sample_status; }
-uint32_t am_hal_adc_sw_trigger(void *h) { assert(allow_capture && h == &handle && powered); ++test_adc.FIFO; return 0; }
-uint32_t am_hal_daxi_control(int c,void *p) { (void)c;(void)p; return 0; }
-uint32_t am_hal_adc_samples_read(void *h,bool b,void *p,uint32_t *n,am_hal_adc_sample_t *s) { assert(allow_capture && h == &handle && b && p == NULL && *n == 1); s->ui32Slot = 5; s->ui32Sample = 123; return 0; }
-void am_hal_delay_us(uint32_t t) { (void)t; }
+uint32_t am_hal_pwrctrl_tempco_sample_handler(uint32_t n,am_hal_adc_sample_t *s) {
+    assert(allow_capture && n == AM_HAL_TEMPCO_NUMSAMPLES && s);
+    for (unsigned i=0;i<n;++i) { assert(s[i].ui32Slot == 5 && s[i].ui32Sample == 123); }
+    ++trim_calls;
+    return sample_status;
+}
+uint32_t am_hal_adc_sw_trigger(void *h) {
+    assert(allow_capture && h == &handle && powered); ++triggers; ++sample_triggers;
+    if (inject_capture_fault()) {
+        if (capture_fault == 1) return 0;
+        if (capture_fault == 2) return FAIL;
+        if (capture_fault == 8 && sample_triggers < NSX_POWERTEMPCO_POLL_LIMIT) return 0;
+    }
+    ++test_adc.FIFO; return 0;
+}
+uint32_t am_hal_daxi_control(int c,void *p) {
+    assert(c == AM_HAL_DAXI_CONTROL_INVALIDATE && p == NULL); ++cache_calls;
+    return inject_capture_fault() && capture_fault == 3 ? FAIL : 0;
+}
+uint32_t am_hal_adc_samples_read(void *h,bool b,void *p,uint32_t *n,am_hal_adc_sample_t *s) {
+    assert(allow_capture && h == &handle && b && p == NULL && *n == 1);
+    bool fault=inject_capture_fault(); ++reads; sample_triggers=0;
+    assert(test_adc.FIFO); --test_adc.FIFO;
+    s->ui32Slot = fault && capture_fault == 7 ? 4 : 5; s->ui32Sample = 123;
+    if(fault && capture_fault == 4) return FAIL;
+    *n=fault && capture_fault == 5 ? 0 : (fault && capture_fault == 6 ? 2 : 1);
+    return 0;
+}
+void am_hal_delay_us(uint32_t t) { assert(t == 1); ++delays; }
 
 static void clean(void) {
     assert(!allocated && !powered && !enabled && !running && !irq_enabled);
@@ -155,6 +182,34 @@ static void setup_success(void) {
     assert(allocated && powered && enabled && running && irq_enabled && s_nsx_power_tempco.initialized);
 }
 int main(int argc,char **argv) {
+    if (argc == 5) {
+        capture_fault=(unsigned)atoi(argv[2]); fault_sample=(unsigned)atoi(argv[3]);
+        bool sleep_fail=atoi(argv[4]) != 0;
+        setup_success(); allow_capture=true;
+        if(sleep_fail) cleanup_failure="sleep";
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        uint32_t expected=capture_fault == 1 ? AM_HAL_STATUS_TIMEOUT :
+            (capture_fault >= 5 && capture_fault <= 7 ? AM_HAL_STATUS_HW_ERR : FAIL);
+        if(capture_fault == 8) expected=sleep_fail ? CLEAN_FAIL : 0;
+        assert(s_nsx_power_tempco.last_handler_status == expected);
+        assert(s_nsx_power_tempco.suspended == !sleep_fail && powered == sleep_fail);
+        assert(trim_calls == (capture_fault == 8 ? 1u : 0u));
+        assert(s_nsx_power_tempco.callback_count == trim_calls);
+        assert(triggers <= AM_HAL_TEMPCO_NUMSAMPLES + NSX_POWERTEMPCO_POLL_LIMIT);
+        if(capture_fault == 1) {
+            assert(triggers == fault_sample + NSX_POWERTEMPCO_POLL_LIMIT);
+            assert(reads == fault_sample && cache_calls == fault_sample);
+        }
+        if(capture_fault == 2) assert(delays == fault_sample && reads == fault_sample);
+        if(capture_fault == 3) assert(reads == fault_sample);
+        unsigned previous=trim_calls;
+        capture_fault=0; cleanup_failure=NULL;
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        assert(s_nsx_power_tempco.last_handler_status == 0 && trim_calls == previous+1);
+        assert(!powered && s_nsx_power_tempco.suspended);
+        assert(nsx_power_tempco_disable() == 0); clean();
+        return 0;
+    }
     assert(argc == 2);
     if (!strcmp(argv[1],"unsupported") || !strcmp(argv[1],"trim-read-failure")) {
         bad_trim = !strcmp(argv[1],"unsupported"); trim_read_failure = !bad_trim;
