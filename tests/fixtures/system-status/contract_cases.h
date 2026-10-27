@@ -13,6 +13,8 @@ static void contract_startup(const char *scenario) {
     bool minimal=strstr(scenario,"minimal") != NULL;
     bool staged=strstr(scenario,"staged") != NULL;
     cfg.skip_bsp_init=minimal;
+    bool high=strstr(scenario,"high") != NULL;
+    if(high) cfg.perf_mode=NSX_PERF_HIGH;
     cfg.debug.transport=strstr(scenario,"itm") ? NSX_DEBUG_ITM :
         strstr(scenario,"uart") ? NSX_DEBUG_UART : NSX_DEBUG_NONE;
     if(!strcmp(scenario,"default")) cfg=(nsx_system_config_t){0};
@@ -77,6 +79,13 @@ static void contract_startup(const char *scenario) {
     }
 #if !defined(AM_PART_APOLLO3) && !defined(AM_PART_APOLLO3P)
     assert(seen(PERF) == 1);
+    if(high) {
+#if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+        assert(selected_mode == AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2);
+#else
+        assert(selected_mode == AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
+#endif
+    }
     if(cfg.debug.transport != NSX_DEBUG_NONE) assert(position(DEBUG) < position(PERF));
     else if(cfg.enable_cache) assert(position(CACHE) < position(PERF));
 #endif

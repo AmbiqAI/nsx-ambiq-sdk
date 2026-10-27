@@ -163,3 +163,10 @@ def test_apollo510l_debug_backend_compiles(repo_root, tmp_path):
 @pytest.mark.parametrize('board', ('apollo3_evb', 'apollo4l_evb', 'apollo510_evb'))
 def test_additional_system_family_headers_compile(repo_root, tmp_path, board):
     compile_system_backend(repo_root, tmp_path, board)
+
+
+@pytest.mark.parametrize('system_backend', ('apollo510', 'apollo330p', 'apollo510l'), indirect=True)
+@pytest.mark.parametrize('scenario', ('full-high-itm', 'minimal-high-itm'))
+def test_itm_precedes_high_performance(system_backend, scenario):
+    # Host HAL model verifies call ordering, not minimal-path HP readiness.
+    run_backend(system_backend, 'contract', scenario)

@@ -163,6 +163,10 @@ POWER_STARTUP = (
                     for scenario in ('full-none', 'full-itm', 'full-uart', 'minimal-none', 'minimal-itm',
                                      'minimal-uart', 'staged-full-itm', 'staged-minimal-itm', 'default',
                                      'none-after-itm', 'fail-core', 'fail-cache'))),
+    Requirement('tests/test_system_status.py::test_itm_precedes_high_performance', 6,
+                parameters=('system_backend', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo510', 'apollo330p', 'apollo510l')
+                               for scenario in ('full-high-itm', 'minimal-high-itm'))),
     Requirement('tests/test_system_status.py::test_system_performance_mapping', 30,
                 parameters=('system_backend', 'mode', 'failure'),
                 variants=tuple((family, mode, failure)
