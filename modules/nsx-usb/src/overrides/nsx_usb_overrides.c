@@ -5,6 +5,10 @@
 
 #include "nsx_usb.h"
 #include "tusb.h"
+#if defined(CFG_TUSB_MCU) && CFG_TUSB_MCU == OPT_MCU_APOLLO4
+/* AP4's DCD owns unmount teardown; its header declares that capability. */
+#include "dcd_apollo4.h"
+#endif
 #include <string.h>
 
 extern nsx_usb_config_t *g_usb_cfg;

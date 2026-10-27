@@ -120,6 +120,12 @@ POWER_STARTUP = (
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
                      'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))),
+    Requirement('tests/test_usb_reentrancy.py::test_usb_reentrancy', 14,
+                parameters=('transport', 'scenario'),
+                variants=tuple((transport, scenario) for transport in ('cdc', 'vendor')
+                               for scenario in ('task', 'timer', 'fallback', 'send', 'query', 'flush', 'connected'))),
+    Requirement('tests/test_usb_reentrancy.py::test_usb_real_header_links', 3,
+                boards=('apollo4p_blue_kxr_evb', 'apollo510_evb', 'apollo510b_evb')),
     Requirement('tests/test_system_status.py::test_manual_debug_disable', 3,
                 parameters=('system_backend',),
                 variants=tuple((family,) for family in ('apollo510', 'apollo330p', 'apollo510l'))),
