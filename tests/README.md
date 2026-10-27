@@ -203,3 +203,11 @@ failure deliberately requires reset because the vendor HAL may discard its
 handle on error. The `tempco-smoke` fixture provides a bounded AP4 KXR
 setup/release/reallocation check through the shared hardware build/session API;
 it does not validate temperature samples or applied trims.
+
+`test_usb_reentrancy.py` compiles the actual NSX USB implementation and callback
+overrides with controlled TinyUSB and timer calls. It exercises CDC/vendor
+callbacks from task and timer servicing, nested nonblocking reads and simulated
+timer preemption. The GCC gate requires those checks and real USB firmware links
+on AP4 KXR, AP510 and AP510B. Host checks do not qualify physical USB traffic or
+sensor interrupt latency; simultaneous TileIO OUT/IN traffic remains a hardware
+acceptance check.

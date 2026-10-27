@@ -7,6 +7,14 @@
  * and the WebUSB landing-page URL are configurable at init time. No
  * values are hardcoded into the driver.
  *
+ * ## Execution context
+ * Application calls must be serialized across tasks. RX callbacks can run
+ * from either the USB timer ISR or task-driven USB servicing. Keep callbacks
+ * bounded and use nonblocking read/query APIs; do not call blocking send or
+ * receive operations from a callback. Other interrupt handlers must not call
+ * this API. Nested nonblocking calls retain USB ownership and do not recurse
+ * into TinyUSB task processing. The guard does not mask global interrupts.
+ *
  * ## DTR (Data Terminal Ready)
  * The CDC `nsx_usb_connected()` check relies on the host asserting DTR.
  * Most terminal emulators (minicom, screen, PuTTY) assert DTR on open,
