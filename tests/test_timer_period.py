@@ -1,4 +1,5 @@
 """Exercise actual TIMER adapters at their HAL boundary, including units/range."""
+import os
 import shutil
 import subprocess
 
@@ -28,7 +29,9 @@ def timer_binary(request, repo_root, tmp_path_factory):
     command += [flag for path in includes for flag in ('-I', str(path))]
     command += [str(fixture / 'main.c'), str(repo_root / 'modules/nsx-timer/src/nsx_timer.c'),
                 str(repo_root / 'modules/nsx-timer/src' / source), '-o', str(output)]
-    subprocess.run(command, check=True, capture_output=True, text=True)
+    host_env = os.environ.copy()
+    host_env.pop('GCC_ROOT', None)
+    subprocess.run(command, check=True, capture_output=True, text=True, env=host_env)
     return output
 
 
