@@ -238,7 +238,9 @@ uint32_t nsx_usb_receive(nsx_usb_config_t *cfg, void *data, uint32_t len,
 }
 
 bool nsx_usb_connected(nsx_usb_config_t *cfg) {
-    (void)cfg;
+    if (cfg == NULL || !cfg->_initialized) {
+        return false;
+    }
     /* Read-only snapshots must not suppress timer progress in polling loops. */
     return tud_cdc_connected();
 }
@@ -357,12 +359,12 @@ uint32_t nsx_usb_vendor_send(nsx_usb_config_t *cfg, const void *data,
 uint32_t nsx_usb_vendor_write_available(nsx_usb_config_t *cfg) {
     uint32_t available;
 
-    if (cfg == NULL || !cfg->_initialized || !cfg->_vendor_connected) {
+    if (cfg == NULL || !cfg->_initialized) {
         return 0u;
     }
     nsx_usb_guard_enter();
     nsx_usb_service();
-    available = tud_vendor_write_available();
+    available = nsx_usb_vendor_connected(cfg) ? tud_vendor_write_available() : 0u;
     nsx_usb_guard_exit();
     return available;
 }
@@ -394,10 +396,10 @@ uint32_t nsx_usb_vendor_read_nb(nsx_usb_config_t *cfg, void *data,
 }
 
 bool nsx_usb_vendor_connected(nsx_usb_config_t *cfg) {
-    if (cfg == NULL) {
+    if (cfg == NULL || !cfg->_initialized) {
         return false;
     }
-    return cfg->_vendor_connected != 0;
+    return cfg->_vendor_connected != 0 && tud_ready();
 }
 
 bool nsx_usb_vendor_data_available(nsx_usb_config_t *cfg) {

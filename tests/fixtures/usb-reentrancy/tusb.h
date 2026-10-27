@@ -6,6 +6,7 @@
 #define TUSB_REQ_TYPE_CLASS 1
 typedef struct { struct {uint8_t type;} bmRequestType_bit; uint8_t bRequest; uint16_t wIndex,wValue; } tusb_control_request_t;
 bool tusb_init(void);
+bool tud_ready(void);
 void tud_task(void);
 uint32_t tud_cdc_available(void);
 uint32_t tud_cdc_write_available(void);

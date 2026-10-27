@@ -216,3 +216,8 @@ acceptance check.
 including requests above 64 KiB, short writes, full queues and stalled hosts.
 It verifies accepted-byte counts, ordering and existing no-progress timeout
 accounting; successful enqueue is not proof of host delivery.
+
+`test_usb_connection.py` exercises connection snapshots, queued state changes and
+buffered-transfer statuses with actual NSX callbacks. It models both NSX-owned
+and DCD-owned unmount; real link checks retain AP4's DCD callback. These models
+are not physical cable-disconnect or AP4 power-teardown qualification.

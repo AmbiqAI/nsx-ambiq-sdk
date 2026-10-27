@@ -15,6 +15,7 @@ static unsigned queued, delivered, serviced, delayed, flushed;
 static unsigned drain_budget = MAX_PAYLOAD + CAPACITY, write_limit = CAPACITY;
 static unsigned wait_before_drain;
 uint32_t nsx_timer_init(nsx_timer_config_t *cfg) {(void)cfg; return 0;}
+bool tud_ready(void) {return true;}
 bool tusb_init(void) {return true;}
 void am_util_delay_ms(uint32_t ms) {delayed += ms;}
 void tud_task(void) {

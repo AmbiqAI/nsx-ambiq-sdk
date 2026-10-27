@@ -13,6 +13,7 @@ static unsigned task_depth,max_depth,task_calls,callback_depth,max_callback_dept
 static unsigned callbacks,received,available,emit,inject,write_count;
 static bool vendor, snapshot;
 uint32_t nsx_timer_init(nsx_timer_config_t *cfg) {timer=cfg;return 0;}
+bool tud_ready(void) {return true;}
 bool tusb_init(void) {return true;}
 void am_util_delay_ms(uint32_t ms) {(void)ms;}
 static void preempt(void) {

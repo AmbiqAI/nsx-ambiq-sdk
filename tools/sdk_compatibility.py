@@ -120,6 +120,12 @@ POWER_STARTUP = (
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
                      'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))),
+    Requirement('tests/test_usb_connection.py::test_usb_connection_contract', 20,
+                parameters=('connection_binary', 'scenario'),
+                variants=tuple((owner, scenario) for owner in ('nsx-unmount', 'dcd-unmount')
+                               for scenario in ('invalid', 'cdc-dtr', 'vendor-lifecycle',
+                                                'queued-unplug', 'queued-suspend', 'queued-open',
+                                                'cdc-buffers', 'vendor-buffers', 'receive-status', 'reconnect'))),
     Requirement('tests/test_usb_cdc_send.py::test_cdc_send_fifo_progress', 18,
                 parameters=('cdc_send_binary', 'scenario'),
                 variants=tuple((family, scenario) for family in ('ordinary', 'apollo5-flush')
