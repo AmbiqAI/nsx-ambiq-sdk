@@ -43,7 +43,6 @@ def test_usb_real_header_links(repo_root, tmp_path, board):
     # have actual definitions (uppercase W), not absent/unresolved weak refs.
     for callback in ('tud_cdc_rx_cb', 'tud_vendor_rx_cb'):
         assert definitions.get(callback) == 'W', f'{callback} definition missing'
-    for callback in ('tud_vendor_control_xfer_cb', 'tud_mount_cb', 'tud_suspend_cb'):
+    for callback in ('tud_vendor_control_xfer_cb', 'tud_mount_cb', 'tud_suspend_cb', 'tud_umount_cb'):
         assert definitions.get(callback) == 'T', f'{callback} missing or weak'
     assert definitions.get('nsx_usb_init') == 'T'
-
