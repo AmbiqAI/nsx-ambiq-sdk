@@ -20,8 +20,8 @@ Apollo4P, Apollo330P, Apollo510, Apollo510B, Apollo510L.
 ## Connection and transfer behavior
 
 `nsx_usb_connected()` reports configured, nonsuspended USB with CDC DTR asserted.
-`nsx_usb_vendor_connected()` additionally depends on the vendor logical session
-flag. The vendor control request or a higher-level consumer such as TileIO can
+`nsx_usb_vendor_connected()` requires configured, nonsuspended USB plus the
+vendor logical session flag; it does not require CDC DTR. The vendor control request or a higher-level consumer such as TileIO can
 open that session. Mount, NSX-owned unmount and suspend clear it; resume alone
 does not reopen it. AP4 retains its DCD-owned unmount teardown; USB readiness
 prevents a stale session flag from reporting connected while unconfigured.
