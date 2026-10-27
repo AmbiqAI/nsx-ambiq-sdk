@@ -52,3 +52,8 @@ extern uint32_t SystemCoreClock;
 uint32_t am_hal_itm_disable(void);
 uint32_t am_hal_tpiu_disable(void);
 uint32_t am_hal_gpio_state_write(unsigned, unsigned);
+
+#define AM_HAL_TPIU_BAUD_1M 1000000
+uint32_t am_hal_dcu_swo_enable(void);
+uint32_t am_hal_tpiu_enable(uint32_t);
+uint32_t am_hal_itm_enable(void);

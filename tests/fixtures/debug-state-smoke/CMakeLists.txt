@@ -12,3 +12,12 @@ option(NSX_TEST_SWO_HANDSHAKE "Wait for an external SWO receiver before printing
 if(NSX_TEST_SWO_HANDSHAKE)
     target_compile_definitions(debug_state PRIVATE NSX_TEST_SWO_HANDSHAKE=1)
 endif()
+
+option(NSX_TEST_SWO_FAILURE "Inject a returning SWO preparation error" OFF)
+if(NSX_TEST_SWO_FAILURE)
+    if(NOT NSX_TEST_BOARD MATCHES "^(apollo330mP|apollo510dL)_evb$")
+        message(FATAL_ERROR "SWO preparation injection requires AP330P or AP510L")
+    endif()
+    target_compile_definitions(debug_state PRIVATE NSX_TEST_SWO_FAILURE=1)
+    target_link_options(debug_state PRIVATE "-Wl,--wrap=am_hal_dcu_swo_enable")
+endif()

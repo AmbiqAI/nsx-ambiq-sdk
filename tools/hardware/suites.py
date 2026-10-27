@@ -114,4 +114,17 @@ SYSTEM_FULL, SYSTEM_MINIMAL = tuple(
     for mode, minimal in (('full', False), ('minimal', True)))
 DEBUG_STATE = Suite('debug-state', 'tests/hardware/test_debug_output.py::test_debug_output',
                     ('output_lifecycle',), 'tests/fixtures/debug-state-smoke', 'debug_state.elf')
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE)
+
+
+def debug_failure_options(repo: Path, output: Path, board: str, fault: str,
+                          sdk_root: Path | None = None) -> list[str]:
+    if board not in ('apollo330mP_evb', 'apollo510dL_evb') or fault != 'none':
+        raise ValueError('SWO preparation failure smoke requires AP330P or AP510L')
+    return ['-DNSX_TEST_SWO_FAILURE=ON']
+
+
+DEBUG_FAILURE = Suite('debug-failure', 'tests/hardware/test_debug_failure.py::test_debug_failure',
+                      ('preparation_failure',), 'tests/fixtures/debug-state-smoke',
+                      'debug_state.elf', configure=debug_failure_options)
+
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE)

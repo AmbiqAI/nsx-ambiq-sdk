@@ -9,12 +9,14 @@
 
 enum { CORE = 1, BSP, CACHE_CONFIG, CACHE_ENABLE, CPDLP, SPOT, FPU, STACK,
        CACHE, OTP_ON, CRYPTO_ON, DCU_GET, DCU_UPDATE, CRYPTO_OFF, OTP_OFF,
-       DEBUG, TPIU, GPIO, PRINT, PERF, PROFILE, ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT };
+       DEBUG, TPIU, GPIO, PRINT, PERF, PROFILE, ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT, SWO_PREP };
 static unsigned calls[64], count, failure, secondary_failure, irq_mask;
+static unsigned failure_window = 1, power_window;
 static unsigned step(unsigned id) {
     assert(count < sizeof(calls) / sizeof(calls[0]));
     calls[count++] = id;
-    return id == failure || id == secondary_failure ? 0x40 + id : 0;
+    unsigned window = (id >= OTP_ON && id <= OTP_OFF) ? power_window : failure_window;
+    return (id == failure || id == secondary_failure) && window == failure_window ? 0x40 + id : 0;
 }
 static unsigned seen(unsigned id) {
     unsigned n = 0;
@@ -29,7 +31,7 @@ const am_hal_cachectrl_config_t am_hal_cachectrl_defaults = 0;
 const nsx_core_api_t nsx_core_V1_0_0 = {0};
 uint32_t nsx_core_init(nsx_core_config_t *cfg) {(void)cfg; return step(CORE);}
 uint32_t nsx_cache_enable(void) {return step(CACHE);}
-uint32_t am_hal_interrupt_master_disable(void) {unsigned old=irq_mask; irq_mask=1; return old;}
+uint32_t am_hal_interrupt_master_disable(void) {unsigned old=irq_mask; irq_mask=1; ++power_window; return old;}
 void am_hal_interrupt_master_enable(void) {irq_mask=0;}
 void am_hal_interrupt_master_set(uint32_t mask) {irq_mask=mask;}
 void am_bsp_low_power_init(void) {(void)step(BSP);}
@@ -77,6 +79,12 @@ void am_hal_spotmgr_profile_set(am_hal_spotmgr_profile_t *profile) {
     assert(profile->PROFILE_b.COLLAPSESTMANDSTMP); (void)step(PROFILE);
 }
 uint32_t am_hal_debug_enable(void) {return step(DEBUG);}
+uint32_t am_hal_dcu_swo_enable(void) {
+    assert(irq_mask == 1 && power.DEVPWRSTATUS_b.PWRSTOTP && power.DEVPWRSTATUS_b.PWRSTCRYPTO);
+    return step(SWO_PREP);
+}
+uint32_t am_hal_tpiu_enable(uint32_t baud) {assert(baud == 1000000); return step(TPIU);}
+uint32_t am_hal_itm_enable(void) {return step(DEBUG);}
 uint32_t am_hal_tpiu_config(unsigned a,unsigned b,unsigned c,unsigned d,unsigned e) {
     assert(a == 0 && b == 0 && c == 1 && d == 1 && e == 95); return step(TPIU);
 }
@@ -122,7 +130,8 @@ int main(int argc, char **argv) {
             assert(seen(FPU) == 1 && seen(STACK) == 1 && !seen(BSP));
         }
     } else if (!strcmp(argv[1], "debug")) {
-        assert(argc == 7);
+        assert(argc == 7 || argc == 8);
+        if (argc == 8) failure_window=(unsigned)atoi(argv[7]);
         failure=(unsigned)atoi(argv[2]); secondary_failure=(unsigned)atoi(argv[3]);
         unsigned domains=(unsigned)atoi(argv[4]), masked=(unsigned)atoi(argv[5]);
         unlocked=(unsigned)atoi(argv[6]); irq_mask=masked;
@@ -131,14 +140,25 @@ int main(int argc, char **argv) {
         status=nsx_system_init(&cfg);
         assert(status == (failure ? 0x40+failure : 0) && irq_mask == masked);
         if (failure) assert(!seen(PERF) && !seen(PROFILE));
+        unsigned windows = 1;
+#if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+        if (!(failure_window == 1 && failure >= OTP_ON && failure <= OTP_OFF)) windows=2;
+#endif
         if (domains & 1) assert(!seen(OTP_ON) && !seen(OTP_OFF) && power.DEVPWRSTATUS_b.PWRSTOTP);
-        else assert(seen(OTP_ON) == 1 && seen(OTP_OFF) == 1);
+        else assert(seen(OTP_ON) == windows && seen(OTP_OFF) == windows);
         if (domains & 2) assert(!seen(CRYPTO_ON) && !seen(CRYPTO_OFF) && power.DEVPWRSTATUS_b.PWRSTCRYPTO);
-        else if (failure != OTP_ON) assert(seen(CRYPTO_ON) == 1 && seen(CRYPTO_OFF) == 1);
-        else assert(!seen(CRYPTO_ON) && !seen(CRYPTO_OFF));
+        else {
+            unsigned crypto_windows = windows - (failure == OTP_ON ? 1 : 0);
+            assert(seen(CRYPTO_ON) == crypto_windows && seen(CRYPTO_OFF) == crypto_windows);
+        }
         if (failure >= OTP_ON && failure <= OTP_OFF) assert(!seen(DEBUG) && !seen(TPIU));
-        if (failure == DEBUG) assert(!seen(TPIU) && !seen(GPIO) && !seen(PRINT));
-        if (failure == TPIU) assert(!seen(GPIO) && !seen(PRINT));
+#if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+        if (failure == SWO_PREP) assert(!seen(DEBUG) && !seen(TPIU));
+        if (failure == TPIU) assert(!seen(DEBUG));
+#else
+        if (failure == DEBUG) assert(!seen(TPIU));
+#endif
+        if (failure == DEBUG || failure == TPIU) assert(!seen(GPIO) && !seen(PRINT));
         if (failure == GPIO) assert(!seen(PRINT));
         if (unlocked) assert(!seen(DCU_UPDATE));
     } else if (!strcmp(argv[1], "success")) {
@@ -157,7 +177,11 @@ int main(int argc, char **argv) {
         count=0; failure=(unsigned)atoi(argv[2]);
         extern void nsx_debug_disable(nsx_debug_transport_e);
         nsx_debug_disable(NSX_DEBUG_ITM);
+#if defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+        const unsigned expected[]={ITM_OFF, TPIU_OFF, DETACH, PIN_DEFAULT};
+#else
         const unsigned expected[]={ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT};
+#endif
         unsigned n=0;
         do {assert(n < count && calls[n] == expected[n]); ++n;}
         while (n < sizeof(expected)/sizeof(expected[0]) && expected[n-1] != failure);

@@ -14,6 +14,29 @@ volatile uint32_t nsx_debug_capture_go;
 void setUp(void) {}
 void tearDown(void) {}
 
+#ifdef NSX_TEST_SWO_FAILURE
+static unsigned preparation_calls;
+uint32_t __wrap_am_hal_dcu_swo_enable(void) {
+    ++preparation_calls;
+    return AM_HAL_STATUS_FAIL;
+}
+
+static void preparation_failure(void) {
+    nsx_system_config_t cfg = {.enable_cache=true};
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_system_init(&cfg));
+    uint32_t domains = PWRCTRL->DEVPWRSTATUS;
+    uint32_t primask = __get_PRIMASK();
+    nsx_debug_config_t debug = {.transport=NSX_DEBUG_ITM};
+    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_FAIL, nsx_debug_init(&debug));
+    TEST_ASSERT_EQUAL_UINT32(primask, __get_PRIMASK());
+    const uint32_t mask = PWRCTRL_DEVPWRSTATUS_PWRSTOTP_Msk |
+                          PWRCTRL_DEVPWRSTATUS_PWRSTCRYPTO_Msk;
+    TEST_ASSERT_EQUAL_HEX32(domains & mask, PWRCTRL->DEVPWRSTATUS & mask);
+    TEST_ASSERT_EQUAL_UINT32(1, preparation_calls);
+    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_FAIL, nsx_debug_init(&debug));
+    TEST_ASSERT_EQUAL_UINT32(1, preparation_calls);
+}
+#else
 static void output_lifecycle(void) {
     nsx_system_config_t cfg = {.enable_cache=true, .debug={.transport=NSX_DEBUG_ITM}};
     TEST_ASSERT_EQUAL_UINT32(0, nsx_system_init(&cfg));
@@ -57,8 +80,14 @@ static void output_lifecycle(void) {
 #endif
 }
 
+#endif
+
 int main(void) {
     nsx_test_begin(__FILE__);
+#ifdef NSX_TEST_SWO_FAILURE
+    RUN_TEST(preparation_failure);
+#else
     RUN_TEST(output_lifecycle);
+#endif
     nsx_test_finish();
 }
