@@ -42,8 +42,8 @@ review, and the tag/release steps explicitly.
    toolchain/board coverage. A missing licensed or local toolchain is a
    recorded gap, not an implied pass.
 8. Complete the [local intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist)
-   for the declared board matrix. Keep experimental clock evidence separate
-   from calibrated qualification; missing required hardware remains a gap.
+   for the declared board matrix and affected NSX interfaces. Missing required
+   hardware remains a gap; experimental clock evidence is not calibrated qualification.
 9. Review the complete diff and verify the worktree is clean after approved
    commits.
 

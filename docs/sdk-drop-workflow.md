@@ -101,8 +101,8 @@ descriptors are the adapter.
    this repo should expose.
 7. Build or import approved HAL/BSP prebuilt libraries for the release payload.
 8. Run the [local intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist):
-   candidate host gate, fixed-harness board comparisons, failure controls and
-   retained evidence for the declared coverage matrix.
+   revision-bound SDK/patch review, candidate host gate, fixed-harness board
+   comparisons and targeted shim checks, with retained evidence and exclusions.
 9. Update module metadata and the NSX registry so logical modules resolve to the
    same physical repo revision.
 

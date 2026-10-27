@@ -73,29 +73,30 @@ board remains AP3 Blue Plus; no production checkout is modified.
 
 ## SDK-intake acceptance checklist
 
-1. Stage the drop using [the intake workflow](sdk-drop-workflow.md), review
-   upstream/NSX patch disposition, and commit the candidate. Select three clean
-   checkouts by immutable tag or full commit: the approved baseline SDK, candidate
-   SDK and reviewed harness. Both SDK roots are **NSX SDK module repositories**,
-   not raw AmbiqSuite source trees. Preserve release history/tags for host checks.
-2. Record the intended board/toolchain matrix before execution. For the current
-   GCC core coverage, require `apollo3p_evb`, `apollo4p_blue_kxr_evb`,
-   `apollo330mP_evb`, `apollo510_evb` and `apollo510b_evb`. Each needs both
-   `startup` (three Unity cases) and `runtime` (four). Add `clock` only for
-   AP330 Plus and AP510B. Missing required boards leave intake acceptance
-   incomplete; they do not silently reduce the matrix. Other compilers and
-   board variants require separately declared coverage.
-3. Run the candidate's host gate, then the fixed-harness hardware comparisons
-   below. Review changed test/acceptance definitions separately: the host gate
-   uses **candidate-owned tests**; it is not the fixed-harness comparison.
-4. For AP330/AP510B, also execute all three [clock negative controls](clock-lab-tests.md#negative-controls-and-cleanup)
-   from the harness with `--candidate-sdk-root "$CANDIDATE"`, separate output
-   directories and no qualification profile. Require the intended assertion
-   failure and passing `restore_low`, then a normal clock run. A timeout or
-   transport error does not demonstrate fault detection.
-5. Review the complete evidence bundle and exclusions before approving intake.
-   This procedure tests NSX integration, not the complete AmbiqSuite peripheral
-   implementation. It does not publish an SDK release or approve a merge.
+1. Stage and commit the candidate using [the intake workflow](sdk-drop-workflow.md).
+   Select clean, immutable baseline SDK, candidate SDK and reviewed harness
+   revisions. SDK roots are **NSX SDK module repositories**, not raw AmbiqSuite
+   trees. Preserve release history/tags for host checks.
+2. Complete the [snapshot and patch review](../sdk-intake/README.md#snapshot-and-patch-review).
+   Record every patch disposition against those exact revisions. Review changed
+   headers, archives, build inputs and NSX adapters; the file inventory is not a
+   semantic API/ABI verdict. For new functionality, decide whether NSX exposes
+   it, retains direct HAL access, or intentionally leaves it unsupported.
+3. Declare the board/toolchain matrix and extra tests before running them. The
+   GCC core baseline is `startup` (three Unity cases) and `runtime` (four) on
+   `apollo3p_evb`, `apollo4p_blue_kxr_evb`, `apollo330mP_evb`, `apollo510_evb`
+   and `apollo510b_evb`. Select additional existing shim tests and bounded board
+   smokes from the changed interfaces and prior defects. Missing required boards
+   remain incomplete coverage; other compilers/variants need explicit coverage.
+4. Run the candidate host gate and fixed-harness comparisons below. Review
+   changes to candidate-owned tests separately. Use relevant failure controls
+   when validating a changed test boundary; failures must be the intended
+   assertions, not timeouts or transport errors, and cleanup must succeed.
+5. Review the complete evidence and exclusions before accepting the intake.
+   This qualifies NSX integration, not the full HAL or every peripheral. A
+   genuinely new SDK must pass this process; comparing snapshots with identical
+   production inputs only rehearses the tooling. Merge/release approval remains
+   a separate maintainer decision.
 
 ### Local commands
 
@@ -111,9 +112,17 @@ BASELINE=/path/to/approved-nsx-sdk
 CANDIDATE=/path/to/candidate-nsx-sdk
 EVIDENCE=/path/to/new-intake-evidence
 GCC=/path/to/arm-gnu-toolchain
+DECISIONS=/path/to/reviewed-patch-decisions.json
 mkdir -p "$EVIDENCE"
 unset PYTEST_ADDOPTS GCC_ROOT
 export PATH="$GCC/bin:$PATH"
+
+# Verify the completed patch review still matches these exact snapshots.
+cd "$HARNESS"
+uv sync --locked --group ci --group hardware
+uv run --group ci python -m tools.sdk_intake_review \
+  --baseline "$BASELINE" --candidate "$CANDIDATE" --decisions "$DECISIONS" \
+  --output "$EVIDENCE/intake-reviewed.json"
 
 # Candidate-owned host gate; all required cases must pass without skips.
 cd "$CANDIDATE"
@@ -127,12 +136,12 @@ cd "$HARNESS"
 uv sync --locked --group ci --group hardware
 BOARD=apollo510b_evb
 PROBE=YOUR_RESERVED_PROBE_SERIAL
-SUITES="startup runtime clock"  # For AP3/AP4/AP510, use "startup runtime".
+SUITES="startup runtime"
 for SUITE in $SUITES; do
   uv run --group ci --group hardware python -m tools.hardware.compare \
     --baseline-sdk-root "$BASELINE" --candidate-sdk-root "$CANDIDATE" \
     --board "$BOARD" --probe "$PROBE" --gcc-root "$GCC" \
-    --suite "$SUITE" --clock-experimental --hardware --hardware-timeout 40 \
+    --suite "$SUITE" --hardware --hardware-timeout 40 \
     --output "$EVIDENCE/$BOARD/$SUITE" || exit 1
 done
 ```
@@ -141,21 +150,31 @@ Run the loop in a POSIX shell (for example Bash). Reserve the exact board before
 starting it, keep J-Link sessions sequential, and release the claim afterward.
 Repeat for each declared board with its correct descriptor/probe. Stop on the
 first failed command; investigate and restore the board before retrying into
-fresh output. `--clock-experimental` only affects the clock suite; its acceptance
-remains conditional on the [reference assumptions](clock-timebase-qualification.md).
+fresh output.
 For a hardware-free rehearsal, replace `--hardware --probe "$PROBE"` with
 `--build-only`; that can never complete hardware acceptance.
+
+Clock testing is an additional regression screen when the intake affects that
+boundary, not a required oscillator-characterization campaign. The existing
+`clock` suite supports AP330 Plus/AP510B with `--clock-experimental`; if selected,
+run its [negative controls and cleanup](clock-lab-tests.md#negative-controls-and-cleanup)
+against the candidate using the fixed harness, then a normal run. Preserve its
+[reference assumptions](clock-timebase-qualification.md); an experimental pass
+is not calibrated frequency qualification.
 
 ### Required evidence and decision
 
 Keep the complete output directories, not only console PASS lines:
 
+- `intake-reviewed.json` must say `review-recorded` with exit zero. This records
+  patch decisions, not test success or automatic provenance/qualification.
 - `candidate-gcc/compatibility.json` must say `passed`, with process exit zero;
   retain JUnit, exact cases, exclusions, compiler identity and build artifacts.
 - Each core-suite `comparison.json` must say `passed`, with both runs passed.
   Require all seven startup/runtime cases for each declared board and SDK.
-- Each clock comparison must say `experimental_pass`; retain all 72 windows
-  per SDK/board and the negative-control/restoration evidence. This is a
+- If clock testing was selected, its comparison must say `experimental_pass`;
+  retain all 72 windows per SDK/board and the negative-control/restoration
+  evidence. This is a
   regression screen, not calibrated frequency qualification.
 - Preserve manifests, ELF/input hashes, raw results, Unity logs, execution and
   J-Link/device-pack metadata. Record board revision, probe, reset/debug policy,
