@@ -100,7 +100,23 @@ static void contract_startup(const char *scenario) {
 #endif
 }
 static void contract_performance(unsigned mode, unsigned expected, bool fail) {
+    SystemCoreClock=777;
+    uint32_t prior=SystemCoreClock;
     failure=fail ? PERF : 0;
     assert(nsx_set_perf_mode((nsx_perf_mode_e)mode) == (fail ? 0x40+PERF : 0));
     assert(count == 1 && calls[0] == PERF && selected_mode == expected);
+    if(fail) assert(SystemCoreClock == prior);
+    else {
+        uint32_t hz=96000000u;
+        if(mode) {
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+            hz=192000000u;
+#elif defined(AM_PART_APOLLO330P) || defined(AM_PART_APOLLO510L)
+            hz=mode==1 ? 192000000u : 250000000u;
+#else
+            hz=250000000u;
+#endif
+        }
+        assert(SystemCoreClock == hz);
+    }
 }

@@ -4,6 +4,10 @@
 #include "nsx_power.h"
 
 uint32_t SystemCoreClock = 1234567u;
+power_regs power;
+#if !defined(TEST_APOLLO3)
+static bool wrong_hardware, missing_ack;
+#endif
 static unsigned transitions, initializations;
 static uint32_t transition_status, init_status;
 static bool available = true, write_availability = true;
@@ -32,6 +36,8 @@ uint32_t am_hal_pwrctrl_mcu_mode_select(am_hal_pwrctrl_mcu_mode_e mode) {
     assert(mode == AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE || mode == AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
     last_high = mode == AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE;
     ++transitions;
+    power.MCUPERFREQ_b.MCUPERFACK=!missing_ack;
+    power.MCUPERFREQ_b.MCUPERFSTATUS=wrong_hardware ? 99u : (unsigned)mode;
     return transition_status;
 }
 #endif
@@ -41,7 +47,11 @@ static void select_ok(nsx_power_perf_mode_t mode, bool high) {
     assert(nsx_power_set_performance_mode(mode) == NSX_STATUS_SUCCESS);
     assert(transitions == count + 1);
     assert(last_high == high);
+#if defined(TEST_APOLLO3) || defined(APOLLO4_FPGA)
     assert(SystemCoreClock == 1234567u);
+#else
+    assert(SystemCoreClock == (high ? 192000000u : 96000000u));
+#endif
 }
 
 int main(int argc, char **argv) {
@@ -94,7 +104,16 @@ int main(int argc, char **argv) {
         select_ok(NSX_POWER_PERF_LOW, false);
         assert(initializations == 2);
 #endif
+#if !defined(TEST_APOLLO3)
+    } else if (!strcmp(scenario,"wrong-hardware") || !strcmp(scenario,"missing-ack")) {
+        wrong_hardware=!strcmp(scenario,"wrong-hardware"); missing_ack=!strcmp(scenario,"missing-ack");
+        for (unsigned i=0;i<2;++i) {
+            assert(nsx_power_set_performance_mode(NSX_POWER_PERF_HIGH) != 0);
+            assert(SystemCoreClock == 1234567u);
+        }
+        wrong_hardware=missing_ack=false;
+        select_ok(NSX_POWER_PERF_HIGH,true);
+#endif
     } else assert(!"unknown scenario");
-    assert(SystemCoreClock == 1234567u);
     return 0;
 }

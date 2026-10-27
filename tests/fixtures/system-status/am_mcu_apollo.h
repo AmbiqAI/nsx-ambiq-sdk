@@ -24,7 +24,7 @@
 #define _VAL2FLD(f,v) (v)
 #define AM_CRITICAL_BEGIN { uint32_t saved_mask = am_hal_interrupt_master_disable()
 #define AM_CRITICAL_END am_hal_interrupt_master_set(saved_mask); }
-typedef struct {struct {unsigned PWRSTOTP,PWRSTCRYPTO;} DEVPWRSTATUS_b;} power_t;
+typedef struct {struct {unsigned PWRSTOTP,PWRSTCRYPTO;} DEVPWRSTATUS_b; struct {unsigned MCUPERFACK,MCUPERFSTATUS;} MCUPERFREQ_b;} power_t;
 typedef struct {struct {unsigned HOSTCCISIDLE;} HOSTCCISIDLE_b;} crypto_t;
 typedef struct {unsigned TPR,TER,TCR;} itm_t;
 extern power_t power; extern crypto_t crypto; extern itm_t itm;
@@ -57,3 +57,18 @@ uint32_t am_hal_gpio_state_write(unsigned, unsigned);
 uint32_t am_hal_dcu_swo_enable(void);
 uint32_t am_hal_tpiu_enable(uint32_t);
 uint32_t am_hal_itm_enable(void);
+
+#define AM_HAL_STATUS_INVALID_ARG 2
+#define AM_HAL_STATUS_INVALID_OPERATION 3
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+#define AM_HAL_CLKGEN_FREQ_MAX_HZ 48000000u
+#else
+#define AM_HAL_CLKGEN_FREQ_MAX_HZ 96000000u
+#endif
+#define AM_HAL_CLKGEN_FREQ_HP192_HZ 192000000u
+#define AM_HAL_CLKGEN_FREQ_HP250_HZ 250000000u
+typedef unsigned am_hal_pwrctrl_mcu_mode_e;
+typedef struct {struct {unsigned HF2ADJEN;} HF2ADJ0_b;} clock_t;
+extern clock_t clock_regs;
+#define CLKGEN (&clock_regs)
+#define CLKGEN_HF2ADJ0_HF2ADJEN_EN 1u

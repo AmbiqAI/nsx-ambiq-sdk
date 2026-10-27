@@ -147,8 +147,9 @@ extern "C" {
  *
  * These are legacy system-selector meanings, not the nsx-power enum layout.
  * AP3 burst control is available through nsx_power_set_performance_mode().
- * CPU rates depend on the configured source; this system selector does not
- * update SystemCoreClock or application-owned SysTick/RTOS timebases.
+ * On AP4 silicon and Apollo510/B/AP330P/510L, successful selection publishes
+ * SystemCoreClock after verifying hardware mode. CPU rates depend on the
+ * configured source. The caller owns SysTick/RTOS reloads and cached conversions.
  */
 typedef enum {
     NSX_PERF_LOW    = 0,   ///< Low-power mode
@@ -267,8 +268,12 @@ uint32_t nsx_minimal_hw_init(void);
 /**
  * @brief Apply the legacy family performance mapping shown above.
  *
- * Does not publish SystemCoreClock or reconfigure SysTick/RTOS timing.
- * Caller owns those timebases and the hardware prerequisites for the mode.
+ * Publishes SystemCoreClock on AP4 silicon and Apollo510/B/AP330P/510L only
+ * after successful selection and hardware ACK/mode verification. On failure
+ * the previous publication is retained; hardware rollback is not guaranteed.
+ * Caller owns hardware prerequisites, serialized access and SysTick/RTOS timing.
+ * AP510/B HP is rejected while audio-adjusted 196.608 MHz HFRC2 is active.
+ * AP4 FPGA, AP3, AP2 and AT110 retain their existing publication behavior.
  * Unknown modes fail before hardware effects; AP3 valid modes remain no-ops.
  *
  * @param mode  Desired performance level.

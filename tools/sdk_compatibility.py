@@ -42,8 +42,8 @@ GCC = (
                 ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_audio_buffers.py::test_audio_real_headers', 6,
                 ('apollo3_evb', 'apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
-    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 4,
-                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
+    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 6,
+                ('apollo4p_blue_kxr_evb', 'apollo4l_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
 # Acceptance matrices are deliberately independent of test parametrization so
 # replacing a scenario in the tests cannot silently replace the requirement.
@@ -78,12 +78,12 @@ ADAPTER_REGRESSIONS = (
                 ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
     Requirement('tests/test_timer_period.py::test_timer_other_variants_compile', 2,
                 ('apollo4l_evb', 'apollo510dL_evb')),
-    Requirement('tests/test_power_selectors.py::test_family_performance_contract', 30,
+    Requirement('tests/test_power_selectors.py::test_family_performance_contract', 42,
                 parameters=('selector_binary', 'scenario'),
-                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4')
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4', 'apollo4-fpga')
                     for scenario in (('low', 'high', 'max', 'repeat', 'invalid', 'invalid-after-init',
                                       'enable-fails', 'disable-fails') +
-                                     (() if family == 'apollo4' else
+                                     (('wrong-hardware', 'missing-ack') if family.startswith('apollo4') else
                                       ('init-fails', 'init-no-output', 'unavailable'))))),
     Requirement('tests/test_audio_buffers.py::test_audio_buffer_bounds', 48,
                 parameters=('audio_binary', 'scenario'),
@@ -96,15 +96,17 @@ ADAPTER_REGRESSIONS = (
                 variants=tuple((backend, phase, fault) for backend in ('apollo3', 'apollo5')
                                for phase, fault in _AUDIO_LIFECYCLE_COMMON)
                          + tuple(('apollo5', phase, fault) for phase, fault in _AUDIO_LIFECYCLE_APOLLO5)),
-    Requirement('tests/test_power_core_clock.py::test_performance_updates_core_clock', 96,
+    Requirement('tests/test_power_core_clock.py::test_performance_updates_core_clock', 133,
                 parameters=('clock_harness', 'scenario'),
                 variants=tuple((target, scenario)
-                    for target in ('apollo510', 'apollo330P', 'apollo510L',
+                    for target in ('apollo510', 'apollo510b', 'apollo330P', 'apollo510L',
                                    'apollo510-fpga', 'apollo330P-fpga', 'apollo510L-fpga')
                     for scenario in ('low', 'high', 'max', 'not-set', 'select-fails', 'query-fails',
                                      'zero-source', 'excessive-source', 'low-source', 'audio-high',
                                      'audio-max', 'adjusted-250', 'unsupported-source', 'audio-then-free',
-                                     'pending-audio', 'released-audio'))),
+                                     'pending-audio', 'released-audio', 'invalid', 'missing-ack', 'wrong-hardware'))),
+    Requirement('tests/test_power_core_clock.py::test_performance_smoke_builds', 4,
+                ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
 )
 CORE_BUILDS = (
     Requirement('tests/test_power_link.py::test_power_module_links_real_sdk', 8,

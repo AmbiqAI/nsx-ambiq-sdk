@@ -54,17 +54,24 @@ The public API is exported as `nsx_power.h`.
 
 ## CPU clock after a performance change
 
-On Apollo510/Apollo510B and Apollo330P/Apollo510L,
+On AP4 silicon, Apollo510/Apollo510B and Apollo330P/Apollo510L,
 `nsx_power_set_performance_mode()` updates the CMSIS `SystemCoreClock` value
-after the HAL successfully switches the CPU mode. On silicon, Apollo510 uses
+after HAL success and actual hardware ACK/mode verification. AP4 publishes
+96 MHz LP or 192 MHz HP; AP4 FPGA retains its existing lack of publication.
+On silicon, Apollo510 uses
 the 96 MHz LP constant and queries configured HFRC2 for HP; HIGH and MAX
 select the same HP mode. HFRC2 is normally 250 MHz, but audio can configure
-it to 196.608 MHz. A stored audio setting takes effect only when adjustment
+it to 196.608 MHz; HP is rejected while that audio adjustment is active.
+A stored audio setting takes effect only when adjustment
 is active; pending configuration alone still reports nominal free-running
 250 MHz. Apollo330P/510L use 96 MHz LP, 192 MHz HP1 (HIGH), and the
 configured PLLVCO rate for HP2 (MAX). Audio can also lower that PLL rate.
 Invalid or unavailable clock-source configuration fails before requesting the
-mode change. FPGA builds use the HAL's scaled execution-rate constants.
+mode change. Apollo5 FPGA builds retain the HAL's scaled execution-rate constants.
+Unknown modes are rejected; NOT_SET retains its LOW compatibility mapping on
+Apollo5-class parts. System and power selectors share this implementation, with
+explicit mapping between their different enums. A failed switch preserves the
+previous publication, but may leave hardware partially changed; handle the error.
 
 The application owns SysTick and other timing peripherals. After a successful
 switch, recalculate the SysTick reload using `SystemCoreClock`, and refresh
@@ -108,8 +115,9 @@ declarations; Apollo4 uses a small host HAL model. The complete eight-board
 power link matrix checks the real family headers and archives separately.
 
 LOW selects normal mode on AP3/3P and LP on AP4; HIGH/MAX select burst or HP.
-Both families reject NOT_SET and unknown modes without touching the HAL and
-leave `SystemCoreClock` unchanged. AP3/3P initializes burst support on its first
+Both families reject NOT_SET and unknown modes without touching the HAL. AP3/3P
+leaves `SystemCoreClock` unchanged; AP4 silicon publishes the verified mode
+frequency as described above. AP3/3P initializes burst support on its first
 valid request, including LOW. Initialization errors propagate and remain
 retryable; only successful, available initialization is cached. Successful
 initialization remains cached if a later mode transition fails.

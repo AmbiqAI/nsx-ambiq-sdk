@@ -23,6 +23,12 @@ def selector_binary(request, repo_root, tmp_path):
                '-I', str(repo_root / 'modules/nsx-core/includes-api')]
     if arch == 'apollo3':
         command += ['-DTEST_APOLLO3', '-I', str(repo_root / f'modules/nsx-ambiqsuite/sdk/mcu/{family}/hal')]
+    if arch == 'apollo4':
+        command += ['-DAM_PART_APOLLO4P',
+                    '-I', str(repo_root / 'modules/nsx-core/includes-internal'),
+                    str(repo_root / 'modules/nsx-core/src/nsx_performance.c')]
+    if family == 'apollo4-fpga':
+        command += ['-DAPOLLO4_FPGA=48']
     command += [str(fixture / 'main.c'),
                 str(repo_root / f'modules/nsx-power/src/{arch}/nsx_power_performance.c'), '-o', str(binary)]
     subprocess.run(command, check=True, capture_output=True, text=True)
@@ -30,8 +36,8 @@ def selector_binary(request, repo_root, tmp_path):
 
 
 @pytest.mark.parametrize(('selector_binary', 'scenario'),
-                         [(family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4')
-                          for scenario in (COMMON if family == 'apollo4' else COMMON + AP3)],
+                         [(family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4', 'apollo4-fpga')
+                          for scenario in (COMMON + ('wrong-hardware', 'missing-ack') if family.startswith('apollo4') else COMMON + AP3)],
                          indirect=['selector_binary'])
 def test_family_performance_contract(selector_binary, scenario):
     family, binary = selector_binary

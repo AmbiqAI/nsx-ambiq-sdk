@@ -28,6 +28,10 @@ static unsigned seen(unsigned id) {
 power_t power;
 crypto_t crypto = {.HOSTCCISIDLE_b = {1}};
 itm_t itm;
+clock_t clock_regs;
+uint32_t am_hal_clkmgr_clock_config_get(unsigned id,uint32_t *hz,void *cfg) {
+    assert(cfg == NULL); *hz=id == 5 ? 250000000u : 0u; return 0;
+}
 static unsigned unlocked;
 const am_hal_cachectrl_config_t am_hal_cachectrl_defaults = 0;
 uint32_t __real_nsx_core_init(nsx_core_config_t *cfg);
@@ -47,7 +51,7 @@ uint32_t am_hal_cachectrl_enable(void) {return step(CACHE_ENABLE);}
 void am_hal_sysctrl_fpu_enable(void) {(void)step(FPU);}
 void am_hal_sysctrl_fpu_stacking_enable(bool lazy) {assert(lazy); (void)step(STACK);}
 uint32_t am_hal_pwrctrl_mcu_mode_select(unsigned mode) {
-    assert(mode >= 10 && mode <= 13); selected_mode=mode; return step(PERF);
+    assert(mode >= 10 && mode <= 13); selected_mode=mode; power.MCUPERFREQ_b.MCUPERFSTATUS=mode; power.MCUPERFREQ_b.MCUPERFACK=1; return step(PERF);
 }
 #if (defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P))
 void am_bsp_itm_printf_enable(void) {(void)step(DEBUG);}

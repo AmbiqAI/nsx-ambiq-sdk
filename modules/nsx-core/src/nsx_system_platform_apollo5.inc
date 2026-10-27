@@ -173,6 +173,7 @@ uint32_t nsx_platform_minimal_hw_init(void) {
  * nsx_platform_set_perf_mode
  * =================================================================== */
 
+#if defined(PART_atomiq110)
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     if (mode == NSX_PERF_HIGH) {
@@ -190,3 +191,9 @@ uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
     }
 #endif
 }
+#else
+#include "nsx_performance_internal.h"
+uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
+    return nsx_performance_select(mode);
+}
+#endif

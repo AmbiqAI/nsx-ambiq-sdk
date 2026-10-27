@@ -1,14 +1,16 @@
 # CPU frequency synchronization in nsx-power
 
-`nsx_power_set_performance_mode()` shares its Apollo510/Apollo330P/510L
-implementation in `modules/nsx-power/src/nsx_power_performance.c`. It updates
-the existing CMSIS `SystemCoreClock` variable after a successful HAL switch;
-it does not own SysTick, RTOS scheduling, oscillator calibration or concurrent
-HAL reconfiguration. Apollo3, Apollo4 and Atomiq110 retain their existing
-platform implementations.
+`nsx_power_set_performance_mode()` and `nsx_set_perf_mode()` share the AP4 and
+Apollo510/B/AP330P/510L operation in `modules/nsx-core/src/nsx_performance.c`.
+The power adapter explicitly translates its legacy enum. Successful selection
+updates CMSIS `SystemCoreClock` after verifying hardware ACK/mode; callers own
+SysTick/RTOS reloads, cached conversions and serialized clock changes. The helper
+does not calibrate oscillators. AP3 and Atomiq110 retain their existing selectors;
+AP4 FPGA retains its existing lack of clock publication.
 
 | Part | LOW | HIGH | MAX |
 | --- | --- | --- | --- |
+| Apollo4P/L silicon | Nominal 96 MHz | Nominal 192 MHz | Same as HIGH |
 | Apollo510 / Apollo510B | HAL LP constant (nominal 96 MHz) | Nominal 250 MHz; rejected during 196.608 MHz audio adjustment | Same as HIGH |
 | Apollo330P / Apollo510L | HAL LP constant (nominal 96 MHz) | HAL HP1 constant (nominal 192 MHz) | Configured PLLVCO rate, 192–250 MHz on silicon |
 

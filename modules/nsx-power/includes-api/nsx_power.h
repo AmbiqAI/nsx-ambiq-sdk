@@ -205,16 +205,22 @@ extern void nsx_power_deep_sleep(void);
  *
  * Apollo3/3P maps LOW to normal mode and HIGH/MAX to burst mode; Apollo4
  * maps LOW to LP and HIGH/MAX to HP. Both reject NOT_SET and unknown values
- * without a HAL call, propagate HAL errors, and leave SystemCoreClock unchanged.
+ * without a HAL call and propagate HAL errors. AP3 leaves SystemCoreClock unchanged;
+ * AP4 silicon publishes 96/192 MHz after hardware ACK/mode verification. AP4
+ * FPGA retains its existing publication behavior.
  * Apollo3/3P initializes burst support on the first valid request (including
  * LOW), caches only successful initialization with available burst support,
- * and retries initialization after failure. The caller owns clock publication
- * and dependent timing updates on these families.
+ * and retries initialization after failure. The caller owns AP3 clock publication
+ * and dependent timing updates on all families.
  *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
- * SystemCoreClock value. Apollo510 HP uses configured HFRC2; Apollo330P/510L
+ * SystemCoreClock value after hardware ACK/mode verification. NOT_SET retains
+ * its LOW compatibility mapping on these families; other unknown values fail
+ * before hardware/query effects. Apollo510 HP uses configured HFRC2; Apollo330P/510L
  * HP2 uses configured PLLVCO. Apollo510 pending HFRC2 adjustment still reports
- * nominal free-running 250 MHz. Active audio adjustment can lower the rate. FPGA builds
+ * nominal free-running 250 MHz. Active 196.608 MHz audio adjustment rejects HP
+ * on AP510/B. Failed selection retains prior publication, not guaranteed hardware
+ * state; callers must handle errors. FPGA builds
  * use scaled HAL mode constants. The application owns SysTick reloads and other
  * cached timing conversions; update them after a successful switch. Direct
  * HAL clock changes are outside this helper's synchronization contract. If
