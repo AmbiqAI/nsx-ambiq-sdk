@@ -54,22 +54,56 @@ interrupt-driven application activity; only ownership transitions mask interrupt
 #include "nsx_system.h"
 
 int main(void) {
-    // One-call init: HP mode, caches, ITM debug, SpotManager
-    nsx_system_config_t cfg = nsx_system_development;
-    cfg.skip_bsp_init = true;   // skip the BSP delay for fast local loops
-    nsx_system_init(&cfg);
+    // Full board baseline, cache requested, LOW performance, ITM output.
+    nsx_system_config_t cfg = {
+        .perf_mode = NSX_PERF_LOW,
+        .enable_cache = true,
+        .debug = {.transport = NSX_DEBUG_ITM},
+    };
+    if (nsx_system_init(&cfg) != NSX_STATUS_SUCCESS) {
+        return 1; // Application owns its startup-failure policy.
+    }
 
     nsx_printf("Hello from NSX\n");
 }
 ```
 
-Three built-in presets:
+Three opt-in presets (include `nsx_presets.h` and link `nsx::presets`):
 
 | Preset | Perf | Cache | Debug | SpotMgr | BSP init |
 |--------|------|-------|-------|---------|----------|
 | `nsx_system_development` | HIGH | yes | ITM | yes | yes |
 | `nsx_system_inference` | HIGH | yes | none | yes | yes |
 | `nsx_system_minimal` | LOW | no | none | no | skip |
+
+Zero-initialized configuration selects the full BSP path, LOW performance and
+no explicit cache/debug/profile request. The BSP can itself enable caches or
+change peripheral state. The minimal path enables cache/FPU on AP3/AP4, and
+CPDLP/SpotManager/FPU on Apollo5-class parts. Consequently `enable_cache=false`
+is not a cache-disable guarantee, and minimal startup is not a substitute for
+board regulator/clock prerequisites. `enable_sram` is reserved and ignored.
+
+`nsx_set_perf_mode()` retains family-specific legacy meanings: AP3/3P makes no
+change; AP4 and AP510 map MEDIUM/HIGH to the same HP mode; AP330P/510L map them
+to HP1/HP2. It does not update `SystemCoreClock` or SysTick/RTOS timing. The
+`nsx-power` selector has a different enum and additional family behavior; do not
+cast between these APIs. See the family table in `nsx_system.h`.
+
+`nsx_debug_init(NULL)` and `NSX_DEBUG_NONE` are no-ops, including when a transport
+is already active. Full BSP startup still releases active NSX debug first.
+Successful system/debug setup and legacy printf-enable wrappers share transport
+state; repeated enable of the active transport does not reconfigure hardware.
+Checked setup errors stop later operations without rolling back completed work.
+Void/nonreturning vendor helpers do not become checked or bounded by this API.
+
+The startup contract tests execute the real lifecycle, coordinator, debug state,
+printf wrappers and selected family backend with controlled HAL responses.
+They cover full/minimal and staged composition, debug/performance ordering,
+legacy mode mappings and failures. These are host control-flow checks; existing
+real-header builds and board smokes provide separate target evidence. Known
+system/power clock-publication and cross-family ownership gaps remain tracked
+in [#162](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/162) and
+[#163](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/163); no replacement API or migration is implemented here.
 
 Or call individual building blocks for fine-grained control — see the
 header's "Recommended Initialization Order" section.
@@ -81,6 +115,8 @@ header's "Recommended Initialization Order" section.
 
 | Backend directory | SoCs covered |
 |-------------------|--------------|
+| `src/apollo3p/` | Apollo3, Apollo3P |
+| `src/apollo4p/` | Apollo4P, Apollo4L |
 | `src/apollo510/` | Apollo510, Apollo510B, Apollo510L, Apollo5A, Apollo5B, Apollo330P |
 
 CMake selects the correct backend via `NSX_SOC_FAMILY`.

@@ -38,40 +38,27 @@
  *
  * ## Recommended Initialization Order in main()
  *
- * The `nsx_system_init()` convenience function performs all steps in the
- * recommended order. For fine-grained control, call the individual helpers
- * in this order:
+ * Choose either nsx_system_init() or a staged sequence, before application
+ * drivers, DMA or a scheduler. Check every returned status. A staged sequence
+ * is nsx_core_init(), one of nsx_hw_init()/nsx_minimal_hw_init(), optional
+ * nsx_cache_enable(), nsx_debug_init(), then nsx_set_perf_mode(). Do not call
+ * nsx_system_init() after a staged hardware-init entry point. The C runtime
+ * and static constructors have already run; nsx_core_init() only establishes
+ * NSX lifecycle/API state.
  *
- * ```c
- * // 1. Core runtime (does not gate other modules)
- * nsx_core_init(&core_cfg);
- *
- * // 2. Low-power hardware init (required for cache, clocks, SIMOBUCK)
- * //    NOTE: am_bsp_low_power_init() includes a 2-second delay.
- * //    Use nsx_minimal_hw_init() instead if you don't need full BSP setup.
- * nsx_hw_init();               // or nsx_minimal_hw_init()
- *
- * // 3. Cache (requires CPDLP from step 2 — will fail without it)
- * nsx_cache_enable();           // from nsx_mem.h
- *
- * // 4. Debug output (before the performance switch — see gotchas below)
- * nsx_debug_init(&debug_cfg);
- *
- * // 5. Performance mode (family-specific)
- * nsx_set_perf_mode(NSX_PERF_HIGH);
- *
- * // 6. Application-specific peripherals
- * // ... your code ...
- * ```
+ * Minimal startup is an advanced board/boot-dependent path, not a faster
+ * equivalent of the full BSP baseline. It does not establish all regulator
+ * and clock prerequisites for high-performance operation. Debug setup must
+ * precede the Apollo5-class performance switch.
  *
  * ## Common Gotchas
  *
  * ### I/D Cache silently not enabled (Apollo5 family)
  *   `am_hal_cachectrl_icache_enable()` checks `PWRMODCTL->CPDLPSTATE` and
- *   returns FAIL (silently!) if the cache power domain (RLP) is not active.
+ *   returns FAIL if the cache power domain (RLP) is not active.
  *   This is configured by `am_hal_pwrctrl_low_power_init()` inside
  *   `am_bsp_low_power_init()`. Without it, inference runs 3–4x slower
- *   with no visible error.
+ *   if the caller ignores the returned error.
  *   → Always call `nsx_hw_init()` or `nsx_minimal_hw_init()` before
  *     `nsx_cache_enable()`. Check the return value.
  *
@@ -151,10 +138,17 @@ extern "C" {
 
 /** @brief CPU performance / clock speed setting.
  *
- *  | SoC       | LOW         | MEDIUM      | HIGH        |
- *  |-----------|-------------|-------------|-------------|
- *  | Apollo510 | LP  96 MHz  | HP  250 MHz | HP  250 MHz |
- *  | AP330P    | LP  96 MHz  | HP1         | HP2         |
+ *  | Family      | LOW       | MEDIUM | HIGH |
+ *  |-------------|-----------|--------|------|
+ *  | Apollo3/3P  | No change | No change | No change |
+ *  | Apollo4P/L  | LP        | HP     | HP   |
+ *  | Apollo510/B | LP        | HP     | HP   |
+ *  | AP330P/510L | LP        | HP1    | HP2  |
+ *
+ * These are legacy system-selector meanings, not the nsx-power enum layout.
+ * AP3 burst control is available through nsx_power_set_performance_mode().
+ * CPU rates depend on the configured source; this system selector does not
+ * update SystemCoreClock or application-owned SysTick/RTOS timebases.
  */
 typedef enum {
     NSX_PERF_LOW    = 0,   ///< Low-power mode
@@ -168,7 +162,7 @@ typedef enum {
 
 /** @brief Preferred NSX debug-output transport. */
 typedef enum {
-    NSX_DEBUG_NONE = 0,    ///< No debug output
+    NSX_DEBUG_NONE = 0,    ///< Request no debug setup; not a shutdown operation
     NSX_DEBUG_ITM  = 1,    ///< SWO/ITM (requires JLink + SWO pin)
     NSX_DEBUG_UART = 2,    ///< UART (requires BSP UART pins)
 } nsx_debug_transport_e;
@@ -192,19 +186,21 @@ typedef struct {
  * @brief Complete system initialization configuration.
  *
  * Pass to nsx_system_init() for a single-call setup. Every field
- * has a safe default (zero-init = minimal, low-power, no debug).
+ * Zero-initialization selects full BSP initialization, LOW performance and
+ * no explicit cache/debug/profile request. It does not select minimal startup
+ * or guarantee that the BSP leaves caches/debug domains disabled.
  *
  * For fine-grained control, skip this and call individual helpers.
  */
 typedef struct {
     nsx_perf_mode_e perf_mode;       ///< CPU performance mode
-    bool            enable_cache;    ///< Enable I/D cache on staged R5 targets
-    bool            enable_sram;     ///< Reserved — keep shared SRAM powered (not yet wired)
+    bool            enable_cache;    ///< Request cache enable after hardware init; false does not disable cache
+    bool            enable_sram;     ///< Reserved, ignored; does not change memory power or layout
 
     nsx_debug_config_t debug;        ///< Debug output config
 
     bool            skip_bsp_init;   ///< Skip am_bsp_low_power_init() (use minimal HW init)
-    bool            spot_mgr_profile;///< Enable SpotManager profile (Apollo5 family only)
+    bool            spot_mgr_profile;///< Profile request on Apollo510/5A/5B; ignored by AP3/AP4/AP330P/510L
 } nsx_system_config_t;
 
 /* ===================================================================
@@ -226,6 +222,7 @@ typedef struct {
  * nsx_hw_init(), nsx_minimal_hw_init() and nsx_power_configure(). Choose one
  * per reset, from foreground before drivers. Valid duplicate/re-entrant calls
  * return NSX_STATUS_STARTUP_REJECTED, including after a reported setup failure.
+ * Other families currently do not enforce this shared ownership guard.
  * Preflight errors are retryable. skip_bsp_init selects minimal initialization
  * and still consumes ownership. Direct HAL/BSP calls bypass this guard.
  *
@@ -244,34 +241,35 @@ uint32_t nsx_system_init(const nsx_system_config_t *cfg);
 /**
  * @brief Full staged hardware init via BSP.
  *
- * Calls am_bsp_low_power_init() which, depending on SoC:
- *   - (AP510) Waits ~2 seconds, configures SIMOBUCK/CPDLP/clocks/SpotManager
+ * Calls the board's am_bsp_low_power_init(); its side effects and delays are
+ * board-specific. The BSP has a void interface, so its internal failures
+ * cannot be propagated. This operation may reset peripheral/debug state.
+ * Active NSX-managed debug output is released first; that failure stops setup.
+ * Configure debug after the BSP baseline if output is required.
  *
- * On all SoCs this call disables debug/trace for minimum power.
- * Call nsx_debug_init() AFTER this if you need ITM/SWO.
- *
- * @return 0 on success.
+ * @return 0 on completion, non-zero on NSX ownership/debug-release failure.
  */
 uint32_t nsx_hw_init(void);
 
 /**
- * @brief Minimal staged hardware init (no BSP, no 2-second delay).
+ * @brief Minimal staged hardware init without the full BSP baseline.
  *
- * Performs the minimum setup needed for basic operation:
- *   - Apollo5: CPDLP config (cache power domain), SpotManager init, FPU
+ * AP3/3P and AP4P/L configure/enable cache and FPU. Apollo5-class backends
+ * configure CPDLP, initialize SpotManager and enable FPU; their cache-enable
+ * operation remains separate. Therefore enable_cache=false in system init
+ * is not a cache-disable request. This path does not establish the complete
+ * board regulator, clock or peripheral baseline needed by every application.
  *
- * Does NOT configure SIMOBUCK, clock gates, or disable peripherals.
- * On Apollo5, caches are NOT enabled — call nsx_cache_enable() after.
- *
- * Use this when you want fast startup and don't need full low-power
- * optimization.
- *
- * @return 0 on success.
+ * @return 0 on success, non-zero on ownership or reported setup failure.
  */
 uint32_t nsx_minimal_hw_init(void);
 
 /**
- * @brief Set CPU performance mode.
+ * @brief Apply the legacy family performance mapping shown above.
+ *
+ * Does not publish SystemCoreClock or reconfigure SysTick/RTOS timing.
+ * Caller owns those timebases and the hardware prerequisites for the mode.
+ * Unknown modes fail before hardware effects; AP3 valid modes remain no-ops.
  *
  * @param mode  Desired performance level.
  * @return 0 on success.

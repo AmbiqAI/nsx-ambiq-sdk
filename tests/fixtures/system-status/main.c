@@ -11,6 +11,8 @@ enum { CORE = 1, BSP, CACHE_CONFIG, CACHE_ENABLE, CPDLP, SPOT, FPU, STACK,
        CACHE, OTP_ON, CRYPTO_ON, DCU_GET, DCU_UPDATE, CRYPTO_OFF, OTP_OFF,
        DEBUG, TPIU, GPIO, PRINT, PERF, PROFILE, ITM_OFF, PIN_HIGH, PIN_OUTPUT, TPIU_OFF, DETACH, PIN_DEFAULT, SWO_PREP };
 static unsigned calls[64], count, failure, secondary_failure, irq_mask;
+static unsigned selected_mode, print_calls;
+uint32_t SystemCoreClock = 96000000;
 static unsigned failure_window = 1, power_window;
 static unsigned step(unsigned id) {
     assert(count < sizeof(calls) / sizeof(calls[0]));
@@ -28,8 +30,13 @@ crypto_t crypto = {.HOSTCCISIDLE_b = {1}};
 itm_t itm;
 static unsigned unlocked;
 const am_hal_cachectrl_config_t am_hal_cachectrl_defaults = 0;
-const nsx_core_api_t nsx_core_V1_0_0 = {0};
-uint32_t nsx_core_init(nsx_core_config_t *cfg) {(void)cfg; return step(CORE);}
+uint32_t __real_nsx_core_init(nsx_core_config_t *cfg);
+uint32_t __wrap_nsx_core_init(nsx_core_config_t *cfg) {
+    unsigned status=step(CORE);
+    return status ? status : __real_nsx_core_init(cfg);
+}
+void am_util_stdio_vprintf(const char *fmt,va_list args) {(void)fmt; (void)args; ++print_calls;}
+void am_util_delay_us(unsigned us) {(void)us;}
 uint32_t nsx_cache_enable(void) {return step(CACHE);}
 uint32_t am_hal_interrupt_master_disable(void) {unsigned old=irq_mask; irq_mask=1; ++power_window; return old;}
 void am_hal_interrupt_master_enable(void) {irq_mask=0;}
@@ -40,9 +47,9 @@ uint32_t am_hal_cachectrl_enable(void) {return step(CACHE_ENABLE);}
 void am_hal_sysctrl_fpu_enable(void) {(void)step(FPU);}
 void am_hal_sysctrl_fpu_stacking_enable(bool lazy) {assert(lazy); (void)step(STACK);}
 uint32_t am_hal_pwrctrl_mcu_mode_select(unsigned mode) {
-    assert(mode >= 10 && mode <= 13); return step(PERF);
+    assert(mode >= 10 && mode <= 13); selected_mode=mode; return step(PERF);
 }
-#if defined(AM_PART_APOLLO3P)
+#if (defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P))
 void am_bsp_itm_printf_enable(void) {(void)step(DEBUG);}
 void am_bsp_uart_printf_enable(void) {(void)step(DEBUG);}
 #else
@@ -92,8 +99,18 @@ uint32_t am_hal_gpio_pinconfig(unsigned pin,unsigned cfg) {assert(pin == 28); re
 void am_hal_itm_print(char *s) {(void)s;}
 void am_util_stdio_printf_init(am_util_stdio_print_char_t fn) {assert(fn == NULL || fn == am_hal_itm_print); (void)step(fn ? PRINT : DETACH);}
 
+#include "contract_cases.h"
+
 int main(int argc, char **argv) {
     assert(argc >= 2);
+    if(!strcmp(argv[1], "contract")) {
+        assert(argc == 3); contract_startup(argv[2]); puts("PASS"); return 0;
+    }
+    if(!strcmp(argv[1], "performance")) {
+        assert(argc == 5);
+        contract_performance((unsigned)atoi(argv[2]),(unsigned)atoi(argv[3]),atoi(argv[4]) != 0);
+        puts("PASS"); return 0;
+    }
     nsx_system_config_t cfg = {.perf_mode=NSX_PERF_LOW, .enable_cache=true,
                               .debug={.transport=NSX_DEBUG_ITM}, .spot_mgr_profile=true};
     unsigned status;
@@ -122,7 +139,7 @@ int main(int argc, char **argv) {
         assert(status == (failure ? 0x40+failure : 0));
         if (failure) {
             assert(calls[count-1] == failure && !seen(PERF) && !seen(DEBUG));
-#if defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO4P)
+#if (defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
             unsigned previous=count;
             assert(nsx_system_init(&cfg) == NSX_STATUS_STARTUP_REJECTED && count == previous);
 #endif
@@ -166,7 +183,7 @@ int main(int argc, char **argv) {
         assert(seen(CORE) == 1 && seen(BSP) == 1 && seen(CACHE) == 1 && seen(DEBUG) == 1);
         unsigned debug_pos=0, perf_pos=0;
         for (unsigned i=0; i<count; ++i) {if(calls[i] == DEBUG) debug_pos=i; if(calls[i] == PERF) perf_pos=i;}
-#if !defined(AM_PART_APOLLO3P)
+#if !(defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P))
         assert(perf_pos > debug_pos);
 #else
         (void)debug_pos; (void)perf_pos;

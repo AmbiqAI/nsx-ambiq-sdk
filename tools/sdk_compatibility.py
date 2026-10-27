@@ -156,6 +156,20 @@ POWER_STARTUP = (
     Requirement('tests/test_debug_state.py::test_apollo2_debug_backend_compiles'),
     Requirement('tests/test_debug_state.py::test_debug_state_real_header_builds', 4,
                 boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb')),
+    Requirement('tests/test_system_status.py::test_startup_public_composition', 84,
+                parameters=('system_backend', 'scenario'),
+                variants=tuple((family, scenario)
+                    for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l', 'apollo510', 'apollo330p', 'apollo510l')
+                    for scenario in ('full-none', 'full-itm', 'full-uart', 'minimal-none', 'minimal-itm',
+                                     'minimal-uart', 'staged-full-itm', 'staged-minimal-itm', 'default',
+                                     'none-after-itm', 'fail-core', 'fail-cache'))),
+    Requirement('tests/test_system_status.py::test_system_performance_mapping', 30,
+                parameters=('system_backend', 'mode', 'failure'),
+                variants=tuple((family, mode, failure)
+                    for family in ('apollo4p', 'apollo4l', 'apollo510', 'apollo330p', 'apollo510l')
+                    for mode in (0, 1, 2) for failure in (False, True))),
+    Requirement('tests/test_system_status.py::test_additional_system_family_headers_compile', 3,
+                boards=('apollo3_evb', 'apollo4l_evb', 'apollo510_evb')),
     Requirement('tests/test_system_status.py::test_system_preflight_and_order', 10,
                 parameters=('system_backend', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p', 'apollo510l')
