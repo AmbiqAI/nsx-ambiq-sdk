@@ -6,7 +6,8 @@
 
 static volatile uint32_t observed;
 static uint32_t statuses[2], elapsed[2];
-static bool sleeping[2];
+static bool sleeping[2], powered[2];
+static uint32_t power_status[2];
 void setUp(void) {}
 void tearDown(void) {
     TEST_ASSERT_EQUAL_UINT32(0, nsx_power_tempco_disable());
@@ -18,6 +19,7 @@ static void observe(nsx_timer_config_t *cfg) {
         elapsed[observed]=am_hal_stimer_counter_get()-start;
         statuses[observed]=s_nsx_power_tempco.last_handler_status;
         sleeping[observed]=s_nsx_power_tempco.suspended;
+        power_status[observed]=am_hal_pwrctrl_periph_enabled(AM_HAL_PWRCTRL_PERIPH_ADC, &powered[observed]);
         ++observed;
     }
 }
@@ -38,6 +40,8 @@ static void capture_and_resume(void) {
         UnityPrint("capture_ticks_6mhz="); UnityPrintNumberUnsigned(elapsed[i]); UnityPrint("\n");
         TEST_ASSERT_EQUAL_UINT32(0,statuses[i]);
         TEST_ASSERT_TRUE(sleeping[i]);
+        TEST_ASSERT_EQUAL_UINT32(0,power_status[i]);
+        TEST_ASSERT_FALSE(powered[i]);
     }
     TEST_ASSERT_EQUAL_UINT32(2,s_nsx_power_tempco.callback_count);
     for(unsigned i=0;i<AM_HAL_TEMPCO_NUMSAMPLES;++i) {
