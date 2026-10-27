@@ -146,22 +146,14 @@ uint32_t nsx_usb_send(nsx_usb_config_t *cfg, const void *data, uint32_t len,
     uint32_t sent = 0;
     uint32_t elapsed_ms = 0;
 
-    while (elapsed_ms < timeout_ms) {
-        nsx_usb_guard_enter();
-        uint32_t available = tud_cdc_write_available();
-        nsx_usb_guard_exit();
-        if (available >= len) break;
-        nsx_usb_guard_enter();
-        tud_cdc_write_flush();
-        nsx_usb_service();
-        nsx_usb_guard_exit();
-        am_util_delay_ms(1);
-        elapsed_ms++;
-    }
-
     while (remaining > 0 && elapsed_ms < timeout_ms) {
         nsx_usb_guard_enter();
-        uint32_t chunk = tud_cdc_write(src + sent, remaining);
+        uint32_t available = tud_cdc_write_available();
+        uint32_t chunk = 0;
+        if (available > 0) {
+            uint32_t want = (remaining < available) ? remaining : available;
+            chunk = tud_cdc_write(src + sent, want);
+        }
         tud_cdc_write_flush();
         nsx_usb_service();
         nsx_usb_guard_exit();

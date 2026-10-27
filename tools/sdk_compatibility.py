@@ -120,6 +120,12 @@ POWER_STARTUP = (
                 parameters=('scenario',), variants=tuple((s,) for s in
                     ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
                      'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))),
+    Requirement('tests/test_usb_cdc_send.py::test_cdc_send_fifo_progress', 18,
+                parameters=('cdc_send_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('ordinary', 'apollo5-flush')
+                               for scenario in ('fit', 'boundary', 'large', 'wide-length',
+                                                'initial-full', 'short-write', 'partial',
+                                                'stalled', 'default-timeout'))),
     Requirement('tests/test_usb_reentrancy.py::test_usb_reentrancy', 14,
                 parameters=('transport', 'scenario'),
                 variants=tuple((transport, scenario) for transport in ('cdc', 'vendor')
