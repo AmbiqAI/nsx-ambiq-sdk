@@ -4,7 +4,9 @@
 implementation in `modules/nsx-power/src/nsx_power_performance.c`. It updates
 the existing CMSIS `SystemCoreClock` variable after a successful HAL switch;
 it does not own SysTick, RTOS scheduling, oscillator calibration or concurrent
-HAL reconfiguration. Apollo3, Apollo4 and Atomiq110 retain their existing
+HAL reconfiguration. AP4 silicon and Apollo510/B/AP330P/510L system and power
+selectors now share the operation and verify actual ACK/mode before publishing.
+AP4 silicon publishes 96 MHz LP / 192 MHz HP. AP4 FPGA, Apollo3 and Atomiq110 retain their existing
 platform implementations.
 
 | Part | LOW | HIGH | MAX |

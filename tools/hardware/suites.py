@@ -145,4 +145,9 @@ TIMER_PERIOD = Suite('timer-period', 'tests/hardware/test_timer.py::test_timer_p
                      'tests/hardware/timer', 'timer_period.elf', configure=timer_options)
 
 
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD)
+PERFORMANCE = Suite('performance', 'tests/hardware/test_performance.py::test_performance',
+                    ('prepare_performance', 'mixed_public_transitions', 'invalid_requests', 'restore_low'),
+                    'tests/hardware/performance', 'performance_contract.elf', configure=timer_options)
+
+
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE)

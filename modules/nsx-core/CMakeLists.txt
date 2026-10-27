@@ -82,6 +82,11 @@ if(NSX_CORE_ARCH_DIR)
     )
 endif()
 
+if(NSX_CORE_ARCH_DIR STREQUAL "apollo4p" OR
+   NSX_CORE_ARCH_DIR STREQUAL "apollo510")
+    list(APPEND NSX_SYSTEM_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_performance.c)
+endif()
+
 # Bounded _sbrk for newlib-based toolchains (GCC, ATfE).  armclang uses
 # its own ARM_LIB_HEAP / ARM_LIB_STACK runtime and does not need this.
 nsx_toolchain_uses_newlib(NSX_TOOLCHAIN_USES_NEWLIB)
@@ -128,6 +133,11 @@ target_link_libraries(nsx_system PUBLIC
 # normal strong-over-weak resolution applies. Found + hardware-validated on
 # apollo330mP_evb and apollo510_evb (heliaPROFILER bring-up, 2026-07).
 if(NSX_TOOLCHAIN_USES_NEWLIB)
+    if(NSX_CORE_ARCH_DIR STREQUAL "apollo4p" OR NSX_CORE_ARCH_DIR STREQUAL "apollo510")
+        # Performance publication can be the first reference, after the CMSIS
+        # startup archive was scanned. Retain its clock definition up front.
+        target_link_options(nsx_system PUBLIC -Wl,-u,SystemCoreClock)
+    endif()
     target_link_options(nsx_system PUBLIC
         -Wl,-u,_sbrk
         -Wl,-u,__wrap__write_r

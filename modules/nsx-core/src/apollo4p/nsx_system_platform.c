@@ -12,6 +12,7 @@
  */
 
 #include "nsx_system.h"
+#include "nsx_performance_internal.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -51,11 +52,7 @@ uint32_t nsx_platform_minimal_hw_init(void) {
  * =================================================================== */
 
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
-    if (mode == NSX_PERF_HIGH || mode == NSX_PERF_MEDIUM) {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
-    } else {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
+    return nsx_performance_select(mode);
 }
 
 /* ===================================================================

@@ -31,6 +31,7 @@ def system_backend(request, repo_root, tmp_path_factory):
                     '-I' + str(fixture), '-I' + str(core / 'includes-api'),
                     '-I' + str(core / 'includes-internal'), str(fixture / 'main.c'),
                     str(core / 'src/nsx_system.c'),
+                    *([] if arch == 'apollo3p' else [str(core / 'src/nsx_performance.c')]),
                     str(core / 'src/nsx_debug.c'), str(core / 'src/nsx_startup.c'),
                     str(lifecycle), str(core / 'src/nsx_core_portable.c'),
                     '-Wl,--wrap=nsx_core_init',

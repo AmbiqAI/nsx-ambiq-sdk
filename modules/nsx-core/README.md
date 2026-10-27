@@ -85,9 +85,12 @@ board regulator/clock prerequisites. `enable_sram` is reserved and ignored.
 
 `nsx_set_perf_mode()` retains family-specific legacy meanings: AP3/3P makes no
 change; AP4 and AP510 map MEDIUM/HIGH to the same HP mode; AP330P/510L map them
-to HP1/HP2. It does not update `SystemCoreClock` or SysTick/RTOS timing. The
-`nsx-power` selector has a different enum and additional family behavior; do not
-cast between these APIs. See the family table in `nsx_system.h`.
+to HP1/HP2. AP4 silicon and AP510/B/AP330P/510L share selection with `nsx-power`
+and publish `SystemCoreClock` only after HAL success and hardware ACK/mode
+verification. Errors retain the previous publication but do not roll back
+hardware. Callers own serialized access, SysTick/RTOS reloads and cached timing
+conversions. The two public enums have different layouts; do not cast between
+them. AP3, AP2, AT110 and AP4 FPGA publication behavior is unchanged.
 
 `nsx_debug_init(NULL)` and `NSX_DEBUG_NONE` are no-ops, including when a transport
 is already active. Full BSP startup still releases active NSX debug first.
@@ -101,8 +104,8 @@ printf wrappers and selected family backend with controlled HAL responses.
 They cover full/minimal and staged composition, debug/performance ordering,
 legacy mode mappings and failures. These are host control-flow checks; existing
 real-header builds and board smokes provide separate target evidence. Known
-system/power clock-publication and cross-family ownership gaps remain tracked
-in [#162](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/162) and
+AP3 system/power semantics and cross-family ownership gaps remain tracked
+in [#165](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/165) and
 [#163](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/163); no replacement API or migration is implemented here.
 
 Or call individual building blocks for fine-grained control — see the
