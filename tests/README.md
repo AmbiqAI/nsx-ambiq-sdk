@@ -211,3 +211,8 @@ timer preemption. The GCC gate requires those checks and real USB firmware links
 on AP4 KXR, AP510 and AP510B. Host checks do not qualify physical USB traffic or
 sensor interrupt latency; simultaneous TileIO OUT/IN traffic remains a hardware
 acceptance check.
+
+`test_usb_cdc_send.py` exercises production CDC sends against a bounded FIFO,
+including requests above 64 KiB, short writes, full queues and stalled hosts.
+It verifies accepted-byte counts, ordering and existing no-progress timeout
+accounting; successful enqueue is not proof of host delivery.
