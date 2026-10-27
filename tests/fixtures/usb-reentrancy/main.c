@@ -11,7 +11,7 @@ const uint8_t *nsx_usb_get_webusb_url_desc(uint8_t *len) {*len=0;return NULL;}
 static nsx_timer_config_t *timer;
 static unsigned task_depth,max_depth,task_calls,callback_depth,max_callback_depth;
 static unsigned callbacks,received,available,emit,inject,write_count;
-static bool vendor;
+static bool vendor, snapshot;
 uint32_t nsx_timer_init(nsx_timer_config_t *cfg) {timer=cfg;return 0;}
 bool tusb_init(void) {return true;}
 void am_util_delay_ms(uint32_t ms) {(void)ms;}
@@ -20,7 +20,7 @@ static void preempt(void) {
         inject=0;
         unsigned before=task_calls;
         timer->callback(timer);
-        assert(task_calls==before); /* API must exclude timer servicing. */
+        assert(task_calls==before+(snapshot?1:0)); /* Snapshots allow timer progress. */
     }
 }
 static void receive_callback(nsx_usb_config_t *cfg) {
@@ -71,13 +71,20 @@ int main(int argc,char **argv) {
     assert(nsx_usb_init(&cfg)==0);cfg._vendor_connected=1;
     available=8;
     if(!strcmp(argv[2],"query")) {
-        inject=1;
-        if(vendor)assert(nsx_usb_vendor_data_available(&cfg));else assert(nsx_usb_data_available(&cfg));
-        assert(!inject);
+        snapshot=true;
+        for(unsigned i=0;i<100;++i) {
+            cfg._rx_ready=cfg._vendor_rx_ready=0;
+            available=0;inject=1;
+            if(vendor)assert(!nsx_usb_vendor_data_available(&cfg));else assert(!nsx_usb_data_available(&cfg));
+            assert(!inject);
+        }
     } else if(!strcmp(argv[2],"flush")) {
         inject=1;nsx_usb_flush_rx(&cfg);assert(!inject && available==0);
     } else if(!strcmp(argv[2],"connected")) {
-        inject=1;assert(nsx_usb_connected(&cfg));assert(!inject);
+        snapshot=true;available=0;
+        for(unsigned i=0;i<100;++i) {
+            inject=1;assert(nsx_usb_connected(&cfg));assert(!inject);
+        }
     } else {
         emit=1;
         if(!strcmp(argv[2],"timer"))timer->callback(timer);
