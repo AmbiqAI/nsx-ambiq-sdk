@@ -889,7 +889,10 @@ def test_power_public_api_uses_nsx_prefix(repo_root: Path) -> None:
         "NSX_PERF_MAX",
     ):
         assert forbidden not in header
-        assert forbidden not in source_text
+        # The private performance adapter may explicitly translate to core's
+        # enum. Those names must still stay out of the power public header.
+        if forbidden not in ("nsx_perf_mode_e", "NSX_PERF_LOW", "NSX_PERF_HIGH"):
+            assert forbidden not in source_text
 
     for expected in (
         "nsx_power_config_t",
