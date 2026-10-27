@@ -141,8 +141,11 @@ def test_clock_gate_requires_each_target_scenario():
     assert gate.report(0)['status'] == 'incomplete'
 
 
-@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[1], ADAPTER_REGRESSIONS[3]),
-                         ids=('audio-buffers', 'audio-lifecycle'))
+@pytest.mark.parametrize('requirement', tuple(
+    next(r for r in ADAPTER_REGRESSIONS if r.selector == selector) for selector in (
+        'tests/test_audio_buffers.py::test_audio_buffer_bounds',
+        'tests/test_audio_lifecycle.py::test_audio_lifecycle_failure')),
+    ids=('audio-buffers', 'audio-lifecycle'))
 def test_audio_gate_requires_every_scenario(requirement):
     assert len(requirement.variants) == requirement.minimum
     gate = Gate((requirement,))
@@ -203,3 +206,19 @@ def test_power_gate_requires_each_family_scenario(requirement):
     assert gate.report(0)['status'] == 'passed'
     gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
     assert gate.report(0)['status'] == 'incomplete'
+
+
+@pytest.mark.parametrize('selector', [
+    'tests/test_timer_period.py::test_timer_smoke_builds',
+    'tests/test_timer_period.py::test_timer_other_variants_compile',
+])
+def test_fixed_gcc_timer_builds_are_not_filtered(selector):
+    requirement = next(r for r in ADAPTER_REGRESSIONS if r.selector == selector)
+    gate = Gate((requirement,))
+    items = [SimpleNamespace(nodeid=selector + f'[{board}]',
+             callspec=SimpleNamespace(params={'board': board})) for board in requirement.boards]
+    config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
+    gate.pytest_collection_modifyitems(config, items)
+    assert len(items) == requirement.minimum
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
