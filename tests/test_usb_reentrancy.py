@@ -34,4 +34,16 @@ def test_usb_real_header_links(repo_root, tmp_path, board):
     compiler = compiler_for_test('gcc')
     suite = Suite('usb-link', 'tests/test_usb_reentrancy.py::test_usb_real_header_links',
                   ('invalid_handle',), 'tests/fixtures/usb-link', 'usb_link.elf')
-    build_firmware(BuildRequest(repo_root, tmp_path, board, compiler.parent.parent, suite))
+    firmware = build_firmware(BuildRequest(repo_root, tmp_path, board, compiler.parent.parent, suite))
+    symbols = subprocess.check_output([str(compiler.parent / 'arm-none-eabi-nm'),
+                                       str(firmware.elf)], text=True)
+    definitions = {parts[2]: parts[1] for line in symbols.splitlines()
+                   if len(parts := line.split()) == 3}
+    # RX hooks inherit TU_ATTR_WEAK from TinyUSB's declarations, but must
+    # have actual definitions (uppercase W), not absent/unresolved weak refs.
+    for callback in ('tud_cdc_rx_cb', 'tud_vendor_rx_cb'):
+        assert definitions.get(callback) == 'W', f'{callback} definition missing'
+    for callback in ('tud_vendor_control_xfer_cb', 'tud_mount_cb', 'tud_suspend_cb'):
+        assert definitions.get(callback) == 'T', f'{callback} missing or weak'
+    assert definitions.get('nsx_usb_init') == 'T'
+

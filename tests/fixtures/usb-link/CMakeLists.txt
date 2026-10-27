@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 project(nsx_usb_link C CXX ASM)
 include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
-nsx_add_test_firmware(usb_link main.c MODULES interrupt timer ambiq-usb usb)
+nsx_add_test_firmware(usb_link main.c DEPENDENCIES ambiq-usb MODULES interrupt timer usb)
 target_link_libraries(usb_link PRIVATE nsx::runtime)
