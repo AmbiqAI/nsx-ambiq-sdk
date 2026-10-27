@@ -15,13 +15,23 @@
  * this API. Nested nonblocking calls retain USB ownership and do not recurse
  * into TinyUSB task processing. The guard does not mask global interrupts.
  *
- * ## DTR (Data Terminal Ready)
- * The CDC `nsx_usb_connected()` check relies on the host asserting DTR.
- * Most terminal emulators (minicom, screen, PuTTY) assert DTR on open,
- * but **pyserial does NOT by default**.  When opening a port with pyserial
- * you must explicitly set `ser.dtr = True` (or pass `dsrdtr=True`) before
- * the device will report as connected.  Without DTR, `tud_cdc_connected()`
- * returns false and send/receive will return NSX_USB_STATUS_NOT_CONNECTED.
+ * ## Connection and transfer status
+ * Connection queries are snapshots, not guarantees of delivery. CDC requires
+ * USB configured/not suspended and host DTR asserted. Vendor requires USB
+ * readiness plus its logical session flag (set by the vendor control request
+ * or a higher-level consumer such as TileIO). Invalid/uninitialized configs
+ * report disconnected. Resume alone does not reopen a vendor session.
+ *
+ * Low-level transfers do not require these logical connection snapshots.
+ * Send SUCCESS means all bytes were accepted into the transport, not received
+ * by the host; TIMEOUT may include partial progress in bytes_sent. Blocking
+ * CDC receive reports SUCCESS/PARTIAL/TIMEOUT for full/partial/no data, while
+ * nonblocking reads may return SUCCESS with zero bytes. NOT_CONNECTED remains
+ * available to higher-level consumers but is not returned by these transfers.
+ * The timeout budget counts accumulated no-progress waits, not wall time.
+ *
+ * For a CDC-connected policy, explicitly control host DTR (for example,
+ * ser.dtr = True in pyserial); dsrdtr is a flow-control option, not a DTR value.
  */
 #ifndef NSX_USB_H
 #define NSX_USB_H
