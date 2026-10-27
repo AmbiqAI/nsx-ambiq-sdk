@@ -129,7 +129,8 @@ def test_core_build_gate_rejects_repeated_board(requirement):
 
 
 def test_clock_gate_requires_each_target_scenario():
-    requirement = ADAPTER_REGRESSIONS[-1]
+    requirement = next(r for r in ADAPTER_REGRESSIONS
+                       if r.selector == 'tests/test_power_core_clock.py::test_performance_updates_core_clock')
     gate = Gate((requirement,))
     gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
     gate.parameters = {node: dict(zip(requirement.parameters, variant))
