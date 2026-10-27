@@ -85,7 +85,7 @@ board remains AP3 Blue Plus; no production checkout is modified.
 3. Declare the board/toolchain matrix and extra tests before running them. The
    GCC core baseline is `startup` (three Unity cases) and `runtime` (four) on
    `apollo3p_evb`, `apollo4p_blue_kxr_evb`, `apollo330mP_evb`, `apollo510_evb`
-   and `apollo510b_evb`. Select additional existing shim tests and bounded board
+   and `apollo510b_evb`. Select and execute additional existing shim tests and bounded board
    smokes from the changed interfaces and prior defects. Missing required boards
    remain incomplete coverage; other compilers/variants need explicit coverage.
 4. Run the candidate host gate and fixed-harness comparisons below. Review
@@ -101,7 +101,8 @@ board remains AP3 Blue Plus; no production checkout is modified.
 ### Local commands
 
 Set absolute paths for this intake. Use a new evidence directory outside all
-three checkouts. The harness must include the comparison command; install its
+three checkouts, with an existing parent directory; creation fails if the evidence
+directory already exists. The harness must include the comparison command; install its
 [host prerequisites and device pack](local-hardware-tests.md#environment) first.
 No board-farm runner or Helia installation is required.
 
@@ -113,7 +114,7 @@ CANDIDATE=/path/to/candidate-nsx-sdk
 EVIDENCE=/path/to/new-intake-evidence
 GCC=/path/to/arm-gnu-toolchain
 DECISIONS=/path/to/reviewed-patch-decisions.json
-mkdir -p "$EVIDENCE"
+mkdir "$EVIDENCE"
 unset PYTEST_ADDOPTS GCC_ROOT
 export PATH="$GCC/bin:$PATH"
 
@@ -154,6 +155,22 @@ fresh output.
 For a hardware-free rehearsal, replace `--hardware --probe "$PROBE"` with
 `--build-only`; that can never complete hardware acceptance.
 
+Run any declared extra host tests from the candidate checkout and retain their
+results, even when they are outside the GCC profile. For example, substitute the
+actual reviewed test paths/node IDs (including applicable patch regression tests):
+
+```sh
+cd "$CANDIDATE"
+uv run --group ci python -m pytest -q path/to/selected_test.py \
+  --junitxml="$EVIDENCE/selected-host-tests.xml"
+```
+
+For declared extra fixed-harness board suites, repeat the comparison loop above
+with `SUITES` set to their registered suite names and the appropriate board/probe.
+Keep the startup/runtime results. Follow each suite's documented prerequisites
+and required flags; record standalone hardware smokes separately if no comparison
+suite exists. Selection alone does not count as execution.
+
 Clock testing is an additional regression screen when the intake affects that
 boundary, not a required oscillator-characterization campaign. The existing
 `clock` suite supports AP330 Plus/AP510B with `--clock-experimental`; if selected,
@@ -172,6 +189,9 @@ Keep the complete output directories, not only console PASS lines:
   retain JUnit, exact cases, exclusions, compiler identity and build artifacts.
 - Each core-suite `comparison.json` must say `passed`, with both runs passed.
   Require all seven startup/runtime cases for each declared board and SDK.
+- Every declared extra host test, patch regression and board smoke must have a
+  recorded result and pass its stated acceptance criteria. Retain JUnit/logs and
+  exact commands, revisions and setup; the GCC/core results do not replace them.
 - If clock testing was selected, its comparison must say `experimental_pass`;
   retain all 72 windows per SDK/board and the negative-control/restoration
   evidence. This is a
