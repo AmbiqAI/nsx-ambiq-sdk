@@ -189,3 +189,17 @@ def test_sdk_link_fixture_uses_harness_tests(repo_root, tmp_path):
     manifest = json.loads((output/'manifest.json').read_text())
     assert str(repo_root/'tests/hardware/firmware/main.cpp') in manifest['input_roles']['harness']
     assert not any('/candidate/tests/' in p for p in manifest['inputs_sha256'])
+
+
+def test_tempco_capture_can_be_selected_by_comparison_cli(tmp_path, monkeypatch):
+    from tools.hardware.suites import TEMPCO_CAPTURE
+    requests = []
+    monkeypatch.setattr(comparison, 'compare', lambda req: requests.append(req) or {'status': 'built'})
+    monkeypatch.setattr('sys.argv', ['compare', '--baseline-sdk-root', str(tmp_path/'baseline'),
+        '--candidate-sdk-root', str(tmp_path/'candidate'), '--output', str(tmp_path/'output'),
+        '--gcc-root', str(tmp_path/'gcc'), '--board', 'apollo4p_blue_kxr_evb',
+        '--suite', 'tempco-capture', '--build-only'])
+    comparison.main()
+    assert len(requests) == 1
+    assert requests[0].suite is TEMPCO_CAPTURE
+    assert requests[0].board_request is None
