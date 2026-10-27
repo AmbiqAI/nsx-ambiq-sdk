@@ -42,8 +42,8 @@ GCC = (
                 ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_audio_buffers.py::test_audio_real_headers', 6,
                 ('apollo3_evb', 'apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
-    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 4,
-                ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
+    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 6,
+                ('apollo4p_blue_kxr_evb', 'apollo4l_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
 # Acceptance matrices are deliberately independent of test parametrization so
 # replacing a scenario in the tests cannot silently replace the requirement.

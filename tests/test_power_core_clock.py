@@ -194,7 +194,7 @@ def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> N
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("board", ("apollo510_evb", "apollo510b_evb", "apollo330mP_evb", "apollo510dL_evb"))
+@pytest.mark.parametrize("board", ("apollo4p_blue_kxr_evb", "apollo4l_evb", "apollo510_evb", "apollo510b_evb", "apollo330mP_evb", "apollo510dL_evb"))
 @pytest.mark.parametrize("family", ("gcc", "atfe", "armclang"))
 def test_performance_compiles_with_real_hal(repo_root: Path, tmp_path: Path, board: str, family: str) -> None:
     if family == "gcc":
@@ -213,7 +213,7 @@ def test_performance_compiles_with_real_hal(repo_root: Path, tmp_path: Path, boa
     if compiler is None:
         pytest.skip(f"{family} is unavailable")
     result = configure_contract_project(repo_root, tmp_path, board, family,
-        ("nsx-core", "nsx-power"), prelude=("set(CMAKE_EXPORT_COMPILE_COMMANDS ON)",))
+        ("nsx-core", "nsx-interrupt", "nsx-timer", "nsx-power"), prelude=("set(CMAKE_EXPORT_COMPILE_COMMANDS ON)",))
     assert result.returncode == 0, result.stdout
     build = tmp_path / family / board / "build"
     entries = json.loads((build / "compile_commands.json").read_text())
