@@ -18,6 +18,9 @@
 #define NSX_POWERTEMPCO_PERIOD_US (10u * 1024u * 1024u)
 #endif
 #define NSX_POWERTEMPCO_MIN_TRIM_REV 6u
+/* Conservative ceiling for one 24 MHz, AVG1, 32-track-cycle conversion.
+ * Bounds our polling only; HAL calls retain their own wait policies. */
+#define NSX_POWERTEMPCO_POLL_LIMIT 1000u
 
 #ifdef NSX_POWERTEMPCO_DIAGNOSTICS
 #define NSX_POWERTEMPCO_LOG(...) nsx_printf(__VA_ARGS__)
@@ -46,7 +49,7 @@ static uint32_t nsx_power_tempco_capture_samples(
     nsx_power_tempco_state_t *state,
     uint32_t num_samples,
     am_hal_adc_sample_t samples[]);
-static void nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state);
+static uint32_t nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state);
 
 static nsx_power_tempco_state_t s_nsx_power_tempco;
 static nsx_timer_config_t s_nsx_power_tempco_timer = {
@@ -215,38 +218,44 @@ static void nsx_power_tempco_callback(nsx_timer_config_t *cfg) {
     }
 
     nsx_power_tempco_prepare_for_sleep();
+    if (state->last_handler_status != AM_HAL_STATUS_SUCCESS) {
+        NSX_POWERTEMPCO_LOG("TempCo capture/handler status=%lu\n",
+            (unsigned long)state->last_handler_status);
+    }
 }
 
-static void nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state) {
+static uint32_t nsx_power_tempco_trigger_wait(nsx_power_tempco_state_t *state) {
     uint32_t fifo_count = _FLD2VAL(ADC_FIFO_COUNT, ADC->FIFO);
 
-    while (_FLD2VAL(ADC_FIFO_COUNT, ADC->FIFO) == fifo_count) {
-        am_hal_adc_sw_trigger(state->adc_handle);
+    for (uint32_t poll = 0; poll < NSX_POWERTEMPCO_POLL_LIMIT; ++poll) {
+        uint32_t status = am_hal_adc_sw_trigger(state->adc_handle);
+        if (status != AM_HAL_STATUS_SUCCESS) return status;
         am_hal_delay_us(1);
+        if (_FLD2VAL(ADC_FIFO_COUNT, ADC->FIFO) != fifo_count) {
+            return AM_HAL_STATUS_SUCCESS;
+        }
     }
+    return AM_HAL_STATUS_TIMEOUT;
 }
 
 static uint32_t nsx_power_tempco_capture_samples(
     nsx_power_tempco_state_t *state,
     uint32_t num_samples,
     am_hal_adc_sample_t samples[]) {
-    uint32_t sample_count = 1;
-    uint32_t sample_idx = 0;
-
-    for (uint32_t i = 0; i < AM_HAL_TEMPCO_NUMSAMPLES; ++i) {
-        samples[i].ui32Sample = 0;
-    }
-
-    while (sample_idx < num_samples) {
-        nsx_power_tempco_trigger_wait(state);
-        am_hal_daxi_control(AM_HAL_DAXI_CONTROL_INVALIDATE, NULL);
-        am_hal_adc_samples_read(state->adc_handle, true, NULL, &sample_count, &samples[sample_idx]);
-
-        if (samples[sample_idx].ui32Slot == state->adc_slot) {
-            sample_idx++;
+    for (uint32_t i = 0; i < num_samples; ++i) {
+        uint32_t status = nsx_power_tempco_trigger_wait(state);
+        if (status != AM_HAL_STATUS_SUCCESS) return status;
+        status = am_hal_daxi_control(AM_HAL_DAXI_CONTROL_INVALIDATE, NULL);
+        if (status != AM_HAL_STATUS_SUCCESS) return status;
+        uint32_t sample_count = 1;
+        am_hal_adc_sample_t sample = {0};
+        status = am_hal_adc_samples_read(state->adc_handle, true, NULL, &sample_count, &sample);
+        if (status != AM_HAL_STATUS_SUCCESS) return status;
+        if (sample_count != 1 || sample.ui32Slot != state->adc_slot) {
+            return AM_HAL_STATUS_HW_ERR;
         }
+        samples[i] = sample;
     }
-
     return AM_HAL_STATUS_SUCCESS;
 }
 

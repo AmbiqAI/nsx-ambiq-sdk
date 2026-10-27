@@ -493,3 +493,13 @@ records seven intervals per period, and stops/unregisters the timer afterward.
 A 20% window catches conversion errors without claiming calibrated HFRC
 accuracy. This does not test sleep, cold boot, long callbacks or IRQ load.
 AP4L/AP510L have host-side cross-compile coverage only.
+
+### AP4 TempCo capture
+
+On `apollo4p_blue_kxr_evb`, run `tests/hardware/test_tempco_capture.py` with
+`--hardware-timeout 35` and the usual board/probe options. This waits for two
+callbacks at the production 10.486-second interval, checking successful sample
+handling and ADC suspension between captures. It includes the private production
+helper directly to inspect its state without adding a public diagnostic API.
+This complements lifecycle testing; it does not qualify temperature accuracy or
+trim calibration. Acquisition has a 25-second target deadline and the host timeout.

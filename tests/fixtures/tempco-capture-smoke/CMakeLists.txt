@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_tempco_capture C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+if(NOT NSX_TEST_BOARD STREQUAL "apollo4p_blue_kxr_evb")
+    message(FATAL_ERROR "TempCo capture smoke supports AP4 Blue Plus KXR only")
+endif()
+nsx_add_test_firmware(tempco_capture main.c MODULES interrupt timer power)
