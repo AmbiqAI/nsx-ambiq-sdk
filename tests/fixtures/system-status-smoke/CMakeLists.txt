@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_system_status C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+option(NSX_TEST_MINIMAL "Use minimal system startup" OFF)
+nsx_add_test_firmware(system_status main.c)
+target_compile_definitions(system_status PRIVATE NSX_TEST_MINIMAL=$<BOOL:${NSX_TEST_MINIMAL}>)

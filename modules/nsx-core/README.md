@@ -34,6 +34,22 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 
 ## nsx_system Quick Start
 
+On AP3/3P and AP4P/L, choose one startup entry point per reset:
+`nsx_system_init()`, `nsx_power_configure()`, `nsx_hw_init()`, or
+`nsx_minimal_hw_init()`. The latter two support staged initialization followed
+by cache, debug, performance and driver operations. Do not follow one with a
+second startup entry point. A valid repeated or re-entrant request returns
+`NSX_STATUS_STARTUP_REJECTED` before hardware effects, including after a failed
+startup. Correcting an input-validation error is allowed. `skip_bsp_init` still
+selects minimal initialization; it consumes startup ownership without claiming
+that BSP initialization ran. Other families retain existing behavior.
+
+The shared guard belongs to `nsx::system`, independently of the core runtime
+initialized flag. Calls directly into HAL/BSP bypass it and remain the caller's
+sequencing responsibility. BSP-internal failures hidden by its void interface
+cannot be reported by this guard. Run startup from foreground before drivers or
+interrupt-driven application activity; only ownership transitions mask interrupts.
+
 ```c
 #include "nsx_system.h"
 

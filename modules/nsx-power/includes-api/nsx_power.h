@@ -74,36 +74,39 @@ extern const nsx_core_api_t nsx_power_current_version;
 /// CPU performance / clock-speed mode.
 typedef enum {
     NSX_POWER_PERF_NOT_SET = -1,
-    NSX_POWER_PERF_LOW     = 0, ///< LP 96 MHz (HFRC)
+    NSX_POWER_PERF_LOW     = 0, ///< Family low-power mode.
     NSX_POWER_PERF_HIGH    = 1, ///< Apollo510: configured HFRC2; Apollo330P/510L: HP1 192 MHz.
     NSX_POWER_PERF_MAX     = 2  ///< Apollo330P/510L: configured HP2 PLL rate; otherwise HIGH.
 } nsx_power_perf_mode_t;
 
 /// Power configuration for the common NSX-managed power states.
 ///
+/// On AP4P/L, supported need_* peripheral flags skip optional shutdown;
+/// they do not initialize drivers or undo the mandatory BSP baseline.
+/// AP3/3P do not translate these peripheral flags. See the module support table.
 /// This is the preferred NSX-facing interface for common power flows.
 /// Lower-level AmbiqSuite power APIs remain available underneath when an
 /// application needs finer control than the staged NSX helpers expose.
 typedef struct {
     const nsx_core_api_t *api;       ///< API version
     nsx_power_perf_mode_t perf_mode;       ///< CPU clock mode
-    bool need_audadc;               ///< Keep audio ADC powered
-    bool need_ssram;                ///< Keep shared SRAM powered
-    bool need_crypto;               ///< Keep crypto block powered
-    bool need_ble;                  ///< Keep BLE powered
-    bool need_usb;                  ///< Keep USB powered
-    bool need_iom;                  ///< Keep IOM interfaces powered
-    bool need_uart;                 ///< Keep alternative UART powered
-    bool small_tcm;                 ///< Use 32K ITCM + 128K DTCM (vs full)
+    bool need_audadc;               ///< Skip optional audio ADC shutdown where supported
+    bool need_ssram;                ///< Shared SRAM requirement; AP4P/L requires true, AP3/3P unmanaged
+    bool need_crypto;               ///< Skip optional crypto shutdown
+    bool need_ble;                  ///< Skip optional BLE GPIO shutdown; BSP reset still applies
+    bool need_usb;                  ///< Skip optional USB/PHY shutdown on AP4P
+    bool need_iom;                  ///< Skip optional IOM shutdown
+    bool need_uart;                 ///< Skip optional UART0/3 shutdown on AP4
+    bool small_tcm;                 ///< Reduced TCM request; AP4P/L rejects true, AP3/3P unmanaged
     bool need_tempco;               ///< Enable Apollo4 TempCo where supported
     bool need_itm;                  ///< Keep ITM/SWO debug output
-    bool need_xtal;                 ///< Keep XTAL oscillator
+    bool need_xtal;                 ///< Skip optional XTAL deep-sleep powerdown policy
     bool spotmgr_collapse;          ///< SpotManager STM state collapse (Apollo5 family)
 } nsx_power_config_t;
 
-extern const nsx_power_config_t nsx_power_all_on;   ///< Everything enabled — development/debug
-extern const nsx_power_config_t nsx_power_minimal;   ///< Minimal peripherals — good starting point
-extern const nsx_power_config_t nsx_power_audio;     ///< Audio ADC on, most else off
+extern const nsx_power_config_t nsx_power_all_on;   ///< Development preset; crypto and TempCo remain false
+extern const nsx_power_config_t nsx_power_minimal;   ///< Request supported shutdowns; check memory layout before use
+extern const nsx_power_config_t nsx_power_audio;     ///< Skip supported audio ADC shutdown; drivers still required
 
 /// Two-bit GPIO state exported for external current/energy tools.
 typedef enum {
@@ -126,6 +129,26 @@ typedef enum {
  * `nsx_power_config_t`. The fields in this structure are intended to cover
  * the common application-facing power cases without forcing apps to manage
  * the lower-level SoC power sequence directly.
+ *
+ * On Apollo3/3P and Apollo4, invalid performance modes and unsupported TempCo
+ * requests are rejected before hardware setup. Core initialization is not a
+ * prerequisite. The first failed status-returning configuration operation is
+ * returned to the application; this path does not enter the NSX fail loop.
+ * Callers must check the result before continuing startup.
+ *
+ * On AP3/3P and AP4P/L, startup ownership is shared with nsx_system_init(),
+ * nsx_hw_init() and nsx_minimal_hw_init(). Choose one per reset, before drivers.
+ * A repeated/re-entrant valid request returns NSX_STATUS_STARTUP_REJECTED,
+ * including after a reported hardware failure. Earlier writes are not rolled
+ * back. Reset before retrying; private helper recovery does not clear ownership.
+ * Preflight validation failures do not claim ownership and can be corrected.
+ * BSP-internal operations and TempCo resource cleanup are separate concerns.
+ *
+ * AP4P/L rejects small_tcm=true or need_ssram=false with INVALID_CONFIG before
+ * startup ownership or hardware effects, even when API validation is disabled.
+ * No supported reduced-memory layout/ownership contract exists yet. Copy the
+ * minimal/audio preset and set need_ssram=true; keep small_tcm=false. AP3/3P
+ * leave these two fields unmanaged. Other families retain their own contracts.
  *
  * @param nsx_power_config_t Desired power configuration.
  * @return uint32_t success/failure.
@@ -180,6 +203,14 @@ extern void nsx_power_deep_sleep(void);
 /**
  * @brief Set CPU performance mode.
  *
+ * Apollo3/3P maps LOW to normal mode and HIGH/MAX to burst mode; Apollo4
+ * maps LOW to LP and HIGH/MAX to HP. Both reject NOT_SET and unknown values
+ * without a HAL call, propagate HAL errors, and leave SystemCoreClock unchanged.
+ * Apollo3/3P initializes burst support on the first valid request (including
+ * LOW), caches only successful initialization with available burst support,
+ * and retries initialization after failure. The caller owns clock publication
+ * and dependent timing updates on these families.
+ *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
  * SystemCoreClock value. Apollo510 HP uses configured HFRC2; Apollo330P/510L
  * HP2 uses configured PLLVCO. Apollo510 pending HFRC2 adjustment still reports
@@ -227,8 +258,9 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode);
  *
  * Disables all device power domains (USB, audio, crypto, IOM, etc.),
  * XTAL oscillator, voltage comparator, and all 16 hardware timers.
- * Does NOT touch memory config, GPIO, or debug — call the dedicated
- * helpers for those.
+ * Releases NSX-managed debug output first; a reported release error stops
+ * shutdown. The HAL all-peripheral gate also disables trace. Memory config
+ * and GPIO are unchanged — use the dedicated helpers for those.
  *
  * Safe to call from any app that no longer needs peripheral I/O.
  *
@@ -297,13 +329,17 @@ void nsx_power_disable_caches(void);
 /**
  * @brief Disable SWO/ITM debug output and the debug peripheral.
  *
- * Clears MCUCTRL DBGCTRL and powers down the debug domain.
+ * Releases any NSX-managed ITM transport before the platform debug gate.
+ * UART transport ownership is unchanged. A reported ITM teardown failure
+ * suppresses low-power output and is retained by nsx_debug_init until reset.
  * Call before entering measurement — debug logic draws current.
  */
 void nsx_power_disable_debug(void);
 
 /**
  * @brief Tristate all GPIO pads except specified pins.
+ *
+ * Suspend any transport whose pads will be tristated before calling this.
  *
  * Unconfigured GPIOs can leak current through internal pull
  * resistors.  This sets every pad to disabled (high-impedance)

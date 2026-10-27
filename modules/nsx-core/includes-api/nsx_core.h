@@ -33,6 +33,11 @@ void nsx_low_power_printf(const char *fmt, ...);
 void nsx_delay_us(uint32_t usec);
 void nsx_interrupt_master_enable(void);
 void nsx_interrupt_master_disable(void);
+/* Debug helpers share nsx_debug_init ownership. Generic enable resumes the
+ * last successful NSX transport (ITM initially); generic disable suspends it.
+ * Disable of an inactive transport is a no-op. These legacy void wrappers
+ * cannot report setup errors; use nsx_debug_init for status. See its contract
+ * for serialization, partial failure and reset requirements. */
 void nsx_debug_printf_enable(void);
 void nsx_debug_printf_disable(void);
 void nsx_itm_printf_enable(void);
@@ -73,6 +78,8 @@ extern const nsx_core_api_t nsx_core_current_version;
 #define NSX_STATUS_INVALID_VERSION 2
 #define NSX_STATUS_INVALID_CONFIG 3
 #define NSX_STATUS_INIT_FAILED 4
+/* AP3/AP4 startup is already running, complete, or failed; reset to retry. */
+#define NSX_STATUS_STARTUP_REJECTED 0x101u
 
 #define NSX_TRY(func, msg)                                                     \
     if (func) {                                                                \

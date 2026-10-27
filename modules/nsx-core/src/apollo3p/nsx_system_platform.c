@@ -32,8 +32,10 @@ uint32_t nsx_platform_hw_init(void) {
 
 uint32_t nsx_platform_minimal_hw_init(void) {
     /* Enable cache with default config. */
-    am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
-    am_hal_cachectrl_enable();
+    uint32_t status = am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
+    if (status != 0) return status;
+    status = am_hal_cachectrl_enable();
+    if (status != 0) return status;
 
     /* FPU */
     am_hal_sysctrl_fpu_enable();
@@ -73,4 +75,10 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
     }
 
     return 0;
+}
+
+uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
+    if (transport == NSX_DEBUG_ITM) am_bsp_itm_printf_disable();
+    else if (transport == NSX_DEBUG_UART) am_bsp_uart_printf_disable();
+    return 0; /* BSP disable helpers do not expose status. */
 }

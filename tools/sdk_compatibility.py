@@ -29,6 +29,7 @@ class Requirement:
 PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
     'test_artifact_baseline', 'test_committed_intake_patches',
     'test_intake_patches_byte_for_byte', 'test_sdk_intake', 'test_intake_workflow',
+    'test_sdk_intake_review',
     'test_cmake_contract', 'test_manifests'))
 # Minimum counts deliberately describe the reviewed matrix, independently of
 # the test parametrization. Removing coverage must not silently weaken the gate.
@@ -71,6 +72,13 @@ _AUDIO_LIFECYCLE_APOLLO5 = (
 # Host fault models exercise NSX adapters without microphones or probe access.
 # Counts and backend requirements are acceptance criteria, not discovered from tests.
 ADAPTER_REGRESSIONS = (
+    Requirement('tests/test_power_selectors.py::test_family_performance_contract', 30,
+                parameters=('selector_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4')
+                    for scenario in (('low', 'high', 'max', 'repeat', 'invalid', 'invalid-after-init',
+                                      'enable-fails', 'disable-fails') +
+                                     (() if family == 'apollo4' else
+                                      ('init-fails', 'init-no-output', 'unavailable'))))),
     Requirement('tests/test_audio_buffers.py::test_audio_buffer_bounds', 48,
                 parameters=('audio_binary', 'scenario'),
                 variants=tuple((backend, scenario) for backend in ('apollo3', 'apollo5')
@@ -93,6 +101,10 @@ ADAPTER_REGRESSIONS = (
                                      'pending-audio', 'released-audio'))),
 )
 CORE_BUILDS = (
+    Requirement('tests/test_power_link.py::test_power_module_links_real_sdk', 8,
+                ('apollo3_evb', 'apollo3p_evb', 'apollo4p_evb',
+                 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
+                 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
     Requirement('tests/test_runtime_suite.py::test_runtime_links_real_handlers_and_heap', 6,
                 ('apollo3p_evb', 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
                  'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
@@ -103,7 +115,97 @@ CORE_BUILDS = (
                 variants=tuple((soc, override) for soc in ('apollo2', 'apollo3', 'apollo3p')
                                for override in (False, True)), compiler='gcc'),
 )
-PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS}
+POWER_STARTUP = (
+    Requirement('tests/test_debug_state.py::test_debug_transport_contract', 12,
+                parameters=('scenario',), variants=tuple((s,) for s in
+                    ('system', 'resume', 'switch', 'noop', 'setup-failure', 'switch-failure',
+                     'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))),
+    Requirement('tests/test_usb_connection.py::test_usb_connection_contract', 20,
+                parameters=('connection_binary', 'scenario'),
+                variants=tuple((owner, scenario) for owner in ('nsx-unmount', 'dcd-unmount')
+                               for scenario in ('invalid', 'cdc-dtr', 'vendor-lifecycle',
+                                                'queued-unplug', 'queued-suspend', 'queued-open',
+                                                'cdc-buffers', 'vendor-buffers', 'receive-status', 'reconnect'))),
+    Requirement('tests/test_usb_cdc_send.py::test_cdc_send_fifo_progress', 18,
+                parameters=('cdc_send_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('ordinary', 'apollo5-flush')
+                               for scenario in ('fit', 'boundary', 'large', 'wide-length',
+                                                'initial-full', 'short-write', 'partial',
+                                                'stalled', 'default-timeout'))),
+    Requirement('tests/test_usb_reentrancy.py::test_usb_reentrancy', 14,
+                parameters=('transport', 'scenario'),
+                variants=tuple((transport, scenario) for transport in ('cdc', 'vendor')
+                               for scenario in ('task', 'timer', 'fallback', 'send', 'query', 'flush', 'connected'))),
+    Requirement('tests/test_usb_reentrancy.py::test_usb_real_header_links', 3,
+                boards=('apollo4p_blue_kxr_evb', 'apollo510_evb', 'apollo510b_evb')),
+    Requirement('tests/test_system_status.py::test_manual_debug_disable', 3,
+                parameters=('system_backend',),
+                variants=tuple((family,) for family in ('apollo510', 'apollo330p', 'apollo510l'))),
+    Requirement('tests/test_system_status.py::test_debug_failure_smoke_builds', 1,
+                boards=('apollo330mP_evb',)),
+    Requirement('tests/test_system_status.py::test_apollo510l_debug_backend_compiles'),
+    Requirement('tests/test_system_status.py::test_bsp_swo_preparation_errors_return_and_restore', 4,
+                parameters=('system_backend', 'masked'),
+                variants=tuple((family, masked) for family in ('apollo330p', 'apollo510l') for masked in (0, 1))),
+    Requirement('tests/test_debug_state.py::test_apollo2_debug_backend_compiles'),
+    Requirement('tests/test_debug_state.py::test_debug_state_real_header_builds', 4,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb')),
+    Requirement('tests/test_system_status.py::test_system_preflight_and_order', 10,
+                parameters=('system_backend', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p', 'apollo510l')
+                               for scenario in ('invalid', 'success'))),
+    Requirement('tests/test_system_status.py::test_minimal_failure_stops_setup', 5,
+                parameters=('system_backend',),
+                variants=tuple((family,) for family in ('apollo3p', 'apollo4p', 'apollo510', 'apollo330p', 'apollo510l'))),
+    Requirement('tests/test_system_status.py::test_dcu_cleanup_and_debug_failures', 6,
+                parameters=('system_backend', 'masked'),
+                variants=tuple((family, masked) for family in ('apollo510', 'apollo330p', 'apollo510l') for masked in (0, 1))),
+    Requirement('tests/test_system_status.py::test_system_status_real_header_builds', 4,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb')),
+
+    Requirement('tests/test_power_startup.py::test_memory_preflight_smoke_builds'),
+    Requirement('tests/test_power_startup.py::test_memory_preflight_without_api_validation', 16,
+                parameters=('startup_binary', 'scenario', 'api_validation'),
+                variants=tuple((family, f'{small}-{ssram}', False)
+                    for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for small in (0, 1) for ssram in (0, 1))),
+    Requirement('tests/test_power_startup.py::test_memory_preflight', 16,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, f'{small}-{ssram}')
+                    for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for small in (0, 1) for ssram in (0, 1))),
+    Requirement('tests/test_power_startup.py::test_usb_policy_smoke_builds', 2,
+                parameters=('mode',), variants=(('keep',), ('off',))),
+    Requirement('tests/test_power_startup.py::test_peripheral_policy', 84,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in tuple(f'{field}-{value}' for field in
+                        ('need_usb', 'need_iom', 'need_uart', 'need_audadc', 'need_crypto',
+                         'need_xtal', 'need_itm', 'need_ble', 'spotmgr_collapse') for value in (0, 1)) +
+                        ('preset-all_on', 'preset-minimal', 'preset-audio'))),
+    Requirement('tests/test_power_startup.py::test_startup_ownership', 56,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in ('system', 'system-minimal', 'hardware', 'minimal', 'power-first',
+                                     'reentry', 'system-failure-1', 'system-failure-2', 'system-failure-3',
+                                     'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure'))),
+    Requirement('tests/test_power_startup.py::test_ownership_smoke_builds', 2,
+                boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb')),
+    Requirement('tests/test_power_startup.py::test_power_startup_contract', 45,
+                parameters=('startup_binary', 'scenario'),
+                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+                    for scenario in ('null', 'null-api', 'bad-api', 'bad-version', 'invalid-mode', 'no-core',
+                                     'success', 'success-keep', 'fail-minimal', 'fail-keep') +
+                                    (('success-tempco', 'fail-tempco') if family == 'apollo4p'
+                                     else ('unsupported-tempco',)))),
+    Requirement('tests/test_power_startup.py::test_apollo4l_power_sources_compile'),
+    Requirement('tests/test_tempco_lifecycle.py::test_tempco_smoke_builds'),
+    Requirement('tests/test_tempco_lifecycle.py::test_tempco_lifecycle', 10,
+                parameters=('scenario',), variants=tuple((s,) for s in
+                    ('success', 'init-failures', 'cleanup-failures', 'callback-failures', 'callback-status', 'unsupported',
+                     'trim-read-failure', 'init-cleanup-failure', 'timer-owner', 'timer-reconfigure'))),
+)
+PROFILES = {'payload': PAYLOAD, 'gcc': PAYLOAD + GCC + ADAPTER_REGRESSIONS + CORE_BUILDS + POWER_STARTUP}
 
 
 def belongs(nodeid: str, selector: str) -> bool:

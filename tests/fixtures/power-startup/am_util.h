@@ -1,0 +1,1 @@
+/* No utility functions are used by these startup adapters. */

@@ -1,6 +1,7 @@
 """SDK-owned suite definitions; hardware facts remain in SDK descriptors."""
 from dataclasses import dataclass
 from pathlib import Path
+from functools import partial
 from typing import Callable
 
 from .protocol import validate_cases
@@ -72,4 +73,58 @@ def clock_options(repo: Path, output: Path, board: str, fault: str, sdk_root: Pa
 CLOCK = Suite('clock', 'tests/hardware/test_clock.py::test_clock',
               ('reference_ready', 'clock_transitions', 'restore_low'),
               'tests/hardware/clock', 'clock_test.elf', configure=clock_options)
-SUITES = (STARTUP, RUNTIME, CLOCK)
+TEMPCO = Suite('tempco-lifecycle', 'tests/hardware/test_tempco.py::test_tempco',
+               ('setup_release_retry',), 'tests/fixtures/tempco-smoke', 'tempco_smoke.elf')
+OWNERSHIP = Suite('startup-ownership', 'tests/hardware/test_ownership.py::test_ownership',
+                  ('initialize_once', 'reject_reapplication'),
+                  'tests/fixtures/startup-ownership', 'startup_ownership.elf')
+def usb_options(repo: Path, output: Path, board: str, fault: str,
+                sdk_root: Path | None = None, *, keep: bool) -> list[str]:
+    if board != 'apollo4p_blue_kxr_evb' or fault != 'none':
+        raise ValueError('USB policy smoke requires AP4 Blue KXR without fault injection')
+    return [f'-DNSX_TEST_USB_KEEP={"ON" if keep else "OFF"}']
+
+
+USB_KEEP, USB_OFF = tuple(
+    Suite(f'usb-{mode}', f'tests/hardware/test_usb_policy.py::test_usb_policy[usb-{mode}]',
+          ('usb_policy',), 'tests/fixtures/usb-policy', 'usb_policy.elf',
+          configure=partial(usb_options, keep=keep))
+    for mode, keep in (('keep', True), ('off', False)))
+def memory_options(repo: Path, output: Path, board: str, fault: str,
+                   sdk_root: Path | None = None) -> list[str]:
+    if board != 'apollo4p_blue_kxr_evb' or fault != 'none':
+        raise ValueError('Memory preflight smoke requires AP4 Blue KXR without fault injection')
+    return []
+
+
+MEMORY_PREFLIGHT = Suite('memory-preflight', 'tests/hardware/test_memory_preflight.py::test_memory_preflight',
+                         ('reject_reductions_then_start',), 'tests/fixtures/memory-preflight',
+                         'memory_preflight.elf', configure=memory_options)
+def system_status_options(repo: Path, output: Path, board: str, fault: str,
+                          sdk_root: Path | None = None, *, minimal: bool) -> list[str]:
+    if board not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb') or fault != 'none':
+        raise ValueError('System status smoke supports AP3P, AP4 KXR, AP510B and AP330P without faults')
+    return [f'-DNSX_TEST_MINIMAL={"ON" if minimal else "OFF"}']
+
+
+SYSTEM_FULL, SYSTEM_MINIMAL = tuple(
+    Suite(f'system-{mode}', f'tests/hardware/test_system_status_smoke.py::test_system_status[system-{mode}]',
+          ('reject_then_start',), 'tests/fixtures/system-status-smoke', 'system_status.elf',
+          configure=partial(system_status_options, minimal=minimal))
+    for mode, minimal in (('full', False), ('minimal', True)))
+DEBUG_STATE = Suite('debug-state', 'tests/hardware/test_debug_output.py::test_debug_output',
+                    ('output_lifecycle',), 'tests/fixtures/debug-state-smoke', 'debug_state.elf')
+
+
+def debug_failure_options(repo: Path, output: Path, board: str, fault: str,
+                          sdk_root: Path | None = None) -> list[str]:
+    if board not in ('apollo330mP_evb', 'apollo510dL_evb') or fault != 'none':
+        raise ValueError('SWO preparation failure smoke requires AP330P or AP510L')
+    return ['-DNSX_TEST_SWO_FAILURE=ON']
+
+
+DEBUG_FAILURE = Suite('debug-failure', 'tests/hardware/test_debug_failure.py::test_debug_failure',
+                      ('preparation_failure',), 'tests/fixtures/debug-state-smoke',
+                      'debug_state.elf', configure=debug_failure_options)
+
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE)

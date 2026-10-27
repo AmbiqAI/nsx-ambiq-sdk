@@ -162,3 +162,53 @@ python sdk-intake/intake_workflow.py verify-internal-markers
 See [`docs/intake-hardening.md`](../docs/intake-hardening.md) for the full
 workflow, security boundaries, and the golden-baseline hash verification path
 (`verify-baseline`).
+
+## Snapshot and patch review
+
+After staging and committing a candidate on its intake branch, compare two
+clean SDK checkouts before accepting the update:
+
+```bash
+uv run --group ci python -m tools.sdk_intake_review \
+  --baseline /path/to/baseline --candidate /path/to/candidate \
+  --output /tmp/sdk-intake-review.json
+```
+
+Exit `2` means the report was generated but still needs review; `1` means an
+input/check failed. The report records both NSX commits, the upstream commit
+**declared** by each artifact manifest, and hashes/file modes/categories for every added,
+removed or modified tracked file. Header changes are a file inventory, not a
+semantic API/ABI compatibility verdict. Both manifests must verify, every
+tracked archive must be declared exactly once, and the candidate must retain
+the baseline archive set. Patch queues are reversed and replayed in temporary
+copies; neither checkout is modified.
+
+Extract `decision_template` from the report into a separate JSON file. Fill in
+`reviewer` and each patch's `reason` and `regression_tests` (tracked candidate
+Python test-file paths). Review every patch in the union of the two snapshots:
+`retain` for unchanged patches/sidecars, `update` for changed ones, `retire` for
+removed ones, and `add` for new ones. A renamed patch is a retirement plus an
+addition. Retired patches still require regression test references; reviewers
+must check that those tests actually exercise the upstream fix rather than
+skip when the patch disappears.
+
+```bash
+uv run --group ci python -m tools.sdk_intake_review \
+  --baseline /path/to/baseline --candidate /path/to/candidate \
+  --decisions /tmp/sdk-intake-decisions.json \
+  --output /tmp/sdk-intake-reviewed.json
+```
+
+Exit `0` / `review-recorded` means the supplied review record matches the exact
+snapshot identities and covers every patch. It does not authenticate the
+reviewer, run the referenced tests, prove upstream provenance, or approve an
+intake. Run the candidate compatibility gate and planned hardware smoke tests
+separately. `qualification_complete` remains false. A different manifest
+commit alone does not complete the wave's real-update acceptance checkpoint.
+
+Reports must use new paths outside both checkouts. Commit candidate changes
+before rerunning; any changed revision/inventory invalidates prior decisions.
+This first version requires a full upstream `source_commit` in each manifest;
+raw ZIP/directory drops without immutable provenance need that recorded first.
+Deliberately reducing supported artifact coverage needs a separate policy
+change; this command will reject a disappearing baseline archive.

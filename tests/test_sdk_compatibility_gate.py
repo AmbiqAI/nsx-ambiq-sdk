@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS
+from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS, POWER_STARTUP
 
 
 @pytest.mark.parametrize('node,expected', [
@@ -113,7 +113,7 @@ def test_same_abi_count_cannot_hide_missing_combinations():
     assert gate.report(0)['status'] == 'passed'
 
 
-@pytest.mark.parametrize('requirement', CORE_BUILDS[:2], ids=('runtime', 'startup'))
+@pytest.mark.parametrize('requirement', CORE_BUILDS[:3], ids=('power', 'runtime', 'startup'))
 def test_core_build_gate_rejects_repeated_board(requirement):
     gate = Gate((requirement,))
     items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',
@@ -141,7 +141,7 @@ def test_clock_gate_requires_each_target_scenario():
     assert gate.report(0)['status'] == 'incomplete'
 
 
-@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[0], ADAPTER_REGRESSIONS[2]),
+@pytest.mark.parametrize('requirement', (ADAPTER_REGRESSIONS[1], ADAPTER_REGRESSIONS[3]),
                          ids=('audio-buffers', 'audio-lifecycle'))
 def test_audio_gate_requires_every_scenario(requirement):
     assert len(requirement.variants) == requirement.minimum
@@ -189,3 +189,17 @@ raise SystemExit(code)
                             cwd=repo_root, env=env, capture_output=True, text=True, timeout=90)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}
+
+
+@pytest.mark.parametrize('requirement',
+                         [r for r in ADAPTER_REGRESSIONS + POWER_STARTUP if len(r.variants) > 1],
+                         ids=lambda r: r.selector.split('::')[-1])
+def test_power_gate_requires_each_family_scenario(requirement):
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'
