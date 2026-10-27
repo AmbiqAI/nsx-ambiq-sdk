@@ -4,6 +4,7 @@
  */
 
 #include "nsx_timer.h"
+#include "../nsx_timer_hfrc.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -73,12 +74,10 @@ static uint32_t nsx_timer_init_locked(nsx_timer_config_t *cfg) {
     s_timer_state[cfg->timer].callback = cfg->enableInterrupt ? cfg->callback : NULL;
     am_hal_timer_config_t timer_config;
     TIMER_TRY(am_hal_timer_default_config_set(&timer_config));
-    if (cfg->timer == NSX_TIMER_TEMPCO) {
-        timer_config.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV16;
-    }
+    timer_config.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV16;
     if (cfg->enableInterrupt) {
         timer_config.eFunction = AM_HAL_TIMER_FN_UPCOUNT;
-        timer_config.ui32Compare1 = cfg->periodInMicroseconds / 6;
+        timer_config.ui32Compare1 = cfg->periodInMicroseconds * NSX_TIMER_HFRC_TICKS_PER_US;
     }
     TIMER_TRY(am_hal_timer_config(cfg->timer, &timer_config));
     TIMER_TRY(am_hal_timer_clear(cfg->timer));
@@ -132,7 +131,7 @@ uint32_t nsx_timer_us_read(nsx_timer_config_t *cfg) {
         return 0xDEADBEEF;
     }
 #endif
-    return am_hal_timer_read(cfg->timer) / 6;
+    return am_hal_timer_read(cfg->timer) / NSX_TIMER_HFRC_TICKS_PER_US;
 }
 
 uint32_t nsx_timer_clear(nsx_timer_config_t *cfg) {

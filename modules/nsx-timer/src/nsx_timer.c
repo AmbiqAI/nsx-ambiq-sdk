@@ -10,6 +10,7 @@
  */
 
 #include "nsx_timer.h"
+#include "nsx_timer_hfrc.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -46,6 +47,15 @@ uint32_t nsx_timer_init(nsx_timer_config_t *cfg) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     if ((cfg->enableInterrupt) && (cfg->callback == NULL)) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+#endif
+
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || \
+    defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    /* Check before publishing ownership or disturbing an existing setup. */
+    if (cfg->enableInterrupt && (cfg->periodInMicroseconds == 0 ||
+        cfg->periodInMicroseconds > NSX_TIMER_HFRC_MAX_PERIOD_US)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
 #endif

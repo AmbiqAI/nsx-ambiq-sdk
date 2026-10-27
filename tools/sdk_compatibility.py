@@ -72,6 +72,12 @@ _AUDIO_LIFECYCLE_APOLLO5 = (
 # Host fault models exercise NSX adapters without microphones or probe access.
 # Counts and backend requirements are acceptance criteria, not discovered from tests.
 ADAPTER_REGRESSIONS = (
+    Requirement('tests/test_timer_period.py::test_timer_period', 180),
+    Requirement('tests/test_timer_period.py::test_timer_nonperiodic_and_defaults', 12),
+    Requirement('tests/test_timer_period.py::test_timer_smoke_builds', 4,
+                ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
+    Requirement('tests/test_timer_period.py::test_timer_other_variants_compile', 2,
+                ('apollo4l_evb', 'apollo510dL_evb')),
     Requirement('tests/test_power_selectors.py::test_family_performance_contract', 30,
                 parameters=('selector_binary', 'scenario'),
                 variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4')
