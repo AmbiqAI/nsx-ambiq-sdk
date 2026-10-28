@@ -212,14 +212,20 @@ POWER_STARTUP = (
                         ('need_usb', 'need_iom', 'need_uart', 'need_audadc', 'need_crypto',
                          'need_xtal', 'need_itm', 'need_ble', 'spotmgr_collapse') for value in (0, 1)) +
                         ('preset-all_on', 'preset-minimal', 'preset-audio'))),
-    Requirement('tests/test_power_startup.py::test_apollo5_power_ownership', 36),
+    Requirement('tests/test_power_startup.py::test_apollo5_power_ownership', 36,
+                parameters=('startup_binary', 'scenario', 'api_validation'),
+                variants=tuple((family, scenario, validation)
+                    for family in ('apollo510', 'apollo510b', 'apollo5a', 'apollo5b', 'apollo330p', 'apollo510l')
+                    for scenario in ('power-not-set', 'power-failure', 'power-reentry')
+                    for validation in (True, False))),
     Requirement('tests/test_power_startup.py::test_apollo510l_startup_headers'),
     Requirement('tests/test_power_startup.py::test_startup_ownership', 280,
-                parameters=('startup_binary', 'scenario'),
-                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l', 'apollo510', 'apollo510b', 'apollo5a', 'apollo5b', 'apollo330p', 'apollo510l')
+                parameters=('startup_binary', 'scenario', 'api_validation'),
+                variants=tuple((family, scenario, validation) for family in ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l', 'apollo510', 'apollo510b', 'apollo5a', 'apollo5b', 'apollo330p', 'apollo510l')
                     for scenario in ('system', 'system-minimal', 'hardware', 'minimal', 'power-first',
                                      'reentry', 'system-failure-1', 'system-failure-2', 'system-failure-3',
-                                     'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure'))),
+                                     'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure')
+                    for validation in (True, False))),
     Requirement('tests/test_power_startup.py::test_ownership_smoke_builds', 5,
                 boards=('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb')),
     Requirement('tests/test_power_startup.py::test_power_startup_contract', 45,
