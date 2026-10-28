@@ -3,7 +3,7 @@ distribution:
   name: nsx-ambiq-sdk
   version: 5.2.27
   tag: v5.2.27
-  title: nsx-ambiq-sdk 5.2.27 — NSX integration fixes and board test foundation
+  title: nsx-ambiq-sdk 5.2.27 — NSX integration fixes and repeatable validation
   git:
     commit: null
     commit_resolution:
@@ -15,8 +15,8 @@ distribution:
     tag: v5.2.26
     commit: ba0621638d57b71a7b0d4f76ddccf0706745ad77
     relationship: content_update
-    reason: NSX startup, linker, audio and clock integration fixes plus local hardware qualification.
-      No AmbiqSuite provider payload changes.
+    reason: NSX startup, memory, performance, debug, timer, USB, I2C and audio integration fixes with
+      repeatable intake and representative board validation. No AmbiqSuite provider payload changes.
   immutability_note: All earlier tags, releases and commits are preserved. Corrections are published as
     new distribution versions.
 consumer_upgrade:
@@ -232,6 +232,183 @@ consumer_upgrade:
     - tools/nsx_toolchain_file.py
     - tools/sdk_compatibility.py
     - tools/test_evidence.py
+  - id: workflow-docs-5-2-27
+    summary: Current intake, shim and hardware validation instructions and release records.
+    paths:
+    - docs/clock-lab-tests.md
+    - docs/clock-timebase-qualification.md
+    - docs/i2c-combined-transfers.md
+    - docs/release-process.md
+    - docs/sdk-drop-workflow.md
+    - docs/sdk-harness-comparison.md
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/CMakeLists.txt
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-api/nsx_system.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo510/nsx_system_platform.c
+    - modules/nsx-core/src/atomiq110/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-core/src/nsx_system_platform_apollo5.inc
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/atomiq110/nsx_power.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_internal.h
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
+  - id: validation-tools-5-2-27
+    summary: Revision-bound intake/patch review, fixed-harness comparison and expanded shim/build/hardware
+      regression tests.
+    paths:
+    - sdk-intake/README.md
+    - tests/fixtures/ap3-performance/am_mcu_apollo.h
+    - tests/fixtures/ap3-performance/main.c
+    - tests/fixtures/ap510l-power/am_bsp.h
+    - tests/fixtures/ap510l-power/am_hal_clkmgr.h
+    - tests/fixtures/ap510l-power/am_hal_spotmgr.h
+    - tests/fixtures/ap510l-power/am_mcu_apollo.h
+    - tests/fixtures/ap510l-power/am_util.h
+    - tests/fixtures/ap510l-power/link.c
+    - tests/fixtures/ap510l-power/main.c
+    - tests/fixtures/ap510l-power/nsx_debug_internal.h
+    - tests/fixtures/apollo5-power-errors/am_hal_spotmgr.h
+    - tests/fixtures/apollo5-power-errors/am_mcu_apollo.h
+    - tests/fixtures/apollo5-power-errors/main.c
+    - tests/fixtures/debug-state-smoke/CMakeLists.txt
+    - tests/fixtures/debug-state-smoke/main.c
+    - tests/fixtures/debug-state/main.c
+    - tests/fixtures/memory-preflight/CMakeLists.txt
+    - tests/fixtures/memory-preflight/main.c
+    - tests/fixtures/power-link/CMakeLists.txt
+    - tests/fixtures/power-selector/am_mcu_apollo.h
+    - tests/fixtures/power-selector/main.c
+    - tests/fixtures/power-startup-smoke/CMakeLists.txt
+    - tests/fixtures/power-startup-smoke/main.c
+    - tests/fixtures/power-startup/am_bsp.h
+    - tests/fixtures/power-startup/am_mcu_apollo.h
+    - tests/fixtures/power-startup/am_util.h
+    - tests/fixtures/power-startup/main.c
+    - tests/fixtures/sdk-link/CMakeLists.txt
+    - tests/fixtures/sdk-link/archive_probe.c
+    - tests/fixtures/startup-ownership/CMakeLists.txt
+    - tests/fixtures/startup-ownership/main.c
+    - tests/fixtures/system-status-smoke/CMakeLists.txt
+    - tests/fixtures/system-status-smoke/main.c
+    - tests/fixtures/system-status/am_bsp.h
+    - tests/fixtures/system-status/am_hal_clkmgr.h
+    - tests/fixtures/system-status/am_hal_dcu.h
+    - tests/fixtures/system-status/am_hal_spotmgr.h
+    - tests/fixtures/system-status/am_mcu_apollo.h
+    - tests/fixtures/system-status/am_util.h
+    - tests/fixtures/system-status/am_util_stdio.h
+    - tests/fixtures/system-status/contract_cases.h
+    - tests/fixtures/system-status/main.c
+    - tests/fixtures/tempco-capture-smoke/CMakeLists.txt
+    - tests/fixtures/tempco-capture-smoke/main.c
+    - tests/fixtures/tempco-smoke/CMakeLists.txt
+    - tests/fixtures/tempco-smoke/main.c
+    - tests/fixtures/tempco/am_bsp.h
+    - tests/fixtures/tempco/am_mcu_apollo.h
+    - tests/fixtures/tempco/am_util.h
+    - tests/fixtures/tempco/main.c
+    - tests/fixtures/timer-period/am_bsp.h
+    - tests/fixtures/timer-period/am_mcu_apollo.h
+    - tests/fixtures/timer-period/am_util.h
+    - tests/fixtures/timer-period/main.c
+    - tests/fixtures/usb-cdc-send/main.c
+    - tests/fixtures/usb-connection/main.c
+    - tests/fixtures/usb-link/CMakeLists.txt
+    - tests/fixtures/usb-link/main.c
+    - tests/fixtures/usb-policy/CMakeLists.txt
+    - tests/fixtures/usb-policy/main.c
+    - tests/fixtures/usb-reentrancy/main.c
+    - tests/fixtures/usb-reentrancy/nsx_core.h
+    - tests/fixtures/usb-reentrancy/nsx_timer.h
+    - tests/fixtures/usb-reentrancy/tusb.h
+    - tests/hardware/ap3-performance/CMakeLists.txt
+    - tests/hardware/ap3-performance/main.c
+    - tests/hardware/clock/CMakeLists.txt
+    - tests/hardware/clock/main.c
+    - tests/hardware/clock/measurement.h
+    - tests/hardware/performance/CMakeLists.txt
+    - tests/hardware/performance/main.c
+    - tests/hardware/test_ap3_performance.py
+    - tests/hardware/test_clock.py
+    - tests/hardware/test_debug_failure.py
+    - tests/hardware/test_debug_output.py
+    - tests/hardware/test_memory_preflight.py
+    - tests/hardware/test_ownership.py
+    - tests/hardware/test_performance.py
+    - tests/hardware/test_power_startup_smoke.py
+    - tests/hardware/test_system_status_smoke.py
+    - tests/hardware/test_tempco.py
+    - tests/hardware/test_tempco_capture.py
+    - tests/hardware/test_timer.py
+    - tests/hardware/test_usb_policy.py
+    - tests/hardware/timer/CMakeLists.txt
+    - tests/hardware/timer/main.c
+    - tests/i2c_host/am_bsp.h
+    - tests/i2c_host/am_mcu_apollo.h
+    - tests/i2c_host/am_util.h
+    - tests/i2c_host/nsx_core.h
+    - tests/i2c_host/test_i2c.c
+    - tests/test_ap3_burst.py
+    - tests/test_ap510l_power.py
+    - tests/test_apollo5_power_errors.py
+    - tests/test_apollo5_power_link.py
+    - tests/test_clock_cleanup.py
+    - tests/test_clock_contract.py
+    - tests/test_clock_measurement.py
+    - tests/test_clock_suite.py
+    - tests/test_debug_state.py
+    - tests/test_hardware_comparison.py
+    - tests/test_i2c_api.py
+    - tests/test_internal_markers.py
+    - tests/test_power_link.py
+    - tests/test_power_selectors.py
+    - tests/test_power_startup.py
+    - tests/test_sdk_intake_review.py
+    - tests/test_system_status.py
+    - tests/test_tempco_lifecycle.py
+    - tests/test_timer_period.py
+    - tests/test_usb_cdc_send.py
+    - tests/test_usb_connection.py
+    - tests/test_usb_reentrancy.py
+    - tools/hardware/compare.py
+    - tools/hardware/provenance.py
+    - tools/sdk_intake_review.py
 - from_version: 5.2.25
   from_tag: v5.2.25
   from_commit: aefce2ca858795e783c76726ebe7d14d9d4bde7c
@@ -451,6 +628,60 @@ consumer_upgrade:
     summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
       and integration regression tests.
     paths: *id003
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/CMakeLists.txt
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo510/nsx_system_platform.c
+    - modules/nsx-core/src/atomiq110/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-core/src/nsx_system_platform_apollo5.inc
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/atomiq110/nsx_power.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_internal.h
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
+  - id: validation-tools-5-2-27
+    summary: Revision-bound intake/patch review, fixed-harness comparison and expanded shim/build/hardware
+      regression tests.
+    paths:
+    - sdk-intake/README.md
+    - tools/hardware/compare.py
+    - tools/hardware/provenance.py
+    - tools/sdk_intake_review.py
 - from_version: 5.2.24
   from_tag: v5.2.24
   from_commit: a9f4ec25a162f6f3700623feb691423bb5a51132
@@ -740,6 +971,46 @@ consumer_upgrade:
     summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
       and integration regression tests.
     paths: *id003
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
 upstream:
   provider: ambiqsuite
   snapshot_identity: stable-2026.09.01
@@ -856,7 +1127,7 @@ payload_provenance:
       actually shipped. No archive bytes changed.
     forensic_report: docs/acfe-artifact-manifest-forensics.md
 qualification:
-  status: qualified_with_exclusions
+  status: pending_final_review
   report: release/qualification-5.2.27.md
   inherits_from: release/qualification-5.2.26.md
   scope:
@@ -905,8 +1176,8 @@ qualification:
     link_smoke_note: No fresh hardware or link qualification in this release preparation. See inherited
       reports for earlier evidence; provider archives are unchanged.
   hardware_status: limited_feature_evidence_only
-  scope_note: Scope lists supported descriptors, not boards physically qualified. Physical coverage and
-    exclusions are detailed in the qualification report.
+  scope_note: Scope lists supported descriptors, not physical qualification. Five-board debugger-connected
+    GCC core and selected shim results are scoped in the report; release approval remains separate.
   hardware_boards:
   - apollo3p_evb
   - apollo4p_blue_kxr_evb
@@ -1033,14 +1304,10 @@ known_deviations:
   - modules/nsx-cordio/nsx-module.yaml
   - modules/nsx-cordio/README.md
 - id: apollo2-3-cxx-global-constructors
-  status: open
-  description: 'C++ global constructors never run on apollo2, apollo3 and apollo3p with gcc or ATfE. Two
-    causes, both in nsx-core: the startup files (src/apollo{2,3,3p}/gcc/startup_gcc.c) never call __libc_init_array,
-    unlike apollo4l/apollo4p/apollo5-class/atomiq110, and the GCC linker scripts define no .preinit_array/.init_array
-    output sections or __init_array_start/__init_array_end symbols. The linker still keeps the .init_array
-    input as an orphan section placed after .data, so the constructor table is linked but nothing walks
-    it. A fix has to change both the startup files and the linker scripts. Present before 5.2.26 and not
-    fixed here; it matters now that apollo3/apollo3p GCC and ATfE apps link (PR #86). Tracked in AmbiqAI/nsx-ambiq-sdk#87.'
+  status: corrected_in_5_2_27
+  description: 'Corrected by #90: Apollo2/3/3 Plus startup invokes the C++ initialization arrays and matching
+    GCC linker scripts retain and bound them. Current AP3 Blue Plus startup hardware tests verify constructor
+    execution with poisoned state. This does not claim physical Apollo2 or plain Apollo3 qualification.'
   issues:
   - 87
   paths:

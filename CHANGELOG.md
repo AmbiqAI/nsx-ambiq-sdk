@@ -9,11 +9,21 @@ All notable distribution changes are recorded here.
 - Keep `SystemCoreClock` synchronized with supported performance changes.
 - Correct PDM buffer sizing, error handling, continuous DMA, sample packing,
   cache ownership and decimation. Guard incompatible CPU/audio clock changes.
+- Validate startup requests before hardware effects, share one-attempt startup
+  ownership, propagate setup errors and coordinate debug output lifecycle.
+- Reject unproven AP4 memory reductions, honor USB preservation, repair TempCo
+  cleanup/capture, and adapt AP510L power setup to its HAL capabilities.
+- Fix AP3 normal/burst selection, share verified family performance selection,
+  and correct timer-period conversion.
+- Fix nested USB callback ownership, bounded CDC transfers and connection-state
+  snapshots; add combined I2C transfers with repeated-start/STOP semantics.
+- Add revision-bound SDK inventory/patch reviews and fixed-harness comparisons.
 - Add local pytest/Unity hardware qualification, explicit board/probe profiles,
   startup/runtime checks and verified per-session J-Link device packs.
 - Validate seven core cases on AP3 Blue Plus, AP4 Blue Plus KXR, AP330 Plus,
-  AP510 and AP510B. An unchanged generated NSX app builds, flashes and emits
-  hello-world on AP4 KXR using the merged SDK through normal vendoring.
+  AP510 and AP510B, plus selected startup/performance/debug/timer/policy tests.
+  Release-candidate generated-app acceptance and limitations are recorded in
+  `release/qualification-5.2.27.md`.
 - Keep all 73 HAL/BSP archives and the entire provider payload unchanged from
   v5.2.26. This is an NSX integration release, not a new AmbiqSuite intake.
 - AP3 microphone capture and adjusted-HFRC2 audio qualification remain open;

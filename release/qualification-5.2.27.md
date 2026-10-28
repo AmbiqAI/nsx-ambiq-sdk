@@ -1,84 +1,73 @@
 # 5.2.27 qualification candidate
 
-Prepared 2026-10-23. This is an NSX integration release over the unchanged
-5.2.26 AmbiqSuite provider. All 73 HAL/BSP archives, headers and the artifact
-manifest remain unchanged. Historical provenance and limitations are retained
-in the 5.2.26 report and the new release manifest.
+Refreshed 2026-10-28. This is an NSX integration release over the unchanged
+5.2.26 AmbiqSuite provider, not a new upstream SDK intake. All 73 HAL/BSP
+archives, headers and the artifact manifest remain unchanged. Historical
+provenance and exclusions remain in the 5.2.26 report and release manifest.
+Release, tag and publication require separate maintainer approval.
 
-## Evidence and scope
+## Implementation and evidence
 
-The implementation baseline is SDK commit
-`4e7a78e10d419d2b067160de7368b1f3a7752f04` (merged PRs #116–#122).
-The release commit additionally aligns versions and records qualification.
+Implementation baseline: `23636da044960ed626d92b68632ced88109a4db2` (main after
+#131 and #174). The release branch adds version alignment and release records.
+Exact candidate revisions, commands, hashes and final review/CI results are
+recorded in [release PR #124](https://github.com/AmbiqAI/nsx-ambiq-sdk/pull/124).
 
-- Local regression at the implementation baseline: 1,572 passed, 184 skipped.
-- Clean-checkout GCC SDK compatibility gate: 288 passed, 40 other-toolchain
-  cases deselected.
-- Seven Unity startup/runtime cases passed on each of AP3 Blue Plus,
-  AP4 Blue Plus KXR, AP330 Plus, AP510 and AP510B. Runs used GCC and an attached
-  debugger. The suite covers startup state, constructors, memory, stack/heap
-  and exception dispatch; it is not peripheral qualification.
-- SVC negative controls on AP3 Blue Plus and AP510B failed the expected
-  assertion; normal firmware was restored and passed.
-- AP4 BSP selection was checked with UART diagnostics. KXR emitted messages
-  in two runs; KBR initialized but emitted none on the connected console.
-  The selected board is `apollo4p_blue_kxr_evb`; this does not prove every
-  peripheral pin mapping.
-- AP330 passed with J-Link 9.50 and the verified per-session device pack.
-  Pack binaries are not redistributed in this public repository.
+The current-main GCC compatibility gate passed 1,916 cases with 58 explicit
+other-profile deselections. The five-board matrix ran production baseline
+`fc5e344576e22500f4fa53706dcb184f504d2581`; subsequent #131 changes documentation,
+and #174 corrects an AP4 test assertion without changing production behavior.
 
-Local raw core evidence is retained at
-`/home/adamp/Ambiq/neuralspotx/artifacts/nsx/sdk-core-qualification-2026-10-23`.
-These machine-local artifacts are not shipped as part of the release.
+| Physical board | Core Unity cases | Additional passing Unity cases |
+| --- | ---: | ---: |
+| AP3 Blue Plus | 7 | 9 |
+| AP4 Blue Plus KXR | 7 | 17 + 1 corrected debug case |
+| AP330 Plus | 7 | 15 |
+| AP510 | 7 | 12 |
+| AP510B | 7 | 14 |
 
-## Generated-app validation
+Core cases cover initialized data/BSS/constructors, stack/heap bounds and SVC
+exception dispatch. Selected extras cover startup ownership/status, performance
+transitions, debug lifecycle, timer periods and applicable power/memory/USB
+preservation/TempCo policies. These are debugger-connected GCC reset tests.
+AP4's original debug assertion failed because it read clock-gated ITM state;
+#174 checks final trace/clock gates. The corrected case passed at
+`f1bcb24a1ac08185b21648fa6c801b46470da894`; omitting disable failed the intended
+assertion, then the normal passing image was restored. All claims were released.
 
-Built the neuralspotx 0.9.0 wheel from commit
-`2b72ffc71f90df792825645ac9c9647f296ca019`, installed it in isolated pipx,
-and ran `nsx doctor` successfully. Created the normal default application for
-`apollo4p_blue_kxr_evb`, then selected the merged SDK through an explicit
-app-local registry override:
+Raw evidence and `acceptance-summary.json` are retained outside the repository
+under `artifacts/nsx/acceptance-2026-10-28` in the parent workspace. Original
+failures and negative controls are preserved, not counted as passing cases.
+Prior AP510 USB traffic and audio evidence remains linked from its implementation
+PRs; this matrix did not repeat those traffic/acoustic experiments.
 
-```yaml
-module_registry:
-  projects:
-    nsx-ambiq-sdk:
-      revision: 4e7a78e10d419d2b067160de7368b1f3a7752f04
-```
+## Release-candidate acceptance
 
-Normal configure vendored that revision and recorded it in `nsx.lock`.
-No SDK-root override or application source edit was used. The frozen build
-passed. With the AP4 probe claimed, the following operations succeeded:
+Candidate checks and generated-app acceptance are being refreshed in PR #124.
+Do not interpret the implementation baseline matrix as an exact-candidate pass.
+The required app flow uses the installed neuralspotx 0.9.0 wheel, an unmodified
+AP4 KXR default app, an explicit immutable candidate-SHA registry override,
+normal app-local vendoring, frozen configure/build, and explicit-probe flash/SWO
+capture. No SDK-root override is permitted for this acceptance.
 
-```sh
-nsx flash --app-dir "$APP" --frozen --probe-serial 1160001491 --timeout 90
-nsx view --app-dir "$APP" --frozen --probe-serial 1160001491 \
-  --duration 7 --capture hello-swo.log --timeout 30
-```
+Candidate evidence is retained outside the repository at
+`artifacts/nsx/release-124-refresh-20261028`. Final acceptance must record the
+SDK candidate and NSX wheel hashes, lock, ELF hash, commands, raw output and
+reviewed exclusions before release approval. After publication, update the
+packaged registry to the immutable tag and repeat generated-app acceptance.
 
-SWO captured seven consecutive `nsx hello from generated app` messages in
-seven seconds. Supply the serial on each operation: a later configure did not
-retain the serial supplied to the initial configure, and an attempt without
-an explicit serial failed to connect in this multi-probe environment.
+## Limits
 
-ELF SHA-256:
-`29c8bef3e6ff8258fd7615ce6faaad3f6cb3c2f1a9916d5624e40ed0da57b636`.
-Logs, lock, manifest, unchanged source and binaries are retained locally at
-`/home/adamp/Ambiq/neuralspotx/artifacts/nsx/generated-app-2026-10-23`.
-This validates the merged SDK integration baseline, not a published 5.2.27 tag.
-
-## Remaining qualification limits
-
-- AP3 physical microphone capture remains unresolved. Passing core tests does
-  not resolve microphone power, routing or acoustic input.
-- Adjusted-HFRC2 audio remains unresolved (#72). The experimental upstream
-  clock-selector proposal is not included. Earlier AP510B HP250/PLL audio
-  results do not qualify the adjusted-HFRC2 path.
-- The five-board results do not establish standalone cold boot, low-power
-  transitions, long-duration DMA, or general peripheral correctness.
-- No new ATfE or ArmClang hardware qualification was performed for this
-  candidate. Earlier toolchain evidence remains historical, not a new pass.
-- Descriptor-only and experimental targets retain their existing exclusions.
-- Publishing and the packaged neuralspotx registry pin are separate steps.
-  After approval, publish the immutable tag, update the registry and repeat
-  the generated-app check against the published release.
+- AP3 microphone work remains paused. Adjusted-HFRC2 audio is unqualified;
+  the withdrawn upstream clock-selector proposal is not included.
+- No standalone cold-power-cycle/PVT, broad sleep/RTOS/peripheral, interrupt
+  latency, physical AP4 USB teardown or cable-unplug qualification is claimed.
+- AP510L has compile/link and controlled shim coverage, not physical validation.
+  AP4 constrained-memory layouts remain intentionally rejected pending proof.
+- ATfE/ArmClang have inherited and per-PR evidence; no fresh hardware
+  qualification is claimed for those toolchains in this release preparation.
+- Experimental AT110 retains header/archive and timer support limitations;
+  descriptor-only/experimental targets are outside the physical matrix.
+- Vendor-internal completion waits remain deferred. The shim's returned errors
+  do not promise hardware rollback or safe continued execution after a partial
+  startup failure.
