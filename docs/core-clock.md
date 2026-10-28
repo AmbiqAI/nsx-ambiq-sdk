@@ -48,7 +48,7 @@ do not replay transitions. Successful initialization is shared between both APIs
 failed initialization is retried. FPGA selection is explicitly unsupported.
 Failure retains the prior clock publication, without promising hardware rollback.
 
-`tests/test_ap3_performance.py` covers unavailable SKUs, preparation/divider
+`tests/test_ap3_burst.py` covers unavailable SKUs, preparation/divider
 rejection, missing HAL outputs, status errors, hardware mismatch, and mixed API
 calls. `ap3-performance` is a separate opt-in board suite: it compares DWT cycles
 with STIMER HFRC/16 across 24/48/96 MHz. Both share HFRC, so this checks relative

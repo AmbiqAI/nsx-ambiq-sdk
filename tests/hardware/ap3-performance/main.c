@@ -16,7 +16,9 @@ static void measure(uint32_t hz) {
     } while(elapsed<30000u && ++polls<1000000u);
     uint32_t delta=DWT->CYCCNT-cycles;
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32(30000u, elapsed);
-    uint32_t expected=elapsed*(hz/3000000u);
+    /* CORESEL divides all internal HFRC sources, including STIMER. */
+    uint32_t reference_hz=3000000u >> CLKGEN->CCTRL_b.CORESEL;
+    uint32_t expected=elapsed*(hz/reference_hz);
     UnityPrint("cpu_hz="); UnityPrintNumberUnsigned(hz);
     UnityPrint(" stimer_ticks="); UnityPrintNumberUnsigned(elapsed);
     UnityPrint(" dwt_cycles="); UnityPrintNumberUnsigned(delta); UnityPrint("\n");
