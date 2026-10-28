@@ -27,14 +27,15 @@ def test_minimum_matrix_is_independent_of_collection():
     assert gate.report(0)['missing_requirements'] == ['test.py::test_a']
 
 
-def test_filter_uses_compiler_parameters_not_substrings():
-    selector = GCC[0].selector
+@pytest.mark.parametrize('requirement', (GCC[0], POWER_STARTUP[0]), ids=('abi', 'power-link'))
+def test_filter_uses_compiler_parameters_not_substrings(requirement):
+    selector = requirement.selector
     def item(family):
         return SimpleNamespace(nodeid=selector + f'[{family}-atfe-artifact]',
                                callspec=SimpleNamespace(params={'family': family, 'selection': 'atfe'}))
     items = [item('gcc'), item('atfe'), item('armclang')]
     config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
-    gate = Gate(GCC)
+    gate = Gate((requirement,))
     gate.pytest_collection_modifyitems(config, items)
     assert len(items) == 1
     assert items[0].callspec.params['family'] == 'gcc'

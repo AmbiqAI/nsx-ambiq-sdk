@@ -87,20 +87,26 @@ void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM3);
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM4);
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM5);
+        #if !defined(AM_PART_APOLLO510L)
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM6);
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM7);
+        #endif
     }
 
     if (!pCfg->need_uart) {
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART0);
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART1);
+        #if !defined(AM_PART_APOLLO510L)
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART2);
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART3);
+        #endif
     }
 
+    #if !defined(AM_PART_APOLLO510L)
     if (!pCfg->need_audadc) {
         nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_AUDADC);
     }
+    #endif
 
 }
 
@@ -110,7 +116,10 @@ void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
     {
         .eROMMode       = AM_HAL_PWRCTRL_ROM_AUTO,
 
-        #if defined(AM_PART_APOLLO5A)
+        #if defined(AM_PART_APOLLO510L)
+            .eDTCMCfg = pCfg->small_tcm ? AM_HAL_PWRCTRL_DTCM128K : AM_HAL_PWRCTRL_DTCM256K,
+            .eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
+        #elif defined(AM_PART_APOLLO5A)
             .bEnableCache   = true,
             .bRetainCache   = true,
             .eDTCMCfg       = pCfg->small_tcm ? AM_HAL_PWRCTRL_ITCM32K_DTCM128K : AM_HAL_PWRCTRL_ITCM256K_DTCM512K,
@@ -181,12 +190,14 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
 
     am_bsp_low_power_init();
 
+    #if !defined(AM_PART_APOLLO510L)
     if (pCfg->spotmgr_collapse) {
         am_hal_spotmgr_profile_t spotmgr_profile;
         spotmgr_profile.PROFILE = 0;
         spotmgr_profile.PROFILE_b.COLLAPSESTMANDSTMP = 1;
         am_hal_spotmgr_profile_set(&spotmgr_profile);
     }
+    #endif
     #define ELP_ON                              1
     am_hal_pwrctrl_pwrmodctl_cpdlp_t sDefaultCpdlpConfig =
     {
@@ -238,7 +249,9 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     //
     // Power off the RSS
     //
-    am_hal_pwrctrl_rss_pwroff();
+    if (!pCfg->need_ble) {
+        am_hal_pwrctrl_rss_pwroff();
+    }
     #endif
 
     // Configure power mode
@@ -285,12 +298,20 @@ uint32_t nsx_power_shutdown_peripherals(void) {
 }
 
 uint32_t nsx_power_minimize_memory(void) {
-    // Smallest TCM: 32K ITCM + 128K DTCM.  Single NVM bank.
+    // Smallest supported TCM and a single NVM bank.
     am_hal_pwrctrl_mcu_memory_config_t mem = {
         .eROMMode              = AM_HAL_PWRCTRL_ROM_AUTO,
+        #if defined(AM_PART_APOLLO510L)
+        .eDTCMCfg              = AM_HAL_PWRCTRL_DTCM128K,
+        #else
         .eDTCMCfg              = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+        #endif
         .eRetainDTCM           = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
+        #if defined(AM_PART_APOLLO510L)
+        .eNVMCfg               = AM_HAL_PWRCTRL_NVM,
+        #else
         .eNVMCfg               = AM_HAL_PWRCTRL_NVM0_ONLY,
+        #endif
         .bKeepNVMOnInDeepSleep = false,
     };
     am_hal_pwrctrl_mcu_memory_config(&mem);
@@ -316,7 +337,9 @@ uint32_t nsx_power_minimize_memory(void) {
 
 void nsx_power_disable_nvm(void) {
     PWRCTRL->MEMPWREN_b.PWRENNVM  = 0;
+    #if !defined(AM_PART_APOLLO510L)
     PWRCTRL->MEMPWREN_b.PWRENNVM1 = 0;
+    #endif
     __DSB();
     __ISB();
 }
