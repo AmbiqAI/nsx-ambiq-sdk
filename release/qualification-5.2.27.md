@@ -43,18 +43,32 @@ PRs; this matrix did not repeat those traffic/acoustic experiments.
 
 ## Release-candidate acceptance
 
-Candidate checks and generated-app acceptance are being refreshed in PR #124.
-Do not interpret the implementation baseline matrix as an exact-candidate pass.
-The required app flow uses the installed neuralspotx 0.9.0 wheel, an unmodified
-AP4 KXR default app, an explicit immutable candidate-SHA registry override,
-normal app-local vendoring, frozen configure/build, and explicit-probe flash/SWO
-capture. No SDK-root override is permitted for this acceptance.
+The implementation candidate `f690dcd38c32024ac122148884edf3a9ea0c8847`
+passed all 1,916 required GCC compatibility cases (58 other-profile
+deselections). A freshly isolated pipx installation of the neuralspotx 0.9.0
+wheel passed `nsx doctor`, created the normal default AP4 KXR app, resolved the
+candidate through an app-local registry override, and passed frozen
+configure/build. App sources were unchanged; no SDK-root override was used.
+All vendored files were verified against the candidate's Git blob identities.
 
-Candidate evidence is retained outside the repository at
-`artifacts/nsx/release-124-refresh-20261028`. Final acceptance must record the
-SDK candidate and NSX wheel hashes, lock, ELF hash, commands, raw output and
-reviewed exclusions before release approval. After publication, update the
-packaged registry to the immutable tag and repeat generated-app acceptance.
+With probe `1160001491` claimed, frozen flash and a seven-second SWO capture
+passed, producing seven `nsx hello from generated app` messages. The claim was
+released. ELF SHA-256:
+`59ed7b5815ec4ba9f3c6e357eef3fb59770764db2dcfa4aaa5b3b0e87bba52f0`.
+NSX wheel SHA-256:
+`6b6d862dd09d0f7e196f3c056ea8a56778768e46f0cbee9d42e4be671972beeb`.
+
+Subsequent release-record-only corrections do not change that implementation.
+The final reviewed candidate must repeat frozen vendoring/build and physical
+flash/SWO acceptance; its exact SHA and hashes are recorded in PR #124 before
+merge approval. This avoids putting a self-referential final commit in this
+file. Final review and CI are separate gates, not implied by these runs.
+
+Evidence is retained outside the repository at
+`artifacts/nsx/release-124-refresh-20261028`, including original attempts,
+source/lock identities, manifests, ELF, raw logs and reviewer reports. After
+publication, update the packaged registry to the immutable tag and repeat
+generated-app acceptance against that tag.
 
 ## Limits
 

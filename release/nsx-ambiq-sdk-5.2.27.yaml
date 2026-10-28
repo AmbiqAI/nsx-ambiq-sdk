@@ -477,18 +477,11 @@ consumer_upgrade:
     - PR 86
     - issue 85
     - issue 87
-    summary: 'The apollo2, apollo3 and apollo3p GCC linker scripts in nsx-core now define __HeapBase and
-      __HeapLimit (a .heap section after .bss running to the top of RWMEM, with the 1 KiB guard ASSERT),
-      which nsx-core''s force-linked _sbrk needs. Before this, every GCC or ATfE application linking nsx::system
-      for apollo3 and apollo3p boards failed to link, already on v5.2.24; such apps now link for the first
-      time. PR #86 verified ble_webble on the Apollo3 Blue Plus EVB with arm-none-eabi-gcc 15.2.1 and
-      ATfE 22.1.0 (flashed; 12 s of SWO showed BLE bring-up stages 6 through 37 and no failure line).
-      apollo2 gets the same symbols but still does not build, for an unrelated reason; apollo3 (non-Plus)
-      hardware was not tested; armclang uses scatter files and is unaffected. Known open issue #87: C++
-      global constructors never run on apollo2/apollo3/apollo3p, because their startup files never call
-      __libc_init_array and their linker scripts define no .init_array section or bounds (see known deviation
-      apollo2-3-cxx-global-constructors). sbrk.c and nsx_system.h only update comments; tests/test_cmake_contract.py
-      requires every nsx-core GCC linker script to define both symbols.'
+    summary: 'Apollo2/3/3 Plus GCC linker scripts define __HeapBase and __HeapLimit for the bounded, force-linked
+      _sbrk implementation, fixing the earlier AP3/AP3 Plus GCC/ATfE link failure (#86). The destination
+      5.2.27 also fixes C++ constructor startup and initialization-array bounds (#90); #87 is closed.
+      Current AP3 Blue Plus hardware checks cover heap/stack bounds and constructor execution. Earlier
+      #86 BLE/GCC/ATfE evidence is historical; physical Apollo2/plain Apollo3 qualification is not claimed.'
     paths:
     - modules/nsx-core/src/apollo2/gcc/linker_script.ld
     - modules/nsx-core/src/apollo3/gcc/linker_script.ld
@@ -498,7 +491,8 @@ consumer_upgrade:
     - tests/test_cmake_contract.py
   - id: ble-dis-firmware-revision
     refs: []
-    summary: The BLE Device Information Service default firmware revision string advertises 5.2.26.
+    summary: The BLE Device Information Service default firmware revision string advertises the destination
+      release, 5.2.27.
     paths:
     - modules/nsx-ble/src/ns_ble.c
     - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
@@ -525,8 +519,8 @@ consumer_upgrade:
     - .github/workflows/container-validation.yml
   - id: distribution-version
     refs: []
-    summary: Distribution version 5.2.26 in pyproject.toml, uv.lock and every module manifest (version
-      line only, except where another change lists the manifest).
+    summary: Distribution version 5.2.27 in pyproject.toml, uv.lock and every module manifest; the same
+      version is used by the BLE firmware defaults.
     paths:
     - pyproject.toml
     - uv.lock
@@ -535,8 +529,8 @@ consumer_upgrade:
     path_scope: tree
     path_scope_reason: Release records and docs are not shipped in a consumer build; any file under these
       directories may change.
-    summary: The 5.2.26 release record and qualification report, CHANGELOG, and README/versioning text
-      that states the current version and payload provenance. Not part of a consumer build.
+    summary: Preserve earlier release records and add the 5.2.27 record, qualification report, changelog
+      and current version/provenance documentation. Not part of a consumer build.
     paths:
     - release
     - CHANGELOG.md
@@ -547,8 +541,8 @@ consumer_upgrade:
     refs: []
     path_scope: tree
     path_scope_reason: Tests are not shipped in a consumer build.
-    summary: Contract tests moved to the 5.2.26 record, plus the release-record checks. Not part of a
-      consumer build.
+    summary: Contract tests target the 5.2.27 release record, verify upgrade coverage and unchanged payload,
+      and freeze published change lists at their immutable tag. Not part of a consumer build.
     paths:
     - tests
   - id: release-integration-5-2-27
@@ -810,7 +804,11 @@ consumer_upgrade:
     - PR 86
     - issue 85
     - issue 87
-    summary: As above.
+    summary: 'Apollo2/3/3 Plus GCC linker scripts define __HeapBase and __HeapLimit for the bounded, force-linked
+      _sbrk implementation, fixing the earlier AP3/AP3 Plus GCC/ATfE link failure (#86). The destination
+      5.2.27 also fixes C++ constructor startup and initialization-array bounds (#90); #87 is closed.
+      Current AP3 Blue Plus hardware checks cover heap/stack bounds and constructor execution. Earlier
+      #86 BLE/GCC/ATfE evidence is historical; physical Apollo2/plain Apollo3 qualification is not claimed.'
     paths:
     - modules/nsx-core/src/apollo2/gcc/linker_script.ld
     - modules/nsx-core/src/apollo3/gcc/linker_script.ld
@@ -820,7 +818,8 @@ consumer_upgrade:
     - tests/test_cmake_contract.py
   - id: ble-dis-firmware-revision
     refs: []
-    summary: The BLE DIS default firmware revision string moves from 5.2.24 to 5.2.26.
+    summary: The BLE Device Information Service default firmware revision string advertises the destination
+      release, 5.2.27.
     paths:
     - modules/nsx-ble/src/ns_ble.c
     - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
@@ -876,7 +875,8 @@ consumer_upgrade:
     - .pre-commit-config.yaml
   - id: distribution-version
     refs: []
-    summary: As above.
+    summary: Distribution version 5.2.27 in pyproject.toml, uv.lock and every module manifest; the same
+      version is used by the BLE firmware defaults.
     paths:
     - pyproject.toml
     - uv.lock
@@ -885,9 +885,8 @@ consumer_upgrade:
     path_scope: tree
     path_scope_reason: Release records and docs are not shipped in a consumer build; any file under these
       directories may change.
-    summary: The 5.2.25 and 5.2.26 release records and qualification reports (and the machine-verified
-      archives_introduced_in ledger in the 5.2.24 record), CHANGELOG, and README/versioning/intake docs.
-      Not part of a consumer build.
+    summary: Preserve earlier release records and add the 5.2.27 record, qualification report, changelog
+      and current version/provenance documentation. Not part of a consumer build.
     paths:
     - release
     - CHANGELOG.md
@@ -1127,7 +1126,7 @@ payload_provenance:
       actually shipped. No archive bytes changed.
     forensic_report: docs/acfe-artifact-manifest-forensics.md
 qualification:
-  status: pending_final_review
+  status: qualified_with_exclusions
   report: release/qualification-5.2.27.md
   inherits_from: release/qualification-5.2.26.md
   scope:
