@@ -304,3 +304,18 @@ uv run --group hardware --group ci pytest -q tests/hardware/test_memory_prefligh
 
 This flashes the board. It tests rejection and corrected startup, not operation
 with reduced RAM or physical AP4L behavior.
+
+## Apollo5-class startup ownership
+
+AP510/B/5A/5B and AP330P/510L now share the same one-attempt-per-reset guard
+as AP3/AP4 across system, full hardware, minimal hardware and power startup.
+Previously these families could replay the BSP baseline. Choose one entry
+point, then use runtime debug/cache/performance helpers; raw HAL/BSP calls
+remain caller-owned. No force/retry API is introduced.
+
+Unknown power performance enums fail before claiming ownership; NOT_SET keeps
+its LOW mapping. API/version validation also precedes the claim. Started
+attempts remain consumed after success or failure; caller interrupt masks are
+preserved. Existing unchecked HAL results and fail-stop operations in the
+legacy Apollo5/330 power backends are unchanged: this guard does not turn them
+into checked or bounded initialization or promise peripheral preservation.

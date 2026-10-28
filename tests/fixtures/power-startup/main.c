@@ -41,6 +41,13 @@ void am_bsp_low_power_init(void) {
         assert(nsx_power_configure(&config) == NSX_STATUS_STARTUP_REJECTED);
     }
 }
+#ifdef TEST_APOLLO5_OWNERSHIP
+/* Isolate wrapper ownership from the legacy peripheral/memory sequence. */
+uint32_t nsx_power_platform_config(const nsx_power_config_t *cfg) {
+    assert(cfg); am_bsp_low_power_init(); return operation("power-config");
+}
+void nsx_power_platform_deep_sleep(void) {assert(!"unexpected sleep");}
+#endif
 uint32_t nsx_platform_hw_init(void) { am_bsp_low_power_init(); return operation("system-hw"); }
 uint32_t nsx_platform_minimal_hw_init(void) { return operation("minimal-hw"); }
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) { (void)mode; return operation("system-perf"); }
@@ -142,20 +149,24 @@ static void ownership(const char *scenario) {
         system.perf_mode=NSX_PERF_LOW; system.debug.transport=(nsx_debug_transport_e)99;
         assert(nsx_system_init(&system) == NSX_STATUS_INVALID_CONFIG);
         assert(nsx_system_init(NULL) == NSX_STATUS_INVALID_HANDLE);
-        nsx_power_config_t bad=config; bad.perf_mode=NSX_POWER_PERF_NOT_SET;
+        nsx_power_config_t bad=config; bad.perf_mode=(nsx_power_perf_mode_t)99;
         assert(nsx_power_configure(&bad) == NSX_STATUS_INVALID_CONFIG);
         assert(calls == 0); system.debug.transport=NSX_DEBUG_ITM;
     }
     if (!strncmp(scenario,"masked",6)) mask=expected_mask=1;
     if (!strcmp(scenario,"system-minimal")) system.skip_bsp_init=true;
-    if (!strcmp(scenario,"reentry")) reenter=true;
+    if (!strcmp(scenario,"reentry") || !strcmp(scenario,"power-reentry")) reenter=true;
     uint32_t status;
     if (!strcmp(scenario,"hardware")) status=nsx_hw_init();
     else if (!strcmp(scenario,"minimal") || !strcmp(scenario,"minimal-failure")) {
         if (!strcmp(scenario,"minimal-failure")) fail_at=1;
         status=nsx_minimal_hw_init();
     }
-    else if (!strcmp(scenario,"power-first")) status=nsx_power_configure(&config);
+    else if (!strncmp(scenario,"power-",6)) {
+        if (!strcmp(scenario,"power-failure")) fail_at=1;
+        if (!strcmp(scenario,"power-not-set")) config.perf_mode=NSX_POWER_PERF_NOT_SET;
+        status=nsx_power_configure(&config);
+    }
     else {
         if (!strncmp(scenario,"system-failure-",15)) fail_at=(unsigned)strtoul(scenario+15,NULL,10);
         if (!strcmp(scenario,"masked-failure")) fail_at=3;

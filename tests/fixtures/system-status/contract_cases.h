@@ -44,7 +44,7 @@ static void contract_startup(const char *scenario) {
         assert(!seen(DEBUG) && !seen(PERF) && !seen(PROFILE));
         assert(nsx_core_initialized() == (failure != CORE));
         if(failure == CORE) assert(!seen(BSP) && !seen(CACHE));
-#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+#if NSX_STARTUP_GUARDED
         unsigned before=count;
         assert(nsx_system_init(&cfg) == NSX_STATUS_STARTUP_REJECTED && count == before);
 #endif
@@ -91,7 +91,7 @@ static void contract_startup(const char *scenario) {
 #endif
     /* AP3 selector behavior is covered by the dedicated burst fixture. */
     assert(!seen(PROFILE));
-#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+#if NSX_STARTUP_GUARDED
     unsigned before=count;
     assert(nsx_hw_init() == NSX_STATUS_STARTUP_REJECTED);
     assert(nsx_minimal_hw_init() == NSX_STATUS_STARTUP_REJECTED);

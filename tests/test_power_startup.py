@@ -14,6 +14,7 @@ from test_small_m55_memory import compiler_for_test
 COMMON = ('null', 'null-api', 'bad-api', 'bad-version', 'invalid-mode', 'no-core',
           'success', 'success-keep', 'fail-minimal', 'fail-keep')
 FAMILIES = ('apollo3', 'apollo3p', 'apollo4p', 'apollo4l')
+APOLLO5 = ('apollo510', 'apollo510b', 'apollo5a', 'apollo5b', 'apollo330p', 'apollo510l')
 
 
 @pytest.fixture
@@ -33,6 +34,8 @@ def startup_binary(request, repo_root, tmp_path, api_validation):
                 '-I', str(repo_root / 'modules/nsx-core/includes-api'),
                 '-I', str(repo_root / 'modules/nsx-core/includes-internal')]
     flags = ['-std=c11', '-Wall', '-Wextra', '-DAM_PART_' + family.upper()]
+    if family in APOLLO5:
+        flags.append('-DTEST_APOLLO5_OWNERSHIP')
     if not api_validation:
         flags.append('-DNSX_DISABLE_API_VALIDATION')
     host_env = os.environ.copy()
@@ -47,7 +50,8 @@ def startup_binary(request, repo_root, tmp_path, api_validation):
                     str(repo_root / 'modules/nsx-core/src/nsx_system.c'),
                     str(repo_root / 'modules/nsx-core/src/nsx_debug.c'),
                     str(repo_root / 'modules/nsx-power/src/nsx_power.c'),
-                    str(repo_root / f'modules/nsx-power/src/{arch}/nsx_power.c'), '-o', str(binary)],
+                    str(repo_root / ('modules/nsx-power/src/nsx_power_preflight.c' if family in APOLLO5
+                                    else f'modules/nsx-power/src/{arch}/nsx_power.c')), '-o', str(binary)],
                    check=True, capture_output=True, text=True, env=host_env)
     return binary
 
@@ -87,15 +91,16 @@ OWNERSHIP = ('system', 'system-minimal', 'hardware', 'minimal', 'power-first',
              'system-failure-4', 'minimal-failure', 'preflight', 'masked', 'masked-failure')
 
 
+@pytest.mark.parametrize('api_validation', (True, False))
 @pytest.mark.parametrize(('startup_binary', 'scenario'),
-                         [(family, scenario) for family in FAMILIES for scenario in OWNERSHIP],
+                         [(family, scenario) for family in FAMILIES + APOLLO5 for scenario in OWNERSHIP],
                          indirect=['startup_binary'])
-def test_startup_ownership(startup_binary, scenario):
+def test_startup_ownership(startup_binary, scenario, api_validation):
     subprocess.run([str(startup_binary), 'ownership-' + scenario], check=True,
                    capture_output=True, text=True, timeout=5)
 
 
-@pytest.mark.parametrize('board', ['apollo3p_evb', 'apollo4p_blue_kxr_evb'])
+@pytest.mark.parametrize('board', ['apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb'])
 def test_ownership_smoke_builds(repo_root, tmp_path, board):
     from tools.hardware.api import BuildRequest, build_firmware
     from tools.hardware.suites import OWNERSHIP
@@ -157,3 +162,31 @@ def test_memory_preflight_smoke_builds(repo_root, tmp_path):
     assert symbols['__HeapBase'] < symbols['__HeapLimit']
     for name in ('shared_initialized', 'shared_zeroed'):
         assert 0x10060000 <= symbols[name] < 0x10160000
+
+
+@pytest.mark.parametrize('api_validation', (True, False))
+@pytest.mark.parametrize(('startup_binary', 'scenario'),
+                         [(family, scenario) for family in APOLLO5
+                          for scenario in ('power-not-set', 'power-failure', 'power-reentry')],
+                         indirect=['startup_binary'])
+def test_apollo5_power_ownership(startup_binary, scenario, api_validation):
+    subprocess.run([str(startup_binary), 'ownership-' + scenario], check=True,
+                   capture_output=True, text=True, timeout=5)
+
+
+def test_apollo510l_startup_headers(repo_root, tmp_path):
+    compiler = compiler_for_test('gcc')
+    board = 'apollo510dL_evb'
+    result = configure_contract_project(repo_root, tmp_path, board, 'gcc',
+        ('nsx-core', 'nsx-interrupt', 'nsx-timer', 'nsx-power'),
+        prelude=('set(CMAKE_EXPORT_COMPILE_COMMANDS ON)',))
+    assert result.returncode == 0, result.stdout
+    entries = json.loads((tmp_path / 'gcc' / board / 'build/compile_commands.json').read_text())
+    selected = [entry for entry in entries if entry['file'].endswith(
+        ('/nsx_startup.c', '/nsx_power_preflight.c', '/nsx_system.c'))]
+    assert len(selected) == 3
+    for index, entry in enumerate(selected):
+        command = shlex.split(entry['command'])
+        command[0] = str(compiler)
+        command[command.index('-o') + 1] = str(tmp_path / f'startup-{index}.o')
+        subprocess.run(command, cwd=entry['directory'], check=True, capture_output=True, text=True)
