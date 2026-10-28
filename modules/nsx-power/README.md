@@ -52,6 +52,18 @@ instrumentation.
 
 The public API is exported as `nsx_power.h`.
 
+Apollo510L uses the Apollo5 backend with its own HAL capabilities: IOM0–5,
+UART0–1, single-bank NVM, 128/256 KiB DTCM and 1.75 MiB shared SRAM.
+`need_ble` skips optional RSS shutdown; it does not initialize BLE or undo the
+BSP baseline. `need_audadc` and `spotmgr_collapse` have no effect on Apollo510L,
+which has neither the AP510 AUDADC nor that SpotManager profile API.
+The measurement helpers remain available, but Apollo510L has no ITCM:
+`nsx_power_minimize_memory()` requires code, stack and data to fit the retained
+memory layout. NVM-off experiments require an entirely RAM-resident execution
+path. Compile/link tests do not constitute physical qualification of those
+memory-changing helpers. Legacy startup error propagation remains tracked in
+[#168](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/168).
+
 ## CPU clock after a performance change
 
 On AP4 silicon, Apollo510/Apollo510B and Apollo330P/Apollo510L,

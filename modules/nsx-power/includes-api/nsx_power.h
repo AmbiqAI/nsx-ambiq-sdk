@@ -284,13 +284,14 @@ uint32_t nsx_power_shutdown_peripherals(void);
 /**
  * @brief Configure the staged minimal-memory profile.
  *
- * Sets 32 KB ITCM + 128 KB DTCM, single NVM bank, no shared SRAM,
- * and enables MRAM low-power read mode.  Suitable for small
- * ITCM-resident workloads with data in DTCM only.
+ * Sets 32 KB ITCM + 128 KB DTCM (Apollo510L: 128 KB DTCM, no ITCM),
+ * single NVM bank, no shared SRAM, and MRAM low-power read mode.
+ * The application must use a layout that fits the retained regions.
  *
  * Any code or data outside these regions will be inaccessible
  * after this call.  Ensure your stack, heap, and working buffers
- * fit within 128 KB DTCM.
+ * fit within 128 KB DTCM, including the configured stack address; a
+ * small stack allocation alone does not ensure it lies in retained memory.
  *
  * @return 0 on success.
  */
@@ -299,12 +300,14 @@ uint32_t nsx_power_minimize_memory(void);
 /**
  * @brief Request NVM (MRAM) power-off.
  *
- * Clears PWRENNVM for both NVM banks and issues barrier.
+ * Clears PWRENNVM for both NVM banks (Apollo510L: its single bank)
+ * and issues barriers.
  * The NVM controller will not finalize power-down until an MRAM bus
  * transaction completes — call NSX_POWER_DRAIN_NVM() afterward.
  *
  * @warning After NSX_POWER_DRAIN_NVM(), MRAM is inaccessible.
- *          The caller must already be executing from ITCM/TCM.
+ *          The complete call/return path, vectors, handlers and data must
+ *          remain accessible outside MRAM. Apollo510L has DTCM, not ITCM.
  */
 void nsx_power_disable_nvm(void);
 
