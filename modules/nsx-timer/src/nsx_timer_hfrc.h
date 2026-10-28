@@ -1,0 +1,7 @@
+/* Apollo4/510/330 TIMER source: 96 MHz HFRC / 16. */
+#ifndef NSX_TIMER_HFRC_H
+#define NSX_TIMER_HFRC_H
+#include <stdint.h>
+#define NSX_TIMER_HFRC_TICKS_PER_US 6u
+#define NSX_TIMER_HFRC_MAX_PERIOD_US (UINT32_MAX / NSX_TIMER_HFRC_TICKS_PER_US)
+#endif

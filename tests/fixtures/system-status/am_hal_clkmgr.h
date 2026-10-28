@@ -1,0 +1,7 @@
+#pragma once
+#define AM_HAL_CLKMGR_CLK_ID_PLLVCO 5
+#define AM_HAL_CLKMGR_CLK_ID_HFRC2 6
+#define AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ 0u
+#define AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_250MHZ 250000000u
+#define AM_HAL_CLKMGR_HFRC2_FREQ_ADJ_196P608MHZ 196608000u
+uint32_t am_hal_clkmgr_clock_config_get(unsigned, uint32_t *, void *);

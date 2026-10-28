@@ -34,26 +34,79 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 
 ## nsx_system Quick Start
 
+On AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L, choose one startup entry point per reset:
+`nsx_system_init()`, `nsx_power_configure()`, `nsx_hw_init()`, or
+`nsx_minimal_hw_init()`. The latter two support staged initialization followed
+by cache, debug, performance and driver operations. Do not follow one with a
+second startup entry point. A valid repeated or re-entrant request returns
+`NSX_STATUS_STARTUP_REJECTED` before hardware effects, including after a failed
+startup. Correcting an input-validation error is allowed. `skip_bsp_init` still
+selects minimal initialization; it consumes startup ownership without claiming
+that BSP initialization ran. Other families retain existing behavior.
+
+The shared guard belongs to `nsx::system`, independently of the core runtime
+initialized flag. Calls directly into HAL/BSP bypass it and remain the caller's
+sequencing responsibility. BSP-internal failures hidden by its void interface
+cannot be reported by this guard. Run startup from foreground before drivers or
+interrupt-driven application activity; only ownership transitions mask interrupts.
+
 ```c
 #include "nsx_system.h"
 
 int main(void) {
-    // One-call init: HP mode, caches, ITM debug, SpotManager
-    nsx_system_config_t cfg = nsx_system_development;
-    cfg.skip_bsp_init = true;   // skip the BSP delay for fast local loops
-    nsx_system_init(&cfg);
+    // Full board baseline, cache requested, LOW performance, ITM output.
+    nsx_system_config_t cfg = {
+        .perf_mode = NSX_PERF_LOW,
+        .enable_cache = true,
+        .debug = {.transport = NSX_DEBUG_ITM},
+    };
+    if (nsx_system_init(&cfg) != NSX_STATUS_SUCCESS) {
+        return 1; // Application owns its startup-failure policy.
+    }
 
     nsx_printf("Hello from NSX\n");
 }
 ```
 
-Three built-in presets:
+Three opt-in presets (include `nsx_presets.h` and link `nsx::presets`):
 
 | Preset | Perf | Cache | Debug | SpotMgr | BSP init |
 |--------|------|-------|-------|---------|----------|
 | `nsx_system_development` | HIGH | yes | ITM | yes | yes |
 | `nsx_system_inference` | HIGH | yes | none | yes | yes |
 | `nsx_system_minimal` | LOW | no | none | no | skip |
+
+Zero-initialized configuration selects the full BSP path, LOW performance and
+no explicit cache/debug/profile request. The BSP can itself enable caches or
+change peripheral state. The minimal path enables cache/FPU on AP3/AP4, and
+CPDLP/SpotManager/FPU on Apollo5-class parts. Consequently `enable_cache=false`
+is not a cache-disable guarantee, and minimal startup is not a substitute for
+board regulator/clock prerequisites. `enable_sram` is reserved and ignored.
+
+`nsx_set_perf_mode()` uses family-specific meanings: AP3/3P selects normal
+24/48 MHz or burst 96 MHz; AP4 and AP510 map MEDIUM/HIGH to the same HP mode; AP330P/510L map them
+to HP1/HP2. AP3/3P, AP4 silicon and AP510/B/AP330P/510L share selection with `nsx-power`
+and publish `SystemCoreClock` only after HAL success and hardware ACK/mode
+verification. Errors retain the previous publication but do not roll back
+hardware. Callers own serialized access, SysTick/RTOS reloads and cached timing
+conversions. The two public enums have different layouts; do not cast between
+them. AP2, AT110 and AP4 FPGA publication behavior is unchanged.
+
+`nsx_debug_init(NULL)` and `NSX_DEBUG_NONE` are no-ops, including when a transport
+is already active. Full BSP startup still releases active NSX debug first.
+Successful system/debug setup and legacy printf-enable wrappers share transport
+state; repeated enable of the active transport does not reconfigure hardware.
+Checked setup errors stop later operations without rolling back completed work.
+Void/nonreturning vendor helpers do not become checked or bounded by this API.
+
+The startup contract tests execute the real lifecycle, coordinator, debug state,
+printf wrappers and selected family backend with controlled HAL responses.
+They cover full/minimal and staged composition, debug/performance ordering,
+legacy mode mappings and failures. These are host control-flow checks; existing
+real-header builds and board smokes provide separate target evidence. AP3/3P
+system and power selectors now share normal/burst behavior; see
+[CPU clock contracts](../../docs/core-clock.md). The shared startup guard now
+also covers the Apollo5-class parts listed above. AP2/Atomiq110 are unchanged.
 
 Or call individual building blocks for fine-grained control — see the
 header's "Recommended Initialization Order" section.
@@ -65,6 +118,8 @@ header's "Recommended Initialization Order" section.
 
 | Backend directory | SoCs covered |
 |-------------------|--------------|
+| `src/apollo3p/` | Apollo3, Apollo3P |
+| `src/apollo4p/` | Apollo4P, Apollo4L |
 | `src/apollo510/` | Apollo510, Apollo510B, Apollo510L, Apollo5A, Apollo5B, Apollo330P |
 
 CMake selects the correct backend via `NSX_SOC_FAMILY`.

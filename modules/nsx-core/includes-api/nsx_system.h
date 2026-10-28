@@ -10,6 +10,13 @@
  * context, but callers should normally reach for the NSX helpers first and
  * only drop lower when they need behavior that NSX does not wrap yet.
  *
+ * Startup and standalone performance/debug helpers reject unknown enum values
+ * before hardware changes. nsx_debug_init(NULL) and NSX_DEBUG_NONE remain
+ * successful no-ops. Status-returning setup failures stop subsequent setup;
+ * already completed hardware steps are not rolled back. DCU setup restores
+ * its interrupt mask and attempts cleanup of temporarily powered domains.
+ * Void or nonreturning vendor helpers cannot report failures through this API.
+ *
  * ## Boot Sequence Overview
  *
  * The ARM Cortex-M goes through several stages before reaching main().
@@ -31,40 +38,27 @@
  *
  * ## Recommended Initialization Order in main()
  *
- * The `nsx_system_init()` convenience function performs all steps in the
- * recommended order. For fine-grained control, call the individual helpers
- * in this order:
+ * Choose either nsx_system_init() or a staged sequence, before application
+ * drivers, DMA or a scheduler. Check every returned status. A staged sequence
+ * is nsx_core_init(), one of nsx_hw_init()/nsx_minimal_hw_init(), optional
+ * nsx_cache_enable(), nsx_debug_init(), then nsx_set_perf_mode(). Do not call
+ * nsx_system_init() after a staged hardware-init entry point. The C runtime
+ * and static constructors have already run; nsx_core_init() only establishes
+ * NSX lifecycle/API state.
  *
- * ```c
- * // 1. Core runtime (required first — gates all other NSX calls)
- * nsx_core_init(&core_cfg);
- *
- * // 2. Low-power hardware init (required for cache, clocks, SIMOBUCK)
- * //    NOTE: am_bsp_low_power_init() includes a 2-second delay.
- * //    Use nsx_minimal_hw_init() instead if you don't need full BSP setup.
- * nsx_hw_init();               // or nsx_minimal_hw_init()
- *
- * // 3. Cache (requires CPDLP from step 2 — will fail without it)
- * nsx_cache_enable();           // from nsx_mem.h
- *
- * // 4. Performance mode (HP clock)
- * nsx_set_perf_mode(NSX_PERF_HIGH);
- *
- * // 5. Debug output (order matters — see gotchas below)
- * nsx_debug_init(&debug_cfg);
- *
- * // 6. Application-specific peripherals
- * // ... your code ...
- * ```
+ * Minimal startup is an advanced board/boot-dependent path, not a faster
+ * equivalent of the full BSP baseline. It does not establish all regulator
+ * and clock prerequisites for high-performance operation. Debug setup must
+ * precede the Apollo5-class performance switch.
  *
  * ## Common Gotchas
  *
  * ### I/D Cache silently not enabled (Apollo5 family)
  *   `am_hal_cachectrl_icache_enable()` checks `PWRMODCTL->CPDLPSTATE` and
- *   returns FAIL (silently!) if the cache power domain (RLP) is not active.
+ *   returns FAIL if the cache power domain (RLP) is not active.
  *   This is configured by `am_hal_pwrctrl_low_power_init()` inside
  *   `am_bsp_low_power_init()`. Without it, inference runs 3–4x slower
- *   with no visible error.
+ *   if the caller ignores the returned error.
  *   → Always call `nsx_hw_init()` or `nsx_minimal_hw_init()` before
  *     `nsx_cache_enable()`. Check the return value.
  *
@@ -83,7 +77,7 @@
  *   1. **DCU unlock** — OTP + Crypto powered temporarily, `am_hal_dcu_update()`
  *      enables SWO/DWT/SWD/TRACE bits, then Crypto/OTP are powered down.
  *      This step is shared by all Apollo5 variants and is handled internally.
- *   2. **TPIU / ITM / SWO pin** — Configured by BSP helper on AP330P/510L,
+ *   2. **TPIU / ITM / SWO pin** — Configured by checked HAL calls on AP330P/510L,
  *      or manually on Apollo510/5B/5A (where `MCUCTRL_DBGCTRL_DBGTPIUCLKSEL_HFRC_96MHz`
  *      is available).
  *   3. **printf backend** — `am_util_stdio_printf_init()` with `am_hal_itm_print`.
@@ -97,7 +91,7 @@
  *   | SoC         | Trace clock source | Freq     | JLink -cpufreq |
  *   |-------------|--------------------|----------|----------------|
  *   | Apollo510   | HFRC_96MHz         | 96 MHz   | 96000000       |
- *   | Apollo330P  | XTAL_HS            | 48 MHz   | 48000000       |
+ *   | Apollo330P  | HFRC_48MHz         | 48 MHz   | 48000000       |
  *
  *   The `nsx view` CLI command and the CMake `<app>_view` target handle
  *   this automatically via the per-SoC `NSX_SEGGER_CPUFREQ` setting in
@@ -113,8 +107,8 @@
  *
  * ### C++ Static Constructors
  *   `__libc_init_array()` in the startup code runs C++ global constructors
- *   BEFORE main(). These run with hardware in reset-default state (no
- *   caches, no SIMOBUCK, no clock config). Keep global constructors
+ *   BEFORE main(). Hardware state depends on the bootloader and SystemInit(),
+ *   not the later application startup request. Keep global constructors
  *   lightweight — defer hardware-dependent init to main().
  *   The linker script MUST have `.preinit_array`, `.init_array`, and
  *   `.fini_array` sections or constructors silently won't run.
@@ -144,10 +138,18 @@ extern "C" {
 
 /** @brief CPU performance / clock speed setting.
  *
- *  | SoC       | LOW         | MEDIUM      | HIGH        |
- *  |-----------|-------------|-------------|-------------|
- *  | Apollo510 | LP  96 MHz  | HP  250 MHz | HP  250 MHz |
- *  | AP330P    | LP  96 MHz  | HP1         | HP2         |
+ *  | Family      | LOW       | MEDIUM | HIGH |
+ *  |-------------|-----------|--------|------|
+ *  | Apollo3/3P  | Normal 24/48 MHz | Burst 96 MHz | Burst 96 MHz |
+ *  | Apollo4P/L  | LP        | HP     | HP   |
+ *  | Apollo510/B | LP        | HP     | HP   |
+ *  | AP330P/510L | LP        | HP1    | HP2  |
+ *
+ * These are legacy system-selector meanings, not the nsx-power enum layout.
+ * AP3/3P shares burst control with nsx_power_set_performance_mode().
+ * On AP3/3P and AP4 silicon and Apollo510/B/AP330P/510L, successful selection publishes
+ * SystemCoreClock after verifying hardware mode. CPU rates depend on the
+ * configured source. The caller owns SysTick/RTOS reloads and cached conversions.
  */
 typedef enum {
     NSX_PERF_LOW    = 0,   ///< Low-power mode
@@ -161,7 +163,7 @@ typedef enum {
 
 /** @brief Preferred NSX debug-output transport. */
 typedef enum {
-    NSX_DEBUG_NONE = 0,    ///< No debug output
+    NSX_DEBUG_NONE = 0,    ///< Request no debug setup; not a shutdown operation
     NSX_DEBUG_ITM  = 1,    ///< SWO/ITM (requires JLink + SWO pin)
     NSX_DEBUG_UART = 2,    ///< UART (requires BSP UART pins)
 } nsx_debug_transport_e;
@@ -184,20 +186,22 @@ typedef struct {
 /**
  * @brief Complete system initialization configuration.
  *
- * Pass to nsx_system_init() for a single-call setup. Every field
- * has a safe default (zero-init = minimal, low-power, no debug).
+ * Pass to nsx_system_init() for a single-call setup.
+ * Zero-initialization selects full BSP initialization, LOW performance and
+ * no explicit cache/debug/profile request. It does not select minimal startup
+ * or guarantee that the BSP leaves caches/debug domains disabled.
  *
  * For fine-grained control, skip this and call individual helpers.
  */
 typedef struct {
     nsx_perf_mode_e perf_mode;       ///< CPU performance mode
-    bool            enable_cache;    ///< Enable I/D cache on staged R5 targets
-    bool            enable_sram;     ///< Reserved — keep shared SRAM powered (not yet wired)
+    bool            enable_cache;    ///< Request cache enable after hardware init; false does not disable cache
+    bool            enable_sram;     ///< Reserved, ignored; does not change memory power or layout
 
     nsx_debug_config_t debug;        ///< Debug output config
 
     bool            skip_bsp_init;   ///< Skip am_bsp_low_power_init() (use minimal HW init)
-    bool            spot_mgr_profile;///< Enable SpotManager profile (Apollo5 family only)
+    bool            spot_mgr_profile;///< Profile request on Apollo510/5A/5B; ignored by AP3/AP4/AP330P/510L
 } nsx_system_config_t;
 
 /* ===================================================================
@@ -211,9 +215,18 @@ typedef struct {
  *   1. nsx_core_init()
  *   2. Hardware init (BSP or minimal)
  *   3. Cache enable (if requested)
- *   4. Performance mode
- *   5. SpotManager profile (if requested)
- *   6. Debug output (if requested)
+ *   4. Debug output (if requested)
+ *   5. Performance mode
+ *   6. SpotManager profile (if requested)
+ *
+ * AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L share one startup guard
+ * across this function,
+ * nsx_hw_init(), nsx_minimal_hw_init() and nsx_power_configure(). Choose one
+ * per reset, from foreground before drivers. Valid duplicate/re-entrant calls
+ * return NSX_STATUS_STARTUP_REJECTED, including after a reported setup failure.
+ * AP2 and Atomiq110 currently do not enforce this shared ownership guard.
+ * Preflight errors are retryable. skip_bsp_init selects minimal initialization
+ * and still consumes ownership. Direct HAL/BSP calls bypass this guard.
  *
  * @param cfg  System configuration. Must not be NULL.
  * @return 0 on success, non-zero on failure.
@@ -230,34 +243,43 @@ uint32_t nsx_system_init(const nsx_system_config_t *cfg);
 /**
  * @brief Full staged hardware init via BSP.
  *
- * Calls am_bsp_low_power_init() which, depending on SoC:
- *   - (AP510) Waits ~2 seconds, configures SIMOBUCK/CPDLP/clocks/SpotManager
+ * Calls the board's am_bsp_low_power_init(); its side effects and delays are
+ * board-specific. The BSP has a void interface, so its internal failures
+ * cannot be propagated. This operation may reset peripheral/debug state.
+ * Active NSX-managed debug output is released first; that failure stops setup.
+ * Configure debug after the BSP baseline if output is required.
  *
- * On all SoCs this call disables debug/trace for minimum power.
- * Call nsx_debug_init() AFTER this if you need ITM/SWO.
- *
- * @return 0 on success.
+ * @return 0 on completion, non-zero on NSX ownership/debug-release failure.
  */
 uint32_t nsx_hw_init(void);
 
 /**
- * @brief Minimal staged hardware init (no BSP, no 2-second delay).
+ * @brief Minimal staged hardware init without the full BSP baseline.
  *
- * Performs the minimum setup needed for basic operation:
- *   - Apollo5: CPDLP config (cache power domain), SpotManager init, FPU
+ * AP3/3P and AP4P/L configure/enable cache and FPU. Apollo5-class backends
+ * configure CPDLP, initialize SpotManager and enable FPU; their cache-enable
+ * operation remains separate. Therefore enable_cache=false in system init
+ * is not a cache-disable request. This path does not establish the complete
+ * board regulator, clock or peripheral baseline needed by every application.
  *
- * Does NOT configure SIMOBUCK, clock gates, or disable peripherals.
- * On Apollo5, caches are NOT enabled — call nsx_cache_enable() after.
- *
- * Use this when you want fast startup and don't need full low-power
- * optimization.
- *
- * @return 0 on success.
+ * @return 0 on success, non-zero on ownership or reported setup failure.
  */
 uint32_t nsx_minimal_hw_init(void);
 
 /**
- * @brief Set CPU performance mode.
+ * @brief Apply the legacy family performance mapping shown above.
+ *
+ * Publishes SystemCoreClock on AP3/3P and AP4 silicon and Apollo510/B/AP330P/510L only
+ * after successful selection and hardware ACK/mode verification. On failure
+ * the previous publication is retained; hardware rollback is not guaranteed.
+ * Caller owns hardware prerequisites, serialized access and SysTick/RTOS timing.
+ * AP510/B HP is rejected while audio-adjusted 196.608 MHz HFRC2 is active.
+ * AP3 LOW preserves the normal divider (24/48 MHz) without initializing burst.
+ * AP3 burst requires CORESEL=0, an allowed SKU, enabled BLE buck and (AP3P) settled
+ * core supply selection; minimal startup alone does not prepare these supplies.
+ * HAL owns patch-dependent workarounds. AP3 FPGA selection is unsupported.
+ * AP4 FPGA, AP2 and AT110 retain their existing publication behavior.
+ * Unknown modes fail before hardware effects.
  *
  * @param mode  Desired performance level.
  * @return 0 on success.
@@ -275,10 +297,25 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  * Platform-specific behavior:
  *   - Apollo510/5B/5A: DCU unlock + manual TPIU (HFRC_96MHz, 96 MHz trace
  *     clock) + SWO pin (GPIO 28) + printf backend.
- *   - Apollo330P/510L: DCU unlock + am_bsp_itm_printf_enable() (XTAL_HS,
- *     48 MHz trace clock).
+ *   - Apollo330P/510L: DCU preparation + checked HAL ITM/TPIU setup
+ *     (HFRC_48MHz, 48 MHz trace clock).
  *
- * @param cfg  Debug configuration. NULL disables debug output.
+ * Calls must be serialized by the application. Only NSX-managed transports
+ * participate in this bookkeeping; do not mix raw BSP/HAL setup with it.
+ * Re-enabling the active transport is a no-op. Switching first disables the
+ * old transport, then enables the new one. Only successful setup permits
+ * nsx_low_power_printf output. On a reported setup/disable error, output is
+ * suppressed and subsequent setup returns that error until reset; partial
+ * hardware changes are not rolled back. Legacy void BSP helpers cannot
+ * expose failures. Underlying vendor HAL waits may still be unbounded.
+ * Full BSP initialization releases the active NSX transport
+ * first and stops if that release reports an error.
+ *
+ * Apollo5 ITM setup/resume retains the existing clock precondition: configure
+ * it while running on HFRC, before switching to a SYSPLL high-performance
+ * source. This helper does not change CPU clock policy on resume.
+ *
+ * @param cfg Debug configuration. NULL and NONE are successful no-ops.
  * @return 0 on success.
  */
 uint32_t nsx_debug_init(const nsx_debug_config_t *cfg);

@@ -1,0 +1,354 @@
+#include <assert.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdlib.h>
+#include "nsx_interrupt.h"
+#include "nsx_timer.h"
+#include "nsx_power_tempco.c"
+
+#define FAIL 0x41u
+#define CLEAN_FAIL 0x42u
+static unsigned step, fail_step, allocations, releases, operations;
+static bool allocated, powered, enabled, running, irq_enabled, cleanup;
+static bool delivering, allow_capture;
+static uint32_t sample_status;
+static unsigned capture_fault, fault_sample, reads, triggers, delays, cache_calls, trim_calls, sample_triggers;
+static bool inject_capture_fault(void) { return reads == fault_sample; }
+static unsigned acknowledgements, timer_clears;
+static uint32_t primask;
+static bool pending, sleep_irq, readiness_irq;
+
+static bool bad_trim, deinit_poison, trim_read_failure;
+static const char *cleanup_failure;
+static nsx_irq_handler_t handler;
+static void *context;
+static void deliver_pending(void) {
+    if (pending && !primask && handler) {
+        pending = false;
+        delivering = true;
+        handler(context);
+        delivering = false;
+    }
+}
+uint32_t am_hal_interrupt_master_disable(void) { uint32_t old=primask; primask=1; return old; }
+void am_hal_interrupt_master_set(uint32_t mask) {
+    if (readiness_irq && s_nsx_power_tempco.initialized) {
+        assert(primask && s_nsx_power_tempco.wanted);
+        readiness_irq=false;
+        pending=true;
+    }
+    primask=mask;
+    deliver_pending();
+}
+static int handle;
+test_adc_t test_adc;
+const nsx_core_api_t nsx_interrupt_current_version = {0};
+extern nsx_timer_config_t *nsx_timer_config[];
+
+static uint32_t op(const char *name) {
+    ++operations;
+    /* Even synchronous delivery during setup/release must not use ADC. */
+    if (!s_nsx_power_tempco.initialized && handler && !delivering && !primask) {
+        delivering = true;
+        unsigned before = acknowledgements;
+        handler(context);
+        assert(acknowledgements > before);
+        delivering = false;
+    }
+    if (delivering) return 0;
+    if (cleanup_failure && !strcmp(cleanup_failure, name)) return CLEAN_FAIL;
+    if (!cleanup && ++step == fail_step) { cleanup = true; return FAIL; }
+    return 0;
+}
+void nsx_printf(const char *format, ...) { (void)format; }
+void nsx_low_power_printf(const char *format, ...) { (void)format; }
+uint32_t nsx_core_check_api(const nsx_core_api_t *a,const nsx_core_api_t *b,const nsx_core_api_t *c) {
+    (void)b; (void)c; assert(a); return 0;
+}
+uint32_t am_hal_mram_info_read(uint32_t n,uint32_t o,uint32_t count,uint32_t *v) {
+    assert(n == 1 && o == 6 && count == 1); *v = bad_trim ? 5 : 6; return trim_read_failure ? FAIL : 0;
+}
+uint32_t am_hal_adc_initialize(uint32_t n,void **h) {
+    assert(n == 0 && !allocated); uint32_t s = op("allocate");
+    if (!s) { allocated = true; ++allocations; *h = &handle; } return s;
+}
+uint32_t am_hal_pwrctrl_periph_enable(int p) {
+    assert(p == AM_HAL_PWRCTRL_PERIPH_ADC && allocated);
+    uint32_t s = op("power-on"); if (!s) powered = true; return s;
+}
+uint32_t am_hal_pwrctrl_periph_disable(int p) {
+    assert(p == AM_HAL_PWRCTRL_PERIPH_ADC && allocated && !enabled);
+    uint32_t s = op("power-off"); if (!s) powered = false; return s;
+}
+uint32_t am_hal_adc_power_control(void *h,int mode,bool retain) {
+    assert(h == &handle && allocated);
+    if (mode == AM_HAL_SYSCTRL_WAKE) {
+        /* Old implementation powered the domain internally, too. */
+        assert(powered || retain || !s_nsx_power_tempco.initialized);
+        uint32_t s = op("wake"); if (!s) powered = true; return s;
+    }
+    assert(mode == AM_HAL_SYSCTRL_DEEPSLEEP && retain && powered);
+    uint32_t s = op("sleep"); if (!s) powered = false;
+    if (sleep_irq) { sleep_irq=false; pending=true; deliver_pending(); }
+    return s;
+}
+uint32_t am_hal_adc_configure(void *h,am_hal_adc_config_t *cfg) {
+    assert(h == &handle && allocated && powered && cfg->eTrigger == AM_HAL_ADC_TRIGSEL_SOFTWARE);
+    return op("configure");
+}
+uint32_t am_hal_pwrctrl_tempco_init(void *h,uint32_t slot) {
+    assert(h == &handle && allocated && powered && slot == 5); return op("tempco");
+}
+uint32_t am_hal_adc_enable(void *h) {
+    assert(h == &handle && allocated && powered); uint32_t s = op("enable");
+    if (!s) enabled = true;
+    return s;
+}
+uint32_t am_hal_adc_disable(void *h) {
+    assert(h == &handle && allocated && powered); uint32_t s = op("disable");
+    if (!s) enabled = false;
+    return s;
+}
+uint32_t am_hal_adc_deinitialize(void *h) {
+    assert(h == &handle && allocated && !powered && !enabled);
+    uint32_t s = op("deallocate");
+    if (!s || deinit_poison) { allocated = false; ++releases; } return s;
+}
+uint32_t am_hal_timer_default_config_set(am_hal_timer_config_t *c) { memset(c,0,sizeof *c); return op("timer-default"); }
+uint32_t am_hal_timer_config(uint32_t n,am_hal_timer_config_t *c) {
+    assert(n == NSX_TIMER_TEMPCO && c->eInputClock == AM_HAL_TIMER_CLOCK_HFRC_DIV16);
+    return op("timer-config");
+}
+uint32_t am_hal_timer_clear(uint32_t n) { assert(n == NSX_TIMER_TEMPCO); ++timer_clears; return op("timer-clear"); }
+uint32_t am_hal_timer_start(uint32_t n) {
+    assert(n == NSX_TIMER_TEMPCO); uint32_t s = op("timer-start"); if (!s) running = true; return s;
+}
+uint32_t am_hal_timer_stop(uint32_t n) {
+    assert(n == NSX_TIMER_TEMPCO); uint32_t s = op("timer-stop"); if (!s) running = false; return s;
+}
+uint32_t am_hal_timer_interrupt_clear(uint32_t m) { assert(m == (1u << NSX_TIMER_TEMPCO)); ++acknowledgements; return op("timer-irq-clear"); }
+uint32_t am_hal_timer_interrupt_enable(uint32_t m) { (void)m; return op("timer-irq-enable"); }
+uint32_t am_hal_timer_interrupt_disable(uint32_t m) { (void)m; return op("timer-irq-disable"); }
+uint32_t am_hal_timer_read(uint32_t n) { (void)n; return 0; }
+uint32_t nsx_irq_register(const nsx_irq_config_t *c) {
+    assert(c->irqn == TIMER4_IRQn); uint32_t s = op("register");
+    if (!s) { handler = c->handler; context = c->ctx; irq_enabled = true;
+        pending = true; deliver_pending(); } return s;
+}
+uint32_t nsx_irq_unregister(IRQn_Type n) {
+    assert(n == TIMER4_IRQn); uint32_t s = op("unregister");
+    if (!s) { irq_enabled = false; pending = false; handler = NULL; context = NULL; } return s;
+}
+uint32_t nsx_irq_clear_pending(IRQn_Type n) { assert(n == TIMER4_IRQn); return op("pending-clear"); }
+uint32_t am_hal_pwrctrl_tempco_sample_handler(uint32_t n,am_hal_adc_sample_t *s) {
+    assert(allow_capture && n == AM_HAL_TEMPCO_NUMSAMPLES && s);
+    for (unsigned i=0;i<n;++i) { assert(s[i].ui32Slot == 5 && s[i].ui32Sample == 123); }
+    ++trim_calls;
+    return sample_status;
+}
+uint32_t am_hal_adc_sw_trigger(void *h) {
+    assert(allow_capture && h == &handle && powered); ++triggers; ++sample_triggers;
+    if (inject_capture_fault()) {
+        if (capture_fault == 1) return 0;
+        if (capture_fault == 2) return FAIL;
+        if (capture_fault == 8 && sample_triggers < NSX_POWERTEMPCO_POLL_LIMIT) return 0;
+    }
+    ++test_adc.FIFO; return 0;
+}
+uint32_t am_hal_daxi_control(int c,void *p) {
+    assert(c == AM_HAL_DAXI_CONTROL_INVALIDATE && p == NULL); ++cache_calls;
+    return inject_capture_fault() && capture_fault == 3 ? FAIL : 0;
+}
+uint32_t am_hal_adc_samples_read(void *h,bool b,void *p,uint32_t *n,am_hal_adc_sample_t *s) {
+    assert(allow_capture && h == &handle && b && p == NULL && *n == 1);
+    bool fault=inject_capture_fault(); ++reads; sample_triggers=0;
+    assert(test_adc.FIFO); --test_adc.FIFO;
+    s->ui32Slot = fault && capture_fault == 7 ? 4 : 5; s->ui32Sample = 123;
+    if(fault && capture_fault == 4) return FAIL;
+    *n=fault && capture_fault == 5 ? 0 : (fault && capture_fault == 6 ? 2 : 1);
+    return 0;
+}
+void am_hal_delay_us(uint32_t t) { assert(t == 1); ++delays; }
+
+static void clean(void) {
+    assert(!allocated && !powered && !enabled && !running && !irq_enabled);
+    assert(!s_nsx_power_tempco.initialized && s_nsx_power_tempco.adc_handle == NULL);
+    assert(nsx_timer_config[NSX_TIMER_TEMPCO] == NULL);
+    assert(allocations == releases);
+}
+static void setup_success(void) {
+    step = fail_step = 0; cleanup = false;
+    assert(nsx_power_tempco_enable() == 0);
+    assert(allocated && powered && enabled && running && irq_enabled && s_nsx_power_tempco.initialized);
+}
+int main(int argc,char **argv) {
+    if (argc == 5) {
+        capture_fault=(unsigned)atoi(argv[2]); fault_sample=(unsigned)atoi(argv[3]);
+        bool sleep_fail=atoi(argv[4]) != 0;
+        setup_success(); allow_capture=true;
+        if(sleep_fail) cleanup_failure="sleep";
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        uint32_t expected=capture_fault == 1 ? AM_HAL_STATUS_TIMEOUT :
+            (capture_fault >= 5 && capture_fault <= 7 ? AM_HAL_STATUS_HW_ERR : FAIL);
+        if(capture_fault == 8) expected=sleep_fail ? CLEAN_FAIL : 0;
+        assert(s_nsx_power_tempco.last_handler_status == expected);
+        assert(s_nsx_power_tempco.suspended == !sleep_fail && powered == sleep_fail);
+        assert(trim_calls == (capture_fault == 8 ? 1u : 0u));
+        assert(s_nsx_power_tempco.callback_count == trim_calls);
+        assert(triggers <= AM_HAL_TEMPCO_NUMSAMPLES + NSX_POWERTEMPCO_POLL_LIMIT);
+        if(capture_fault == 1) {
+            assert(triggers == fault_sample + NSX_POWERTEMPCO_POLL_LIMIT);
+            assert(reads == fault_sample && cache_calls == fault_sample);
+        }
+        if(capture_fault == 2) assert(delays == fault_sample && reads == fault_sample);
+        if(capture_fault == 3) assert(reads == fault_sample);
+        unsigned previous=trim_calls;
+        capture_fault=0; cleanup_failure=NULL;
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        assert(s_nsx_power_tempco.last_handler_status == 0 && trim_calls == previous+1);
+        assert(!powered && s_nsx_power_tempco.suspended);
+        assert(nsx_power_tempco_disable() == 0); clean();
+        return 0;
+    }
+    assert(argc == 2);
+    if (!strcmp(argv[1],"unsupported") || !strcmp(argv[1],"trim-read-failure")) {
+        bad_trim = !strcmp(argv[1],"unsupported"); trim_read_failure = !bad_trim;
+        assert(nsx_power_tempco_enable() == (bad_trim ? (uint32_t)NSX_STATUS_FAILURE : FAIL)); assert(operations == 0); clean(); return 0;
+    }
+    setup_success(); unsigned setup_steps = step;
+    if (!strcmp(argv[1],"success")) {
+        unsigned before = operations; assert(nsx_power_tempco_enable() == 0); assert(operations == before);
+        allow_capture=true; sleep_irq=true;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(!pending && !powered && !primask);
+        before=operations;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(operations == before && !primask);
+        primask=1;
+        nsx_power_tempco_prepare_for_sleep();
+        assert(operations == before && primask == 1);
+        nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+        assert(primask == 1);
+        primask=0;
+    }
+    cleanup = true; assert(nsx_power_tempco_disable() == 0); clean();
+    if (!strcmp(argv[1],"success")) {
+        for (unsigned mask=0; mask<=1; ++mask) {
+            primask=mask; readiness_irq=true; allow_capture=true;
+            assert(nsx_power_tempco_enable() == 0);
+            assert(!readiness_irq && primask == mask);
+            if (mask) assert(pending && powered && s_nsx_power_tempco.callback_count == 0);
+            am_hal_interrupt_master_set(0);
+            assert(!pending && !powered && s_nsx_power_tempco.suspended);
+            assert(s_nsx_power_tempco.callback_count == 1);
+            assert(nsx_power_tempco_disable() == 0); clean();
+        }
+    }
+    if (!strcmp(argv[1],"init-failures")) {
+        for (unsigned i=1;i<=setup_steps;++i) {
+            step=0; fail_step=i; cleanup=false;
+            assert(nsx_power_tempco_enable() == FAIL); clean();
+            setup_success(); cleanup=true; assert(nsx_power_tempco_disable() == 0); clean();
+        }
+    }
+    if (!strcmp(argv[1],"init-cleanup-failure")) {
+        step = 0; fail_step = setup_steps; cleanup = false;
+        cleanup_failure = "timer-stop";
+        assert(nsx_power_tempco_enable() == FAIL);
+        assert(!s_nsx_power_tempco.initialized && allocated);
+        assert(s_nsx_power_tempco.cleanup_status == CLEAN_FAIL);
+        unsigned before = allocations;
+        assert(nsx_power_tempco_enable() == CLEAN_FAIL); assert(allocations == before);
+        cleanup_failure = NULL; fail_step = 0;
+        assert(nsx_power_tempco_enable() == 0);
+        assert(nsx_power_tempco_disable() == 0); clean();
+    }
+    if (!strcmp(argv[1],"callback-failures")) {
+        for (unsigned i=1;i<=2;++i) {
+            setup_success(); nsx_power_tempco_prepare_for_sleep();
+            step=0; fail_step=i; cleanup=false;
+            nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+            assert(s_nsx_power_tempco.last_handler_status == FAIL);
+            assert(!powered && s_nsx_power_tempco.suspended);
+            assert(nsx_power_tempco_disable() == 0); clean();
+        }
+    }
+    if (!strcmp(argv[1],"cleanup-failures")) {
+        const char *failures[] = {"unregister","timer-irq-disable","timer-stop","timer-irq-clear","pending-clear","disable","power-off"};
+        for (unsigned i=0;i<sizeof failures/sizeof failures[0];++i) {
+            setup_success(); cleanup=true; cleanup_failure=failures[i];
+            assert(nsx_power_tempco_disable() == CLEAN_FAIL);
+            assert(!s_nsx_power_tempco.initialized && allocated);
+            unsigned before=allocations;
+            assert(nsx_power_tempco_enable() == CLEAN_FAIL); assert(allocations == before);
+            cleanup_failure=NULL; assert(nsx_power_tempco_disable() == 0); clean();
+        }
+        setup_success(); cleanup=true; cleanup_failure="deallocate"; deinit_poison=true;
+        assert(nsx_power_tempco_disable() == CLEAN_FAIL);
+        unsigned before=operations; cleanup_failure=NULL;
+        assert(nsx_power_tempco_enable() == CLEAN_FAIL); assert(operations == before);
+        return 0;
+    }
+    if (!strcmp(argv[1],"callback-status")) {
+        for (unsigned i=0;i<4;++i) {
+            setup_success(); allow_capture = true;
+            sample_status = (i & 1) ? FAIL : 0;
+            cleanup_failure = (i & 2) ? "sleep" : NULL;
+            nsx_power_tempco_callback(&s_nsx_power_tempco_timer);
+            assert(s_nsx_power_tempco.last_handler_status ==
+                   (sample_status ? sample_status : (cleanup_failure ? CLEAN_FAIL : 0)));
+            assert(s_nsx_power_tempco.suspended == (cleanup_failure == NULL));
+            cleanup_failure = NULL; cleanup = true;
+            assert(nsx_power_tempco_disable() == 0); clean();
+        }
+    }
+    if (!strcmp(argv[1],"timer-reconfigure")) {
+        nsx_timer_config_t other=s_nsx_power_tempco_timer;
+        unsigned before_clears=timer_clears;
+        assert(nsx_timer_init(&other) == 0);
+        assert(timer_clears == before_clears + 2 && !primask);
+        other.periodInMicroseconds = 12000;
+        primask=1;
+        assert(nsx_timer_init(&other) == 0);
+        assert(primask == 1);
+        am_hal_interrupt_master_set(0);
+        other.enableInterrupt = false;
+        other.callback = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(!irq_enabled && handler == NULL && running);
+        cleanup_failure = "timer-stop";
+        assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(!primask);
+        assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
+        cleanup_failure = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(nsx_timer_deinit(&other) == 0); clean();
+        other.enableInterrupt = true;
+        other.callback = nsx_power_tempco_callback;
+        cleanup_failure = "timer-start";
+        primask=1;
+        assert(nsx_timer_init(&other) == CLEAN_FAIL);
+        assert(primask == 1);
+        am_hal_interrupt_master_set(0);
+        assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other);
+        cleanup_failure = NULL;
+        assert(nsx_timer_init(&other) == 0);
+        assert(nsx_timer_deinit(&other) == 0); clean();
+    }
+    if (!strcmp(argv[1],"timer-owner")) {
+        nsx_timer_config_t other=s_nsx_power_tempco_timer;
+        assert(nsx_timer_init(&other) == 0);
+        unsigned before=operations;
+        assert(nsx_timer_init(&s_nsx_power_tempco_timer) == NSX_TIMER_STATUS_IN_USE);
+        assert(nsx_timer_deinit(&s_nsx_power_tempco_timer) == NSX_STATUS_INVALID_CONFIG);
+        assert(before == operations);
+        assert(nsx_power_tempco_enable() == NSX_TIMER_STATUS_IN_USE);
+        assert(nsx_timer_config[NSX_TIMER_TEMPCO] == &other && running);
+        assert(!allocated && !powered && !enabled);
+        assert(nsx_timer_deinit(&other) == 0);
+        assert(nsx_power_tempco_enable() == 0);
+        assert(nsx_power_tempco_disable() == 0);
+        assert(nsx_timer_deinit(&other) == 0); clean();
+    }
+    return 0;
+}

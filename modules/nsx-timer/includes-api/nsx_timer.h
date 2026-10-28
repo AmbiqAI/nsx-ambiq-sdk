@@ -30,6 +30,8 @@ extern "C" {
     #define NSX_TIMER_OLDEST_SUPPORTED_VERSION NSX_TIMER_V0_0_1
     #define NSX_TIMER_CURRENT_VERSION NSX_TIMER_V1_0_0
     #define NSX_TIMER_API_ID 0xCA0002
+    /* Apollo4 init rejected a different owner without reserving/touching it. */
+    #define NSX_TIMER_STATUS_IN_USE 0x100u
 
 extern const nsx_core_api_t nsx_timer_V0_0_1;
 extern const nsx_core_api_t nsx_timer_V1_0_0;
@@ -58,7 +60,11 @@ typedef struct nsx_timer_config {
     const nsx_core_api_t *api;      ///< API prefix
     nsx_timers_e timer;             ///< NSX_TIMER_COUNTER, NSX_TIMER_INTERRUPT, or NSX_TIMER_USB
     bool enableInterrupt;          ///< Will generate interrupts, needs callback
-    uint32_t periodInMicroseconds; ///< For interrupts
+    /** Interrupt period. Apollo4/510/330: 1..715827882 us, nominal HFRC timing.
+     * The ISR clears the counter before calling back: interrupt latency adds to
+     * the period. Keep callbacks short; this is not a phase-locked scheduler.
+     * Ignored for counter-only operation. */
+    uint32_t periodInMicroseconds;
     nsx_timer_callback_cb callback; ///< Invoked when timer ticks
 } nsx_timer_config_t;
 
@@ -74,6 +80,17 @@ typedef struct nsx_timer_config {
  * @return uint32_t status
  */
 extern uint32_t nsx_timer_init(nsx_timer_config_t *cfg);
+
+/**
+ * @brief Release an Apollo4 timer, including a partially initialized timer.
+ *
+ * Call from foreground with the same configuration object passed to init.
+ * The object must remain alive, with its timer number unchanged, until release
+ * succeeds. Reinitializing with the same object first releases its old setup.
+ * Failure retains ownership; retry deinit before reusing the timer. Callbacks
+ * are suppressed during release. Other families return INVALID_CONFIG.
+ */
+extern uint32_t nsx_timer_deinit(nsx_timer_config_t *cfg);
 
 /**
  * @brief Read current value of timer

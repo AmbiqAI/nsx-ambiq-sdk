@@ -1,4 +1,5 @@
 function(nsx_add_test_firmware target)
+    cmake_parse_arguments(TEST "" "" "MODULES;DEPENDENCIES" ${ARGN})
     include(GNUInstallDirs)
     set(NSX_ROOT "${NSX_TEST_SDK_ROOT}")
     set(NSX_CMAKE_DIR "${NSX_ROOT}/cmake")
@@ -16,7 +17,10 @@ function(nsx_add_test_firmware target)
     add_subdirectory("${NSX_ROOT}/modules/nsx-soc-hal" soc-hal)
     add_subdirectory("${NSX_ROOT}/modules/nsx-core" core)
     target_link_libraries(nsx_startup PUBLIC nsx::runtime)
-    add_executable(${target} ${ARGN}
+    foreach(module IN LISTS TEST_DEPENDENCIES TEST_MODULES)
+        add_subdirectory("${NSX_ROOT}/modules/nsx-${module}" "module-${module}")
+    endforeach()
+    add_executable(${target} ${TEST_UNPARSED_ARGUMENTS}
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/result_reporter.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../vendor/unity/unity.c")
     set_target_properties(${target} PROPERTIES SUFFIX .elf CXX_STANDARD 17)
@@ -26,6 +30,9 @@ function(nsx_add_test_firmware target)
     target_compile_options(${target} PRIVATE -ffunction-sections -fdata-sections
         $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions;-fno-rtti>)
     target_link_libraries(${target} PRIVATE nsx::board nsx::cmsis_startup nsx::ambiq_bsp nsx::soc_hal)
+    foreach(module IN LISTS TEST_MODULES)
+        target_link_libraries(${target} PRIVATE nsx::${module})
+    endforeach()
     target_link_options(${target} PRIVATE -nostartfiles "LINKER:-T,${NSX_LINKER_SCRIPT}"
         "LINKER:-u,Reset_Handler" "LINKER:--gc-sections")
     file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/inputs.txt" CONTENT

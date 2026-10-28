@@ -10,6 +10,7 @@
  */
 
 #include "nsx_timer.h"
+#include "nsx_timer_hfrc.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -50,9 +51,30 @@ uint32_t nsx_timer_init(nsx_timer_config_t *cfg) {
     }
 #endif
 
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || \
+    defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    /* Check before publishing ownership or disturbing an existing setup. */
+    if (cfg->enableInterrupt && (cfg->periodInMicroseconds == 0 ||
+        cfg->periodInMicroseconds > NSX_TIMER_HFRC_MAX_PERIOD_US)) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+#endif
+
+#if !defined(AM_PART_APOLLO4P) && !defined(AM_PART_APOLLO4L)
     nsx_timer_config[cfg->timer] = cfg;
+#endif
 
     ui32Status = nsx_timer_platform_init(cfg);
 
     return ui32Status;
+}
+
+uint32_t nsx_timer_deinit(nsx_timer_config_t *cfg) {
+#if defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+    extern uint32_t nsx_timer_platform_deinit(nsx_timer_config_t *cfg);
+    return nsx_timer_platform_deinit(cfg);
+#else
+    (void)cfg;
+    return NSX_STATUS_INVALID_CONFIG;
+#endif
 }

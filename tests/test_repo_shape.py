@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 MODULE_REPO_RESIDUE = {
     ".github",
@@ -283,7 +285,7 @@ def test_core_bundle_does_not_import_optional_middleware(repo_root: Path) -> Non
     offenders = []
     for path in repo_root.rglob("*"):
         relative_parts = path.relative_to(repo_root).parts
-        if ".git" in path.parts or relative_parts[:2] == ("sdk-intake", "local"):
+        if ".git" in path.parts or relative_parts[:2] in (("sdk-intake", "local"), ("artifacts", "compatibility")):
             continue
         if any(relative_parts[:len(prefix)] == prefix for prefix in OPTIONAL_MIDDLEWARE_MODULE_PREFIXES):
             continue
@@ -564,3 +566,11 @@ def test_provider_payload_source_boundary_is_explicit(repo_root: Path) -> None:
         if any(fragment in path.name for fragment in forbidden_fragments)
     ]
     assert offenders == []
+
+
+def test_optional_middleware_check_ignores_only_root_compatibility_evidence(tmp_path: Path) -> None:
+    (tmp_path / 'artifacts/compatibility/run/freertos').mkdir(parents=True)
+    test_core_bundle_does_not_import_optional_middleware(tmp_path)
+    (tmp_path / 'modules/artifacts/compatibility/freertos').mkdir(parents=True)
+    with pytest.raises(AssertionError):
+        test_core_bundle_does_not_import_optional_middleware(tmp_path)

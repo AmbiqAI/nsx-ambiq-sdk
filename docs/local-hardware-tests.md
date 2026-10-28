@@ -278,8 +278,33 @@ The `gcc` profile includes those checks and additionally requires:
 | Audio adapter against real headers: AP3, AP3P and four M55 variants | 6 |
 | Performance adapter against real HAL headers: four M55 variants | 4 |
 
-The matrix follows existing tests; it does not yet cover complete AP3/AP4
-firmware linking. ATfE/ArmClang execution is outside this GCC profile and is
+The GCC profile also requires the following existing integration regressions:
+
+| Integration boundary | Required minimum cases |
+| --- | ---: |
+| AP3P/AP4 KBR/AP4 KXR startup plus retained real HAL/BSP implementations | 3 |
+| Runtime/heap/SVC firmware: AP3P, AP4 KBR/KXR, AP330P, AP510, AP510B | 6 |
+| Apollo2/3/3P constructors, default and application CRT | 6 |
+| Audio buffer/packing models, Apollo3 and Apollo5 | 48 |
+| Audio cache-view model | 2 |
+| Applicable Apollo3/Apollo5 lifecycle fault scenarios | 66 |
+| Clock/performance model: six targets, sixteen scenarios each | 96 |
+
+The AP3P/AP4 link fixture reuses the hardware startup source and shared builder.
+It retains a link-only probe that pulls actual PDM HAL and low-power BSP
+implementations into the ELF; merely naming libraries in CMake is insufficient.
+The probe is never called. No microphone, probe, external wiring, or device pack
+is required. These builds do not qualify physical PDM or BSP operation.
+
+Audio lifecycle cases are collected only for applicable backend operations;
+there is no acceptance exception for skipped tests. Their module-scoped
+parametrization builds one sanitizer executable per backend. Audio backend/scenario
+and backend/phase/fault combinations, clock target/scenario combinations, and
+constructor/CRT combinations are required explicitly, in addition to minimum
+counts and required boards. Acceptance matrices are kept independent of test
+parametrization so replacing a test with a duplicate cannot hide lost coverage. The payload-only profile remains unchanged.
+
+ATfE/ArmClang execution is outside this GCC profile and is
 listed explicitly as excluded, not reported as passed. Selecting an ATfE
 *archive* in a GCC ABI check does not mean the ATfE compiler was exercised.
 
@@ -297,8 +322,10 @@ checkout, not physical board qualification or approval to promote an SDK.
 For the next intake, stage the candidate in an isolated checkout, review any
 patches that upstream has absorbed, and deliberately update release-baseline
 expectations where appropriate. Do not delete a failing patch check simply to
-make an update pass. Run current and candidate with the same test definitions
-and toolchain; automated comparison and board aggregation remain later work.
+make an update pass. Use the [intake acceptance checklist](sdk-harness-comparison.md#sdk-intake-acceptance-checklist)
+for fixed-harness board comparison and required evidence. The host gate still
+uses each candidate checkout's tests; cross-board intake approval remains a
+reviewer decision.
 
 ## Test infrastructure boundaries
 
@@ -445,3 +472,45 @@ all seven AP330 hardware cases. The GCC compatibility gate passed 288 checks
 with 40 other-compiler cases deselected. Reports, binaries, UART diagnostic
 sources/captures and `board-baseline.json` are retained in the lab evidence
 directory `artifacts/nsx/sdk-core-qualification-2026-10-23` outside this repo.
+
+## Clock/timebase next increment
+
+The [two-board clock/timebase contract](clock-timebase-qualification.md) records
+the first milestone, source evidence, transition matrix and unresolved reference
+prerequisites. Its host-tested counter arithmetic does not constitute a hardware
+qualification profile or new physical evidence.
+
+Experimental AP510B/AP330 clock and SysTick work is documented in
+[Clock lab tests](clock-lab-tests.md); it is not part of the core qualification profiles.
+
+Use [fixed-harness comparison](sdk-harness-comparison.md) to build and run the same tests against two explicit SDK checkouts.
+
+### Timer-period smoke
+
+`tests/hardware/test_timer.py` uses the `timer-period` suite on AP4 Blue Plus
+KXR, AP330 Plus, AP510 and AP510B. Use the same local `--hardware`, `--board`,
+`--probe`, `--gcc-root` and artifact options as the other suites. It checks
+1/10/50 ms callback intervals against DWT CPU cycles after LOW-mode startup,
+records seven intervals per period, and stops/unregisters the timer afterward.
+A 20% window catches conversion errors without claiming calibrated HFRC
+accuracy. This does not test sleep, cold boot, long callbacks or IRQ load.
+AP4L/AP510L have host-side cross-compile coverage only.
+
+### AP4 TempCo capture
+
+On `apollo4p_blue_kxr_evb`, run `tests/hardware/test_tempco_capture.py` with
+`--hardware-timeout 35` and the usual board/probe options. This waits for two
+callbacks at the production 10.486-second interval, checking successful sample
+handling and ADC suspension between captures. It includes the private production
+helper directly to inspect its state without adding a public diagnostic API.
+This complements lifecycle testing; it does not qualify temperature accuracy or
+trim calibration. Acquisition has a 25-second target deadline and the host timeout.
+
+### Apollo5-class power startup
+
+`tests/hardware/test_power_startup_smoke.py` starts through `nsx_power_configure()` on
+AP510/B or AP330 Plus with full TCM/shared SRAM and LOW performance. It checks
+the returned status, 96 MHz LP/cache state, retained memory sentinels and
+rejection of competing startup entry points. Select it with the same local
+pytest board/probe options above. It does not exercise reduced-memory layouts,
+NVM shutdown, injected silicon failures or cold-power-cycle qualification.

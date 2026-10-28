@@ -53,6 +53,30 @@ before the tag exists they are checked against HEAD. This keeps later fixes
 out of an older release's qualification claims. Provider and archive integrity
 checks continue to inspect the current payload.
 
+`test_system_status.py` injects HAL failures through actual core family backends,
+checking first-error propagation, DCU cleanup, incoming interrupt masks, and
+invalid requests before startup ownership. Its real-header builds and opt-in
+`tests/hardware/test_system_status_smoke.py` smoke cover full/minimal startup with ITM
+on AP3P, AP4 KXR, AP510B and AP330P. The smoke checks trace registers and reports
+through RTT; it does not establish externally received SWO output or exercise
+vendor nonreturning error paths.
+
+`test_debug_state.py` tests shared transport ownership through actual runtime
+and system entry points. The `debug-state` board smoke checks ITM disable/resume
+and emits `NSX149:` lifecycle markers for optional external SWO capture. Its Unity
+results travel through debugger memory; passing this smoke alone does not prove
+SWO reception. Startup/debug configuration must be serialized by the caller.
+For an external receiver, build this fixture with `NSX_TEST_SWO_HANDSHAKE=ON`:
+after `nsx_debug_capture_ready` becomes 1, start SWO reception and write 1 to
+`nsx_debug_capture_go`. The default smoke needs no debugger handshake. The AP330 `debug-failure` suite replaces only
+`am_hal_dcu_swo_enable` with a returning error and verifies that the real adapter
+restores OTP/crypto power and PRIMASK, then latches the failure. Run it locally
+with `pytest tests/hardware/test_debug_failure.py --hardware --board apollo330mP_evb
+--probe SERIAL --gcc-root /usr/local/arm-gnu-toolchain`. This is controlled error
+injection, not an induced hardware fault or proof that vendor HAL waits are bounded.
+AP510L receives host and real-header compile coverage; no physical AP510L coverage
+is claimed.
+
 ## Running Tests
 
 ```sh
@@ -145,7 +169,8 @@ passes. Shared-lab allocation remains a prerequisite to physical execution.
 ## SDK update acceptance
 
 `uv run --group ci python -m tools.sdk_compatibility --profile gcc --output artifacts/compatibility/RUN_NAME`
-requires the payload checks plus the reviewed GCC header/ABI/link matrix to
+requires the payload checks, reviewed GCC header/ABI/link matrix, core firmware
+builds and audio/clock adapter fault models to
 complete without skips. Use a fresh output directory for each invocation.
 The `payload` profile omits the target cross-compilation matrix. See the local hardware guide
 above for matrix boundaries and evidence interpretation. Neither profile
@@ -154,3 +179,45 @@ accesses boards or claims physical qualification.
 The shared hardware API and fixture boundaries are described in the local
 hardware guide. `test_hardware_architecture.py` exercises a second synthetic
 suite through the shared build and simulated transport; it does not flash a board.
+
+The required GCC intake gate includes AP3 Blue Plus and AP4 KBR/KXR startup
+images with retained real HAL/BSP implementations, six runtime firmware builds,
+and Apollo2/3/3P constructor/CRT variants. These reuse the shared hardware build
+API without opening probes. Host audio lifecycle coverage collects only applicable
+backend operations; skipped applicable cases still make qualification incomplete.
+AP3 acoustic testing remains paused and is not an intake-gate prerequisite.
+
+## I2C wrapper regressions
+
+`python -m pytest tests/test_i2c_api.py` exercises the actual I2C source against
+a recording HAL boundary for Apollo3-style and newer instruction layouts, with
+validation enabled and disabled. It checks combined transaction descriptors,
+input limits, native failures and legacy helper behavior. These host checks do
+not emulate I2C waveforms or qualify vendor HAL recovery.
+
+`test_tempco_lifecycle.py` runs the actual AP4 TempCo and timer adapters against
+recording HAL calls. It sweeps initialization failures, exercises cleanup
+failures and retries, rejects timer ownership conflicts, and checks callback
+suppression before setup completes and during release. ADC deinitialization
+failure deliberately requires reset because the vendor HAL may discard its
+handle on error. The `tempco-smoke` fixture provides a bounded AP4 KXR
+setup/release/reallocation check through the shared hardware build/session API;
+it does not validate temperature samples or applied trims.
+
+`test_usb_reentrancy.py` compiles the actual NSX USB implementation and callback
+overrides with controlled TinyUSB and timer calls. It exercises CDC/vendor
+callbacks from task and timer servicing, nested nonblocking reads and simulated
+timer preemption. The GCC gate requires those checks and real USB firmware links
+on AP4 KXR, AP510 and AP510B. Host checks do not qualify physical USB traffic or
+sensor interrupt latency; simultaneous TileIO OUT/IN traffic remains a hardware
+acceptance check.
+
+`test_usb_cdc_send.py` exercises production CDC sends against a bounded FIFO,
+including requests above 64 KiB, short writes, full queues and stalled hosts.
+It verifies accepted-byte counts, ordering and existing no-progress timeout
+accounting; successful enqueue is not proof of host delivery.
+
+`test_usb_connection.py` exercises connection snapshots, queued state changes and
+buffered-transfer statuses with actual NSX callbacks. It models both NSX-owned
+and DCD-owned unmount; real link checks retain AP4's DCD callback. These models
+are not physical cable-disconnect or AP4 power-teardown qualification.

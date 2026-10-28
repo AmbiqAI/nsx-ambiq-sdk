@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_memory_preflight C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+if(NOT NSX_TEST_BOARD STREQUAL "apollo4p_blue_kxr_evb")
+    message(FATAL_ERROR "Memory preflight smoke supports AP4 Blue KXR")
+endif()
+nsx_add_test_firmware(memory_preflight main.c MODULES interrupt timer power)
+target_link_options(memory_preflight PRIVATE "LINKER:--wrap=am_bsp_low_power_init")

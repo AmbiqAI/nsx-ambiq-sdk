@@ -1,4 +1,5 @@
 """Compile the runtime suite against real family targets; no probe access."""
+from dataclasses import replace
 import json
 import subprocess
 
@@ -7,7 +8,7 @@ import pytest
 from tools.hardware.api import BuildRequest, build_firmware
 from tools.hardware.inventory import BOARDS
 from tools.hardware.qualification import PROFILES
-from tools.hardware.suites import RUNTIME, STARTUP
+from tools.hardware.suites import RUNTIME, STARTUP, no_options
 from test_small_m55_memory import compiler_for_test
 
 
@@ -38,3 +39,23 @@ def test_runtime_links_real_handlers_and_heap(repo_root, tmp_path, board):
 def test_runtime_rejects_unknown_negative_control(repo_root, tmp_path):
     with pytest.raises(ValueError, match='Unknown runtime'):
         RUNTIME.configure(repo_root, tmp_path, 'apollo3p_evb', 'omit-data')
+
+
+@pytest.mark.parametrize('board', ['apollo3p_evb', 'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb'])
+def test_startup_links_real_sdk(repo_root, tmp_path, board):
+    """Link production startup and vendor implementations without probe access."""
+    compiler = compiler_for_test('gcc')
+    suite = replace(STARTUP, name='sdk-link', source_dir='tests/fixtures/sdk-link',
+                    elf_name='sdk_link.elf', configure=no_options)
+    image = build_firmware(BuildRequest(repo_root, tmp_path, board, compiler.parent.parent, suite))
+    listing = subprocess.check_output([str(compiler.parent / 'arm-none-eabi-nm'), str(image.elf)], text=True)
+    symbols = {parts[2]: parts[1] for line in listing.splitlines() if len(parts := line.split()) == 3}
+    assert symbols['Reset_Handler'] == 'T'
+    assert symbols['__libc_init_array'] == 'T'
+    assert symbols['am_hal_pdm_configure'] == 'T'
+    assert symbols['am_bsp_low_power_init'] == 'T'
+    assert {seed.symbol for seed in image.seeds} == {
+        'nsx_probe_data', 'nsx_probe_bss', 'nsx_probe_constructor'}
+    manifest = json.loads((tmp_path / 'manifest.json').read_text())
+    assert manifest['expected_cases'] == list(STARTUP.cases)
+    assert manifest['fault_injection'] == 'none'

@@ -9,6 +9,12 @@
 
 static bool s_nsx_power_monitor_enabled;
 
+#if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)
+    #define NSX_POWER_MONITOR_OUTPUT_CONFIG g_AM_HAL_GPIO_OUTPUT
+#else
+    #define NSX_POWER_MONITOR_OUTPUT_CONFIG am_hal_gpio_pincfg_output
+#endif
+
 #if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO4) || \
     defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P)
     #define NSX_POWER_MONITOR_GPIO_0 22
@@ -38,8 +44,8 @@ uint32_t nsx_power_monitor_init(void) {
 #if !NSX_POWER_MONITOR_SUPPORTED
     return NSX_STATUS_INVALID_CONFIG;
 #else
-    am_hal_gpio_pinconfig(NSX_POWER_MONITOR_GPIO_0, am_hal_gpio_pincfg_output);
-    am_hal_gpio_pinconfig(NSX_POWER_MONITOR_GPIO_1, am_hal_gpio_pincfg_output);
+    am_hal_gpio_pinconfig(NSX_POWER_MONITOR_GPIO_0, NSX_POWER_MONITOR_OUTPUT_CONFIG);
+    am_hal_gpio_pinconfig(NSX_POWER_MONITOR_GPIO_1, NSX_POWER_MONITOR_OUTPUT_CONFIG);
     s_nsx_power_monitor_enabled = true;
     nsx_power_monitor_set_state(NSX_POWER_MONITOR_STATE_IDLE);
     return NSX_STATUS_SUCCESS;

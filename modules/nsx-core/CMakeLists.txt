@@ -72,12 +72,21 @@ target_link_libraries(nsx_core_lifecycle PUBLIC nsx_core_includes nsx::compiler 
 # ---- nsx::system — bring-up sequencing + per-SoC backend + newlib retarget/heap ----
 set(NSX_SYSTEM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_system.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_debug.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_startup.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_retarget.c
 )
 if(NSX_CORE_ARCH_DIR)
     list(APPEND NSX_SYSTEM_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_CORE_ARCH_DIR}/nsx_system_platform.c
     )
+endif()
+
+if(NSX_CORE_ARCH_DIR STREQUAL "apollo3p")
+    list(APPEND NSX_SYSTEM_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/apollo3p/nsx_performance.c)
+elseif(NSX_CORE_ARCH_DIR STREQUAL "apollo4p" OR
+   NSX_CORE_ARCH_DIR STREQUAL "apollo510")
+    list(APPEND NSX_SYSTEM_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_performance.c)
 endif()
 
 # Bounded _sbrk for newlib-based toolchains (GCC, ATfE).  armclang uses
@@ -94,6 +103,10 @@ add_library(nsx_system STATIC
 )
 set_target_properties(nsx_system PROPERTIES EXPORT_NAME system)
 add_library(nsx::system ALIAS nsx_system)
+target_include_directories(nsx_system PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-internal>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core/includes-internal>
+)
 target_link_libraries(nsx_system PUBLIC
     nsx_core_includes
     nsx::core_lifecycle
@@ -122,6 +135,12 @@ target_link_libraries(nsx_system PUBLIC
 # normal strong-over-weak resolution applies. Found + hardware-validated on
 # apollo330mP_evb and apollo510_evb (heliaPROFILER bring-up, 2026-07).
 if(NSX_TOOLCHAIN_USES_NEWLIB)
+    if(NSX_CORE_ARCH_DIR STREQUAL "apollo3p" OR
+       NSX_CORE_ARCH_DIR STREQUAL "apollo4p" OR NSX_CORE_ARCH_DIR STREQUAL "apollo510")
+        # Performance publication can be the first reference, after the CMSIS
+        # startup archive was scanned. Retain its clock definition up front.
+        target_link_options(nsx_system PUBLIC -Wl,-u,SystemCoreClock)
+    endif()
     target_link_options(nsx_system PUBLIC
         -Wl,-u,_sbrk
         -Wl,-u,__wrap__write_r
@@ -179,6 +198,7 @@ target_link_libraries(nsx_runtime_core INTERFACE nsx_core)
 
 install(DIRECTORY
     ${CMAKE_CURRENT_LIST_DIR}/includes-api
+    ${CMAKE_CURRENT_LIST_DIR}/includes-internal
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-core
 )
 

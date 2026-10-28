@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.sdk_compatibility import Gate, Requirement, belongs, GCC
+from tools.sdk_compatibility import Gate, Requirement, belongs, GCC, CORE_BUILDS, ADAPTER_REGRESSIONS, POWER_STARTUP
 
 
 @pytest.mark.parametrize('node,expected', [
@@ -27,14 +27,16 @@ def test_minimum_matrix_is_independent_of_collection():
     assert gate.report(0)['missing_requirements'] == ['test.py::test_a']
 
 
-def test_filter_uses_compiler_parameters_not_substrings():
-    selector = GCC[0].selector
+@pytest.mark.parametrize('requirement', (GCC[0], next(r for r in POWER_STARTUP if r.selector ==
+    'tests/test_apollo5_power_link.py::test_power_module_links')), ids=('abi', 'power-link'))
+def test_filter_uses_compiler_parameters_not_substrings(requirement):
+    selector = requirement.selector
     def item(family):
         return SimpleNamespace(nodeid=selector + f'[{family}-atfe-artifact]',
                                callspec=SimpleNamespace(params={'family': family, 'selection': 'atfe'}))
     items = [item('gcc'), item('atfe'), item('armclang')]
     config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
-    gate = Gate(GCC)
+    gate = Gate((requirement,))
     gate.pytest_collection_modifyitems(config, items)
     assert len(items) == 1
     assert items[0].callspec.params['family'] == 'gcc'
@@ -110,4 +112,116 @@ def test_same_abi_count_cannot_hide_missing_combinations():
     assert len(report['missing_variants'][requirement.selector]) == 5
     for node, variant in zip(gate.selected, requirement.variants):
         gate.parameters[node] = dict(zip(requirement.parameters, variant))
+    assert gate.report(0)['status'] == 'passed'
+
+
+@pytest.mark.parametrize('requirement', CORE_BUILDS[:3], ids=('power', 'runtime', 'startup'))
+def test_core_build_gate_rejects_repeated_board(requirement):
+    gate = Gate((requirement,))
+    items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',
+             callspec=SimpleNamespace(params={'board': requirement.boards[0]}))
+             for i in range(requirement.minimum)]
+    config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
+    gate.pytest_collection_modifyitems(config, items)
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'incomplete'
+    for node, board in zip(gate.selected, requirement.boards):
+        gate.boards[node] = board
+    assert gate.report(0)['status'] == 'passed'
+
+
+def test_clock_gate_requires_each_target_scenario():
+    requirement = next(r for r in ADAPTER_REGRESSIONS
+                       if r.selector == 'tests/test_power_core_clock.py::test_performance_updates_core_clock')
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    # Preserve the count while losing one actual target/scenario combination.
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'
+
+
+@pytest.mark.parametrize('requirement', tuple(
+    next(r for r in ADAPTER_REGRESSIONS if r.selector == selector) for selector in (
+        'tests/test_audio_buffers.py::test_audio_buffer_bounds',
+        'tests/test_audio_lifecycle.py::test_audio_lifecycle_failure')),
+    ids=('audio-buffers', 'audio-lifecycle'))
+def test_audio_gate_requires_every_scenario(requirement):
+    assert len(requirement.variants) == requirement.minimum
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    for index, variant in enumerate(requirement.variants):
+        node = gate.selected[index]
+        original = gate.parameters[node]
+        # Duplicate another case from the same backend, preserving counts and backends.
+        replacement = next(v for v in requirement.variants if v[0] == variant[0] and v != variant)
+        gate.parameters[node] = dict(zip(requirement.parameters, replacement))
+        report = gate.report(0)
+        assert report['status'] == 'incomplete'
+        assert report['missing_variants'][requirement.selector] == [variant]
+        gate.parameters[node] = original
+
+
+def test_lifecycle_reuses_backend_builds(repo_root: Path, tmp_path: Path):
+    script = '''
+from collections import Counter
+import json
+from pathlib import Path
+import pytest
+import sys
+class Builds:
+    def __init__(self):
+        self.counts = Counter()
+    def pytest_fixture_setup(self, fixturedef, request):
+        if fixturedef.argname == 'lifecycle_binary':
+            self.counts[request.param] += 1
+plugin = Builds()
+code = pytest.main(['-q', '-o', 'addopts=', 'tests/test_audio_lifecycle.py',
+                   '--basetemp=' + sys.argv[1]], plugins=[plugin])
+Path(sys.argv[2]).write_text(json.dumps(plugin.counts))
+raise SystemExit(code)
+'''
+    env = os.environ.copy()
+    env.pop('PYTEST_ADDOPTS', None)
+    report = tmp_path / 'builds.json'
+    result = subprocess.run([sys.executable, '-c', script, str(tmp_path / 'work'), str(report)],
+                            cwd=repo_root, env=env, capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(report.read_text()) == {'apollo3': 1, 'apollo5': 1}
+
+
+@pytest.mark.parametrize('requirement',
+                         [r for r in ADAPTER_REGRESSIONS + POWER_STARTUP if len(r.variants) > 1],
+                         ids=lambda r: r.selector.split('::')[-1])
+def test_power_gate_requires_each_family_scenario(requirement):
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{i}]' for i in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'
+
+
+@pytest.mark.parametrize('selector', [
+    'tests/test_timer_period.py::test_timer_smoke_builds',
+    'tests/test_timer_period.py::test_timer_other_variants_compile',
+])
+def test_fixed_gcc_timer_builds_are_not_filtered(selector):
+    requirement = next(r for r in ADAPTER_REGRESSIONS if r.selector == selector)
+    gate = Gate((requirement,))
+    items = [SimpleNamespace(nodeid=selector + f'[{board}]',
+             callspec=SimpleNamespace(params={'board': board})) for board in requirement.boards]
+    config = SimpleNamespace(hook=SimpleNamespace(pytest_deselected=lambda **kw: None))
+    gate.pytest_collection_modifyitems(config, items)
+    assert len(items) == requirement.minimum
+    gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
     assert gate.report(0)['status'] == 'passed'

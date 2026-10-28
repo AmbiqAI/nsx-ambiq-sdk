@@ -12,6 +12,7 @@
  */
 
 #include "nsx_system.h"
+#include "nsx_performance_internal.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -34,8 +35,10 @@ uint32_t nsx_platform_hw_init(void) {
 
 uint32_t nsx_platform_minimal_hw_init(void) {
     /* Enable cache with default config (unified on Apollo4) */
-    am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
-    am_hal_cachectrl_enable();
+    uint32_t status = am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
+    if (status != 0) return status;
+    status = am_hal_cachectrl_enable();
+    if (status != 0) return status;
 
     /* FPU */
     am_hal_sysctrl_fpu_enable();
@@ -49,11 +52,7 @@ uint32_t nsx_platform_minimal_hw_init(void) {
  * =================================================================== */
 
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
-    if (mode == NSX_PERF_HIGH || mode == NSX_PERF_MEDIUM) {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE);
-    } else {
-        return am_hal_pwrctrl_mcu_mode_select(AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER);
-    }
+    return nsx_performance_select(mode);
 }
 
 /* ===================================================================
@@ -86,4 +85,10 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
     }
 
     return 0;
+}
+
+uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
+    if (transport == NSX_DEBUG_ITM) am_bsp_itm_printf_disable();
+    else if (transport == NSX_DEBUG_UART) am_bsp_uart_printf_disable();
+    return 0; /* BSP disable helpers do not expose status. */
 }

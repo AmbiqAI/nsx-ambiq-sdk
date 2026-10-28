@@ -13,7 +13,14 @@ These docs are for contributors maintaining the unified NSX AmbiqSuite SDK repo.
 - `core-clock.md` records the part-specific performance clock sources and the
   boundary between CMSIS clock synchronization and application-owned timing.
 
+- `clock-timebase-qualification.md` specifies the first two-board clock/timebase
+  milestone, reference prerequisites and target counter arithmetic.
 - `local-hardware-tests.md` describes the opt-in local pytest/Unity startup harness.
+
+## Hardware testing
+
+- [Experimental clock/SysTick lab checks](clock-lab-tests.md)
+- [Fixed-harness SDK comparison](sdk-harness-comparison.md)
 
 ## Intake And Scope
 
@@ -40,3 +47,5 @@ Keep these files short and factual. If a note no longer guides a maintainer acti
 - [scatter-load-bounds.md](scatter-load-bounds.md) — aggregate NVM scatter load bounds and real-linker checks.
 
 - [shared-startup.md](shared-startup.md) — shared/resource startup copy windows and validation.
+
+- [i2c-combined-transfers.md](i2c-combined-transfers.md) — repeated-START wrapper mapping, limits, failure handling and validation.
