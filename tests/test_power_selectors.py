@@ -36,7 +36,7 @@ def selector_binary(request, repo_root, tmp_path):
 
 
 @pytest.mark.parametrize(('selector_binary', 'scenario'),
-                         [(family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4', 'apollo4-fpga')
+                         [(family, scenario) for family in ('apollo4', 'apollo4-fpga')
                           for scenario in (COMMON + ('wrong-hardware', 'missing-ack') if family.startswith('apollo4') else COMMON + AP3)],
                          indirect=['selector_binary'])
 def test_family_performance_contract(selector_binary, scenario):

@@ -150,4 +150,17 @@ PERFORMANCE = Suite('performance', 'tests/hardware/test_performance.py::test_per
                     'tests/hardware/performance', 'performance_contract.elf', configure=timer_options)
 
 
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE)
+def ap3_performance_options(repo: Path, output: Path, board: str, fault: str,
+                            sdk_root: Path | None = None) -> list[str]:
+    if board not in ('apollo3_evb', 'apollo3p_evb') or fault != 'none':
+        raise ValueError('AP3 performance smoke requires AP3/AP3P without faults')
+    return []
+
+
+AP3_PERFORMANCE = Suite('ap3-performance', 'tests/hardware/test_ap3_performance.py::test_ap3_performance',
+                        ('prepare', 'mixed_transitions', 'divided_normal', 'restore_normal'),
+                        'tests/hardware/ap3-performance', 'ap3_performance_contract.elf',
+                        configure=ap3_performance_options)
+
+
+SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

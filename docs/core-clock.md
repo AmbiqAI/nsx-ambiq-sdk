@@ -1,15 +1,16 @@
 # CPU frequency synchronization in nsx-power
 
-`nsx_power_set_performance_mode()` and `nsx_set_perf_mode()` share the AP4 and
+`nsx_power_set_performance_mode()` and `nsx_set_perf_mode()` share family selectors for AP3/3P, AP4 and
 Apollo510/B/AP330P/510L operation in `modules/nsx-core/src/nsx_performance.c`.
 The power adapter explicitly translates its legacy enum. Successful selection
 updates CMSIS `SystemCoreClock` after verifying hardware ACK/mode; callers own
 SysTick/RTOS reloads, cached conversions and serialized clock changes. The helper
-does not calibrate oscillators. AP3 and Atomiq110 retain their existing selectors;
+does not calibrate oscillators. Atomiq110 retains its existing selector;
 AP4 FPGA retains its existing lack of clock publication.
 
 | Part | LOW | HIGH | MAX |
 | --- | --- | --- | --- |
+| Apollo3/3P silicon | Normal 24/48 MHz (preserves divider) | Burst 96 MHz | Same as HIGH |
 | Apollo4P/L silicon | Nominal 96 MHz | Nominal 192 MHz | Same as HIGH |
 | Apollo510 / Apollo510B | HAL LP constant (nominal 96 MHz) | Nominal 250 MHz; rejected during 196.608 MHz audio adjustment | Same as HIGH |
 | Apollo330P / Apollo510L | HAL LP constant (nominal 96 MHz) | HAL HP1 constant (nominal 192 MHz) | Configured PLLVCO rate, 192–250 MHz on silicon |
@@ -28,6 +29,30 @@ which are not the FPGA execution rates. A failed HAL switch propagates its statu
 frequency. As with the HAL itself, a failed hardware transition is not a
 guarantee that the hardware remains in a known state; callers must handle the
 error rather than continuing on an assumed frequency.
+
+## Apollo3 normal/burst contract
+
+System LOW and power LOW select normal mode; system MEDIUM/HIGH and power
+HIGH/MAX select burst. This changes the former system-selector no-op: an
+AP3 startup configuration requesting HIGH now requests burst and can fail.
+LOW works without burst availability and does not initialize burst support.
+Burst requires CORESEL=0, SKU permission, enabled BLE buck, and (AP3P) matching core
+supply request/status. Full BSP startup normally prepares supplies; minimal
+startup only configures cache/FPU, so custom startup owns power preparation.
+No implicit BSP initialization, divider change or startup charge is performed.
+
+The HAL owns the patch-dependent power sequence and SRAM-based burst-disable
+workaround. Unpatched AP3P retains the vendor fallback; this does not qualify
+it against the underlying vendor MSPI/power erratum. Repeated confirmed modes
+do not replay transitions. Successful initialization is shared between both APIs;
+failed initialization is retried. FPGA selection is explicitly unsupported.
+Failure retains the prior clock publication, without promising hardware rollback.
+
+`tests/test_ap3_burst.py` covers unavailable SKUs, preparation/divider
+rejection, missing HAL outputs, status errors, hardware mismatch, and mixed API
+calls. `ap3-performance` is a separate opt-in board suite: it compares DWT cycles
+with STIMER HFRC/16 across 24/48/96 MHz. Both share HFRC, so this checks relative
+clock behavior, not absolute oscillator accuracy or silicon erratum coverage.
 
 ## Apollo510 CPU/audio clock compatibility
 

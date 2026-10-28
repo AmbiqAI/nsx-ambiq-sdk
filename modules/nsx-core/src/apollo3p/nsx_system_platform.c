@@ -11,6 +11,7 @@
  */
 
 #include "nsx_system.h"
+#include "nsx_performance_internal.h"
 #include "am_bsp.h"
 #include "am_mcu_apollo.h"
 #include "am_util.h"
@@ -45,12 +46,11 @@ uint32_t nsx_platform_minimal_hw_init(void) {
 }
 
 /* ===================================================================
- * nsx_platform_set_perf_mode — no-op on Apollo3
+ * nsx_platform_set_perf_mode — normal / burst selection
  * =================================================================== */
 
 uint32_t nsx_platform_set_perf_mode(nsx_perf_mode_e mode) {
-    (void)mode;
-    return 0;
+    return nsx_performance_select(mode);
 }
 
 /* ===================================================================

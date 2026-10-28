@@ -205,13 +205,16 @@ extern void nsx_power_deep_sleep(void);
  *
  * Apollo3/3P maps LOW to normal mode and HIGH/MAX to burst mode; Apollo4
  * maps LOW to LP and HIGH/MAX to HP. Both reject NOT_SET and unknown values
- * without a HAL call and propagate HAL errors. AP3 leaves SystemCoreClock unchanged;
- * AP4 silicon publishes 96/192 MHz after hardware ACK/mode verification. AP4
- * FPGA retains its existing publication behavior.
- * Apollo3/3P initializes burst support on the first valid request (including
- * LOW), caches only successful initialization with available burst support,
- * and retries initialization after failure. The caller owns AP3 clock publication
- * and dependent timing updates on all families.
+ * without a HAL call and propagate HAL errors. AP3/3P publishes normal 24/48 MHz
+ * or burst 96 MHz after confirming request/status and HAL output. LOW preserves
+ * the normal divider and does not initialize or require burst support. Burst
+ * requires CORESEL=0, an allowed SKU, enabled BLE buck and (AP3P) settled core supply
+ * selection. Startup owns supply preparation; minimal init alone is insufficient.
+ * Successful burst initialization is cached; failed initialization is retried.
+ * HAL owns patch-dependent workarounds; NSX does not install patches or replay
+ * startup charging. AP3 FPGA selection is unsupported. AP4 silicon publishes
+ * 96/192 MHz after hardware ACK/mode verification; AP4 FPGA retains its existing
+ * publication behavior. Serialize calls and refresh dependent timing settings.
  *
  * On Apollo510/Apollo510B and Apollo330P/510L, success refreshes the CMSIS
  * SystemCoreClock value after hardware ACK/mode verification. NOT_SET retains
