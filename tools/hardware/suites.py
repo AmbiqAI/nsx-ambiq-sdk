@@ -163,4 +163,9 @@ AP3_PERFORMANCE = Suite('ap3-performance', 'tests/hardware/test_ap3_performance.
                         configure=ap3_performance_options)
 
 
-SUITES = (STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+POWER_STARTUP = Suite('power-startup', 'tests/hardware/test_power_startup_smoke.py::test_power_startup',
+                      ('configure_then_reject',), 'tests/fixtures/power-startup-smoke',
+                      'power_startup.elf')
+
+
+SUITES = (POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

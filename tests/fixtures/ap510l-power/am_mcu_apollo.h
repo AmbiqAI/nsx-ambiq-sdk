@@ -17,7 +17,11 @@
 #define __ISB() ((void)0)
 typedef struct { unsigned PWDKEY; } vcomp_t;
 typedef struct { unsigned DBGCTRL; struct { unsigned CRYPTOCLKGATEN, MRAM0PWRCTRL, MRAM0LPREN, MRAM0SLPEN; } MRAMCRYPTOPWRCTRL_b; } mcuctrl_t;
-typedef struct { struct { unsigned PWRENNVM; } MEMPWREN_b; } pwrctrl_t;
+typedef struct { struct { unsigned PWRENNVM;
+#if !defined(AM_PART_APOLLO510L) && !defined(AM_PART_APOLLO330P)
+unsigned PWRENNVM1;
+#endif
+ } MEMPWREN_b; } pwrctrl_t;
 typedef struct { unsigned ICIALLU, CCR; } scb_t;
 extern vcomp_t vcomp; extern mcuctrl_t mcuctrl; extern pwrctrl_t pwrctrl; extern scb_t scb;
 #define VCOMP (&vcomp)

@@ -503,3 +503,12 @@ handling and ADC suspension between captures. It includes the private production
 helper directly to inspect its state without adding a public diagnostic API.
 This complements lifecycle testing; it does not qualify temperature accuracy or
 trim calibration. Acquisition has a 25-second target deadline and the host timeout.
+
+### Apollo5-class power startup
+
+`tests/hardware/test_power_startup_smoke.py` starts through `nsx_power_configure()` on
+AP510/B or AP330 Plus with full TCM/shared SRAM and LOW performance. It checks
+the returned status, 96 MHz LP/cache state, retained memory sentinels and
+rejection of competing startup entry points. Select it with the same local
+pytest board/probe options above. It does not exercise reduced-memory layouts,
+NVM shutdown, injected silicon failures or cold-power-cycle qualification.

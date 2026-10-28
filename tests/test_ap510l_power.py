@@ -17,7 +17,8 @@ def ap510l_power(request, repo_root, tmp_path_factory):
         command.append('-DNSX_DISABLE_API_VALIDATION')
     for directory in (fixture, repo_root / 'modules/nsx-core/includes-api',
                       repo_root / 'modules/nsx-core/includes-internal',
-                      repo_root / 'modules/nsx-power/includes-api'):
+                      repo_root / 'modules/nsx-power/includes-api',
+                      repo_root / 'modules/nsx-power/src'):
         command.extend(('-I', str(directory)))
     command.extend(str(repo_root / source) for source in (
         'tests/fixtures/ap510l-power/main.c', 'modules/nsx-core/src/nsx_startup.c',

@@ -47,7 +47,7 @@
 #include "am_util.h"
 #include "nsx_core.h"
 #include "nsx_debug_internal.h"
-#include "nsx_power.h"
+#include "nsx_power_internal.h"
 #include "am_hal_clkmgr.h"
 #include "am_hal_spotmgr.h"
 
@@ -57,17 +57,17 @@
 // Internal method for turning off peripherals
 //
 //*****************************************************************************
-static void nsx_power_disable_periph(am_hal_pwrctrl_periph_e peripheral) {
-    (void)am_hal_pwrctrl_periph_disable(peripheral);
+static uint32_t nsx_power_disable_periph(am_hal_pwrctrl_periph_e peripheral) {
+    return am_hal_pwrctrl_periph_disable(peripheral);
 }
 
-void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
+uint32_t nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
 
     //
     // Disable the XTAL.
     //
     if (!pCfg->need_xtal) {
-        am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, 0);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, 0));
     }
 
     //
@@ -76,41 +76,42 @@ void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
     VCOMP->PWDKEY = _VAL2FLD(VCOMP_PWDKEY_PWDKEY, VCOMP_PWDKEY_PWDKEY_Key);
 
     if (!pCfg->need_usb) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USB);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USBPHY);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USB));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USBPHY));
     }
 
     if (!pCfg->need_iom) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM0);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM1);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM2);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM3);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM4);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM5);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM0));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM1));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM2));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM3));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM4));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM5));
         #if !defined(AM_PART_APOLLO510L)
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM6);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM7);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM6));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM7));
         #endif
     }
 
     if (!pCfg->need_uart) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART0);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART1);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART0));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART1));
         #if !defined(AM_PART_APOLLO510L)
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART2);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART3);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART2));
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART3));
         #endif
     }
 
     #if !defined(AM_PART_APOLLO510L)
     if (!pCfg->need_audadc) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_AUDADC);
+        NSX_POWER_RETURN_IF_ERROR(nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_AUDADC));
     }
     #endif
 
+    return NSX_STATUS_SUCCESS;
 }
 
-void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
+uint32_t nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
     // configure SRAM & other memories
     am_hal_pwrctrl_mcu_memory_config_t McuMemCfg =
     {
@@ -140,7 +141,7 @@ void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
         .bKeepNVMOnInDeepSleep     = false
     };
 
-    am_hal_pwrctrl_mcu_memory_config(&McuMemCfg);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_mcu_memory_config(&McuMemCfg));
 
     if (pCfg->need_ssram == false) {
         am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
@@ -150,7 +151,7 @@ void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
             .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
             .eSRAMRetain     = AM_HAL_PWRCTRL_SRAM_NONE
         };
-        am_hal_pwrctrl_sram_config(&SRAMMemCfg);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_sram_config(&SRAMMemCfg));
 
     } else {
          am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
@@ -169,13 +170,13 @@ void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
             .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_1P75M
             #endif
         };
-        am_hal_pwrctrl_sram_config(&SRAMMemCfg);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_sram_config(&SRAMMemCfg));
     };
+    return NSX_STATUS_SUCCESS;
 }
 
 
-int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
-    uint32_t ui32ReturnStatus = AM_HAL_STATUS_SUCCESS;
+uint32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
 
 #ifndef NSX_DISABLE_API_VALIDATION
     if (pCfg == NULL) {
@@ -211,11 +212,11 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     };
 
     // Configure the cache power domain (CPDLP must precede cache enable).
-    am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig));
 
     // Enable the I-Cache and D-Cache.
-    am_hal_cachectrl_icache_enable();
-    am_hal_cachectrl_dcache_enable(true);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_icache_enable());
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_dcache_enable(true));
 
 
     // am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_DIS_PERIPHS_ALL, 0);
@@ -223,7 +224,7 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     // am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, 0);
     if (!pCfg->need_xtal) {
         am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC); // Use LFRC instead of XT
-        am_hal_rtc_osc_disable();
+        NSX_POWER_RETURN_IF_ERROR(am_hal_rtc_osc_disable());
     }
     VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
     if (!pCfg->need_itm) {
@@ -231,39 +232,39 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     }
     // Powering down various peripheral power domains
     if (!pCfg->need_itm) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG));
     }
     if (!pCfg->need_crypto) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO));
     }
-    am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP));
 
-    nsx_power_platform_memory_config(pCfg);
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_memory_config(pCfg));
 
     am_hal_sysctrl_fpu_enable();
     am_hal_sysctrl_fpu_stacking_enable(true);
 
-    nsx_power_platform_shutdown_peripherals(pCfg);
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_shutdown_peripherals(pCfg));
 
     #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     //
     // Power off the RSS
     //
     if (!pCfg->need_ble) {
-        am_hal_pwrctrl_rss_pwroff();
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_rss_pwroff());
     }
     #endif
 
     // Configure power mode
     nsx_delay_us(10000);
-    NSX_TRY(nsx_power_set_performance_mode(pCfg->perf_mode), "Set CPU Perf mode failed.");
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_set_performance_mode(pCfg->perf_mode));
     MCUCTRL->MRAMCRYPTOPWRCTRL_b.CRYPTOCLKGATEN = 1;
 
     if (pCfg->need_tempco) {
         nsx_printf("WARNING TempCo not supported.\n");
     }
 
-    return ui32ReturnStatus;
+    return NSX_STATUS_SUCCESS;
 }
 
 /**

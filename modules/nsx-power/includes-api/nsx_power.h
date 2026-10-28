@@ -130,10 +130,13 @@ typedef enum {
  * the common application-facing power cases without forcing apps to manage
  * the lower-level SoC power sequence directly.
  *
- * On Apollo3/3P and Apollo4, invalid performance modes and unsupported TempCo
- * requests are rejected before hardware setup. Core initialization is not a
+ * On Apollo3/3P, Apollo4 and Apollo5-class targets, invalid performance modes
+ * are rejected before hardware setup. Apollo3/4 also reject unsupported TempCo
+ * requests. Core initialization is not a
  * prerequisite. The first failed status-returning configuration operation is
  * returned to the application; this path does not enter the NSX fail loop.
+ * This covers status-returning calls made directly by NSX, not failures hidden
+ * inside void BSP/HAL helpers or non-returning vendor operations.
  * Callers must check the result before continuing startup.
  *
  * On AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L, startup ownership

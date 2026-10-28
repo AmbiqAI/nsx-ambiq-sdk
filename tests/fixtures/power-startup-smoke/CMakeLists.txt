@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_power_startup C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+if(NOT NSX_TEST_BOARD MATCHES "^(apollo510_evb|apollo510b_evb|apollo330mP_evb)$")
+    message(FATAL_ERROR "Power startup smoke requires AP510/B or AP330 Plus")
+endif()
+nsx_add_test_firmware(power_startup main.c MODULES interrupt timer power)

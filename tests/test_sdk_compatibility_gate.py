@@ -27,7 +27,8 @@ def test_minimum_matrix_is_independent_of_collection():
     assert gate.report(0)['missing_requirements'] == ['test.py::test_a']
 
 
-@pytest.mark.parametrize('requirement', (GCC[0], POWER_STARTUP[0]), ids=('abi', 'power-link'))
+@pytest.mark.parametrize('requirement', (GCC[0], next(r for r in POWER_STARTUP if r.selector ==
+    'tests/test_apollo5_power_link.py::test_power_module_links')), ids=('abi', 'power-link'))
 def test_filter_uses_compiler_parameters_not_substrings(requirement):
     selector = requirement.selector
     def item(family):
