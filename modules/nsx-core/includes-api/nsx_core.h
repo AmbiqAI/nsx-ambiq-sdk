@@ -78,7 +78,7 @@ extern const nsx_core_api_t nsx_core_current_version;
 #define NSX_STATUS_INVALID_VERSION 2
 #define NSX_STATUS_INVALID_CONFIG 3
 #define NSX_STATUS_INIT_FAILED 4
-/* AP3/AP4 startup is already running, complete, or failed; reset to retry. */
+/* Guarded startup is already running, complete, or failed; reset to retry. */
 #define NSX_STATUS_STARTUP_REJECTED 0x101u
 
 #define NSX_TRY(func, msg)                                                     \

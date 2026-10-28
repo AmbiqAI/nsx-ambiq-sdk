@@ -136,7 +136,8 @@ typedef enum {
  * returned to the application; this path does not enter the NSX fail loop.
  * Callers must check the result before continuing startup.
  *
- * On AP3/3P and AP4P/L, startup ownership is shared with nsx_system_init(),
+ * On AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L, startup ownership
+ * is shared with nsx_system_init(),
  * nsx_hw_init() and nsx_minimal_hw_init(). Choose one per reset, before drivers.
  * A repeated/re-entrant valid request returns NSX_STATUS_STARTUP_REJECTED,
  * including after a reported hardware failure. Earlier writes are not rolled

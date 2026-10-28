@@ -20,14 +20,16 @@ def debug_binary(repo_root, tmp_path_factory):
                     '-I' + str(fixture / 'system-status'), '-I' + str(core / 'includes-api'),
                     '-I' + str(core / 'includes-internal'),
                     '-I' + str(repo_root / 'modules/nsx-power/includes-api'),
-                    str(repo_root / 'modules/nsx-power/src/nsx_power.c'), str(fixture / 'debug-state/main.c'),
+                    str(repo_root / 'modules/nsx-power/src/nsx_power.c'),
+                    str(repo_root / 'modules/nsx-power/src/nsx_power_preflight.c'),
+                    str(fixture / 'debug-state/main.c'),
                     *(str(core / 'src' / source) for source in
                       ('nsx_debug.c', 'nsx_system.c', 'nsx_startup.c', 'nsx_core_portable.c')),
                     '-o', str(output)], check=True, capture_output=True, text=True, env=env)
     return output
 
 
-@pytest.mark.parametrize('scenario', ('system', 'resume', 'switch', 'noop', 'setup-failure',
+@pytest.mark.parametrize('scenario', ('system', 'system-reject', 'resume', 'switch', 'noop', 'setup-failure',
                                      'switch-failure', 'disable-failure', 'hardware-reset', 'system-reapply', 'hardware-release-failure', 'power-release', 'power-release-failure'))
 def test_debug_transport_contract(debug_binary, scenario):
     subprocess.run([str(debug_binary), scenario], check=True, capture_output=True, text=True, timeout=5)

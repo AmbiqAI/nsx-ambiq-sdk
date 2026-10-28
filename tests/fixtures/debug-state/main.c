@@ -50,6 +50,14 @@ int main(int argc, char **argv) {
         output(1);
         nsx_itm_printf_enable(); nsx_debug_printf_enable();
         assert(enable_calls == 1); output(2);
+    } else if (!strcmp(argv[1], "system-reject")) {
+        assert(nsx_system_init(&system) == 0);
+        assert(nsx_system_init(&system) == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_minimal_hw_init() == NSX_STATUS_STARTUP_REJECTED);
+        assert(nsx_power_configure(&nsx_power_all_on) == NSX_STATUS_STARTUP_REJECTED);
+        assert(enable_calls == 1 && disable_calls == 0 && bsp_calls == 1);
+        output(1);
     } else if (!strcmp(argv[1], "resume")) {
         nsx_debug_printf_enable(); output(1);
         assert(route == NSX_DEBUG_ITM);

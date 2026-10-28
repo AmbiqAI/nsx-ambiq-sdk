@@ -24,7 +24,9 @@ set(NSX_POWER_SOURCES
 )
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo5" OR NSX_POWER_ARCH_DIR STREQUAL "apollo330")
-    list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c)
+    list(APPEND NSX_POWER_SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_preflight.c)
 endif()
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo3" OR NSX_POWER_ARCH_DIR STREQUAL "apollo4")
@@ -78,6 +80,7 @@ install(DIRECTORY
 install(FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_profile.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_preflight.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_internal.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src
 )

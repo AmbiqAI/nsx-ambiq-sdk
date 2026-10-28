@@ -5,8 +5,9 @@ from tools.hardware.suites import OWNERSHIP
 
 @pytest.fixture
 def suite_spec(request):
-    if request.config.getoption('--board') not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb'):
-        pytest.skip('Startup ownership smoke supports AP3 Blue Plus and AP4 Blue KXR')
+    if request.config.getoption('--board') not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb',
+                                                         'apollo510b_evb', 'apollo330mP_evb'):
+        pytest.skip('Startup ownership smoke requires a supported AP3/AP4/AP510/AP330 board')
     return OWNERSHIP
 
 

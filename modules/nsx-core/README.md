@@ -34,7 +34,7 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 
 ## nsx_system Quick Start
 
-On AP3/3P and AP4P/L, choose one startup entry point per reset:
+On AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L, choose one startup entry point per reset:
 `nsx_system_init()`, `nsx_power_configure()`, `nsx_hw_init()`, or
 `nsx_minimal_hw_init()`. The latter two support staged initialization followed
 by cache, debug, performance and driver operations. Do not follow one with a
@@ -83,14 +83,14 @@ CPDLP/SpotManager/FPU on Apollo5-class parts. Consequently `enable_cache=false`
 is not a cache-disable guarantee, and minimal startup is not a substitute for
 board regulator/clock prerequisites. `enable_sram` is reserved and ignored.
 
-`nsx_set_perf_mode()` retains family-specific legacy meanings: AP3/3P makes no
-change; AP4 and AP510 map MEDIUM/HIGH to the same HP mode; AP330P/510L map them
-to HP1/HP2. AP4 silicon and AP510/B/AP330P/510L share selection with `nsx-power`
+`nsx_set_perf_mode()` uses family-specific meanings: AP3/3P selects normal
+24/48 MHz or burst 96 MHz; AP4 and AP510 map MEDIUM/HIGH to the same HP mode; AP330P/510L map them
+to HP1/HP2. AP3/3P, AP4 silicon and AP510/B/AP330P/510L share selection with `nsx-power`
 and publish `SystemCoreClock` only after HAL success and hardware ACK/mode
 verification. Errors retain the previous publication but do not roll back
 hardware. Callers own serialized access, SysTick/RTOS reloads and cached timing
 conversions. The two public enums have different layouts; do not cast between
-them. AP3, AP2, AT110 and AP4 FPGA publication behavior is unchanged.
+them. AP2, AT110 and AP4 FPGA publication behavior is unchanged.
 
 `nsx_debug_init(NULL)` and `NSX_DEBUG_NONE` are no-ops, including when a transport
 is already active. Full BSP startup still releases active NSX debug first.
@@ -105,8 +105,8 @@ They cover full/minimal and staged composition, debug/performance ordering,
 legacy mode mappings and failures. These are host control-flow checks; existing
 real-header builds and board smokes provide separate target evidence. AP3/3P
 system and power selectors now share normal/burst behavior; see
-[CPU clock contracts](../../docs/core-clock.md). Apollo5 startup ownership
-remains tracked in [#163](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/163).
+[CPU clock contracts](../../docs/core-clock.md). The shared startup guard now
+also covers the Apollo5-class parts listed above. AP2/Atomiq110 are unchanged.
 
 Or call individual building blocks for fine-grained control — see the
 header's "Recommended Initialization Order" section.

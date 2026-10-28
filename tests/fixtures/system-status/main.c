@@ -6,6 +6,7 @@
 #include "am_bsp.h"
 #include "am_util_stdio.h"
 #include "nsx_system.h"
+#include "nsx_startup_internal.h"
 
 enum { CORE = 1, BSP, CACHE_CONFIG, CACHE_ENABLE, CPDLP, SPOT, FPU, STACK,
        CACHE, OTP_ON, CRYPTO_ON, DCU_GET, DCU_UPDATE, CRYPTO_OFF, OTP_OFF,
@@ -14,9 +15,13 @@ static unsigned calls[64], count, failure, secondary_failure, irq_mask;
 static unsigned selected_mode, print_calls;
 uint32_t SystemCoreClock = 96000000;
 static unsigned failure_window = 1, power_window;
+static bool power_window_started;
 static unsigned step(unsigned id) {
     assert(count < sizeof(calls) / sizeof(calls[0]));
     calls[count++] = id;
+    if (id >= OTP_ON && id <= OTP_OFF && !power_window_started) {
+        ++power_window; power_window_started=true;
+    }
     unsigned window = (id >= OTP_ON && id <= OTP_OFF) ? power_window : failure_window;
     return (id == failure || id == secondary_failure) && window == failure_window ? 0x40 + id : 0;
 }
@@ -42,7 +47,7 @@ uint32_t __wrap_nsx_core_init(nsx_core_config_t *cfg) {
 void am_util_stdio_vprintf(const char *fmt,va_list args) {(void)fmt; (void)args; ++print_calls;}
 void am_util_delay_us(unsigned us) {(void)us;}
 uint32_t nsx_cache_enable(void) {return step(CACHE);}
-uint32_t am_hal_interrupt_master_disable(void) {unsigned old=irq_mask; irq_mask=1; ++power_window; return old;}
+uint32_t am_hal_interrupt_master_disable(void) {unsigned old=irq_mask; irq_mask=1; power_window_started=false; return old;}
 void am_hal_interrupt_master_enable(void) {irq_mask=0;}
 void am_hal_interrupt_master_set(uint32_t mask) {irq_mask=mask;}
 void am_bsp_low_power_init(void) {(void)step(BSP);}
@@ -145,7 +150,7 @@ int main(int argc, char **argv) {
         assert(status == (failure ? 0x40+failure : 0));
         if (failure) {
             assert(calls[count-1] == failure && !seen(PERF) && !seen(DEBUG));
-#if (defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P)) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+#if NSX_STARTUP_GUARDED
             unsigned previous=count;
             assert(nsx_system_init(&cfg) == NSX_STATUS_STARTUP_REJECTED && count == previous);
 #endif

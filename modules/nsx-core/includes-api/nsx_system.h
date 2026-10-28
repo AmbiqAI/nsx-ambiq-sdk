@@ -219,11 +219,12 @@ typedef struct {
  *   5. Performance mode
  *   6. SpotManager profile (if requested)
  *
- * AP3/3P and AP4P/L share one startup ownership guard across this function,
+ * AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L share one startup guard
+ * across this function,
  * nsx_hw_init(), nsx_minimal_hw_init() and nsx_power_configure(). Choose one
  * per reset, from foreground before drivers. Valid duplicate/re-entrant calls
  * return NSX_STATUS_STARTUP_REJECTED, including after a reported setup failure.
- * Other families currently do not enforce this shared ownership guard.
+ * AP2 and Atomiq110 currently do not enforce this shared ownership guard.
  * Preflight errors are retryable. skip_bsp_init selects minimal initialization
  * and still consumes ownership. Direct HAL/BSP calls bypass this guard.
  *
