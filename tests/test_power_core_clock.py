@@ -194,7 +194,7 @@ def test_performance_updates_core_clock(clock_harness: Path, scenario: str) -> N
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("board", ("apollo4p_blue_kxr_evb", "apollo4l_evb", "apollo510_evb", "apollo510b_evb", "apollo330mP_evb", "apollo510dL_evb"))
+@pytest.mark.parametrize("board", ("apollo3_evb", "apollo3p_evb", "apollo4p_blue_kxr_evb", "apollo4l_evb", "apollo510_evb", "apollo510b_evb", "apollo330mP_evb", "apollo510dL_evb"))
 @pytest.mark.parametrize("family", ("gcc", "atfe", "armclang"))
 def test_performance_compiles_with_real_hal(repo_root: Path, tmp_path: Path, board: str, family: str) -> None:
     if family == "gcc":

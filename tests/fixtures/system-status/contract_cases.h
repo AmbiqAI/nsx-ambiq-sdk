@@ -89,8 +89,7 @@ static void contract_startup(const char *scenario) {
     if(cfg.debug.transport != NSX_DEBUG_NONE) assert(position(DEBUG) < position(PERF));
     else if(cfg.enable_cache) assert(position(CACHE) < position(PERF));
 #endif
-    /* AP3's no-op system selector is an unresolved compatibility gap, not
-     * a strict cross-family performance guarantee established by this test. */
+    /* AP3 selector behavior is covered by the dedicated burst fixture. */
     assert(!seen(PROFILE));
 #if defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
     unsigned before=count;

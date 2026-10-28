@@ -54,6 +54,8 @@ uint32_t am_hal_pwrctrl_mcu_mode_select(unsigned mode) {
     assert(mode >= 10 && mode <= 13); selected_mode=mode; power.MCUPERFREQ_b.MCUPERFSTATUS=mode; power.MCUPERFREQ_b.MCUPERFACK=1; return step(PERF);
 }
 #if (defined(AM_PART_APOLLO3) || defined(AM_PART_APOLLO3P))
+/* Selector details have their own fault-injection fixture. */
+uint32_t nsx_performance_select(nsx_perf_mode_e mode) {(void)mode; return 0;}
 void am_bsp_itm_printf_enable(void) {(void)step(DEBUG);}
 void am_bsp_uart_printf_enable(void) {(void)step(DEBUG);}
 #else

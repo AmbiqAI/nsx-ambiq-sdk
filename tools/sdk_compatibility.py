@@ -42,8 +42,8 @@ GCC = (
                 ('apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
     Requirement('tests/test_audio_buffers.py::test_audio_real_headers', 6,
                 ('apollo3_evb', 'apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
-    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 6,
-                ('apollo4p_blue_kxr_evb', 'apollo4l_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
+    Requirement('tests/test_power_core_clock.py::test_performance_compiles_with_real_hal', 8,
+                ('apollo3_evb', 'apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo4l_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo510dL_evb'), compiler='gcc'),
 )
 # Acceptance matrices are deliberately independent of test parametrization so
 # replacing a scenario in the tests cannot silently replace the requirement.
@@ -78,9 +78,12 @@ ADAPTER_REGRESSIONS = (
                 ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
     Requirement('tests/test_timer_period.py::test_timer_other_variants_compile', 2,
                 ('apollo4l_evb', 'apollo510dL_evb')),
-    Requirement('tests/test_power_selectors.py::test_family_performance_contract', 42,
+    Requirement('tests/test_ap3_performance.py::test_ap3_performance_contract', 200),
+    Requirement('tests/test_ap3_performance.py::test_ap3_performance_builds', 2,
+                ('apollo3_evb', 'apollo3p_evb')),
+    Requirement('tests/test_power_selectors.py::test_family_performance_contract', 20,
                 parameters=('selector_binary', 'scenario'),
-                variants=tuple((family, scenario) for family in ('apollo3', 'apollo3p', 'apollo4', 'apollo4-fpga')
+                variants=tuple((family, scenario) for family in ('apollo4', 'apollo4-fpga')
                     for scenario in (('low', 'high', 'max', 'repeat', 'invalid', 'invalid-after-init',
                                       'enable-fails', 'disable-fails') +
                                      (('wrong-hardware', 'missing-ack') if family.startswith('apollo4') else
