@@ -127,6 +127,14 @@ CORE_BUILDS = (
                                for override in (False, True)), compiler='gcc'),
 )
 POWER_STARTUP = (
+    Requirement('tests/test_apollo5_power_errors.py::test_apollo5_first_error', 80,
+                parameters=('power_errors', 'keep', 'mask', 'small', 'ssram'),
+                variants=tuple(((family, validation), keep, mask, small, ssram)
+                    for family in ('apollo510', 'apollo510b', 'apollo5b', 'apollo330p', 'apollo510l')
+                    for validation in (True, False) for keep in (0, 1) for mask in (0, 1)
+                    for small, ssram in ((0, 1), (1, 0)))),
+    Requirement('tests/test_apollo5_power_errors.py::test_power_startup_smoke_builds', 3,
+                ('apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb')),
     Requirement('tests/test_apollo5_power_link.py::test_power_module_links', 4,
                 parameters=('family', 'board'),
                 variants=tuple(('gcc', board) for board in

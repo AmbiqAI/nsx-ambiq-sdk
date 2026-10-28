@@ -61,8 +61,11 @@ The measurement helpers remain available, but Apollo510L has no ITCM:
 `nsx_power_minimize_memory()` requires code, stack and data to fit the retained
 memory layout. NVM-off experiments require an entirely RAM-resident execution
 path. Compile/link tests do not constitute physical qualification of those
-memory-changing helpers. Legacy startup error propagation remains tracked in
-[#168](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/168).
+memory-changing helpers. Apollo5-class power startup returns the first error from its direct
+status-returning HAL calls and stops further setup. Earlier hardware effects
+remain; stop application startup and reset before retrying. No rollback or safe
+continued execution after a memory error is promised. Void BSP/HAL helpers and
+waits inside vendor operations retain their existing behavior.
 
 ## CPU clock after a performance change
 
@@ -328,6 +331,8 @@ remain caller-owned. No force/retry API is introduced.
 Unknown power performance enums fail before claiming ownership; NOT_SET keeps
 its LOW mapping. API/version validation also precedes the claim. Started
 attempts remain consumed after success or failure; caller interrupt masks are
-preserved. Existing unchecked HAL results and fail-stop operations in the
-legacy Apollo5/330 power backends are unchanged: this guard does not turn them
-into checked or bounded initialization or promise peripheral preservation.
+preserved by the ownership guard. Apollo5/330 power startup now returns the
+first reported error from its direct status-returning setup calls, without
+entering the NSX fail loop. This does not bound vendor-internal waits or report
+errors hidden by void BSP helpers, undo partial hardware effects, or promise
+peripheral preservation. Reset before another startup attempt.
