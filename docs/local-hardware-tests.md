@@ -506,7 +506,7 @@ trim calibration. Acquisition has a 25-second target deadline and the host timeo
 
 ### Apollo5-class power startup
 
-`tests/hardware/test_power_startup.py` starts through `nsx_power_configure()` on
+`tests/hardware/test_power_startup_smoke.py` starts through `nsx_power_configure()` on
 AP510/B or AP330 Plus with full TCM/shared SRAM and LOW performance. It checks
 the returned status, 96 MHz LP/cache state, retained memory sentinels and
 rejection of competing startup entry points. Select it with the same local

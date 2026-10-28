@@ -163,7 +163,7 @@ AP3_PERFORMANCE = Suite('ap3-performance', 'tests/hardware/test_ap3_performance.
                         configure=ap3_performance_options)
 
 
-POWER_STARTUP = Suite('power-startup', 'tests/hardware/test_power_startup.py::test_power_startup',
+POWER_STARTUP = Suite('power-startup', 'tests/hardware/test_power_startup_smoke.py::test_power_startup',
                       ('configure_then_reject',), 'tests/fixtures/power-startup-smoke',
                       'power_startup.elf')
 
