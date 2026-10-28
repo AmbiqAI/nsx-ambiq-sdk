@@ -55,6 +55,10 @@ static void output_lifecycle(void) {
      * the disable contract. Check the HAL's final clock/trace state. */
     TEST_ASSERT_BITS_LOW(CoreDebug_DEMCR_TRCENA_Msk, CoreDebug->DEMCR);
     TEST_ASSERT_EQUAL_UINT32(0, MCUCTRL->TPIUCTRL);
+#elif defined(AM_PART_APOLLO4P)
+    /* Check the final trace/clock gates, not the gated ITM register. */
+    TEST_ASSERT_BITS_LOW(CoreDebug_DEMCR_TRCENA_Msk, CoreDebug->DEMCR);
+    TEST_ASSERT_EQUAL_UINT32(0, MCUCTRL->DBGCTRL);
 #else
     TEST_ASSERT_BITS_LOW(ITM_TCR_ITMENA_Msk, ITM->TCR);
 #endif
