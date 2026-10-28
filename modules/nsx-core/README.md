@@ -103,10 +103,10 @@ The startup contract tests execute the real lifecycle, coordinator, debug state,
 printf wrappers and selected family backend with controlled HAL responses.
 They cover full/minimal and staged composition, debug/performance ordering,
 legacy mode mappings and failures. These are host control-flow checks; existing
-real-header builds and board smokes provide separate target evidence. Known
-AP3 system/power semantics and cross-family ownership gaps remain tracked
-in [#165](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/165) and
-[#163](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/163); no replacement API or migration is implemented here.
+real-header builds and board smokes provide separate target evidence. AP3/3P
+system and power selectors now share normal/burst behavior; see
+[CPU clock contracts](../../docs/core-clock.md). Apollo5 startup ownership
+remains tracked in [#163](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/163).
 
 Or call individual building blocks for fine-grained control — see the
 header's "Recommended Initialization Order" section.

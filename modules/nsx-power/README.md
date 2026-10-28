@@ -109,18 +109,22 @@ newer families' `am_hal_gpio_pincfg_output` configuration.
 
 ## Apollo3/Apollo4 selector contracts
 
-`tests/test_power_selectors.py` executes the production selectors through the
+`tests/test_ap3_burst.py` and `tests/test_power_selectors.py` execute the production selectors through the
 public NSX header with a controllable HAL. Apollo3/3P use the shipped burst HAL
 declarations; Apollo4 uses a small host HAL model. The complete eight-board
 power link matrix checks the real family headers and archives separately.
 
 LOW selects normal mode on AP3/3P and LP on AP4; HIGH/MAX select burst or HP.
 Both families reject NOT_SET and unknown modes without touching the HAL. AP3/3P
-leaves `SystemCoreClock` unchanged; AP4 silicon publishes the verified mode
-frequency as described above. AP3/3P initializes burst support on its first
-valid request, including LOW. Initialization errors propagate and remain
-retryable; only successful, available initialization is cached. Successful
-initialization remains cached if a later mode transition fails.
+shares the core selector with `nsx_set_perf_mode()`: LOW preserves normal
+24/48 MHz, while system MEDIUM/HIGH and power HIGH/MAX select 96 MHz burst.
+Successful selection publishes `SystemCoreClock` after checking HAL output and
+hardware state. LOW does not initialize or require burst support. Burst requires
+an allowed SKU, undivided normal clock and prepared supplies; see the
+[prerequisites and compatibility change](../../docs/core-clock.md#apollo3-normalburst-contract).
+Initialization errors remain retryable; only successful, available initialization
+is cached. The HAL owns patch-dependent workarounds. AP4 silicon publishes its
+verified mode frequency as described above. AP3 FPGA selection is unsupported.
 
 The required intake matrix covers translation, invalid inputs, status
 propagation, retries and call ordering. It does not validate physical clock
