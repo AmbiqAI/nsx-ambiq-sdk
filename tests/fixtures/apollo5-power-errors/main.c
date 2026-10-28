@@ -8,6 +8,9 @@
 vcomp_t vcomp; mcuctrl_t mcuctrl; pwrctrl_t pwrctrl; scb_t scb;
 const unsigned am_hal_gpio_pincfg_disabled=0;
 static unsigned calls, fail_at, failed, mask, memory_written;
+static unsigned mcu_step, sram_step;
+static unsigned active_dtcm=0xdead, active_nvm=0xdead, retained_dtcm=0xdead;
+static unsigned active_sram=0xdead, retained_sram=0xdead;
 static nsx_power_config_t config;
 /* Every later HAL/runtime operation would fail this assertion after injection. */
 static uint32_t step(const char *name, bool fallible) {
@@ -24,11 +27,50 @@ uint32_t am_hal_pwrctrl_periph_disable(am_hal_pwrctrl_periph_e p) {
     char name[32]; snprintf(name,sizeof(name),"periph-%u",(unsigned)p); return step(name,true);
 }
 uint32_t am_hal_clkgen_control(unsigned op, void *arg) { (void)op; (void)arg; return step("clkgen",true); }
+static unsigned expected_dtcm(void) {
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    return config.small_tcm ? AM_HAL_PWRCTRL_DTCM128K : AM_HAL_PWRCTRL_DTCM256K;
+#else
+    return config.small_tcm ? AM_HAL_PWRCTRL_ITCM32K_DTCM128K : AM_HAL_PWRCTRL_ITCM256K_DTCM512K;
+#endif
+}
+static unsigned expected_nvm(void) {
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    return AM_HAL_PWRCTRL_NVM;
+#else
+    return AM_HAL_PWRCTRL_NVM0_AND_NVM1;
+#endif
+}
+static unsigned expected_sram(void) {
+    if (!config.need_ssram) return AM_HAL_PWRCTRL_SRAM_NONE;
+#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+    return AM_HAL_PWRCTRL_SRAM_1P75M;
+#else
+    return AM_HAL_PWRCTRL_SRAM_3M;
+#endif
+}
 uint32_t am_hal_pwrctrl_mcu_memory_config(am_hal_pwrctrl_mcu_memory_config_t *cfg) {
-    assert(cfg->eDTCMCfg!=0); memory_written=1; return step("mcu-memory",true);
+    assert(cfg->eROMMode==AM_HAL_PWRCTRL_ROM_AUTO);
+    assert(cfg->eDTCMCfg==expected_dtcm() && cfg->eNVMCfg==expected_nvm());
+    assert(cfg->eRetainDTCM==AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN);
+    assert(!cfg->bKeepNVMOnInDeepSleep);
+    memory_written=1; mcu_step=calls+1;
+    /* Model a HAL failure after its first hardware effect, without rollback. */
+    active_dtcm=cfg->eDTCMCfg;
+    uint32_t status=step("mcu-memory",true);
+    if (status) return status;
+    active_nvm=cfg->eNVMCfg; retained_dtcm=cfg->eRetainDTCM;
+    return 0;
 }
 uint32_t am_hal_pwrctrl_sram_config(am_hal_pwrctrl_sram_memcfg_t *cfg) {
-    assert(memory_written); assert(cfg->eSRAMCfg==cfg->eSRAMRetain); return step("sram",true);
+    assert(memory_written);
+    assert(cfg->eSRAMCfg==expected_sram() && cfg->eSRAMRetain==expected_sram());
+    assert(!cfg->eActiveWithMCU && !cfg->eActiveWithGFX && !cfg->eActiveWithDISP);
+    sram_step=calls+1; active_sram=cfg->eSRAMCfg;
+    uint32_t status=step("sram",true);
+    if (status) return status;
+    retained_sram=cfg->eSRAMRetain;
+    return 0;
 }
 uint32_t am_hal_pwrctrl_pwrmodctl_cpdlp_config(am_hal_pwrctrl_pwrmodctl_cpdlp_t cfg) { assert(cfg.eRlpConfig==AM_HAL_PWRCTRL_RLP_ON); return step("cpdlp",true); }
 uint32_t am_hal_cachectrl_icache_enable(void) { return step("icache",true); }
@@ -67,6 +109,19 @@ int main(int argc,char **argv) {
         assert(mcuctrl.MRAMCRYPTOPWRCTRL_b.CRYPTOCLKGATEN==0);
     } else {
         assert(result==0 && mcuctrl.MRAMCRYPTOPWRCTRL_b.CRYPTOCLKGATEN==1);
+    }
+    if (mcu_step) {
+        assert(active_dtcm==expected_dtcm());
+        assert(active_nvm==(fail_at==mcu_step ? 0xdead : expected_nvm()));
+        assert(retained_dtcm==(fail_at==mcu_step ? 0xdead : AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN));
+    } else {
+        assert(active_dtcm==0xdead && active_nvm==0xdead && retained_dtcm==0xdead);
+    }
+    if (sram_step) {
+        assert(active_sram==expected_sram());
+        assert(retained_sram==(fail_at==sram_step ? 0xdead : expected_sram()));
+    } else {
+        assert(active_sram==0xdead && retained_sram==0xdead);
     }
     /* All failed attempts, including partially applied memory changes, consume ownership. */
     assert(nsx_power_configure(&config)==NSX_STATUS_STARTUP_REJECTED);
