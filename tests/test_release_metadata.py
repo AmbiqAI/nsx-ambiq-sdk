@@ -13,8 +13,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.26.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.25.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.27.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.26.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
 OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
@@ -85,7 +85,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.26"
+    assert root_version == "5.2.27"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -190,14 +190,14 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.25"
+    assert superseded["distribution"]["version"] == "5.2.26"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "aefce2ca858795e783c76726ebe7d14d9d4bde7c"
+    assert supersedes["commit"] == "ba0621638d57b71a7b0d4f76ddccf0706745ad77"
     assert supersedes["reason"].strip()
 
 
@@ -337,6 +337,10 @@ def test_consumer_upgrade_paths_cover_the_versions_consumers_move_from(repo_root
             assert change["id"] and change["summary"].strip(), (version, change)
             for path in change["paths"]:
                 assert (repo_root / path).exists(), (version, change["id"], path)
+            for path in change.get("removed_paths", []):
+                assert not (repo_root / path).exists(), (version, change["id"], path)
+                require_full_history(repo_root)
+                assert git(repo_root, "cat-file", "-e", f"{entry['from_commit']}:{path}").returncode == 0, path
     assert paths[superseded["distribution"]["version"]]["from_commit"] == release["distribution"]["supersedes"]["commit"]
 
 
@@ -404,6 +408,7 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
         files: set[str] = set()
         trees: set[str] = set()
         for change in entry["changes"]:
+            files.update(change.get("removed_paths", []))
             scope = change.get("path_scope", "files")
             assert scope in ("files", "tree"), (entry["from_version"], change["id"], scope)
             for path in change["paths"]:
@@ -465,6 +470,11 @@ def test_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Pa
             history_unavailable(f"{base} is not in this checkout")
         names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD", "--", provider)
         assert names.returncode == 0, names.stderr
+        if entry.get("provider_content_unchanged") is True:
+            # Releases after the header fixes must preserve the entire provider,
+            # including atomiq110 and the artifact manifest.
+            assert names.stdout.splitlines() == [], entry["from_version"]
+            continue
         changed = {
             name
             for name in names.stdout.splitlines()

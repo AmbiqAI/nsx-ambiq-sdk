@@ -21,8 +21,8 @@ official numbered AmbiqSuite release, and the payload is not one build of it:
   archives come from an unrecorded, older source. Headers and archives do not
   fully match.
 
-`release/nsx-ambiq-sdk-5.2.26.yaml` records these as known deviations. The NSX
-distribution and module version is `5.2.26`.
+`release/nsx-ambiq-sdk-5.2.27.yaml` records these as known deviations. The NSX
+distribution and module version is `5.2.27`.
 
 ## Package Contents
 

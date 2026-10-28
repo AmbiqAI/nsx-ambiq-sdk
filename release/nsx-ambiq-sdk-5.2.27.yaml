@@ -1,0 +1,1345 @@
+schema_version: 1
+distribution:
+  name: nsx-ambiq-sdk
+  version: 5.2.27
+  tag: v5.2.27
+  title: nsx-ambiq-sdk 5.2.27 — NSX integration fixes and repeatable validation
+  git:
+    commit: null
+    commit_resolution:
+      source: immutable_tag_target
+      command: git rev-list -n 1 v5.2.27
+      publication_requirement: Tag v5.2.27 must point to the approved release commit.
+  supersedes:
+    version: 5.2.26
+    tag: v5.2.26
+    commit: ba0621638d57b71a7b0d4f76ddccf0706745ad77
+    relationship: content_update
+    reason: NSX startup, memory, performance, debug, timer, USB, I2C and audio integration fixes with
+      repeatable intake and representative board validation. No AmbiqSuite provider payload changes.
+  immutability_note: All earlier tags, releases and commits are preserved. Corrections are published as
+    new distribution versions.
+consumer_upgrade:
+- from_version: 5.2.26
+  from_tag: v5.2.26
+  from_commit: ba0621638d57b71a7b0d4f76ddccf0706745ad77
+  github_release_published: true
+  consumers: Consumers on the latest published SDK release.
+  changed_archive_parts: []
+  unchanged_archive_count: 73
+  provider_content_unchanged: true
+  changes:
+  - id: release-integration-5-2-27
+    summary: Release version alignment, documentation, build environment and CI integration for the 5.2.27
+      fixes and test foundation.
+    paths: &id001
+    - .github/workflows/ci.yml
+    - .gitignore
+    - .pre-commit-config.yaml
+    - CHANGELOG.md
+    - CONTRIBUTING.md
+    - README.md
+    - docker/dev-ci.Dockerfile
+    - docs/README.md
+    - docs/core-clock.md
+    - docs/local-hardware-tests.md
+    - docs/scatter-load-bounds.md
+    - docs/shared-startup.md
+    - docs/small-m55-memory.md
+    - docs/toolchain-smoke.md
+    - docs/vendor-abi.md
+    - docs/versioning.md
+    - modules/nsx-ambiq-usb/nsx-module.yaml
+    - modules/nsx-ambiqsuite/README.md
+    - modules/nsx-ambiqsuite/nsx-module.yaml
+    - modules/nsx-ble/nsx-module.yaml
+    - modules/nsx-ble/src/ns_ble.c
+    - modules/nsx-cmsis-core/nsx-module.yaml
+    - modules/nsx-cmsis-startup/nsx-module.yaml
+    - modules/nsx-cordio/nsx-module.yaml
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+    - modules/nsx-emmc/nsx-module.yaml
+    - modules/nsx-freertos/nsx-module.yaml
+    - modules/nsx-gpio/nsx-module.yaml
+    - modules/nsx-i2c/nsx-module.yaml
+    - modules/nsx-interrupt/nsx-module.yaml
+    - modules/nsx-npu/nsx-module.yaml
+    - modules/nsx-perf/nsx-module.yaml
+    - modules/nsx-psram/nsx-module.yaml
+    - modules/nsx-soc-hal/nsx-module.yaml
+    - modules/nsx-spi/nsx-module.yaml
+    - modules/nsx-timer/nsx-module.yaml
+    - modules/nsx-uart/nsx-module.yaml
+    - modules/nsx-usb/nsx-module.yaml
+    - pyproject.toml
+    - release/nsx-ambiq-sdk-5.2.27.yaml
+    - release/qualification-5.2.27.md
+    - uv.lock
+  - id: startup-linker-abi-5-2-27
+    summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
+      fixes.
+    paths:
+    - cmake/nsx_toolchain_flags.cmake
+    - cmake/socs/apollo330P.cmake
+    - cmake/socs/apollo510L.cmake
+    - cmake/socs/facts/apollo510b.cmake
+    - modules/nsx-ambiq-bsp/CMakeLists.txt
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4l/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4l/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4l/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4p/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/startup_gcc.c
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
+  - id: audio-power-5-2-27
+    summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
+    paths: &id002
+    - modules/nsx-audio/README.md
+    - modules/nsx-audio/includes-api/nsx_audio.h
+    - modules/nsx-audio/nsx-module.yaml
+    - modules/nsx-audio/src/apollo3/nsx_pdm_apollo3.c
+    - modules/nsx-audio/src/apollo5/nsx_pdm_apollo5.c
+    - modules/nsx-audio/src/nsx_audio_buffers.h
+    - modules/nsx-power/CMakeLists.txt
+    - modules/nsx-power/README.md
+    - modules/nsx-power/includes-api/nsx_power.h
+    - modules/nsx-power/nsx-module.yaml
+    - modules/nsx-power/src/apollo330/nsx_power.c
+    - modules/nsx-power/src/apollo5/nsx_power.c
+    - modules/nsx-power/src/nsx_power_performance.c
+  - id: qualification-infrastructure-5-2-27
+    summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
+      and integration regression tests.
+    paths: &id003
+    - tests/README.md
+    - tests/conftest.py
+    - tests/fixtures/audio/am_bsp.h
+    - tests/fixtures/audio/am_mcu_apollo.h
+    - tests/fixtures/audio/am_util.h
+    - tests/fixtures/audio/lifecycle.c
+    - tests/fixtures/audio/main.c
+    - tests/fixtures/audio/nsx_core.h
+    - tests/fixtures/cpp-startup/CMakeLists.txt
+    - tests/fixtures/cpp-startup/crt-overrides.cpp
+    - tests/fixtures/cpp-startup/main.cpp
+    - tests/fixtures/hardware_second/CMakeLists.txt
+    - tests/fixtures/hardware_second/main.c
+    - tests/hardware/common/firmware.cmake
+    - tests/hardware/common/result_reporter.cpp
+    - tests/hardware/common/result_reporter.h
+    - tests/hardware/common/unity_config.h
+    - tests/hardware/conftest.py
+    - tests/hardware/firmware/CMakeLists.txt
+    - tests/hardware/firmware/main.cpp
+    - tests/hardware/runtime/CMakeLists.txt
+    - tests/hardware/runtime/main.c
+    - tests/hardware/test_runtime.py
+    - tests/hardware/test_startup.py
+    - tests/hardware/vendor/unity/LICENSE.txt
+    - tests/hardware/vendor/unity/provenance.json
+    - tests/hardware/vendor/unity/unity.c
+    - tests/hardware/vendor/unity/unity.h
+    - tests/hardware/vendor/unity/unity_internals.h
+    - tests/test_audio_buffers.py
+    - tests/test_audio_lifecycle.py
+    - tests/test_cmake_contract.py
+    - tests/test_cpp_startup.py
+    - tests/test_device_pack.py
+    - tests/test_hardware_architecture.py
+    - tests/test_hardware_lifecycle.py
+    - tests/test_hardware_qualification.py
+    - tests/test_hardware_runner.py
+    - tests/test_intake_patches_byte_for_byte.py
+    - tests/test_link_smoke.py
+    - tests/test_manifests.py
+    - tests/test_power_core_clock.py
+    - tests/test_probe_profiles.py
+    - tests/test_release_metadata.py
+    - tests/test_repo_shape.py
+    - tests/test_runtime_suite.py
+    - tests/test_scatter_load_bounds.py
+    - tests/test_sdk_compatibility_gate.py
+    - tests/test_shared_startup.py
+    - tests/test_small_m55_memory.py
+    - tests/test_vendor_abi.py
+    - tools/hardware/__init__.py
+    - tools/hardware/api.py
+    - tools/hardware/build.py
+    - tools/hardware/device-pack.json
+    - tools/hardware/device_pack.py
+    - tools/hardware/inventory.py
+    - tools/hardware/jlink_worker.py
+    - tools/hardware/preparation.py
+    - tools/hardware/process.py
+    - tools/hardware/protocol.py
+    - tools/hardware/pytest_plugin.py
+    - tools/hardware/qualification.py
+    - tools/hardware/runner.py
+    - tools/hardware/startup.py
+    - tools/hardware/suites.py
+    - tools/nsx_firmware_elf.py
+    - tools/nsx_link_smoke.py
+    - tools/nsx_toolchain_file.py
+    - tools/sdk_compatibility.py
+    - tools/test_evidence.py
+  - id: workflow-docs-5-2-27
+    summary: Current intake, shim and hardware validation instructions and release records.
+    paths:
+    - docs/clock-lab-tests.md
+    - docs/clock-timebase-qualification.md
+    - docs/i2c-combined-transfers.md
+    - docs/release-process.md
+    - docs/sdk-drop-workflow.md
+    - docs/sdk-harness-comparison.md
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/CMakeLists.txt
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-api/nsx_system.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo510/nsx_system_platform.c
+    - modules/nsx-core/src/atomiq110/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-core/src/nsx_system_platform_apollo5.inc
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/atomiq110/nsx_power.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_internal.h
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
+  - id: validation-tools-5-2-27
+    summary: Revision-bound intake/patch review, fixed-harness comparison and expanded shim/build/hardware
+      regression tests.
+    paths:
+    - sdk-intake/README.md
+    - tests/fixtures/ap3-performance/am_mcu_apollo.h
+    - tests/fixtures/ap3-performance/main.c
+    - tests/fixtures/ap510l-power/am_bsp.h
+    - tests/fixtures/ap510l-power/am_hal_clkmgr.h
+    - tests/fixtures/ap510l-power/am_hal_spotmgr.h
+    - tests/fixtures/ap510l-power/am_mcu_apollo.h
+    - tests/fixtures/ap510l-power/am_util.h
+    - tests/fixtures/ap510l-power/link.c
+    - tests/fixtures/ap510l-power/main.c
+    - tests/fixtures/ap510l-power/nsx_debug_internal.h
+    - tests/fixtures/apollo5-power-errors/am_hal_spotmgr.h
+    - tests/fixtures/apollo5-power-errors/am_mcu_apollo.h
+    - tests/fixtures/apollo5-power-errors/main.c
+    - tests/fixtures/debug-state-smoke/CMakeLists.txt
+    - tests/fixtures/debug-state-smoke/main.c
+    - tests/fixtures/debug-state/main.c
+    - tests/fixtures/memory-preflight/CMakeLists.txt
+    - tests/fixtures/memory-preflight/main.c
+    - tests/fixtures/power-link/CMakeLists.txt
+    - tests/fixtures/power-selector/am_mcu_apollo.h
+    - tests/fixtures/power-selector/main.c
+    - tests/fixtures/power-startup-smoke/CMakeLists.txt
+    - tests/fixtures/power-startup-smoke/main.c
+    - tests/fixtures/power-startup/am_bsp.h
+    - tests/fixtures/power-startup/am_mcu_apollo.h
+    - tests/fixtures/power-startup/am_util.h
+    - tests/fixtures/power-startup/main.c
+    - tests/fixtures/sdk-link/CMakeLists.txt
+    - tests/fixtures/sdk-link/archive_probe.c
+    - tests/fixtures/startup-ownership/CMakeLists.txt
+    - tests/fixtures/startup-ownership/main.c
+    - tests/fixtures/system-status-smoke/CMakeLists.txt
+    - tests/fixtures/system-status-smoke/main.c
+    - tests/fixtures/system-status/am_bsp.h
+    - tests/fixtures/system-status/am_hal_clkmgr.h
+    - tests/fixtures/system-status/am_hal_dcu.h
+    - tests/fixtures/system-status/am_hal_spotmgr.h
+    - tests/fixtures/system-status/am_mcu_apollo.h
+    - tests/fixtures/system-status/am_util.h
+    - tests/fixtures/system-status/am_util_stdio.h
+    - tests/fixtures/system-status/contract_cases.h
+    - tests/fixtures/system-status/main.c
+    - tests/fixtures/tempco-capture-smoke/CMakeLists.txt
+    - tests/fixtures/tempco-capture-smoke/main.c
+    - tests/fixtures/tempco-smoke/CMakeLists.txt
+    - tests/fixtures/tempco-smoke/main.c
+    - tests/fixtures/tempco/am_bsp.h
+    - tests/fixtures/tempco/am_mcu_apollo.h
+    - tests/fixtures/tempco/am_util.h
+    - tests/fixtures/tempco/main.c
+    - tests/fixtures/timer-period/am_bsp.h
+    - tests/fixtures/timer-period/am_mcu_apollo.h
+    - tests/fixtures/timer-period/am_util.h
+    - tests/fixtures/timer-period/main.c
+    - tests/fixtures/usb-cdc-send/main.c
+    - tests/fixtures/usb-connection/main.c
+    - tests/fixtures/usb-link/CMakeLists.txt
+    - tests/fixtures/usb-link/main.c
+    - tests/fixtures/usb-policy/CMakeLists.txt
+    - tests/fixtures/usb-policy/main.c
+    - tests/fixtures/usb-reentrancy/main.c
+    - tests/fixtures/usb-reentrancy/nsx_core.h
+    - tests/fixtures/usb-reentrancy/nsx_timer.h
+    - tests/fixtures/usb-reentrancy/tusb.h
+    - tests/hardware/ap3-performance/CMakeLists.txt
+    - tests/hardware/ap3-performance/main.c
+    - tests/hardware/clock/CMakeLists.txt
+    - tests/hardware/clock/main.c
+    - tests/hardware/clock/measurement.h
+    - tests/hardware/performance/CMakeLists.txt
+    - tests/hardware/performance/main.c
+    - tests/hardware/test_ap3_performance.py
+    - tests/hardware/test_clock.py
+    - tests/hardware/test_debug_failure.py
+    - tests/hardware/test_debug_output.py
+    - tests/hardware/test_memory_preflight.py
+    - tests/hardware/test_ownership.py
+    - tests/hardware/test_performance.py
+    - tests/hardware/test_power_startup_smoke.py
+    - tests/hardware/test_system_status_smoke.py
+    - tests/hardware/test_tempco.py
+    - tests/hardware/test_tempco_capture.py
+    - tests/hardware/test_timer.py
+    - tests/hardware/test_usb_policy.py
+    - tests/hardware/timer/CMakeLists.txt
+    - tests/hardware/timer/main.c
+    - tests/i2c_host/am_bsp.h
+    - tests/i2c_host/am_mcu_apollo.h
+    - tests/i2c_host/am_util.h
+    - tests/i2c_host/nsx_core.h
+    - tests/i2c_host/test_i2c.c
+    - tests/test_ap3_burst.py
+    - tests/test_ap510l_power.py
+    - tests/test_apollo5_power_errors.py
+    - tests/test_apollo5_power_link.py
+    - tests/test_clock_cleanup.py
+    - tests/test_clock_contract.py
+    - tests/test_clock_measurement.py
+    - tests/test_clock_suite.py
+    - tests/test_debug_state.py
+    - tests/test_hardware_comparison.py
+    - tests/test_i2c_api.py
+    - tests/test_internal_markers.py
+    - tests/test_power_link.py
+    - tests/test_power_selectors.py
+    - tests/test_power_startup.py
+    - tests/test_sdk_intake_review.py
+    - tests/test_system_status.py
+    - tests/test_tempco_lifecycle.py
+    - tests/test_timer_period.py
+    - tests/test_usb_cdc_send.py
+    - tests/test_usb_connection.py
+    - tests/test_usb_reentrancy.py
+    - tools/hardware/compare.py
+    - tools/hardware/provenance.py
+    - tools/sdk_intake_review.py
+- from_version: 5.2.25
+  from_tag: v5.2.25
+  from_commit: aefce2ca858795e783c76726ebe7d14d9d4bde7c
+  github_release_published: false
+  consumers: Consumers still pinned to 5.2.25.
+  changed_archive_parts: []
+  unchanged_archive_count: 73
+  changes:
+  - id: clang-cxx-header-compat
+    refs:
+    - PR 83
+    - issue 81
+    - issue 82
+    summary: 'C++ translation units that include the AmbiqSuite HAL now compile with ATfE clang++. Intake
+      patches 001 and 002 change 26 provider files, 40 lines: 23 headers and 3 C sources (devices/am_devices_mspi_psram_{aps12804o,aps25616n,aps25616ba_1p2v}.c).
+      GNU-path detection tests __GNUC__ instead of __GNUC_STDC_INLINE__, two debug macros gain the space
+      C++11 needs before a string paste, and unnamed padding bit-fields in four USB register headers drop
+      their qualifier. Applies to every part. The three patched .c files are not compiled by any NSX module
+      (nsx-psram builds its own copies under src/apollo*/devices/).'
+    paths:
+    - sdk-intake/patches/README.md
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+    - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+    - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_emmc_rpmb.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo2/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo2/regs/am_reg_macros_asm.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo3/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo3p/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_macros.h
+    - release/source-ownership.yaml
+    - tests/test_committed_intake_patches.py
+  - id: nsx-psram-apollo510dl-compatibility
+    refs:
+    - PR 77
+    - issue 76
+    summary: 'nsx-psram lists apollo510dL_evb and apollo510L as compatible, so lock resolution no longer
+      rejects it there. The driver is not defaulted for that board: NSX_PSRAM_USE_BA_DRIVER must be set
+      explicitly. The rev 2 EVB does not populate its PSRAM footprint, and no hardware validation exists.'
+    paths:
+    - modules/nsx-psram/nsx-module.yaml
+    - modules/nsx-psram/CMakeLists.txt
+  - id: nsx-core-apollo2-3-heap-symbols
+    refs:
+    - PR 86
+    - issue 85
+    - issue 87
+    summary: 'Apollo2/3/3 Plus GCC linker scripts define __HeapBase and __HeapLimit for the bounded, force-linked
+      _sbrk implementation, fixing the earlier AP3/AP3 Plus GCC/ATfE link failure (#86). The destination
+      5.2.27 also fixes C++ constructor startup and initialization-array bounds (#90); #87 is closed.
+      Current AP3 Blue Plus hardware checks cover heap/stack bounds and constructor execution. Earlier
+      #86 BLE/GCC/ATfE evidence is historical; physical Apollo2/plain Apollo3 qualification is not claimed.'
+    paths:
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/sbrk.c
+    - modules/nsx-core/includes-api/nsx_system.h
+    - tests/test_cmake_contract.py
+  - id: ble-dis-firmware-revision
+    refs: []
+    summary: The BLE Device Information Service default firmware revision string advertises the destination
+      release, 5.2.27.
+    paths:
+    - modules/nsx-ble/src/ns_ble.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+  - id: nsx-cordio-vendored-revision-label
+    refs:
+    - known_deviations.nsx-cordio-vendored-revision-label
+    summary: 'Corrects nsx-cordio''s vendored-revision label, which 5.2.25 recorded as stable-2026.09.01
+      (3062036c4f) in error, back to the true provenance: stable-2026.06.18 (caaf5af860) plus the NSX
+      edits now listed in NSX_VENDORED_VERSION.txt and the module README; the README, CMakeLists.txt comment
+      and manifest summary no longer say the stack is pinned to the provider''s drop. Metadata and documentation
+      only; the cordio and uECC sources are unchanged apart from the DIS firmware revision string.'
+    paths:
+    - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+    - modules/nsx-cordio/nsx-module.yaml
+    - modules/nsx-cordio/README.md
+    - modules/nsx-cordio/CMakeLists.txt
+  - id: ci-workflow-token-permissions
+    refs:
+    - PR 80
+    summary: 'CI workflows declare `permissions: contents: read`. Repository tooling only; nothing a consumer
+      builds changes.'
+    paths:
+    - .github/workflows/ci.yml
+    - .github/workflows/container-validation.yml
+  - id: distribution-version
+    refs: []
+    summary: Distribution version 5.2.27 in pyproject.toml, uv.lock and every module manifest; the same
+      version is used by the BLE firmware defaults.
+    paths:
+    - pyproject.toml
+    - uv.lock
+  - id: release-records-and-docs
+    refs: []
+    path_scope: tree
+    path_scope_reason: Release records and docs are not shipped in a consumer build; any file under these
+      directories may change.
+    summary: Preserve earlier release records and add the 5.2.27 record, qualification report, changelog
+      and current version/provenance documentation. Not part of a consumer build.
+    paths:
+    - release
+    - CHANGELOG.md
+    - README.md
+    - docs
+    - modules/nsx-ambiqsuite/README.md
+  - id: repository-tests
+    refs: []
+    path_scope: tree
+    path_scope_reason: Tests are not shipped in a consumer build.
+    summary: Contract tests target the 5.2.27 release record, verify upgrade coverage and unchanged payload,
+      and freeze published change lists at their immutable tag. Not part of a consumer build.
+    paths:
+    - tests
+  - id: release-integration-5-2-27
+    summary: Release version alignment, documentation, build environment and CI integration for the 5.2.27
+      fixes and test foundation.
+    paths: *id001
+  - id: startup-linker-abi-5-2-27
+    summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
+      fixes.
+    paths:
+    - cmake/nsx_toolchain_flags.cmake
+    - cmake/socs/apollo330P.cmake
+    - cmake/socs/apollo510L.cmake
+    - cmake/socs/facts/apollo510b.cmake
+    - modules/nsx-ambiq-bsp/CMakeLists.txt
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4l/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4l/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4l/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4p/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/startup_gcc.c
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
+  - id: audio-power-5-2-27
+    summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
+    paths: *id002
+  - id: qualification-infrastructure-5-2-27
+    summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
+      and integration regression tests.
+    paths: *id003
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/CMakeLists.txt
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo510/nsx_system_platform.c
+    - modules/nsx-core/src/atomiq110/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-core/src/nsx_system_platform_apollo5.inc
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/atomiq110/nsx_power.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_internal.h
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
+  - id: validation-tools-5-2-27
+    summary: Revision-bound intake/patch review, fixed-harness comparison and expanded shim/build/hardware
+      regression tests.
+    paths:
+    - sdk-intake/README.md
+    - tools/hardware/compare.py
+    - tools/hardware/provenance.py
+    - tools/sdk_intake_review.py
+- from_version: 5.2.24
+  from_tag: v5.2.24
+  from_commit: a9f4ec25a162f6f3700623feb691423bb5a51132
+  github_release_published: true
+  consumers: Consumers still pinned to 5.2.24.
+  changed_archive_parts:
+  - atomiq110
+  unchanged_archive_count: 67
+  archive_note: All 67 non-atomiq110 HAL/BSP archives (gcc, atfe, acfe) are byte-identical to v5.2.24,
+    and their artifact-manifest sha256 records are unchanged. Only the six atomiq110 archives differ.
+  changes:
+  - id: clang-cxx-header-compat
+    refs:
+    - PR 83
+    - issue 81
+    - issue 82
+    summary: As above. These patches are the only change since v5.2.24 to provider headers and sources
+      other than atomiq110-specific files (mcu/atomiq110, boards/atomiq110_fpga_turbo, CMSIS system_atomiq110.{h,c})
+      and the artifact manifest.
+    paths:
+    - sdk-intake/patches/README.md
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+    - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+    - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_emmc_rpmb.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps12804o.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616ba_1p2v.h
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.c
+    - modules/nsx-ambiqsuite/sdk/devices/am_devices_mspi_psram_aps25616n.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo2/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo2/regs/am_reg_macros_asm.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo330P/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo3/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo3p/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4l/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo4p/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/apollo510L/hal/am_hal_usbregs.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/am_hal_global.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/hal/mcu/am_hal_card.h
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110/regs/am_reg_macros.h
+    - release/source-ownership.yaml
+    - tests/test_committed_intake_patches.py
+  - id: provider-identity-repin
+    refs:
+    - release/nsx-ambiq-sdk-5.2.25.yaml
+    summary: 'The provider identity recorded in artifact-manifest.yaml and nsx-ambiqsuite/nsx-module.yaml
+      (sdk_release, upstream_revision) moves from stable-2026.06.18/caaf5af8 to stable-2026.09.01/3062036c4f.
+      This is metadata for non-atomiq110 parts: their headers (apart from the clang C++ patches) and archives
+      remain the caaf5af8 content. Of the atomiq110 content only the atfe/acfe archives are recorded as
+      built from 3062036c4f; see known deviation mixed-snapshot-provider-payload.'
+    paths:
+    - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+    - modules/nsx-ambiqsuite/nsx-module.yaml
+  - id: nsx-core-apollo5-backend-dedupe
+    refs:
+    - PR 57
+    summary: nsx-core's Apollo5-class platform backend (DCU unlock, hw init, perf-mode select) moves into
+      the shared src/nsx_system_platform_apollo5.inc, included by the apollo510 and atomiq110 arch files.
+      Compiled for Apollo5-class parts and apollo330P. The PR reports byte-identical objects before and
+      after for apollo510_evb and atomiq110_fpga_turbo with arm-none-eabi-gcc 15.2.rel1. nsx_mem.h and
+      nsx_cache.c gain AM_PART_ATOMIQ110 branches only.
+    paths:
+    - modules/nsx-core/src/nsx_system_platform_apollo5.inc
+    - modules/nsx-core/src/apollo510/nsx_system_platform.c
+    - modules/nsx-core/includes-api/nsx_mem.h
+    - modules/nsx-core/src/nsx_cache.c
+    - modules/nsx-core/CMakeLists.txt
+  - id: nsx-power-shared-profile-printer
+    refs:
+    - PR 56
+    summary: 'nsx-power''s power-profile JSON/CSV printers are shared across arch directories; each arch
+      publishes only its register table. Output format is unchanged. Behaviour change: the CSV dump no
+      longer waits 1 ms per row (Apollo5-class parts had the delay; Apollo4 never did). apollo3 and apollo330
+      still report the dump as unsupported. The installed src tree now also carries src/nsx_power_profile.c
+      and src/nsx_power_internal.h. Public API unchanged.'
+    paths:
+    - modules/nsx-power/src/nsx_power_profile.c
+    - modules/nsx-power/src/nsx_power_internal.h
+    - modules/nsx-power/src/apollo3/nsx_power_profile.c
+    - modules/nsx-power/src/apollo330/nsx_power_profile.c
+    - modules/nsx-power/src/apollo4/nsx_power_profile.c
+    - modules/nsx-power/src/apollo5/nsx_power_profile.c
+    - modules/nsx-power/CMakeLists.txt
+    - modules/nsx-power/CHANGELOG.md
+  - id: nsx-ambiq-hal-pmu-atomiq110
+    refs:
+    - PR 46
+    summary: nsx_ambiq_pmu_init gains an atomiq110-only path under AM_PART_ATOMIQ110 that skips am_hal_debug_enable.
+      Other parts still call am_util_pmu_init unchanged.
+    paths:
+    - modules/nsx-ambiq-hal/src/nsx_ambiq_pmu.c
+  - id: nsx-psram-apollo510dl-compatibility
+    refs:
+    - PR 77
+    - issue 76
+    summary: As above.
+    paths:
+    - modules/nsx-psram/nsx-module.yaml
+    - modules/nsx-psram/CMakeLists.txt
+  - id: nsx-cordio-vendored-revision-label
+    refs:
+    - known_deviations.nsx-cordio-vendored-revision-label
+    summary: 'No provenance change for these consumers: the vendored-revision label reads stable-2026.06.18
+      (caaf5af860) in both v5.2.24 and 5.2.26, and the cordio and uECC sources are unchanged apart from
+      the DIS firmware revision string. 5.2.25 recorded the label as stable-2026.09.01 (3062036c4f) in
+      error; 5.2.26 corrects it and documents the NSX edits in NSX_VENDORED_VERSION.txt and the module
+      README.'
+    paths:
+    - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+    - modules/nsx-cordio/nsx-module.yaml
+    - modules/nsx-cordio/README.md
+    - modules/nsx-cordio/CMakeLists.txt
+  - id: nsx-core-apollo2-3-heap-symbols
+    refs:
+    - PR 86
+    - issue 85
+    - issue 87
+    summary: 'Apollo2/3/3 Plus GCC linker scripts define __HeapBase and __HeapLimit for the bounded, force-linked
+      _sbrk implementation, fixing the earlier AP3/AP3 Plus GCC/ATfE link failure (#86). The destination
+      5.2.27 also fixes C++ constructor startup and initialization-array bounds (#90); #87 is closed.
+      Current AP3 Blue Plus hardware checks cover heap/stack bounds and constructor execution. Earlier
+      #86 BLE/GCC/ATfE evidence is historical; physical Apollo2/plain Apollo3 qualification is not claimed.'
+    paths:
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/sbrk.c
+    - modules/nsx-core/includes-api/nsx_system.h
+    - tests/test_cmake_contract.py
+  - id: ble-dis-firmware-revision
+    refs: []
+    summary: The BLE Device Information Service default firmware revision string advertises the destination
+      release, 5.2.27.
+    paths:
+    - modules/nsx-ble/src/ns_ble.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+  - id: atomiq110-platform
+    refs:
+    - PR 46
+    - PR 55
+    - PR 58
+    - PR 63
+    - PR 64
+    - PR 68
+    - PR 75
+    path_scope: tree
+    path_scope_reason: The atomiq110 payload (npu-drop-2026.07.09 headers, rebuilt archives) and the new
+      nsx-npu module are replaced wholesale; every file under these atomiq110-only directories is part
+      of this change.
+    summary: 'atomiq110 (experimental): headers from the npu-drop-2026.07.09 payload (INTERNAL-marker
+      sanitized), rebuilt HAL/BSP archives (atfe and acfe recorded as built from 3062036c4f; the gcc archive''s
+      source is not recorded), nsx-power and nsx-core atomiq110 backends, the nsx-npu module (Ethos-U85
+      glue, external nsx-ethos-u-driver), and the atomiq110 Ethos-U inference timeout in cmake/socs/atomiq110.cmake.
+      Selected only for atomiq110 targets. The shipped headers and archives do not match; see known deviation
+      atomiq110-header-archive-mismatch.'
+    paths:
+    - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+    - modules/nsx-ambiqsuite/sdk/boards/atomiq110_fpga_turbo
+    - modules/nsx-ambiqsuite/sdk/CMSIS/AmbiqMicro/Include/system_atomiq110.h
+    - modules/nsx-ambiqsuite/sdk/CMSIS/AmbiqMicro/Source/system_atomiq110.c
+    - modules/nsx-ambiqsuite/sdk/lib/gcc/atomiq110
+    - modules/nsx-ambiqsuite/sdk/lib/atfe/atomiq110
+    - modules/nsx-ambiqsuite/sdk/lib/acfe/atomiq110
+    - modules/nsx-npu
+    - modules/nsx-power/src/atomiq110
+    - modules/nsx-power/nsx-module.yaml
+    - modules/nsx-core/src/atomiq110
+    - modules/nsx-core/CMakeLists.txt
+    - cmake/socs/atomiq110.cmake
+    - docs/platform-coverage.md
+  - id: repository-tooling
+    refs:
+    - PR 58
+    - PR 64
+    - PR 80
+    path_scope: tree
+    path_scope_reason: Intake tooling, tests, tools and CI are not shipped in a consumer build.
+    summary: INTERNAL-marker sanitizer and baseline, nsx-npu cross-compile CI job, committed-intake-patch
+      guard test, and CI token permissions. Not part of any consumer build.
+    paths:
+    - sdk-intake
+    - tests
+    - tools
+    - .github
+    - .gitignore
+    - .pre-commit-config.yaml
+  - id: distribution-version
+    refs: []
+    summary: Distribution version 5.2.27 in pyproject.toml, uv.lock and every module manifest; the same
+      version is used by the BLE firmware defaults.
+    paths:
+    - pyproject.toml
+    - uv.lock
+  - id: release-records-and-docs
+    refs: []
+    path_scope: tree
+    path_scope_reason: Release records and docs are not shipped in a consumer build; any file under these
+      directories may change.
+    summary: Preserve earlier release records and add the 5.2.27 record, qualification report, changelog
+      and current version/provenance documentation. Not part of a consumer build.
+    paths:
+    - release
+    - CHANGELOG.md
+    - README.md
+    - docs
+    - modules/nsx-ambiqsuite/README.md
+  - id: release-integration-5-2-27
+    summary: Release version alignment, documentation, build environment and CI integration for the 5.2.27
+      fixes and test foundation.
+    paths: *id001
+  - id: startup-linker-abi-5-2-27
+    summary: Constructor startup, memory and load bounds, shared-copy guards and toolchain ABI integration
+      fixes.
+    paths:
+    - cmake/nsx_toolchain_flags.cmake
+    - cmake/socs/apollo330P.cmake
+    - cmake/socs/apollo510L.cmake
+    - cmake/socs/facts/apollo510b.cmake
+    - modules/nsx-ambiq-bsp/CMakeLists.txt
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo330P/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4l/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4l/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4l/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo4p/armclang/linker_script.sct
+    - modules/nsx-core/src/apollo4p/gcc/linker_script.ld
+    - modules/nsx-core/src/apollo4p/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510L/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo510b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo510b/gcc/startup_gcc.c
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/apollo5b/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/linker_script_sbl.ld
+    - modules/nsx-core/src/apollo5b/gcc/startup_gcc.c
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_nbl.sct
+    - modules/nsx-core/src/atomiq110/armclang/linker_script_sbl.sct
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_nbl.ld
+    - modules/nsx-core/src/atomiq110/gcc/linker_script_sbl.ld
+    removed_paths:
+    - modules/nsx-core/src/apollo330P/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo330P/gcc/linker_script_itcm_sbl.ld
+    - modules/nsx-core/src/apollo510L/armclang/linker_script_itcm_sbl.sct
+    - modules/nsx-core/src/apollo510L/gcc/linker_script_itcm_sbl.ld
+  - id: audio-power-5-2-27
+    summary: Audio buffer/lifecycle/DMA/packing/cache/decimation fixes and supported CPU/audio clock guards.
+    paths: *id002
+  - id: qualification-infrastructure-5-2-27
+    summary: Local pytest/Unity board qualification, startup/runtime checks, pinned device-pack provisioning
+      and integration regression tests.
+    paths: *id003
+  - id: runtime-seams-5-2-27
+    summary: Startup ownership, validation/error propagation, performance/clock publication, debug lifecycle,
+      timer, USB and combined I2C fixes.
+    paths:
+    - modules/nsx-core/README.md
+    - modules/nsx-core/includes-api/nsx_core.h
+    - modules/nsx-core/includes-internal/nsx_debug_internal.h
+    - modules/nsx-core/includes-internal/nsx_performance_internal.h
+    - modules/nsx-core/includes-internal/nsx_startup_internal.h
+    - modules/nsx-core/src/apollo2/nsx_system_platform.c
+    - modules/nsx-core/src/apollo3p/nsx_performance.c
+    - modules/nsx-core/src/apollo3p/nsx_system_platform.c
+    - modules/nsx-core/src/apollo4p/nsx_system_platform.c
+    - modules/nsx-core/src/nsx_core_portable.c
+    - modules/nsx-core/src/nsx_debug.c
+    - modules/nsx-core/src/nsx_performance.c
+    - modules/nsx-core/src/nsx_startup.c
+    - modules/nsx-core/src/nsx_system.c
+    - modules/nsx-i2c/README.md
+    - modules/nsx-i2c/includes-api/nsx_i2c.h
+    - modules/nsx-i2c/src/nsx_i2c.c
+    - modules/nsx-power/src/apollo3/nsx_power.c
+    - modules/nsx-power/src/apollo3/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power.c
+    - modules/nsx-power/src/apollo4/nsx_power_performance.c
+    - modules/nsx-power/src/apollo4/nsx_power_tempco.c
+    - modules/nsx-power/src/nsx_power.c
+    - modules/nsx-power/src/nsx_power_monitor.c
+    - modules/nsx-power/src/nsx_power_preflight.c
+    - modules/nsx-timer/README.md
+    - modules/nsx-timer/includes-api/nsx_timer.h
+    - modules/nsx-timer/src/apollo330/nsx_timer_ap330.c
+    - modules/nsx-timer/src/apollo4/nsx_timer_ap4.c
+    - modules/nsx-timer/src/apollo5/nsx_timer_ap5.c
+    - modules/nsx-timer/src/nsx_timer.c
+    - modules/nsx-timer/src/nsx_timer_hfrc.h
+    - modules/nsx-usb/README.md
+    - modules/nsx-usb/includes-api/nsx_usb.h
+    - modules/nsx-usb/src/nsx_usb.c
+    - modules/nsx-usb/src/overrides/nsx_usb_overrides.c
+upstream:
+  provider: ambiqsuite
+  snapshot_identity: stable-2026.09.01
+  source_kind: git_ref
+  source_ref: stable
+  source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+  artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  raw_source_committed: false
+  official_numbered_release_claimed: false
+  identity_scope: The identity above is what the artifact manifest and the provider module record. Of
+    the shipped payload, only the atomiq110 atfe and acfe archives are recorded as built from it. Every
+    other archive and every non-atomiq110 header is stable-2026.06.18 (caaf5af8) content, the atomiq110
+    headers are the npu-drop-2026.07.09 payload, and the atomiq110 gcc archive's source is not recorded.
+    See payload_provenance and known deviations mixed-snapshot-provider-payload and atomiq110-header-archive-mismatch.
+payload_provenance:
+  summary: '5.2.26 ships the 5.2.25 binary payload unchanged: every HAL/BSP archive and the artifact manifest
+    are byte-identical to v5.2.25. The provider headers differ from v5.2.25 only by intake patches 001
+    and 002 (clang C++ compatibility), which are recorded as the clang-cxx-header-compat exception and
+    known deviation. Applying both patches to the v5.2.25 modules/nsx-ambiqsuite/sdk tree with "git apply
+    --directory=modules/nsx-ambiqsuite/sdk" yields the 5.2.26 tree byte-for-byte (checked during 5.2.26
+    preparation).'
+  binary_payload_identical_to: 5.2.26
+  carried_over_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+  carried_over_archives_note: 'Only the six atomiq110 archives were rebuilt after 5.2.24: the atfe and
+    acfe ones from 3062036c4f (commit 2138331), and the gcc ones in d5a1a93 from a source that commit
+    does not record. Every other part/board archive (67) is byte-identical to the 5.2.23 payload, whose
+    object code was built from caaf5af86087881647f56c70646c748d40c86e23; those archives were not rebuilt
+    against 3062036c4f. Per-train, per-set provenance is in toolchain_trains[].archive_sets.'
+  artifact_manifest_generated_at: 2026-06-22
+  archive_determinism:
+    gcc: non_deterministic_ar_headers
+    atfe: deterministic
+    acfe: deterministic
+  determinism_note: gcc archives are produced by arm-none-eabi-ar in non-deterministic mode, so their
+    bytes change on every rebuild even when no object code changes. atfe (llvm-ar) and acfe (armar) archives
+    carry zeroed member timestamps, so their bytes change only when object code changes. Comparing archive
+    bytes across commits therefore means different things per train; see docs/acfe-artifact-manifest-forensics.md.
+  toolchain_trains:
+  - manifest_key: gcc
+    cmake_family: gcc
+    archive_sets:
+    - scope: non_atomiq110
+      archive_count: 23
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+    - scope: atomiq110
+      archive_count: 2
+      built_from_source_commit: null
+      source_note: 'Refreshed in d5a1a9321fd4f970a56d98d35b9786b31e32fbf0, whose message does not name
+        the AmbiqSuite source. The archive predates AmbiqSuite 1d9cd5c06e (2026-07-22, an ancestor of
+        both 78bb76821e and 3062036c4f): it does not define the memory-vote API (am_hal_pwrctrl_mem_vote_request/_release/_status_get,
+        am_hal_pwrctrl_mem_retention_status_get) or the am_hal_secure_stimer_*/am_hal_secure_timer_* functions
+        that the atfe/acfe archives define. So it was not built from 3062036c4f, although the artifact-manifest
+        comment on this archive says it was. See known deviation atomiq110-header-archive-mismatch.'
+    archives_introduced_in:
+    - 1a919aee0f24adb17fa6345fc15a874d1e3a4c29
+    - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
+    - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+    - 960624ee18afd9fbf5db957371c92c828bf6a721
+    - d5a1a9321fd4f970a56d98d35b9786b31e32fbf0
+    manifest_hashes_correct_in_5_2_23: true
+  - manifest_key: atfe
+    cmake_family: atfe
+    archive_sets:
+    - scope: non_atomiq110
+      archive_count: 23
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+      source_note: Object-code equivalent to a caaf5af8 build; most of these archives are byte-identical
+        since 56a72f08 (see byte_stability_note).
+    - scope: atomiq110
+      archive_count: 2
+      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+      source_note: 'Rebuilt in 213833166a13f3abb9ae5b0d2de72530155a42ff with ATfE 22.1.0, which records
+        3062036c4f as the source. Consistent with the symbols: the archive defines the memory-vote API
+        added upstream in 1d9cd5c06e, an ancestor of 3062036c4f. Not independently re-derived from source.'
+    archives_introduced_in:
+    - 56a72f08b34e9315f8c58a9defb784329e789678
+    - 74682fbe6a1a3933ff1d81ed3f2be5e2ce165d29
+    - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+    - 960624ee18afd9fbf5db957371c92c828bf6a721
+    - 213833166a13f3abb9ae5b0d2de72530155a42ff
+    byte_stability_note: '22 of these 25 archives have been byte-identical since 56a72f08b34e9315f8c58a9defb784329e789678,
+      which predates the caaf5af86087881647f56c70646c748d40c86e23 regeneration in 1a919aee0f24adb17fa6345fc15a874d1e3a4c29.
+      That is expected rather than stale: llvm-ar is deterministic, and the corresponding gcc archives
+      rebuilt in 1a919aee differ only in ar member timestamps, with every object member byte-identical,
+      so the upstream delta changed no object code.'
+    manifest_hashes_correct_in_5_2_23: true
+  - manifest_key: acfe
+    cmake_family: armclang
+    archive_sets:
+    - scope: non_atomiq110
+      archive_count: 21
+      built_from_source_commit: caaf5af86087881647f56c70646c748d40c86e23
+    - scope: atomiq110
+      archive_count: 2
+      built_from_source_commit: 3062036c4f3e7822d27e6a842f226f423328a25a
+      source_note: Rebuilt in 213833166a13f3abb9ae5b0d2de72530155a42ff with ACfE 6.24 (-fshort-wchar -fshort-enums),
+        which records 3062036c4f as the source. Defines the same global symbols as the atfe archive. Not
+        independently re-derived from source.
+    abi_cflags: -fshort-wchar -fshort-enums
+    abi_attributes:
+      Tag_ABI_PCS_wchar_t: 2
+      Tag_ABI_enum_size: smallest_container
+    archives_introduced_in:
+    - ddb88640e61660edc65ebc956b65dcbd6804d2e6
+    - ed60f26f4bdaa885d6a279a20a6e94aa23cd3655
+    - 960624ee18afd9fbf5db957371c92c828bf6a721
+    - 213833166a13f3abb9ae5b0d2de72530155a42ff
+    byte_stability_note: All 55 object members of a sampled acfe HAL archive differ across ddb88640e61660edc65ebc956b65dcbd6804d2e6,
+      and armar emits zeroed member timestamps, so that commit is a genuine object-code rebuild rather
+      than archive-metadata churn.
+    manifest_hashes_correct_in_5_2_23: false
+    correction: 22 acfe sha256 records in the artifact manifest still described the pre-ABI-fix archives
+      replaced by ddb88640e61660edc65ebc956b65dcbd6804d2e6. 5.2.24 records the sha256 of the archives
+      actually shipped. No archive bytes changed.
+    forensic_report: docs/acfe-artifact-manifest-forensics.md
+qualification:
+  status: qualified_with_exclusions
+  report: release/qualification-5.2.27.md
+  inherits_from: release/qualification-5.2.26.md
+  scope:
+    socs:
+    - apollo2
+    - apollo3
+    - apollo3p
+    - apollo4l
+    - apollo4p
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    boards:
+    - apollo2_evb
+    - apollo3_evb
+    - apollo3_evb_cygnus
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+    - apollo4p_evb_disp_shield_rev2
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  toolchains:
+  - cmake_family: gcc
+    artifact_manifest_key: gcc
+    artifact_status: built
+    representative_link_smoke: passed
+  - cmake_family: atfe
+    artifact_manifest_key: atfe
+    artifact_status: built
+    representative_link_smoke: not_rerun
+    cxx_link_smoke: not_rerun
+    link_smoke_note: No fresh hardware or link qualification in this release preparation. See inherited
+      reports for earlier evidence; provider archives are unchanged.
+  - cmake_family: armclang
+    artifact_manifest_key: acfe
+    artifact_status: built
+    representative_link_smoke: not_rerun
+    link_smoke_note: No fresh hardware or link qualification in this release preparation. See inherited
+      reports for earlier evidence; provider archives are unchanged.
+  hardware_status: limited_feature_evidence_only
+  scope_note: Scope lists supported descriptors, not physical qualification. Five-board debugger-connected
+    GCC core and selected shim results are scoped in the report; release approval remains separate.
+  hardware_boards:
+  - apollo3p_evb
+  - apollo4p_blue_kxr_evb
+  - apollo330mP_evb
+  - apollo510_evb
+  - apollo510b_evb
+exclusions:
+  descriptor_only:
+    socs:
+    - apollo5b
+    boards:
+    - apollo5b_evb
+  experimental:
+    socs:
+    - atomiq110
+    boards:
+    - atomiq110_fpga_turbo
+release_evidence:
+- CHANGELOG.md
+- docs/versioning.md
+- docs/source-ownership.md
+- docs/toolchain-smoke.md
+- docs/acfe-artifact-manifest-forensics.md
+- release/source-ownership.yaml
+- release/qualification-5.2.26.md
+- release/nsx-ambiq-sdk-5.2.25.yaml
+- release/qualification-5.2.25.md
+- release/nsx-ambiq-sdk-5.2.24.yaml
+- release/qualification-5.2.24.md
+- release/nsx-ambiq-sdk-5.2.23.yaml
+- release/qualification-5.2.23.md
+- modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+- sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+- sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+- tests/test_release_metadata.py
+- tests/test_artifact_baseline.py
+- tests/test_committed_intake_patches.py
+- release/nsx-ambiq-sdk-5.2.26.yaml
+- release/qualification-5.2.27.md
+known_deviations:
+- id: clang-cxx-header-compat
+  description: 'The provider headers under modules/nsx-ambiqsuite/sdk diverge from the recorded AmbiqSuite
+    payload by intake patches 001 (clang-cxx-compiler-detection) and 002 (clang-cxx-unnamed-bitfield-qualifiers):
+    26 files, 40 lines (23 headers and 3 C sources, devices/am_devices_mspi_psram_*.c), applied directly
+    to the committed payload because it cannot be re-staged from a single AmbiqSuite commit (issue #82).
+    No prebuilt archive is affected, and no NSX module compiles the three patched .c files. Every configuration
+    that compiled before selects the same branch (C with gcc or clang, C++ with gcc, armclang), and register
+    struct layout is unchanged. No archive or artifact-manifest change, so no artifact hash changes. Fixes
+    issue #81. The scoped ownership exception is clang-cxx-header-compat on the generated-ambiqsuite-provider
+    entry in release/source-ownership.yaml; tests/test_committed_intake_patches.py fails if a regenerated
+    payload drops either patch.'
+  upstream_status: Upstream resolution is tracked by AmbiqAI/nsx-ambiq-sdk#82; its current PR status was
+    not revalidated during this release preparation. Retire the patches only after regenerated payload
+    validation.
+  issues:
+  - 81
+  - 82
+  paths:
+  - release/source-ownership.yaml
+  - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+  - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+  - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+  - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+  - tests/test_committed_intake_patches.py
+- id: mixed-snapshot-provider-payload
+  description: 'The provider identity records stable-2026.09.01 / 3062036c4f, but the shipped payload
+    comes from four sources, unchanged since 5.2.25: (1) non-atomiq110 headers and all 67 non-atomiq110
+    archives are stable-2026.06.18 / caaf5af86087881647f56c70646c748d40c86e23 content, plus the clang
+    C++ intake patches; (2) the atomiq110 headers (mcu/atomiq110, boards/atomiq110_fpga_turbo, system_atomiq110.{h,c})
+    are the npu-drop-2026.07.09 payload, INTERNAL-marker sanitized, and every one carries the "revision
+    npu-drop-2026.07.09" banner; after removing INTERNAL blocks and banner lines, 28 of the 64 files that
+    also exist at 3062036c4f still differ in content from it; (3) the atomiq110 atfe and acfe archives
+    are recorded as built from 3062036c4f; (4) the atomiq110 gcc archives were refreshed from a source
+    that is not recorded and that predates 3062036c4f. The artifact-manifest comments that say all three
+    atomiq110 trains were rebuilt from 3062036c4f are wrong for gcc; the manifest is generated payload
+    and is left as shipped. The payload therefore cannot be reproduced from one AmbiqSuite commit. Resolution
+    is tracked in issue #82.'
+  issues:
+  - 82
+  paths:
+  - modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  - modules/nsx-ambiqsuite/nsx-module.yaml
+  - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+- id: atomiq110-header-archive-mismatch
+  status: open
+  description: 'atomiq110 (experimental) ships headers and prebuilt HAL archives built from different
+    sources (see mixed-snapshot-provider-payload), and they do not match. Of the 544 am_hal_* function
+    prototypes in the shipped mcu/atomiq110 headers, 19 are defined by none of the three shipped atomiq110
+    libam_hal.a archives: am_hal_systick_delay_us, am_hal_mcuctrl_clkncnt_get, am_hal_mcuctrl_finecnt_get,
+    am_hal_mcuctrl_i3c_phy_pulldown_enable, am_hal_mcuctrl_private_extclk32k_{enable,disable}, am_hal_mcuctrl_rss_codebase_set,
+    am_hal_pdm_i2s_{enable,disable}, am_hal_pwrctrl_rss_{bootup,pwroff}, am_hal_pwrctrl_tempco_{init,sample_handler},
+    am_hal_spotmgr_log_change, am_hal_spotmgr_simobuck_lp_autosw_{init,enable,disable}, am_hal_spotmgr_tempco_suspend
+    and am_hal_sysctrl_ton_config_init. A call to any of them compiles and then fails to link. Conversely,
+    all three archives define functions no shipped header declares, among them am_hal_wdt_* (13 functions;
+    am_hal_wdt.h is not shipped), am_hal_ddb_*, am_hal_dsi_*, am_hal_pwrctrl_gpu_mode_select, am_hal_rtc_osc_get
+    and am_hal_usb_ep_xfer_abort (128 in the gcc archive, 168 in atfe/acfe). The gcc archive also lacks
+    40 functions the atfe/acfe archives define (the memory-vote API and am_hal_secure_stimer_*/am_hal_secure_timer_*),
+    so the same app can link differently per toolchain. Enum and register-macro values also differ between
+    the two header sets (for example am_reg.h, am_hal_timer.h, am_hal_pwrctrl.h, am_hal_gpio.h), so values
+    an app passes into the archives may be interpreted against different definitions. Counts from llvm-nm
+    --defined-only over the shipped archives and a prototype scan of the shipped headers during 5.2.26
+    preparation. Not a regression for atomiq110 consumers moving from 5.2.25 (identical bytes), and atomiq110
+    stays experimental and outside the qualified scope. Fixing it needs a consistent atomiq110 regeneration
+    (headers and all three archive trains from one AmbiqSuite commit) in a later release.'
+  paths:
+  - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+  - modules/nsx-ambiqsuite/sdk/lib/gcc/atomiq110
+  - modules/nsx-ambiqsuite/sdk/lib/atfe/atomiq110
+  - modules/nsx-ambiqsuite/sdk/lib/acfe/atomiq110
+- id: nsx-cordio-vendored-revision-label
+  status: corrected_in_5_2_26
+  description: 'In 5.2.25 (tag v5.2.25, aefce2ca) nsx-cordio''s vendored-revision label (NSX_VENDORED_VERSION.txt
+    and both `revision:` lines of the `vendored:` block in nsx-module.yaml) read stable-2026.09.01 (3062036c4f),
+    set in 0940bca/2138331, but the cordio and uecc sources were never re-vendored. Checked read-only
+    against AmbiqSuite during 5.2.26 preparation: all 452 vendored files match caaf5af860 except 7 NSX-edited
+    files that predate v5.2.24 (PR #30: dm_api.h, dm_sec_lesc.c, sec_ecc.c, smp_sc_act.c, svc_core.c/.h,
+    svc_dis.c), and the 9 upstream cordio files that changed between caaf5af860 and 3062036c4f are not
+    carried (em9305 and 510L radio HCI drivers and the em9305 firmware image, smp_act.c, hci_defs.h, fit_main.c).
+    5.2.26 corrects the label to stable-2026.06.18 (caaf5af860) and lists the NSX edits in NSX_VENDORED_VERSION.txt
+    and the module README; the sources are unchanged. The released 5.2.25 record is left as published.
+    Moving cordio to newer upstream is a BLE stack change for a separate, tested release.'
+  paths:
+  - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+  - modules/nsx-cordio/nsx-module.yaml
+  - modules/nsx-cordio/README.md
+- id: apollo2-3-cxx-global-constructors
+  status: corrected_in_5_2_27
+  description: 'Corrected by #90: Apollo2/3/3 Plus startup invokes the C++ initialization arrays and matching
+    GCC linker scripts retain and bound them. Current AP3 Blue Plus startup hardware tests verify constructor
+    execution with poisoned state. This does not claim physical Apollo2 or plain Apollo3 qualification.'
+  issues:
+  - 87
+  paths:
+  - modules/nsx-core/src/apollo2/gcc/startup_gcc.c
+  - modules/nsx-core/src/apollo3/gcc/startup_gcc.c
+  - modules/nsx-core/src/apollo3p/gcc/startup_gcc.c
+  - modules/nsx-core/src/apollo2/gcc/linker_script.ld
+  - modules/nsx-core/src/apollo3/gcc/linker_script.ld
+  - modules/nsx-core/src/apollo3p/gcc/linker_script.ld
+- id: atomiq110-internal-marker-sanitation
+  description: 'The atomiq110 headers under modules/nsx-ambiqsuite/sdk/mcu/atomiq110 diverge from the
+    raw npu-drop-2026.07.09 payload by a one-time, deletion-only sanitation (sdk-intake/internal_markers.py):
+    988 lines of vendor INTERNAL-fenced dead content removed across 23 files, zero lines added or modified,
+    nothing visible to the compiler changed, no artifact hash changes. Tool-reproducible; the scoped ownership
+    exception is recorded on the generated-ambiqsuite-provider entry in release/source-ownership.yaml.
+    See issue #52. Carried from 5.2.25.'
+  issues:
+  - 52
+  paths:
+  - release/source-ownership.yaml
+  - sdk-intake/internal_markers.py
+  - modules/nsx-ambiqsuite/sdk/mcu/atomiq110
+- id: nsx-ethos-u-driver-external
+  description: nsx-npu requires nsx-ethos-u-driver, which is deliberately not part of this distribution;
+    it is resolved from AmbiqAI/nsx-ethos-u-driver (pinned at nsx-ethos-u-driver-v0.1.2) by the neuralspotx
+    registry at workspace-assembly time. Carried from 5.2.25.
+  paths:
+  - modules/nsx-npu/nsx-module.yaml
+- id: audio-physical-qualification-gaps
+  description: AP3 microphone capture and adjusted-HFRC2 audio remain unresolved. Five-board core qualification
+    does not qualify these paths, other peripherals or standalone cold boot. The withdrawn upstream clock-selector
+    proposal is not included.
+  paths:
+  - release/qualification-5.2.27.md
+  - modules/nsx-audio/README.md
+  - docs/core-clock.md
