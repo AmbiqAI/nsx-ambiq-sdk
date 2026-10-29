@@ -54,6 +54,13 @@ def decode(data: bytes, build_id: str, cases: tuple[str, ...]) -> Result | None:
     if overflow or length > TEXT_SIZE:
         raise QualificationError('Firmware output overflow')
     output = data[HEADER.size:HEADER.size + length].decode('ascii', errors='strict')
+    return validate_result(Result(identity, total, failed, ignored, output), cases)
+
+
+def validate_result(result: Result, cases: tuple[str, ...]) -> Result:
+    """Apply the same Unity evidence contract to memory and UART results."""
+    validate_cases(cases)
+    total, failed, ignored, output = result.total, result.failed, result.ignored, result.output
     if (total, failed, ignored) != (len(cases), 0, 0):
         raise QualificationError(f'Unity: total={total}, failed={failed}, ignored={ignored}\n{output}')
     passed = re.findall(r'^.*:\d+:([A-Za-z_][A-Za-z_0-9]*):PASS\r?$', output, re.MULTILINE)
@@ -61,7 +68,7 @@ def decode(data: bytes, build_id: str, cases: tuple[str, ...]) -> Result | None:
         raise QualificationError(f'Missing, duplicate or unexpected cases\n{output}')
     if not re.search(rf'^{len(cases)} Tests 0 Failures 0 Ignored[ \t]*\r?\nOK\r?$', output, re.MULTILINE):
         raise QualificationError('Missing Unity summary')
-    return Result(identity, total, failed, ignored, output)
+    return result
 
 
 def wait_for_result(read: Callable[[], bytes], build_id: str, timeout: float, cases: tuple[str, ...],

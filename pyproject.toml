@@ -12,7 +12,7 @@ ci = [
     "tomli>=2; python_version < '3.11'",
 ]
 
-hardware = ["pytest>=8", "pylink-square>=1.2,<3"]
+hardware = ["pytest>=8", "pylink-square>=1.2,<3", "pyserial>=3.5,<4"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

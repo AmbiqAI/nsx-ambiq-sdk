@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_standalone_boot C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+nsx_add_test_firmware(standalone_boot main.cpp)
+target_link_options(standalone_boot PRIVATE "LINKER:--wrap=nsx_test_putchar")
