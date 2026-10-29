@@ -50,10 +50,9 @@ jobs:
           uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py sdk-intake/intake_workflow.py
           uv run --group ci python -m pytest
 
-  # nsx-npu's C sources have no other build coverage on pull requests: the
-  # contract tests configure with the host compiler, and container-validation
-  # is workflow_dispatch only. This job cross-compiles them for atomiq110 with
-  # the same Arm GNU release the dev/CI container pins (docker/dev-ci.Dockerfile).
+  # Cross-compile SDK integration fixtures and nsx-npu's AT110 sources with
+  # the Arm GNU release pinned by docker/dev-ci.Dockerfile. Container validation
+  # is manual. Keep this existing required-check name stable; see CONTRIBUTING.md.
   arm-compile:
     name: nsx-npu cross-compile (arm-none-eabi-gcc)
     runs-on: ubuntu-latest
