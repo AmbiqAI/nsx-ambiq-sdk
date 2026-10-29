@@ -90,7 +90,7 @@ SWD speed come from the SDK board/SoC descriptors; optional `--device` checks
 that your inventory agrees and refuses mismatches before touching hardware:
 
 ```sh
-uv run --group hardware --group ci pytest -q tests/hardware \
+uv run --group hardware --group ci pytest -q tests/hardware/test_startup.py::test_startup \
   --hardware --board apollo3p_evb --probe YOUR_SERIAL --device AMA3B2KK-KBR \
   --gcc-root /usr/local/arm-gnu-toolchain \
   --junitxml=artifacts/hardware/junit.xml
@@ -199,7 +199,7 @@ HAL/BSP driver, all runtime memory regions, or peripheral behavior.
 For an update acceptance run, select an exact board/GCC startup profile:
 
 ```sh
-uv run --group hardware --group ci pytest -q tests/hardware \
+uv run --group hardware --group ci pytest -q tests/hardware/test_startup.py::test_startup \
   --qualification-profile apollo3p_evb-gcc-startup \
   --qualification-report artifacts/hardware/ap3p-qualification.json \
   --hardware --probe YOUR_SERIAL --gcc-root /usr/local/arm-gnu-toolchain
@@ -228,6 +228,43 @@ leave the initial incomplete report; it cannot establish qualification.
 Firmware manifests also hash the packaged SDK provider metadata, artifact
 manifest and SDK version header. Together with linked-input hashes, these tie
 results to the candidate SDK instead of just a release label.
+
+### Startup-seam gate
+
+For bounded NSX startup/API coverage, use `<descriptor>-gcc-startup-seam` on
+`apollo3p_evb`, `apollo4p_blue_kxr_evb`, `apollo330mP_evb`, `apollo510_evb`, or
+`apollo510b_evb`. It requires six existing Unity cases across three firmware
+images: CRT data/BSS/constructors, initialization ownership and repeat-call
+rejection, and invalid requests followed by successful full-system startup.
+The API suites also check interrupt-mask preservation and their existing
+runtime/debug state contracts.
+
+Profiles require evidence but **do not select tests**. Use these exact nodes
+to avoid running unrelated suites or the minimal-startup variant:
+
+```sh
+uv run --group hardware --group ci pytest -q \
+  tests/hardware/test_startup.py::test_startup \
+  tests/hardware/test_ownership.py::test_ownership \
+  'tests/hardware/test_system_status_smoke.py::test_system_status[system-full]' \
+  --qualification-profile apollo4p_blue_kxr_evb-gcc-startup-seam \
+  --qualification-report artifacts/hardware/ap4-startup-seam.json \
+  --hardware --probe YOUR_SERIAL --gcc-root /usr/local/arm-gnu-toolchain
+```
+
+Use one invocation per selected board with a fresh report path and an existing
+lab claim. Replace `--hardware --probe YOUR_SERIAL` with `--build-only` to
+compile the same images without a probe; qualification then remains incomplete
+and exits nonzero, even if all builds succeed. Individual build evidence is
+retained. Existing `--candidate-sdk-root` supports a separate candidate checkout
+without changing this harness or its expectations.
+
+This composes complementary tests; it is not a single-image end-to-end test.
+Each image uses the existing debugger-connected reset/flash/run procedure,
+including cleared result memory and poisoned CRT probes in the startup suite.
+There is no reset loop, power-cycle control, cold-boot claim, or HAL/silicon
+reliability qualification. Profile availability does not imply physical coverage
+of every listed board; record actual builds and executions separately.
 
 These are ordinary local pytest commands. A future board-farm workflow should
 reserve hardware, invoke the same commands and upload evidence; it should not

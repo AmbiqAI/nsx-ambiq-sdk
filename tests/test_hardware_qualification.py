@@ -7,6 +7,65 @@ import sys
 import pytest
 
 from tools.hardware.qualification import PROFILES, Profile, Qualification, STARTUP, Suite
+from tools.hardware.suites import OWNERSHIP, SYSTEM_FULL, SYSTEM_MINIMAL
+
+
+STARTUP_SEAM_BOARDS = ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo330mP_evb',
+                       'apollo510_evb', 'apollo510b_evb')
+STARTUP_SEAM_NODES = (
+    'tests/hardware/test_startup.py::test_startup',
+    'tests/hardware/test_ownership.py::test_ownership',
+    'tests/hardware/test_system_status_smoke.py::test_system_status[system-full]',
+)
+
+
+@pytest.mark.parametrize('board', STARTUP_SEAM_BOARDS)
+@pytest.mark.parametrize('omitted', [None, STARTUP, OWNERSHIP, SYSTEM_FULL],
+                         ids=['complete', 'no-crt', 'no-ownership', 'no-full-system'])
+def test_startup_seam_requires_all_existing_contracts(tmp_path, board, omitted):
+    q = Qualification(PROFILES[f'{board}-gcc-startup-seam'])
+    assert q.profile.suites == (STARTUP, OWNERSHIP, SYSTEM_FULL)
+    for suite in q.profile.suites:
+        if suite == omitted:
+            continue
+        bind_execution(q, suite, tmp_path / suite.name)
+        for phase in ('setup', 'call', 'teardown'):
+            q.record(suite.nodeid, phase, 'passed')
+    # A successful minimal-startup run cannot replace full-system evidence.
+    q.record(SYSTEM_MINIMAL.nodeid, 'call', 'passed')
+    assert not q.require_suite(SYSTEM_MINIMAL.nodeid, SYSTEM_MINIMAL)
+    assert q.report(True, True)['status'] == ('passed' if omitted is None else 'incomplete')
+    assert q.report(True, False)['status'] == 'incomplete'
+
+
+@pytest.mark.parametrize('board', STARTUP_SEAM_BOARDS)
+def test_startup_seam_documented_nodes_collect_only_required_cases(repo_root, tmp_path, board):
+    report = tmp_path / 'qualification.json'
+    result = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q',
+        *STARTUP_SEAM_NODES, '--qualification-profile', f'{board}-gcc-startup-seam',
+        '--qualification-report', str(report)], cwd=repo_root,
+        capture_output=True, text=True, timeout=30)
+    collected = tuple(line for line in result.stdout.splitlines() if line.startswith('tests/hardware/'))
+    assert collected == STARTUP_SEAM_NODES, result.stdout + result.stderr
+    # Collection is not execution and must not satisfy a qualification gate.
+    assert result.returncode != 0
+    data = json.loads(report.read_text())
+    assert data['status'] == 'incomplete'
+    assert len(data['suites']) == 3
+
+
+@pytest.mark.parametrize('phase,outcome,expected', [
+    ('call', 'skipped', 'incomplete'), ('call', 'failed', 'failed'),
+    ('teardown', 'failed', 'failed'),
+])
+def test_startup_seam_rejects_unsuccessful_lifecycle(tmp_path, phase, outcome, expected):
+    q = Qualification(PROFILES['apollo4p_blue_kxr_evb-gcc-startup-seam'])
+    for suite in q.profile.suites:
+        bind_execution(q, suite, tmp_path / suite.name)
+        for stage in ('setup', 'call', 'teardown'):
+            q.record(suite.nodeid, stage, 'passed')
+    q.record(SYSTEM_FULL.nodeid, phase, outcome)
+    assert q.report(outcome != 'failed', True)['status'] == expected
 
 
 @pytest.mark.parametrize('phases,hardware,session_ok,expected', [
