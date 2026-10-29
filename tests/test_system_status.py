@@ -74,7 +74,7 @@ def test_dcu_cleanup_and_debug_failures(system_backend, masked):
         run_backend(system_backend, 'debug', step, 0, 0, masked, 0)
 
 
-@pytest.mark.parametrize('board', ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb'))
+@pytest.mark.parametrize('board', ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb'))
 def test_system_status_real_header_builds(repo_root, tmp_path, board):
     from test_small_m55_memory import compiler_for_test
     from tools.hardware.api import BuildRequest, build_firmware
