@@ -68,6 +68,9 @@ jobs:
       ETHOS_U_DRIVER_REF: nsx-ethos-u-driver-v0.1.2
 
     steps:
+      - name: Deliberate required-check failure for issue 179
+        run: exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 
