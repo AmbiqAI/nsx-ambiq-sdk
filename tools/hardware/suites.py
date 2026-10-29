@@ -104,8 +104,9 @@ MEMORY_PREFLIGHT = Suite('memory-preflight', 'tests/hardware/test_memory_preflig
                          'memory_preflight.elf', configure=memory_options)
 def system_status_options(repo: Path, output: Path, board: str, fault: str,
                           sdk_root: Path | None = None, *, minimal: bool) -> list[str]:
-    if board not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510b_evb', 'apollo330mP_evb') or fault != 'none':
-        raise ValueError('System status smoke supports AP3P, AP4 KXR, AP510B and AP330P without faults')
+    if board not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb',
+                     'apollo510b_evb', 'apollo330mP_evb') or fault != 'none':
+        raise ValueError('System status smoke supports AP3P, AP4 KXR, AP510, AP510B and AP330P without faults')
     return [f'-DNSX_TEST_MINIMAL={"ON" if minimal else "OFF"}']
 
 
