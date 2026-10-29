@@ -266,6 +266,55 @@ There is no reset loop, power-cycle control, cold-boot claim, or HAL/silicon
 reliability qualification. Profile availability does not imply physical coverage
 of every listed board; record actual builds and executions separately.
 
+### Standalone UART observation
+
+The separate standalone fixture checks data/BSS/constructors, full
+`nsx_system_init()` with UART output, and interrupt-mask preservation. It samples
+debugger attachment at **main entry** and requires it clear. AP4 also requires
+unmasked main entry; AP510B records and preserves its entry mask. This is not
+evidence that a debugger was absent throughout the bootloader/startup sequence.
+
+Build for `apollo4p_blue_kxr_evb` or `apollo510b_evb`:
+
+```sh
+uv run --group hardware python -m tools.hardware.standalone_cli build \
+  --board apollo4p_blue_kxr_evb --gcc-root /usr/local/arm-gnu-toolchain \
+  --output /tmp/nsx-standalone-ap4
+```
+
+Reserve the board, then flash `standalone_boot.elf` using the device and speed
+from its `manifest.json` and the existing lab flashing procedure. Close J-Link,
+SWO viewers and other debugger sessions before observation. Flashing is
+preparation, not standalone execution evidence. Do not use SEGGER reset as a
+substitute for the manual power cycle.
+
+```sh
+uv run --group hardware python -m tools.hardware.standalone_cli observe \
+  --firmware /tmp/nsx-standalone-ap4 \
+  --serial /dev/serial/by-id/YOUR_BOARD_UART \
+  --output /tmp/nsx-standalone-ap4-observation --timeout 120
+```
+
+After `READY`, switch board power off, wait for the UART device to disappear,
+then switch on. Keep the device absent for at least one second so host polling
+can observe it. This initial procedure requires a board power topology where
+the UART bridge disconnects with board power; it does not support a separately
+powered bridge. The tool waits for the same serial identity to return, flushes
+input, and accepts one complete matching transcript. The fixture runs its six
+Unity cases once per boot, then replays the stored result so USB enumeration
+does not lose the evidence. No J-Link connection or SRAM read occurs during
+observation. A missed disconnect, timeout, malformed/failed result or changed
+ELF cannot pass.
+
+Use new output directories. Retain `uart.bin`, `observation.json`, build
+manifest/ELF and a separate operator record of the power action, board revision
+and power sources. A passing UART result establishes only matching test evidence
+after an observed USB reconnect, with debug disabled at main entry. It **does
+not prove SoC power removal**; `power_cycle_verified` remains false. Confirm the
+actual board power topology and operator action before making a power-on claim.
+Physical standalone acceptance remains separate from builds and the existing
+debugger qualification profiles. This fixture is not collected by those profiles.
+
 These are ordinary local pytest commands. A future board-farm workflow should
 reserve hardware, invoke the same commands and upload evidence; it should not
 implement separate acceptance logic. The existing manual lab reservation
