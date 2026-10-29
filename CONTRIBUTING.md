@@ -19,6 +19,21 @@ uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py
 uv run --group ci python -m pytest
 ```
 
+## Required CI checks
+
+The main-branch ruleset is maintained in GitHub. Its required check contexts are
+`Python 3.10`, `Python 3.12`, and
+`nsx-npu cross-compile (arm-none-eabi-gcc)`, all from GitHub Actions. The ARM job
+covers SDK integration fixtures as well as NPU sources. Keep these jobs running
+on every PR, including release PRs, and coordinate any context rename or matrix
+change with the ruleset. Manual container validation and Copilot reviews are
+separate from the required status checks.
+
+PR branches must be up to date with `main` before merging. After updating a
+branch, wait for the required checks on the updated revision. A missing check
+is not a pass; inspect the workflow trigger and run before retrying. SDK tag
+creation and publication remain separate approved steps.
+
 ## Development Rules
 
 - Do not edit `modules/nsx-ambiqsuite/sdk/` by hand. Regenerate the provider payload from `sdk-intake/build_ambiqsuite.py`.
