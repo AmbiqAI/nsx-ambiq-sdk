@@ -398,7 +398,8 @@ typedef struct ns_ble_characteristic {
     uint16_t cccIndicationHandle;
     wsfTimer_t indicationTimer;       /*! \brief periodic measurement timer */
     uint32_t indicationPeriod;        /*! \brief periodic measurement period in ms */
-    uint8_t indicationIsAsynchronous; /*! \brief TRUE if indication is asynchronous */
+    /*! \brief Nonzero for application-driven notifications; no periodic callback */
+    uint8_t indicationIsAsynchronous;
 
     // Internals
     uint16_t handleId;
@@ -485,9 +486,12 @@ extern int ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg);
  * @param properties - a bitmask of properties for the characteristic, from the enum above
  * @param readHandlerCb - a callback function for read requests if the characteristic is readable
  * @param writeHandlerCb - a callback function for write requests if the characteristic is writable
- * @param notifyHandlerCb - a callback function for notify requests if the characteristic is
- * "subscribe-able"
- * @param periodMs - the period of the notify timer, in milliseconds
+ * @param notifyHandlerCb - periodic value-update callback for synchronous notifications.
+ * A successful return sends the value; failure skips that send. NULL sends without an update.
+ * Async characteristics do not invoke this callback.
+ * @param periodMs - synchronous notify timer period in milliseconds; ignored for async mode
+ * @param async - nonzero disables wrapper periodic callbacks and notifications. The application
+ * schedules its work and explicitly calls ns_ble_send_value() while connected and subscribed.
  * @param attributeCount - a pointer to the service's attribute count. This is incremented by the
  * function.
  * @return int
