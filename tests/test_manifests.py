@@ -270,3 +270,15 @@ def test_sdk_drop_manifest_template_parseable(repo_root: Path) -> None:
     assert "core_artifacts" in scope
     assert "optional_module_candidates" in scope
     assert "ignored_upstream_content" in scope
+
+
+def test_at110_timer_and_power_support_boundary(manifests: dict[Path, dict]) -> None:
+    modules = {manifest_name(manifest): manifest for manifest in manifests.values()}
+    supported = {"apollo3", "apollo3p", "apollo4l", "apollo4p", "apollo330P",
+                 "apollo510", "apollo510b", "apollo510L"}
+    for name in ("nsx-timer", "nsx-power"):
+        assert set(modules[name]["compatibility"]["socs"]) == supported
+        assert "atomiq110_fpga_turbo" not in modules[name]["compatibility"]["boards"]
+    assert "nsx-timer" in modules["nsx-power"]["depends"]["required"]
+    assert "atomiq110" in modules["nsx-npu"]["compatibility"]["socs"]
+    assert not {"nsx-timer", "nsx-power"}.intersection(modules["nsx-npu"]["depends"]["required"])
