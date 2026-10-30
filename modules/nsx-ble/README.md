@@ -65,10 +65,16 @@ nsx::ble
 - Own board/radio IRQ policy in the app: vector symbols, NVIC priorities, power,
   cache, task sizing, WSF pool sizing, service contents, TX power, and security
   policy are intentionally not owned by this module.
-- For periodic notify characteristics, the notify callback updates the
-  application value and returns a status; the wrapper sends the notification for
-  non-async characteristics after a successful callback. Async characteristics
-  may call `ns_ble_send_value()` themselves.
+- For synchronous notify characteristics (`async == 0`), subscription starts a
+  periodic timer at `periodMs`. The notify callback updates the application
+  value; success sends a notification and failure skips that send. A NULL
+  callback sends the existing value. Each expiry rearms the timer.
+- Asynchronous notify characteristics (`async != 0`) never start a wrapper
+  periodic timer or invoke the notify callback; `periodMs` is ignored. The
+  application schedules its work and calls `ns_ble_send_value()` explicitly.
+  Sending requires an active connection and enabled notification subscription.
+  Legacy callers that used periodic async callbacks must move that work to
+  their application scheduler. CCC-change events are still delivered.
 - Current intentional limits: one wrapper-managed service, one active
   connection, and no high-level pairing/bonding policy helpers.
 

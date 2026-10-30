@@ -1048,6 +1048,11 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
         for (int j = 0; j < service->numCharacteristics; j++) {
             if (service->characteristics[j]->cccIndicationHandle == event) {
                 ns_ble_characteristic_t *c = service->characteristics[j];
+                // Async notifications are application-driven, including stale expiries.
+                if (c->indicationIsAsynchronous) {
+                    WsfTimerStop(&c->indicationTimer);
+                    return true;
+                }
                 int status = NS_STATUS_SUCCESS;
                 // Found a match, handle timer expiry
                 // Call the callback to update the value of attribute
@@ -1082,7 +1087,7 @@ static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
             ns_ble_characteristic_t *c = service->characteristics[j];
             // ns_lp_printf("webbleProcessCccState: %d %d %d\n", j, idx, c->cccIndex);
             if (service->characteristics[j]->cccIndex == idx) {
-                if (pMsg->value == ATT_CLIENT_CFG_NOTIFY) {
+                if (pMsg->value == ATT_CLIENT_CFG_NOTIFY && !c->indicationIsAsynchronous) {
                     // Start the timer
                     ns_lp_printf("webbleStartTimer\n");
                     WsfTimerStartMs(&c->indicationTimer, c->indicationPeriod);
