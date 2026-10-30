@@ -590,14 +590,14 @@ def test_atomiq110_npu_modules_configure_through_soc_hal_contract(
 ) -> None:
     # atomiq110 is the only board wiring nsx-npu (Ethos-U85 glue) and the
     # nsx-power atomiq110 arch-dir backend; nothing previously exercised this
-    # combination in CI.
+    # combination in CI. This is direct experimental CMake coverage; the
+    # power manifest does not advertise an AT110 registry closure.
     if shutil.which("cmake") is None:
         raise AssertionError("cmake is required for NSX CMake contract tests")
 
     modules = (
         "nsx-core",
         "nsx-interrupt",
-        "nsx-timer",
         "nsx-power",
         "nsx-npu",
     )
@@ -1149,3 +1149,14 @@ def test_freertos_module_requires_config_provider(repo_root: Path, tmp_path: Pat
     )
     assert result.returncode != 0
     assert "nsx::freertos_config" in result.stdout
+
+
+@pytest.mark.parametrize("toolchain", ["gcc", "atfe", "armclang"])
+def test_at110_timer_rejected_before_compilation(repo_root: Path, tmp_path: Path, toolchain: str) -> None:
+    result = configure_contract_project(
+        repo_root, tmp_path, "atomiq110_fpga_turbo", toolchain,
+        ("nsx-core", "nsx-interrupt", "nsx-timer"),
+    )
+    assert result.returncode != 0
+    assert "nsx-timer does not support AT110" in result.stdout
+    assert "Core STIMER and NPU timebases are separate" in result.stdout

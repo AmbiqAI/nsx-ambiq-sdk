@@ -4,12 +4,18 @@ if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-timer is added.")
 endif()
 
+if(NSX_SOC_FAMILY IN_LIST NSX_SOC_FAMILIES_ATOMIQ)
+    message(FATAL_ERROR
+        "nsx-timer does not support AT110: the packaged FPGA timer clock mapping "
+        "is not verified. Omit nsx-timer until an AT110 backend is available "
+        "(nsx-ambiq-sdk issue #160). Core STIMER and NPU timebases are separate.")
+endif()
+
 # apollo330P uses its dedicated apollo330 arch sources.
 nsx_select_soc_arch_dir(NSX_TIMER_ARCH_DIR
     APOLLO3 apollo3
     APOLLO4 apollo4
     APOLLO5 apollo5
-    ATOMIQ apollo5
     APOLLO330 apollo330
 )
 
