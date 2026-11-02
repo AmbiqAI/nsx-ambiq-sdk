@@ -6,6 +6,12 @@ It owns hardware timer setup and ISR callback routing. Application scheduling, t
 
 Public interfaces live in `includes-api/`.
 
+## AT110 availability
+
+AT110 timer selection is rejected at configure time. The packaged FPGA clock
+mapping has not been verified, and the Apollo510 timer conversion does not
+apply. Core STIMER delays and the NPU timebase are separate from this module.
+
 ## Apollo4 lifecycle
 
 Apollo4 timer initialization reserves the selected timer until

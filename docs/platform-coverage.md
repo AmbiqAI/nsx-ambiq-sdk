@@ -24,11 +24,10 @@ Maturity is independent of whether a part's artifacts are staged:
 > evaluation only. They are **not officially released** and must not be used in
 > production.
 
-On the AT110 FPGA, `atomiq110` is wired for the core runtime stack plus power
+On the AT110 FPGA, `atomiq110` is wired for the core runtime stack
 and NPU support: `nsx-cmsis-core`, `nsx-cmsis-startup`, `nsx-soc-hal`,
-`nsx-core`, `nsx-interrupt`, `nsx-timer`, `nsx-gpio`, `nsx-perf`, `nsx-uart`,
-`nsx-power` (Atomiq110-specific backend; see
-`modules/nsx-power/src/atomiq110`), and `nsx-npu` (Ethos-U85 NPU glue on top
+`nsx-core`, `nsx-interrupt`, `nsx-gpio`, `nsx-perf`, `nsx-uart`,
+and `nsx-npu` (Ethos-U85 NPU glue on top
 of `nsx-ethos-u-driver`, an external module resolved from
 AmbiqAI/nsx-ethos-u-driver by the neuralspotx registry; see
 `modules/nsx-npu`). The following are
@@ -37,6 +36,13 @@ silicon exposes them): `nsx-i2c` and `nsx-spi` (basic buses), `nsx-freertos`
 (RTOS port facts are ready), `nsx-psram` (external MSPI memory not present on
 the FPGA), and the audio/USB middleware (`nsx-audio`, `nsx-usb`,
 `nsx-ambiq-usb`).
+
+`nsx-timer` is unavailable on AT110 until its FPGA clock mapping is verified.
+Registry-resolved `nsx-power` is also unavailable because its manifest requires
+`nsx-timer`; that dependency remains necessary for Apollo4. The timer-free
+AT110 power backend remains available to direct, experimental CMake integrations
+but is not advertised as a supported module closure. NPU/core STIMER timebases
+are separate and are unaffected. See SDK issue #160.
 
 ### Family Overview
 
