@@ -87,6 +87,7 @@ accept one connection, serve reads/writes, and send notifications. It does not
 try to own product policy such as bonding, privacy, application protocol design,
 or multi-service orchestration.
 
-Synchronous notification timers stop on disconnect. Reconnecting without subscribing
-leaves them stopped; subscribing again starts periodic notifications. A notify callback
-that processes an unsubscribe or disconnect does not send or rearm its timer afterward.
+Synchronous notification timers stop on disconnect. They restart when a client subscribes
+or Cordio restores a bonded subscription. Without either, reconnecting leaves them stopped.
+A notify callback that processes an unsubscribe or disconnect does not send or rearm its
+timer afterward. Sending continues to enforce the characteristic’s security requirements.
