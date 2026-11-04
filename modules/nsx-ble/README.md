@@ -86,3 +86,7 @@ policy. The wrapper wires those pieces into Cordio so the app can advertise,
 accept one connection, serve reads/writes, and send notifications. It does not
 try to own product policy such as bonding, privacy, application protocol design,
 or multi-service orchestration.
+
+Synchronous notification timers stop on disconnect. Reconnecting without subscribing
+leaves them stopped; subscribing again starts periodic notifications. A notify callback
+that processes an unsubscribe or disconnect does not send or rearm its timer afterward.

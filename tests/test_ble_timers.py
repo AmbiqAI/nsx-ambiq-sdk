@@ -9,8 +9,10 @@ import subprocess
 import pytest
 
 
-@pytest.fixture(scope="module")
-def ble_binary(repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
+@pytest.fixture(scope="module", params=[False, True], ids=["boundary", "real-wsf-queue"])
+def ble_binary(
+    repo_root: Path, tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest,
+) -> Path:
     compiler = shutil.which("cc")
     assert compiler, "Host C compiler required"
     fixture = repo_root / "tests/fixtures/ble-timers"
@@ -36,6 +38,9 @@ def ble_binary(repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> Pat
     command += [str(fixture / "main.c"),
                 str(cordio / "ble-host/sources/stack/att/att_uuid.c"),
                 "-Wl,--gc-sections", "-o", str(output)]
+    if request.param:
+        command += ["-DNSX_TEST_REAL_WSF_TIMER", str(fixture / "real_wsf.c"),
+                    str(cordio / "wsf/sources/port/freertos/wsf_queue.c")]
     env = os.environ.copy()
     env.pop("GCC_ROOT", None)
     result = subprocess.run(command, capture_output=True, text=True, env=env)
@@ -45,7 +50,9 @@ def ble_binary(repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> Pat
 
 @pytest.mark.parametrize("scenario", [
     "async-enable", "async-expiry", "explicit-send", "sync-success", "sync-failure",
-    "sync-null", "mixed-disable", "unknown",
+    "sync-null", "mixed-disable", "unknown", "disconnect", "unsubscribed-expiry",
+    "callback-disable", "callback-disconnect", "callback-disable-failure",
+    "callback-disconnect-failure", "ccc-callback-disable", "ccc-callback-disconnect",
 ])
 def test_ble_notification_timers(ble_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(ble_binary), scenario], capture_output=True,
