@@ -53,6 +53,7 @@ def ble_binary(
     "sync-null", "mixed-disable", "unknown", "disconnect", "unsubscribed-expiry",
     "callback-disable", "callback-disconnect", "callback-disable-failure",
     "callback-disconnect-failure", "ccc-callback-disable", "ccc-callback-disconnect",
+    "bonded-restore", "bonded-disable", "bonded-disconnect", "bonded-security",
 ])
 def test_ble_notification_timers(ble_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(ble_binary), scenario], capture_output=True,

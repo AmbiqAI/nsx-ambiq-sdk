@@ -10,6 +10,7 @@ static unsigned starts[3], stops[3], callbacks[3], sent, sets, events, ccc_queri
 static uint16_t periods[3], subscribed[3], sent_handle;
 static uint8_t sent_value, queried_index;
 static int callback_status;
+static bool security_pending;
 static unsigned callback_action, ccc_action;
 static void subscription(ns_ble_characteristic_t *, uint16_t);
 static void disconnect(void);
@@ -47,11 +48,14 @@ void WsfTimerStop(wsfTimer_t *timer) {
     timer->isStarted = false;
 #endif
 }
-uint16_t AttsCccEnabled(dmConnId_t connection, uint8_t index) {
+uint16_t AttsCccGet(dmConnId_t connection, uint8_t index) {
     assert(connection == 1 && index > 0 && index < 3);
     ccc_queries++;
     queried_index = index;
     return subscribed[index];
+}
+uint16_t AttsCccEnabled(dmConnId_t connection, uint8_t index) {
+    return security_pending ? 0 : AttsCccGet(connection, index);
 }
 uint8_t AttsSetAttr(uint16_t handle, uint16_t length, uint8_t *value) {
     assert(length == 1 && value != NULL);
@@ -203,6 +207,29 @@ int main(int argc, char **argv) {
         assert(WsfTimerServiceExpired(0) == &sync_char.indicationTimer);
         assert(WsfTimerServiceExpired(0) == NULL);
 #endif
+    } else if (!strncmp(argv[1], "bonded-", 7)) {
+        /* ATT restores CCCs before the application's connection-open message. */
+        currentConnId = DM_CONN_ID_NONE;
+        security_pending = strstr(argv[1], "security") != NULL;
+        if (strstr(argv[1], "disable")) ccc_action = 1;
+        if (strstr(argv[1], "disconnect")) ccc_action = 2;
+        bool cancelled = ccc_action != 0;
+        subscription(&sync_char, ATT_CLIENT_CFG_NOTIFY);
+        subscription(&async_char, ATT_CLIENT_CFG_NOTIFY);
+        assert(starts[2] == 0 && !async_char.indicationTimer.isStarted);
+        if (cancelled) {
+            assert(starts[1] == 0 && !sync_char.indicationTimer.isStarted);
+        } else {
+            assert(starts[1] == 1 && sync_char.indicationTimer.isStarted);
+            currentConnId = 1; /* Generic connection-open processing. */
+            expiry(&sync_char);
+            assert(callbacks[1] == 1 && sent == (security_pending ? 0u : 1u) && starts[1] == 2);
+            if (security_pending) {
+                security_pending = false;
+                expiry(&sync_char);
+                assert(callbacks[1] == 2 && sent == 1 && starts[1] == 3);
+            }
+        }
     } else if (!strcmp(argv[1], "unsubscribed-expiry")) {
         expiry(&sync_char);
         assert(callbacks[1] == 0 && starts[1] == 0 && sent == 0);

@@ -1039,9 +1039,9 @@ int ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg) {
     }
 }
 
-static bool ns_ble_notification_enabled(const ns_ble_characteristic_t *c) {
+static bool ns_ble_notification_subscribed(const ns_ble_characteristic_t *c) {
     return currentConnId != DM_CONN_ID_NONE &&
-        (AttsCccEnabled(currentConnId, c->cccIndex) & ATT_CLIENT_CFG_NOTIFY) != 0;
+        (AttsCccGet(currentConnId, c->cccIndex) & ATT_CLIENT_CFG_NOTIFY) != 0;
 }
 
 static void ns_ble_stop_notification_timers(void) {
@@ -1066,7 +1066,7 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
             if (service->characteristics[j]->cccIndicationHandle == event) {
                 ns_ble_characteristic_t *c = service->characteristics[j];
                 // Async or unsubscribed characteristics have no periodic work.
-                if (c->indicationIsAsynchronous || !ns_ble_notification_enabled(c)) {
+                if (c->indicationIsAsynchronous || !ns_ble_notification_subscribed(c)) {
                     WsfTimerStop(&c->indicationTimer);
                     return true;
                 }
@@ -1079,7 +1079,7 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
                 }
 
                 // A callback may unsubscribe or process a disconnect.
-                if (currentConnId != connId || !ns_ble_notification_enabled(c)) {
+                if (currentConnId != connId || !ns_ble_notification_subscribed(c)) {
                     WsfTimerStop(&c->indicationTimer);
                     return true;
                 }
@@ -1100,6 +1100,9 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
 
 static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
     uint8_t idx = pMsg->idx;
+    // Bonded CCC restoration can precede the application connection-open event.
+    dmConnId_t connId = pMsg->hdr.param;
+    dmConnId_t previousConnId = currentConnId;
     ns_ble_service_t *service;
     ns_ble_emit_event(
         NS_BLE_EVENT_CCC_CHANGED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event, pMsg->idx,
@@ -1112,7 +1115,8 @@ static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
             // ns_lp_printf("webbleProcessCccState: %d %d %d\n", j, idx, c->cccIndex);
             if (service->characteristics[j]->cccIndex == idx) {
                 if (pMsg->value == ATT_CLIENT_CFG_NOTIFY && !c->indicationIsAsynchronous &&
-                    ns_ble_notification_enabled(c)) {
+                    connId != DM_CONN_ID_NONE && currentConnId == previousConnId &&
+                    (AttsCccGet(connId, c->cccIndex) & ATT_CLIENT_CFG_NOTIFY) != 0) {
                     // Start the timer
                     ns_lp_printf("webbleStartTimer\n");
                     WsfTimerStartMs(&c->indicationTimer, c->indicationPeriod);
