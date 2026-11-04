@@ -134,6 +134,13 @@ NSX_MEM_FAST_CODE void hot_isr(void) { ... }         // ITCM (AP510) / DTCM (AP5
 
 Macros degrade gracefully on simpler SoCs (fall back to default sections).
 
+The legacy `AM_SHARED_RW` spelling matches the selected HAL's definition on
+shared-SRAM targets, regardless of whether `nsx_mem.h` or `am_mcu_apollo.h` is
+included first. Link `nsx::mem` to receive the HAL headers and compiler selectors;
+manual builds must supply the same HAL include paths and `gcc` (GCC/ATfE) or
+`keil6` (ArmClang) definition. New code should prefer `NSX_MEM_SRAM`.
+
+
 `nsx_mem.h` also exposes lightweight cache helpers for common portable flows:
 
 - `nsx_cache_enable()` / `nsx_cache_disable()` for turning cache on or off.

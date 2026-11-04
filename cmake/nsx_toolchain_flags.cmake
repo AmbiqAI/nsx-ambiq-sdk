@@ -263,6 +263,17 @@ function(nsx_apply_toolchain_flags target)
         message(FATAL_ERROR "Unsupported NSX_TOOLCHAIN_FAMILY='${NSX_TOOLCHAIN_FAMILY}'.")
     endif()
 
+    # AmbiqSuite's public headers select attributes using these legacy
+    # compiler selectors, not __GNUC__/__ARMCC_VERSION. Without one,
+    # AM_SHARED_RW and other HAL attributes silently select their empty stub.
+    if(NSX_TOOLCHAIN_FAMILY STREQUAL "armclang")
+        set(nsx_hal_compiler_selector keil6)
+    else()
+        set(nsx_hal_compiler_selector gcc) # GCC-compatible attributes for ATfE too
+    endif()
+    target_compile_definitions(${target} INTERFACE
+        "$<$<COMPILE_LANGUAGE:C,CXX>:${nsx_hal_compiler_selector}>")
+
     # ABI follows the archive actually selected, including the ATfE -> GCC
     # fallback. Do not infer it from the compiler executing this function.
     if(DEFINED NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN)
