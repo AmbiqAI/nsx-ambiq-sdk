@@ -13,7 +13,8 @@ All notable distribution changes are recorded here.
 - Add required startup-seam qualification profiles and bounded standalone UART
   startup observation (#176, #178). These are test capabilities, not new
   hardware qualification claims.
-- Keep the AmbiqSuite provider and all 73 HAL/BSP archives unchanged.
+- Keep the generated AmbiqSuite payload (`modules/nsx-ambiqsuite/sdk/`) and
+  all 73 HAL/BSP archives unchanged; update wrapper version metadata.
 
 ## 5.2.27 - 2026-10-28
 
