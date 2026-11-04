@@ -2,7 +2,20 @@
 
 All notable distribution changes are recorded here.
 
-## 5.2.27 - unreleased
+## 5.2.28 - unreleased
+
+- Make `AM_SHARED_RW` safe in either NSX/HAL header order and preserve shared
+  SRAM placement through explicit HAL compiler selectors and the canonical
+  Atomiq part selector (#187).
+- Stop asynchronous BLE notification timers and stop synchronous notification
+  timers after disconnect, preserving restored subscriptions (#184, #186).
+- Reject unsupported AT110 timer integration explicitly (#182).
+- Add required startup-seam qualification profiles and bounded standalone UART
+  startup observation (#176, #178). These are test capabilities, not new
+  hardware qualification claims.
+- Keep the AmbiqSuite provider and all 73 HAL/BSP archives unchanged.
+
+## 5.2.27 - 2026-10-28
 
 - Fix C++ constructor startup on Apollo2/3/3 Plus, small-M55 memory bounds,
   shared startup copy ranges, ArmClang load bounds and vendor ABI selection.
