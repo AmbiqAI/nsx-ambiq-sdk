@@ -113,7 +113,7 @@
  * zeroed at boot) and an .itcm_text code overlay. Atomiq110 has 256 KB of
  * MCU_ITCM at 0x0, unlike Apollo510L/Apollo330P above, so fast code targets
  * ITCM rather than a DTCM overlay. */
-#elif defined(AM_PART_ATOMIQ110)
+#elif defined(AM_PART_ATOMIQ110) || defined(PART_atomiq110)
   #define NSX_MEM__HAS_SRAM        1
   #define NSX_MEM__HAS_SRAM_BSS    1
   #define NSX_MEM__HAS_FAST_CODE   1
@@ -247,11 +247,25 @@
 /* ===================================================================
  * Backward compatibility aliases
  *
- * These map legacy macros to the new NSX_MEM_* system.
+ * Legacy NSX names map to NSX_MEM_*; AM_SHARED_RW retains HAL attributes.
  * Prefer NSX_MEM_* in new code.
  * =================================================================== */
-#ifndef AM_SHARED_RW  /* don't override if SDK already defined it */
-  #define AM_SHARED_RW   NSX_MEM_SRAM
+/* Keep the shared-SRAM compatibility definition token-identical to
+ * am_hal_global.h: C permits identical macro redefinitions in either order.
+ * Do not replace these attributes with NSX_MEM_SRAM/NSX_SECTION aliases;
+ * macro replacement tokens (not their expanded values) must match the HAL.
+ * tests/test_mem_header_order.py checks the real staged HAL definitions.
+ */
+#ifndef AM_SHARED_RW
+  #if NSX_MEM__HAS_SRAM && (defined(keil) || defined(keil6))
+    #define AM_SHARED_RW __attribute__((section("SHARED_RW"))) __attribute__((used))
+  #elif NSX_MEM__HAS_SRAM && defined(iar)
+    #define AM_SHARED_RW __attribute__((section("SHARED_RW"))) __root
+  #elif NSX_MEM__HAS_SRAM && defined(gcc)
+    #define AM_SHARED_RW __attribute__((section(".shared")))
+  #else
+    #define AM_SHARED_RW NSX_MEM_SRAM
+  #endif
 #endif
 
 /* Fix: NSX_SRAM_BSS was broken on Apollo510/510B (empty expansion).
