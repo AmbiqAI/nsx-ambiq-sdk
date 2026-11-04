@@ -1039,6 +1039,23 @@ int ns_ble_send_value(ns_ble_characteristic_t *c, attEvt_t *pMsg) {
     }
 }
 
+static bool ns_ble_notification_subscribed(const ns_ble_characteristic_t *c) {
+    return currentConnId != DM_CONN_ID_NONE &&
+        (AttsCccGet(currentConnId, c->cccIndex) & ATT_CLIENT_CFG_NOTIFY) != 0;
+}
+
+static void ns_ble_stop_notification_timers(void) {
+    for (int i = 0; i < g_ns_ble_control.numServices; i++) {
+        ns_ble_service_t *service = g_ns_ble_control.services[i];
+        for (int j = 0; j < service->numCharacteristics; j++) {
+            ns_ble_characteristic_t *c = service->characteristics[j];
+            if (c->ccc.pUuid != NULL) {
+                WsfTimerStop(&c->indicationTimer);
+            }
+        }
+    }
+}
+
 static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
     uint8_t event = pMsg->hdr.event;
     ns_ble_service_t *service;
@@ -1048,16 +1065,23 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
         for (int j = 0; j < service->numCharacteristics; j++) {
             if (service->characteristics[j]->cccIndicationHandle == event) {
                 ns_ble_characteristic_t *c = service->characteristics[j];
-                // Async notifications are application-driven, including stale expiries.
-                if (c->indicationIsAsynchronous) {
+                // Async or unsubscribed characteristics have no periodic work.
+                if (c->indicationIsAsynchronous || !ns_ble_notification_subscribed(c)) {
                     WsfTimerStop(&c->indicationTimer);
                     return true;
                 }
+                dmConnId_t connId = currentConnId;
                 int status = NS_STATUS_SUCCESS;
                 // Found a match, handle timer expiry
                 // Call the callback to update the value of attribute
                 if (c->notifyHandlerCb != NULL) {
                     status = c->notifyHandlerCb(service, c);
+                }
+
+                // A callback may unsubscribe or process a disconnect.
+                if (currentConnId != connId || !ns_ble_notification_subscribed(c)) {
+                    WsfTimerStop(&c->indicationTimer);
+                    return true;
                 }
 
                 // Send the value if not asynchronous
@@ -1076,6 +1100,9 @@ static bool ns_ble_handle_indication_timer_expired(ns_ble_msg_t *pMsg) {
 
 static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
     uint8_t idx = pMsg->idx;
+    // Bonded CCC restoration can precede the application connection-open event.
+    dmConnId_t connId = pMsg->hdr.param;
+    dmConnId_t previousConnId = currentConnId;
     ns_ble_service_t *service;
     ns_ble_emit_event(
         NS_BLE_EVENT_CCC_CHANGED, pMsg->hdr.param, pMsg->hdr.status, pMsg->hdr.event, pMsg->idx,
@@ -1087,7 +1114,9 @@ static void ns_ble_process_ccc_state(attsCccEvt_t *pMsg) {
             ns_ble_characteristic_t *c = service->characteristics[j];
             // ns_lp_printf("webbleProcessCccState: %d %d %d\n", j, idx, c->cccIndex);
             if (service->characteristics[j]->cccIndex == idx) {
-                if (pMsg->value == ATT_CLIENT_CFG_NOTIFY && !c->indicationIsAsynchronous) {
+                if (pMsg->value == ATT_CLIENT_CFG_NOTIFY && !c->indicationIsAsynchronous &&
+                    connId != DM_CONN_ID_NONE && currentConnId == previousConnId &&
+                    (AttsCccGet(connId, c->cccIndex) & ATT_CLIENT_CFG_NOTIFY) != 0) {
                     // Start the timer
                     ns_lp_printf("webbleStartTimer\n");
                     WsfTimerStartMs(&c->indicationTimer, c->indicationPeriod);
@@ -1111,6 +1140,7 @@ bool ns_ble_new_proc_msg(ns_ble_msg_t *pMsg) {
         break;
 
     case DM_CONN_CLOSE_IND:
+        ns_ble_stop_notification_timers();
         messageHandled = false;
         break;
 
