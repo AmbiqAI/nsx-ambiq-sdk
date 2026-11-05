@@ -368,6 +368,12 @@ def materialize_git_ref(repo: Path, source_ref: str, worktree_dir: Path, *, forc
     if not worktree_dir.exists():
         worktree_dir.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "-C", str(repo), "worktree", "add", "--detach", str(worktree_dir), commit], check=True)
+    actual_commit = git_commit(worktree_dir, "HEAD")
+    if actual_commit != commit:
+        raise ValueError(
+            f"source worktree {worktree_dir} is at {actual_commit}, but {source_ref} resolves to {commit}; "
+            "use a new --source-worktree-dir or --force-source-ref to recreate it"
+        )
     ensure_worktree_submodules(worktree_dir)
     return find_sdk_root(worktree_dir)
 
