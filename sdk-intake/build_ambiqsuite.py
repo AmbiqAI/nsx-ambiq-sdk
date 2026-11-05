@@ -1187,6 +1187,9 @@ def source_patch_provenance(sdk_root: Path) -> dict | None:
         raise ValueError("prepared commit contains undeclared source changes")
     for item in data["files"]:
         name = item["path"]
+        after = subprocess.check_output(["git", "-C", str(sdk_root), "show", "HEAD:" + name])
+        if hashlib.sha256(after).hexdigest() != item["after_sha256"]:
+            raise ValueError(f"committed source postimage differs from receipt: {name}")
         before = subprocess.check_output(["git", "-C", str(sdk_root), "show", "HEAD^:" + name])
         if hashlib.sha256(before).hexdigest() != item["before_sha256"]:
             raise ValueError(f"source patch preimage differs from parent: {name}")

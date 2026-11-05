@@ -226,3 +226,16 @@ def test_fresh_staging_matches_build_adaptations(repo_root, tmp_path, monkeypatc
         relative = header.relative_to(source)
         assert (first / relative.parent / "am_bsp_gpio.h").read_text() == "generated GPIO declarations\n"
         assert (first / relative).read_bytes() == (second / relative).read_bytes()
+
+
+def test_provenance_checks_committed_postimage(source, repo_root):
+    helper, repo, patchset, output, _ = source
+    helper.prepare(repo, patchset, output)
+    header = output / "driver.h"
+    header.write_text("size=3\n")
+    helper.git(output, "add", "driver.h")
+    helper.git(output, "commit", "--amend", "--no-edit")
+    header.write_text("size=2\n")
+    builder = load(repo_root, "build_ambiqsuite")
+    with pytest.raises(ValueError, match="committed source postimage"):
+        builder.source_patch_provenance(output)
