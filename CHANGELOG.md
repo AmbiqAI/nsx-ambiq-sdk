@@ -2,7 +2,7 @@
 
 All notable distribution changes are recorded here.
 
-## 5.2.28 - unreleased
+## 5.2.28 - 2026-11-04
 
 - Make `AM_SHARED_RW` safe in either NSX/HAL header order and preserve shared
   SRAM placement through explicit HAL compiler selectors and the canonical
