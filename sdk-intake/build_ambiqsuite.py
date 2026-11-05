@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -1147,6 +1148,86 @@ def manifest_tool_identity(value: str) -> str:
     return token
 
 
+SOURCE_PATCH_RECEIPT = ".nsx-source-patches.json"
+
+
+def source_patch_provenance(sdk_root: Path) -> dict | None:
+    receipt = sdk_root / SOURCE_PATCH_RECEIPT
+    if not receipt.exists():
+        if (sdk_root / ".git").exists():
+            tracked = subprocess.run(
+                ["git", "-C", str(sdk_root), "cat-file", "-e", "HEAD:" + SOURCE_PATCH_RECEIPT],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            if tracked.returncode == 0:
+                raise ValueError("committed source patch receipt is missing")
+        return None
+    text = receipt.read_text(encoding="utf-8")
+    committed = subprocess.check_output(
+        ["git", "-C", str(sdk_root), "show", "HEAD:" + SOURCE_PATCH_RECEIPT], text=True
+    )
+    if text != committed:
+        raise ValueError("source patch receipt differs from committed source")
+    data = json.loads(text)
+    if data.get("schema_version") != 1:
+        raise ValueError("unsupported source patch receipt schema_version")
+    if git_commit(sdk_root, "HEAD^") != data["upstream_commit"]:
+        raise ValueError("source patch receipt upstream does not match parent commit")
+    for item in data["files"]:
+        path = sdk_root / item["path"]
+        if not path.resolve().is_relative_to(sdk_root.resolve()) or path.is_symlink():
+            raise ValueError("invalid source patch receipt path")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != item["after_sha256"]:
+            raise ValueError(f"patched source changed: {item['path']}")
+    # Builds may apply these existing BSP adaptations, but no other tracked edits.
+    changed = subprocess.check_output(
+        ["git", "-C", str(sdk_root), "diff", "HEAD", "--name-only", "-z"]
+    ).decode().split("\0")
+    boards = {f"boards/{board.name}/bsp/am_bsp.h": board
+              for train in TRAINS.values() for board in train.boards}
+    for name in filter(None, changed):
+        board = boards.get(name)
+        if board is None:
+            raise ValueError(f"prepared source has unexpected tracked changes: {name}")
+        original = subprocess.check_output(
+            ["git", "-C", str(sdk_root), "show", "HEAD:" + name]
+        ).decode()
+        expected = original
+        if board.inject_gpio_pincfg_shim:
+            anchor = '#include "am_devices.h"\n'
+            if GPIO_PINCFG_SHIM not in expected:
+                expected = expected.replace(anchor, GPIO_PINCFG_SHIM + anchor, 1)
+        if board.strip_display_include:
+            expected = expected.replace('#include "am_devices_display_generic.h"\n', "")
+        path = sdk_root / name
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != expected.encode():
+            raise ValueError(f"prepared source has unexpected tracked changes: {name}")
+    modes = subprocess.check_output(
+        ["git", "-C", str(sdk_root), "diff", "HEAD", "--summary"], text=True
+    )
+    if modes:
+        raise ValueError("prepared source has unexpected file modes or types")
+    return data
+
+
+def bind_source_artifacts(root: Path, sdk_root: Path, source_commit: str | None) -> None:
+    provenance = source_patch_provenance(sdk_root)
+    marker = root / "source-patches.json"
+    if provenance is None and not marker.exists():
+        return
+    if provenance is None or source_commit != git_commit(sdk_root, "HEAD"):
+        raise ValueError("patched artifacts require the prepared git source commit")
+    identity = {"source_commit": source_commit, "source_patch_provenance": provenance}
+    if marker.exists():
+        if json.loads(marker.read_text()) != identity:
+            raise ValueError("artifact directory belongs to a different prepared source; use a new version")
+    else:
+        if any(root.rglob("*.a")):
+            raise ValueError("existing archives have no prepared-source provenance; use a new version")
+        root.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps(identity, sort_keys=True, indent=2) + "\n")
+
+
 def write_manifest(
     train: TrainSpec,
     version: str,
@@ -1174,6 +1255,11 @@ def write_manifest(
         lines.append(f"  source_ref: {source_ref}")
     if source_commit:
         lines.append(f"  source_commit: {source_commit}")
+    provenance = source_patch_provenance(sdk_root)
+    if provenance is not None:
+        if source_commit != git_commit(sdk_root, "HEAD"):
+            raise ValueError("manifest source commit does not match prepared source")
+        lines.append("  source_patch_provenance: " + json.dumps(provenance, sort_keys=True))
     lines.extend([
         "  source_root: " + display_path(sdk_root),
         "  raw_source_committed: false",
@@ -1325,6 +1411,11 @@ def main() -> int:
         print(f"error: {error}", file=sys.stderr)
         return 2
     profiles = {name: optional_toolchain_profile(args, name) for name in full_train.toolchains}
+    try:
+        bind_source_artifacts(artifact_root(full_train, version), sdk_root, source_commit)
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
     if not args.promote_only:
         for name in build_toolchains:
             profile = profiles[name]

@@ -212,3 +212,40 @@ This first version requires a full upstream `source_commit` in each manifest;
 raw ZIP/directory drops without immutable provenance need that recorded first.
 Deliberately reducing supported artifact coverage needs a separate policy
 change; this command will reject a disappearing baseline archive.
+
+## Source patches before compilation
+
+Use this explicit preparation step for fixes that must be present while HAL/BSP
+archives compile. The existing `patches/stable/` queue still applies only to
+staged output. Never use a staged-header patch to repair an archive built from
+different headers.
+
+```sh
+python sdk-intake/prepare_source.py --repo /path/to/ambiqsuite \
+  --patchset sdk-intake/source-patches/stable-2026.11.05/patchset.json \
+  --output /path/to/new-prepared-worktree
+```
+
+The command prints a **local patched commit**. It validates the pinned upstream
+commit, patch hashes, target preimages/postimages and changed paths, then commits
+only those changes plus `.nsx-source-patches.json`. It never pushes upstream.
+Use the printed SHA as `--source-ref` for the existing build and stage commands,
+with `--ambiqsuite-repo` pointing to the same local Git repository. A new build
+worktree may be used; build initialization populates the required submodules.
+
+Use a new artifact `--version`. Patched build directories are bound to their
+source commit and receipt before compilation; existing unbound archives or a
+changed source identity are refused. Build manifests retain both the local
+source commit and upstream/patch provenance. Staging checks that identity
+against the supplied source and original artifact-directory receipt before
+copying headers. Keep the local patched commit available until qualification
+completes; the committed patchset permits recreation elsewhere (commit times
+may produce a different local SHA, requiring a new artifact version).
+
+The prepared receipt does not replace the source-generation review: existing
+HAL/BSP generation and compatibility adapters still run. A failed preparation
+leaves a diagnostic worktree without a returned prepared SHA; inspect it and
+use a new output directory for a corrected attempt. Patches must modify only
+declared existing regular files, without mode changes. Remove or replace the
+patchset deliberately after upstream absorbs the fixes; mismatches fail rather
+than being silently skipped.

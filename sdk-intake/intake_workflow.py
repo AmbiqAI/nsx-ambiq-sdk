@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -1372,6 +1373,22 @@ def stage_provider_payload(
     patches_dir: Path | None,
 ) -> StageResult:
     verify_generated_boundary(train)
+
+    manifest_path = bas.artifact_root(train, version) / "manifest.yaml"
+    if manifest_path.is_file():
+        built_source = yaml.safe_load(manifest_path.read_text())["sdk"]
+        expected = built_source.get("source_patch_provenance")
+        try:
+            actual = bas.source_patch_provenance(sdk_root)
+            if expected is not None or actual is not None:
+                if expected != actual or built_source.get("source_commit") != bas.git_commit(sdk_root, "HEAD"):
+                    raise ValueError("staging source differs from prepared archive source")
+                marker = bas.artifact_root(train, version) / "source-patches.json"
+                identity = {"source_commit": built_source["source_commit"], "source_patch_provenance": expected}
+                if not marker.is_file() or json.loads(marker.read_text()) != identity:
+                    raise ValueError("prepared archive provenance is missing or mismatched")
+        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+            raise IntakeVerificationError(str(error)) from error
 
     incomplete = bas.missing_artifact_libraries(train, version)
     if incomplete or not bas.built_artifact_toolchains(train, version):

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "upstream_commit": "3cfb7d50718e6fb016f1a0128121cb40598109d5",
+  "owner": "apage224",
+  "issue": "https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/190",
+  "reason": "Reserve sufficient opaque XSPI state for native ATfE enum ABI and align the two allocation wrappers. Temporary local correction; upstream follow-up pending.",
+  "patches": [
+    {
+      "path": "001-at110-xspi-state-capacity.patch",
+      "sha256": "37bce090b83923502178f78c319676370dc767b84b4c1e4dae0a1fc5d0469ff5"
+    },
+    {
+      "path": "002-at110-xspi-state-alignment.patch",
+      "sha256": "1c12fb3918202d9f20680d451f07d3699de95c7e4bde0352b7380cd4500de08e"
+    }
+  ],
+  "files": [
+    {
+      "path": "mcu/atomiq110/hal/am_hal_xspimc.h",
+      "before_sha256": "1f6d7f2e0dbb4b4e0e4c7cb3039978b7b7acfce504bc4277706eeb3ba7ab8993",
+      "after_sha256": "ce4cf0f535432300b483f9403dc2914032aa40ad9ee67364312925db1f45884b"
+    },
+    {
+      "path": "devices/am_devices_xspi_psram_w958d6nw.h",
+      "before_sha256": "4e5e08560269bbfe10ef56d46267eb5a545300763f067a3ada30da8dd7ff05e7",
+      "after_sha256": "3bb80f513139cf77a34593d3b1d6b138213584f26949ab438c4f5995b48c291b"
+    }
+  ]
+}
