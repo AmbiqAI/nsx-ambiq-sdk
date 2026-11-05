@@ -763,6 +763,7 @@ def promote_board_headers(
 ) -> None:
     bsp_dir = sdk_root / "boards" / board.name / "bsp"
     ensure_bsp_pins(sdk_root, bsp_dir)
+    ensure_bsp_gpio_header(sdk_root, bsp_dir)
     ensure_generated_makefile(bsp_dir / "gcc" / "Makefile", bsp_dir)
     # Staging from a fresh worktree must match headers used by native builds.
     if board.inject_gpio_pincfg_shim:

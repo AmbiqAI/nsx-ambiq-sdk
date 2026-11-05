@@ -205,6 +205,9 @@ def test_fresh_staging_matches_build_adaptations(repo_root, tmp_path, monkeypatc
     builder = load(repo_root, "build_ambiqsuite")
     monkeypatch.setattr(builder, "ensure_bsp_pins", lambda *args: None)
     monkeypatch.setattr(builder, "ensure_generated_makefile", lambda *args: None)
+    def generate_gpio(sdk_root, bsp_dir):
+        (bsp_dir / "am_bsp_gpio.h").write_text("generated GPIO declarations\n")
+    monkeypatch.setattr(builder, "ensure_bsp_gpio_header", generate_gpio)
     source = tmp_path / "source"
     first, second = tmp_path / "first", tmp_path / "second"
     train = builder.TRAINS["stable"]
@@ -221,4 +224,5 @@ def test_fresh_staging_matches_build_adaptations(repo_root, tmp_path, monkeypatc
             assert "am_devices_display_generic.h" not in header.read_text()
         builder.promote_board_headers(train, "test", source, board, destination_root=second)
         relative = header.relative_to(source)
+        assert (first / relative.parent / "am_bsp_gpio.h").read_text() == "generated GPIO declarations\n"
         assert (first / relative).read_bytes() == (second / relative).read_bytes()
