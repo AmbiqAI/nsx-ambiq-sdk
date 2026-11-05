@@ -26,7 +26,8 @@ Candidate `7e99645e15b1e6a6ff3a60ed78f775299f5acc22` passed:
 
 Local Copilot identified two release-record wording issues: an overly broad
 provider identity claim and a stale description of the 5.2.26 consumer path.
-Both are corrected; follow-up record review and hardware execution are pending.
+Both are corrected and cleared by independent and local Copilot follow-up reviews.
+All three required CI jobs also passed on `a0382fd`.
 The registry promotion will align project, module and SoC-family pins, regenerate
 example receipts through `nsx lock`, and validate fresh apps without an override
 after publication. No tag exists yet. Raw logs, firmware inputs and review
@@ -34,9 +35,25 @@ reports are retained outside the repository in the local SDK528 evidence bundle.
 
 ## Hardware scope
 
-Proposed bounded AP510B debugger-reset test: poison shared-memory sentinel
-values before reset-entry execution, verify both legacy include orders and
-native shared attributes initialize from flash, then run existing startup
-smokes. Flash authorization/board reservation and execution are pending.
-No cold boot, DMA/cache coherence, sleep, BLE radio traffic or new broad board
-qualification is claimed. IAR coverage remains preprocessing-only.
+On clean candidate `a0382fdf167171064024a973e4e4331a4619d89d`, AP510B
+(`apollo510b_evb`, probe 1160002954) passed nine Unity cases with GCC:
+
+- Shared-memory initialization and placement: five volatile values covering both
+  NSX/HAL include orders and the native attribute were poisoned to `0xDEADBEEF`
+  and read back before reset-entry execution. All restored their distinct flash
+  initializers and lay within the linked shared-data bounds (two cases).
+- Initialized data, zeroed BSS and C++ constructor startup (three cases).
+- Stack alignment/bounds, heap allocation, heap-limit rejection and SVC dispatch
+  (four cases).
+
+The local API acquired the shared lab claim and probe lease, programmed each
+image, executed normal reset entry, and required fresh build identities with
+zero failures/ignored cases. The claim was released; runtime test firmware
+remains on the board. Manifests, ELF/input hashes, seed readback, transport and
+Unity records are retained in the local SDK528 evidence bundle under
+`hw-shared-startup`, `hw-startup` and `hw-runtime`.
+
+This is debugger-connected GCC reset evidence, not cold boot, DMA/cache
+coherence, sleep, BLE radio traffic or a broad board qualification. IAR coverage
+remains preprocessing-only. The final release-record commit changes no tested
+firmware inputs or production implementation.

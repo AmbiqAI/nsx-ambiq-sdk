@@ -1110,8 +1110,9 @@ upstream:
     headers are the npu-drop-2026.07.09 payload, and the atomiq110 gcc archive's source is not recorded.
     See payload_provenance and known deviations mixed-snapshot-provider-payload and atomiq110-header-archive-mismatch.
 payload_provenance:
-  summary: The generated payload under modules/nsx-ambiqsuite/sdk/, including all 73 HAL/BSP archives, is byte-identical to 5.2.27. Wrapper metadata and README change for the distribution version. Earlier source/train
-    deviations remain recorded below; this release changes NSX integration only.
+  summary: The generated payload under modules/nsx-ambiqsuite/sdk/, including all 73 HAL/BSP archives,
+    is byte-identical to 5.2.27. Wrapper metadata and README change for the distribution version. Earlier
+    source/train deviations remain recorded below; this release changes NSX integration only.
   binary_payload_identical_to: 5.2.27
   carried_over_source_commit: caaf5af86087881647f56c70646c748d40c86e23
   carried_over_archives_note: 'Only the six atomiq110 archives were rebuilt after 5.2.24: the atfe and
@@ -1207,7 +1208,7 @@ payload_provenance:
       actually shipped. No archive bytes changed.
     forensic_report: docs/acfe-artifact-manifest-forensics.md
 qualification:
-  status: host_validated_hardware_pending
+  status: qualified_with_exclusions
   report: release/qualification-5.2.28.md
   inherits_from: release/qualification-5.2.27.md
   scope:
@@ -1251,10 +1252,12 @@ qualification:
     artifact_manifest_key: acfe
     artifact_status: built
     representative_link_smoke: passed
-  hardware_status: not_run
-  scope_note: Four-board GCC/ATfE/ArmClang link smokes and full local/CI checks passed; AP4/AP510B generated
-    apps built against candidate7e99645. Hardware is pending; earlier physical evidence is inherited only.
-  hardware_boards: []
+  hardware_status: limited_feature_evidence_only
+  scope_note: Four-board GCC/ATfE/ArmClang link smokes and full candidate local/CI checks passed. AP4/AP510B
+    generated apps built against candidate7e99645. AP510B passed nine debugger-connected GCC shared-memory/startup/runtime
+    cases on clean a0382fd; see report for exact scope and exclusions.
+  hardware_boards:
+  - apollo510b_evb
 exclusions:
   descriptor_only:
     socs:
