@@ -764,6 +764,11 @@ def promote_board_headers(
     bsp_dir = sdk_root / "boards" / board.name / "bsp"
     ensure_bsp_pins(sdk_root, bsp_dir)
     ensure_generated_makefile(bsp_dir / "gcc" / "Makefile", bsp_dir)
+    # Staging from a fresh worktree must match headers used by native builds.
+    if board.inject_gpio_pincfg_shim:
+        inject_gpio_pincfg_shim(bsp_dir / "am_bsp.h")
+    if board.strip_display_include:
+        strip_display_include(bsp_dir / "am_bsp.h")
     root = destination_root if destination_root is not None else provider_sdk_root(train)
     destination = root / "boards" / board.name / "bsp"
     shutil.rmtree(destination, ignore_errors=True)
@@ -1173,8 +1178,23 @@ def source_patch_provenance(sdk_root: Path) -> dict | None:
         raise ValueError("unsupported source patch receipt schema_version")
     if git_commit(sdk_root, "HEAD^") != data["upstream_commit"]:
         raise ValueError("source patch receipt upstream does not match parent commit")
+    declared = [item["path"] for item in data["files"]]
+    delta = subprocess.check_output(
+        ["git", "-C", str(sdk_root), "diff", "HEAD^", "HEAD", "--name-only", "-z"]
+    ).decode().rstrip("\0").split("\0")
+    if len(set(declared)) != len(declared) or set(delta) != set(declared) | {SOURCE_PATCH_RECEIPT}:
+        raise ValueError("prepared commit contains undeclared source changes")
     for item in data["files"]:
-        path = sdk_root / item["path"]
+        name = item["path"]
+        before = subprocess.check_output(["git", "-C", str(sdk_root), "show", "HEAD^:" + name])
+        if hashlib.sha256(before).hexdigest() != item["before_sha256"]:
+            raise ValueError(f"source patch preimage differs from parent: {name}")
+        modes = [subprocess.check_output(
+            ["git", "-C", str(sdk_root), "ls-tree", ref, "--", name], text=True
+        ).split()[0] for ref in ("HEAD^", "HEAD")]
+        if modes[0] not in ("100644", "100755") or modes[0] != modes[1]:
+            raise ValueError(f"source patch changed file modes or types: {name}")
+        path = sdk_root / name
         if not path.resolve().is_relative_to(sdk_root.resolve()) or path.is_symlink():
             raise ValueError("invalid source patch receipt path")
         if hashlib.sha256(path.read_bytes()).hexdigest() != item["after_sha256"]:

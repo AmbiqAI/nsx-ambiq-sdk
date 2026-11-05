@@ -188,3 +188,37 @@ def test_provenance_allows_only_exact_build_adaptations(source, repo_root):
     header.write_text(header.read_text() + "unrelated edit\n")
     with pytest.raises(ValueError, match="unexpected tracked changes"):
         builder.source_patch_provenance(output)
+
+
+def test_provenance_rejects_amended_extra_source(source, repo_root):
+    helper, repo, patchset, output, _ = source
+    helper.prepare(repo, patchset, output)
+    (output / "extra.c").write_text("extra source\n")
+    helper.git(output, "add", "extra.c")
+    helper.git(output, "commit", "--amend", "--no-edit")
+    builder = load(repo_root, "build_ambiqsuite")
+    with pytest.raises(ValueError, match="undeclared source changes"):
+        builder.source_patch_provenance(output)
+
+
+def test_fresh_staging_matches_build_adaptations(repo_root, tmp_path, monkeypatch):
+    builder = load(repo_root, "build_ambiqsuite")
+    monkeypatch.setattr(builder, "ensure_bsp_pins", lambda *args: None)
+    monkeypatch.setattr(builder, "ensure_generated_makefile", lambda *args: None)
+    source = tmp_path / "source"
+    first, second = tmp_path / "first", tmp_path / "second"
+    train = builder.TRAINS["stable"]
+    for board in train.boards:
+        if not (board.inject_gpio_pincfg_shim or board.strip_display_include):
+            continue
+        header = source / "boards" / board.name / "bsp" / "am_bsp.h"
+        header.parent.mkdir(parents=True)
+        header.write_text('#include "am_devices.h"\n#include "am_devices_display_generic.h"\n')
+        builder.promote_board_headers(train, "test", source, board, destination_root=first)
+        if board.inject_gpio_pincfg_shim:
+            assert builder.GPIO_PINCFG_SHIM in header.read_text()
+        if board.strip_display_include:
+            assert "am_devices_display_generic.h" not in header.read_text()
+        builder.promote_board_headers(train, "test", source, board, destination_root=second)
+        relative = header.relative_to(source)
+        assert (first / relative).read_bytes() == (second / relative).read_bytes()
