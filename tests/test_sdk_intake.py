@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import sys
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -365,3 +366,39 @@ def test_promoted_payload_verification_fails_closed_on_degenerate_manifests(
     manifest.write_text("        sha256: " + "0" * 64 + "\n", encoding="utf-8")
     with pytest.raises(helper.ArtifactManifestMismatch, match="unpaired"):
         helper.verify_promoted_manifest_agreement(root)
+
+
+@pytest.mark.parametrize("matching", [False, True])
+def test_materialize_existing_worktree_checks_requested_commit(repo_root, tmp_path, monkeypatch, matching):
+    helper = load_build_ambiqsuite(repo_root)
+    source = tmp_path / "source"
+    source.mkdir()
+
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(source), *args], text=True).strip()
+
+    git("init", "-q")
+    git("config", "user.name", "Intake Test")
+    git("config", "user.email", "intake@example.invalid")
+    (source / "mcu").mkdir()
+    (source / "boards").mkdir()
+    (source / "mcu" / "input").write_text("old")
+    (source / "boards" / "input").write_text("board")
+    git("add", ".")
+    git("commit", "-qm", "old")
+    old = git("rev-parse", "HEAD")
+    (source / "mcu" / "input").write_text("new")
+    git("commit", "-qam", "new")
+    new = git("rev-parse", "HEAD")
+    worktree = tmp_path / "worktree"
+    git("worktree", "add", "--detach", str(worktree), new if matching else old)
+    calls = []
+    monkeypatch.setattr(helper, "ensure_worktree_submodules", lambda path: calls.append(path))
+    if matching:
+        assert helper.materialize_git_ref(source, new, worktree, force=False) == worktree
+        assert calls == [worktree]
+    else:
+        with pytest.raises(ValueError, match="use a new --source-worktree-dir"):
+            helper.materialize_git_ref(source, new, worktree, force=False)
+        assert calls == []
+        assert subprocess.check_output(["git", "-C", str(worktree), "rev-parse", "HEAD"], text=True).strip() == old
