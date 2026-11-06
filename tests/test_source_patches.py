@@ -258,7 +258,8 @@ def test_missing_marker_rejects_prepared_manifest(source, repo_root, tmp_path, u
 
 
 @pytest.mark.parametrize("same_source", [False, True])
-def test_concurrent_prepared_sources_cannot_claim_same_version(repo_root, tmp_path, monkeypatch, same_source):
+@pytest.mark.parametrize("unpatched", [False, True])
+def test_concurrent_prepared_sources_cannot_claim_same_version(repo_root, tmp_path, monkeypatch, same_source, unpatched):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier, local
 
@@ -277,7 +278,8 @@ def test_concurrent_prepared_sources_cannot_claim_same_version(repo_root, tmp_pa
         return result
 
     monkeypatch.setattr(Path, "exists", simultaneous_absence)
-    monkeypatch.setattr(builder, "source_patch_provenance", lambda path: {"source": str(path)})
+    monkeypatch.setattr(builder, "source_patch_provenance",
+                        lambda path: None if unpatched and str(path) == "source-a" else {"source": str(path)})
     monkeypatch.setattr(builder, "git_commit", lambda path, ref: str(path))
 
     def claim(name):
@@ -311,7 +313,7 @@ def test_existing_manifest_must_match_binding(source, repo_root, tmp_path):
         builder.bind_source_artifacts(artifacts, output, commit)
 
 
-def test_legacy_manifest_needs_no_patch_marker(source, repo_root, tmp_path):
+def test_legacy_manifest_acquires_unpatched_marker(source, repo_root, tmp_path):
     helper, repo, _, _, data = source
     builder = load(repo_root, "build_ambiqsuite")
     artifacts = tmp_path / "legacy"
@@ -320,4 +322,5 @@ def test_legacy_manifest_needs_no_patch_marker(source, repo_root, tmp_path):
         "source_commit": data["upstream_commit"]}}))
     (artifacts / "test.a").write_bytes(b"legacy archive")
     builder.bind_source_artifacts(artifacts, repo, data["upstream_commit"])
-    assert not (artifacts / "source-patches.json").exists()
+    assert json.loads((artifacts / "source-patches.json").read_text()) == {
+        "source_commit": data["upstream_commit"], "source_patch_provenance": None}

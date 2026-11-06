@@ -1256,13 +1256,18 @@ def bind_source_artifacts(root: Path, sdk_root: Path, source_commit: str | None)
         if (recorded.get("source_commit") != source_commit
                 or recorded["source_patch_provenance"] != provenance):
             raise ValueError("artifact manifest belongs to a different prepared source; use a new version")
-    if provenance is None and not marker.exists():
-        return
-    if provenance is None or source_commit != git_commit(sdk_root, "HEAD"):
+    if provenance is not None and source_commit != git_commit(sdk_root, "HEAD"):
         raise ValueError("patched artifacts require the prepared git source commit")
     identity = {"source_commit": source_commit, "source_patch_provenance": provenance}
+    if source_commit is None:
+        identity["source_root"] = str(sdk_root.resolve())
+    if recorded is not None and (recorded.get("source_commit") != source_commit
+                                 or recorded.get("source_patch_provenance") != provenance):
+        raise ValueError("artifact manifest belongs to a different source; use a new version")
     if not marker.exists():
-        if any(root.rglob("*.a")):
+        # Legacy unpatched archives may acquire a claim only with a matching manifest.
+        legacy = provenance is None and recorded is not None
+        if any(root.rglob("*.a")) and not legacy:
             raise ValueError("existing archives have no prepared-source provenance; use a new version")
         root.mkdir(parents=True, exist_ok=True)
         # Publish complete bytes without replacing a concurrent build's claim.
