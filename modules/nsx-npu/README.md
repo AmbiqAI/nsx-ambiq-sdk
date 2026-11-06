@@ -71,8 +71,8 @@ publish a fixed 1 µs virtual clock scaled at the tap rate that is live at each
 read, so reconfiguring or clearing STIMER — before, between, or during
 inferences — never rescales an in-flight deadline.
 
-The current AT110 register map no longer defines selector 11 (formerly the
-16 MHz HFRC tap). It is treated as an unknown rate, like the CTIMER-fed taps;
+The current AT110 register map does not define selector 11.
+It is treated as an unknown rate, like the CTIMER-fed taps;
 the default remains selector 2. FPGA rate calibration still requires hardware
 validation and is not established by a successful compile.
 
