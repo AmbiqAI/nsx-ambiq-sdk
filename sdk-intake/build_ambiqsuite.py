@@ -1264,6 +1264,11 @@ def bind_source_artifacts(root: Path, sdk_root: Path, source_commit: str | None)
     if recorded is not None and (recorded.get("source_commit") != source_commit
                                  or recorded.get("source_patch_provenance") != provenance):
         raise ValueError("artifact manifest belongs to a different source; use a new version")
+    if recorded is not None and source_commit is None:
+        recorded_root = recorded.get("source_root")
+        if (not isinstance(recorded_root, str) or not recorded_root
+                or (repo_root() / recorded_root).resolve() != sdk_root.resolve()):
+            raise ValueError("artifact manifest source directory is missing or different; use a new version")
     if not marker.exists():
         # Legacy unpatched archives may acquire a claim only with a matching manifest.
         legacy = provenance is None and recorded is not None

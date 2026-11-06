@@ -324,3 +324,26 @@ def test_legacy_manifest_acquires_unpatched_marker(source, repo_root, tmp_path):
     builder.bind_source_artifacts(artifacts, repo, data["upstream_commit"])
     assert json.loads((artifacts / "source-patches.json").read_text()) == {
         "source_commit": data["upstream_commit"], "source_patch_provenance": None}
+
+
+@pytest.mark.parametrize("recorded_root", ["absolute", "relative", "different", "missing"])
+def test_legacy_directory_identity(repo_root, tmp_path, monkeypatch, recorded_root):
+    builder = load(repo_root, "build_ambiqsuite")
+    sdk_root = tmp_path / "sdk"
+    sdk_root.mkdir()
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    monkeypatch.setattr(builder, "repo_root", lambda: tmp_path)
+    sdk = {}
+    if recorded_root != "missing":
+        sdk["source_root"] = {"absolute": str(sdk_root), "relative": "sdk",
+                              "different": "other"}[recorded_root]
+    (artifacts / "manifest.yaml").write_text(yaml.safe_dump({"sdk": sdk}))
+    (artifacts / "legacy.a").write_bytes(b"archive")
+    if recorded_root in ("different", "missing"):
+        with pytest.raises(ValueError, match="source directory is missing or different"):
+            builder.bind_source_artifacts(artifacts, sdk_root, None)
+        assert not (artifacts / "source-patches.json").exists()
+    else:
+        builder.bind_source_artifacts(artifacts, sdk_root, None)
+        assert json.loads((artifacts / "source-patches.json").read_text())["source_root"] == str(sdk_root)
