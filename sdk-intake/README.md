@@ -249,3 +249,11 @@ use a new output directory for a corrected attempt. Patches must modify only
 declared existing regular files, without mode changes. Remove or replace the
 patchset deliberately after upstream absorbs the fixes; mismatches fail rather
 than being silently skipped.
+
+Build and intake commands require PyYAML from the repository's `ci` dependency
+group; use `uv run --group ci python sdk-intake/build_ambiqsuite.py ...` when
+running outside an already provisioned environment. Prepared artifact manifests
+require their matching source marker even for direct `--promote-only` operations.
+The marker is published atomically without replacement, so different prepared
+sources cannot claim the same version directory concurrently. Use separate
+source worktrees for parallel builds; sharing one mutable build tree is unsupported.

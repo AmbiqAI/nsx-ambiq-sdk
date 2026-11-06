@@ -239,3 +239,85 @@ def test_provenance_checks_committed_postimage(source, repo_root):
     builder = load(repo_root, "build_ambiqsuite")
     with pytest.raises(ValueError, match="committed source postimage"):
         builder.source_patch_provenance(output)
+
+
+@pytest.mark.parametrize("use_prepared_source", [False, True])
+def test_missing_marker_rejects_prepared_manifest(source, repo_root, tmp_path, use_prepared_source):
+    helper, repo, patchset, output, data = source
+    commit = helper.prepare(repo, patchset, output)
+    builder = load(repo_root, "build_ambiqsuite")
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    (artifacts / "test.a").write_bytes(b"prepared archive")
+    (artifacts / "manifest.yaml").write_text(yaml.safe_dump({"sdk": {
+        "source_commit": commit, "source_patch_provenance": data}}))
+    with pytest.raises(ValueError, match="provenance.*missing"):
+        builder.bind_source_artifacts(artifacts, output if use_prepared_source else repo,
+                                      commit if use_prepared_source else data["upstream_commit"])
+    assert not (artifacts / "source-patches.json").exists()
+
+
+@pytest.mark.parametrize("same_source", [False, True])
+def test_concurrent_prepared_sources_cannot_claim_same_version(repo_root, tmp_path, monkeypatch, same_source):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier, local
+
+    builder = load(repo_root, "build_ambiqsuite")
+    root = tmp_path / "artifacts"
+    marker = root / "source-patches.json"
+    barrier = Barrier(2)
+    thread_state = local()
+    exists = Path.exists
+
+    def simultaneous_absence(path):
+        result = exists(path)
+        if path == marker and not getattr(thread_state, "checked", False):
+            thread_state.checked = True
+            barrier.wait(timeout=10)
+        return result
+
+    monkeypatch.setattr(Path, "exists", simultaneous_absence)
+    monkeypatch.setattr(builder, "source_patch_provenance", lambda path: {"source": str(path)})
+    monkeypatch.setattr(builder, "git_commit", lambda path, ref: str(path))
+
+    def claim(name):
+        try:
+            builder.bind_source_artifacts(root, Path(name), name)
+            return name
+        except ValueError:
+            return None
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(claim, ["source-a", "source-a" if same_source else "source-b"]))
+    winners = [value for value in results if value is not None]
+    assert len(winners) == (2 if same_source else 1)
+    assert json.loads(marker.read_text())["source_commit"] == winners[0]
+    assert sorted(p.name for p in root.iterdir()) == ["source-patches.json"]
+
+
+def test_existing_manifest_must_match_binding(source, repo_root, tmp_path):
+    helper, repo, patchset, output, data = source
+    commit = helper.prepare(repo, patchset, output)
+    builder = load(repo_root, "build_ambiqsuite")
+    artifacts = tmp_path / "artifacts"
+    builder.bind_source_artifacts(artifacts, output, commit)
+    manifest = {"sdk": {"source_commit": commit, "source_patch_provenance": data}}
+    path = artifacts / "manifest.yaml"
+    path.write_text(yaml.safe_dump(manifest))
+    builder.bind_source_artifacts(artifacts, output, commit)
+    manifest["sdk"]["source_commit"] = "0" * 40
+    path.write_text(yaml.safe_dump(manifest))
+    with pytest.raises(ValueError, match="manifest belongs to a different"):
+        builder.bind_source_artifacts(artifacts, output, commit)
+
+
+def test_legacy_manifest_needs_no_patch_marker(source, repo_root, tmp_path):
+    helper, repo, _, _, data = source
+    builder = load(repo_root, "build_ambiqsuite")
+    artifacts = tmp_path / "legacy"
+    artifacts.mkdir()
+    (artifacts / "manifest.yaml").write_text(yaml.safe_dump({"sdk": {
+        "source_commit": data["upstream_commit"]}}))
+    (artifacts / "test.a").write_bytes(b"legacy archive")
+    builder.bind_source_artifacts(artifacts, repo, data["upstream_commit"])
+    assert not (artifacts / "source-patches.json").exists()

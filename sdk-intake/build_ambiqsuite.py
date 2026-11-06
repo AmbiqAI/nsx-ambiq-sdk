@@ -10,9 +10,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 from dataclasses import dataclass, replace
 from pathlib import Path
+
+import yaml
 
 
 # Clang-family (ATfE/ACfE) FPU spellings. GCC derives CPU/FPU/float-abi from the
@@ -1237,19 +1240,46 @@ def source_patch_provenance(sdk_root: Path) -> dict | None:
 def bind_source_artifacts(root: Path, sdk_root: Path, source_commit: str | None) -> None:
     provenance = source_patch_provenance(sdk_root)
     marker = root / "source-patches.json"
+    manifest = root / "manifest.yaml"
+    recorded = None
+    if manifest.is_file():
+        try:
+            document = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+            recorded = document["sdk"]
+            if not isinstance(recorded, dict):
+                raise ValueError("sdk must be a mapping")
+        except (yaml.YAMLError, KeyError, TypeError, ValueError) as error:
+            raise ValueError(f"invalid artifact manifest: {manifest}") from error
+    if recorded is not None and recorded.get("source_patch_provenance") is not None:
+        if not marker.exists():
+            raise ValueError("prepared archive provenance marker is missing; use a new version")
+        if (recorded.get("source_commit") != source_commit
+                or recorded["source_patch_provenance"] != provenance):
+            raise ValueError("artifact manifest belongs to a different prepared source; use a new version")
     if provenance is None and not marker.exists():
         return
     if provenance is None or source_commit != git_commit(sdk_root, "HEAD"):
         raise ValueError("patched artifacts require the prepared git source commit")
     identity = {"source_commit": source_commit, "source_patch_provenance": provenance}
-    if marker.exists():
-        if json.loads(marker.read_text()) != identity:
-            raise ValueError("artifact directory belongs to a different prepared source; use a new version")
-    else:
+    if not marker.exists():
         if any(root.rglob("*.a")):
             raise ValueError("existing archives have no prepared-source provenance; use a new version")
         root.mkdir(parents=True, exist_ok=True)
-        marker.write_text(json.dumps(identity, sort_keys=True, indent=2) + "\n")
+        # Publish complete bytes without replacing a concurrent build's claim.
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=root,
+                                         prefix=".source-patches-", delete=False) as stream:
+            temporary = Path(stream.name)
+            try:
+                stream.write(json.dumps(identity, sort_keys=True, indent=2) + "\n")
+                stream.close()
+                try:
+                    os.link(temporary, marker)
+                except FileExistsError:
+                    pass
+            finally:
+                temporary.unlink()
+    if json.loads(marker.read_text()) != identity:
+        raise ValueError("artifact directory belongs to a different prepared source; use a new version")
 
 
 def write_manifest(
