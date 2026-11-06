@@ -91,6 +91,15 @@ if(DEFINED NSX_AMBIQ_HAL_MCU_DIR)
 endif()
 list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES ${NSX_AMBIQ_INSTALL_BASE}/utils)
 
+# AT110's peripheral HAL embeds control blocks from its bundled bare-metal
+# CMSIS-RTOS port. Expose the matching headers only for that MCU payload.
+if(EXISTS "${NSX_AMBIQ_HAL_DIR}/cmsis_os2/cmsis_types.h")
+    nsx_assert_directory_exists("${NSX_AMBIQ_HAL_DIR}/cmsis_os2")
+    list(APPEND NSX_AMBIQ_HAL_BUILD_INCLUDES ${NSX_AMBIQ_HAL_DIR}/cmsis_os2)
+    list(APPEND NSX_AMBIQ_HAL_INSTALL_INCLUDES
+        ${NSX_AMBIQ_INSTALL_BASE}/mcu/${NSX_AMBIQ_MCU_INSTALL_NAME}/hal/cmsis_os2)
+endif()
+
 set(NSX_AMBIQ_HAL_INCLUDE_ARGS "")
 foreach(p IN LISTS NSX_AMBIQ_HAL_BUILD_INCLUDES)
     list(APPEND NSX_AMBIQ_HAL_INCLUDE_ARGS "$<BUILD_INTERFACE:${p}>")

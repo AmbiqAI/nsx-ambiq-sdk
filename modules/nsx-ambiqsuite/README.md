@@ -72,3 +72,12 @@ adding NSX-owned integration files outside the imported vendor tree.
 Licensing for the imported SDK content follows the upstream AmbiqSuite terms.
 See [`UPSTREAM-LICENSE-NOTICE.md`](UPSTREAM-LICENSE-NOTICE.md) for the
 provenance note for this repo.
+
+### AT110 peripheral runtime
+
+The AT110 HAL archives include AmbiqSuite's bare-metal CMSIS-RTOS interface
+implementation. Its matching `cmsis_os2.h` and `cmsis_types.h` ship under
+`mcu/atomiq110/hal/cmsis_os2` and are exposed only by that MCU's HAL target.
+These control-block layouts are part of the prebuilt HAL ABI; substituting
+another RTOS port's definitions is not supported. This does not qualify the
+bare-metal implementation as a scheduler or as general interrupt-safe locking.

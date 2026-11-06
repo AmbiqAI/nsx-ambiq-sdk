@@ -42,6 +42,8 @@ class PartBuild:
     # it ships gcc+atfe only). The provider train's toolchains form the union; this
     # filters which (part, toolchain) pairs are actually built and published.
     toolchains: tuple[str, ...] = ()
+    # Headers for the peripheral runtime already compiled into this part's HAL.
+    peripheral_runtime_headers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -175,7 +177,10 @@ TRAINS: dict[str, TrainSpec] = {
             # AT110 (Atomiq), Cortex-M55. Realized today only as an FPGA; upstream
             # mcu/atomiq110/am_mcu_apollo.h hardcodes ATOMIQ11X_FPGA, so the HAL is
             # built in FPGA mode with no extra flags.
-            PartBuild("atomiq110"),
+            PartBuild("atomiq110", peripheral_runtime_headers=(
+                "CMSIS/ARM/Include/cmsis_os2.h",
+                "third_party/cmsis_os2/baremetal_port/cmsis_types.h",
+            )),
         ),
         boards=(
             BoardBuild("apollo330mP_evb", "apollo330P"),
@@ -759,6 +764,9 @@ def promote_part_headers(
     destination = root / "mcu" / part.name
     shutil.rmtree(destination, ignore_errors=True)
     copy_matching_files(sdk_root / "mcu" / part.name, destination, PROMOTED_FILE_SUFFIXES, banner_version=version)
+    for relative in part.peripheral_runtime_headers:
+        copy_file(sdk_root / relative, destination / "hal" / "cmsis_os2" / Path(relative).name,
+                  banner_version=version)
 
 
 def promote_board_headers(
