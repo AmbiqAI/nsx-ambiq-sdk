@@ -104,7 +104,7 @@ def test_only_part_keeps_full_train_for_promotion(repo_root: Path, tmp_path: Pat
     # refuses to run without one, so provide it.
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
-    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n", encoding="utf-8")
+    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n  source_commit: deadbeef\n", encoding="utf-8")
     monkeypatch.setattr(helper, "artifact_root", lambda train, version: artifacts)
     # The full train's artifact set is treated as already complete on disk so the
     # promotion guard passes without depending on locally-built (gitignored) trees.
@@ -181,7 +181,7 @@ def test_promote_only_reuses_existing_manifest(repo_root: Path, tmp_path: Path, 
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
     # A manifest from the original full build already exists on disk.
-    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n", encoding="utf-8")
+    (artifacts / "manifest.yaml").write_text("sdk:\n  provider: ambiqsuite\n  source_commit: deadbeef\n", encoding="utf-8")
     wrote: list[str] = []
     promoted: list[str] = []
 

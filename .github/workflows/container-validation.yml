@@ -135,7 +135,7 @@ jobs:
               if [ "${SDK_TOOLCHAIN}" = acfe ] || [ "${SDK_TOOLCHAIN}" = all ]; then
                 "$ACFE_ROOT/bin/armlm" activate -code "$ARMLM_ACTIVATION_CODE"
               fi
-              uv run --no-project python sdk-intake/build_ambiqsuite.py \
+              UV_PROJECT_ENVIRONMENT=/tmp/nsx-venv uv run --group ci python sdk-intake/build_ambiqsuite.py \
                 --ambiqsuite-repo /ambiqsuite-repo \
                 --source-ref "${AMBIQSUITE_SOURCE_REF}" \
                 --force-source-ref \
