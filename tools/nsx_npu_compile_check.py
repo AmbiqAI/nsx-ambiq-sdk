@@ -130,6 +130,7 @@ def compile_flags(repo: Path, facts: dict[str, str | list[str]]) -> list[str]:
         sdk / "CMSIS" / "AmbiqMicro" / "Include",
         mcu,
         mcu / "hal",
+        mcu / "hal" / "cmsis_os2",
         mcu / "hal" / "mcu",
         sdk / "utils",
     ):
