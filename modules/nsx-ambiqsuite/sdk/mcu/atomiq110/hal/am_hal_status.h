@@ -59,7 +59,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_STATUS_H
@@ -75,17 +75,17 @@ extern "C"
 //
 typedef enum
 {
-AM_HAL_STATUS_SUCCESS,
-AM_HAL_STATUS_FAIL,
-AM_HAL_STATUS_INVALID_HANDLE,
-AM_HAL_STATUS_IN_USE,
-AM_HAL_STATUS_TIMEOUT,
-AM_HAL_STATUS_OUT_OF_RANGE,
-AM_HAL_STATUS_INVALID_ARG,
-AM_HAL_STATUS_INVALID_OPERATION,
-AM_HAL_STATUS_MEM_ERR,
-AM_HAL_STATUS_HW_ERR,
-AM_HAL_STATUS_MODULE_SPECIFIC_START = 0x08000000,
+    AM_HAL_STATUS_SUCCESS,
+    AM_HAL_STATUS_FAIL,
+    AM_HAL_STATUS_INVALID_HANDLE,
+    AM_HAL_STATUS_IN_USE,
+    AM_HAL_STATUS_TIMEOUT,
+    AM_HAL_STATUS_OUT_OF_RANGE,
+    AM_HAL_STATUS_INVALID_ARG,
+    AM_HAL_STATUS_INVALID_OPERATION,
+    AM_HAL_STATUS_MEM_ERR,
+    AM_HAL_STATUS_HW_ERR,
+    AM_HAL_STATUS_MODULE_SPECIFIC_START = 0x08000000,
 } am_hal_status_e;
 
 #ifdef __cplusplus
@@ -100,4 +100,3 @@ AM_HAL_STATUS_MODULE_SPECIFIC_START = 0x08000000,
 //! @}
 //
 //*****************************************************************************
-

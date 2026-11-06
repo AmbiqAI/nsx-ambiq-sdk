@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -31,6 +31,7 @@
 #include "am_devices_led.h"
 #include "am_devices_button.h"
 #include "am_devices_display_types.h"
+#include "am_bsp_xspi_dev.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -50,30 +51,12 @@ extern am_devices_display_hw_config_t g_sDispCfg;
 // Definition of External Clock Sources for the board
 //
 //*****************************************************************************
-// #define AM_BSP_XTAL_HS_MODE         AM_HAL_CLKMGR_XTAL_HS_MODE_XTAL
-// #define AM_BSP_XTAL_HS_FREQ_HZ      (48000000U)
-// #define AM_BSP_XTAL_LS_MODE         AM_HAL_CLKMGR_XTAL_LS_MODE_XTAL
-// #define AM_BSP_XTAL_LS_FREQ_HZ      (32768U)
-// #define AM_BSP_EXTREF_CLK_FREQ_HZ   (0U)
+#define AM_BSP_XTAL_HS_MODE         AM_HAL_CLKMGR_XTAL_HS_MODE_XTAL
+#define AM_BSP_XTAL_HS_FREQ_HZ      (6000000U)
+#define AM_BSP_XTAL_LS_MODE         AM_HAL_CLKMGR_XTAL_LS_MODE_XTAL
+#define AM_BSP_XTAL_LS_FREQ_HZ      (32768U)
+#define AM_BSP_EXTREF_CLK_FREQ_HZ   (1536000U)
 
-//*****************************************************************************
-//
-// MSPI NAND FLASH definitions.
-//
-//*****************************************************************************
-#define AM_BSP_MSPI_NAND_FLASH_DEVICE_NUM   1
-
-#define AM_BSP_MSPI_NAND_FLASH_U31
-#define AM_BSP_MSPI_NAND_FLASH_U31_DESIGNATOR   31
-#define AM_BSP_MSPI_NAND_FLASH_U31_MODULE       0
-
-typedef struct
-{
-    uint32_t    ui32Designator;
-    uint32_t    ui32Module;
-}am_bsp_nand_flash_t;
-
-extern const am_bsp_nand_flash_t bsp_nand_flash_devices[];
 
 // #### INTERNAL BEGIN ####
 //
@@ -130,27 +113,10 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 
 //*****************************************************************************
 //
-// MSPI FLASH definitions.
-//
-//*****************************************************************************
-#define AM_BSP_MSPI_FLASH_MODULE            2
-#define AM_BSP_MSPI_FLASH_DEVICE_IS25WX064
-//#define AM_BSP_MSPI_FLASH_DEVICE_ATXP032
-
-//*****************************************************************************
-//
 // Touch interface definitions.
 //
 //*****************************************************************************
 #define AM_BSP_TP_IOM_MODULE                 6
-
-//*****************************************************************************
-//
-// MSPI PSRAM definitions.
-//
-//*****************************************************************************
-#define AM_BSP_MSPI_PSRAM_DEVICE_APS25616N
-#define AM_BSP_MSPI_PSRAM_MODULE_OCTAL_DDR_CE   AM_HAL_MSPI_FLASH_OCTAL_DDR_CE0
 
 //*****************************************************************************
 //
@@ -186,11 +152,6 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 #define TEST_IOS_CNTLR_MODULE           1
 #define am_iomaster_isr                 am_iomaster1_isr
 #define IOMSTR_IQRn                     IOMSTR1_IRQn
-
-//
-// ios_fullduplex
-//
-#define IOM_DUPLEX_TEST_MODULE          1
 
 //
 // ios_device and ios_controller pins
@@ -365,7 +326,16 @@ extern void am_bsp_iom_3wire_pins_enable(uint32_t ui32Module, am_hal_iom_mode_e 
 extern void am_bsp_iom_3wire_pins_disable(uint32_t ui32Module, am_hal_iom_mode_e eIOMMode);
 extern void am_bsp_ios_pins_enable(uint32_t ui32Module, uint32_t ui32IOSMode);
 extern void am_bsp_ios_pins_disable(uint32_t ui32Module, uint32_t ui32IOSMode);
-
+extern void am_bsp_xspi_bridge_pins_enable(am_hal_xspi_bridge_xmode_e eXspiMode
+// #### INTERNAL BEGIN ####
+                                         , bool bDQSEnable
+// #### INTERNAL END ####
+);
+extern void am_bsp_xspi_bridge_pins_disable(am_hal_xspi_bridge_xmode_e eXspiMode
+// #### INTERNAL BEGIN ####
+                                          , bool bDQSEnable
+// #### INTERNAL END ####
+);
 
 //*****************************************************************************
 //
@@ -510,6 +480,24 @@ extern void am_bsp_ckerr(int32_t i32ErrorCount);
 
 //*****************************************************************************
 //
+//! @brief Set up the I3C SCL and SDA pins for a module.
+//!
+//! @param ui32Module - I3C module number (0, 1, or 2).
+//
+//*****************************************************************************
+extern void am_bsp_i3c_pins_enable(uint32_t ui32Module);
+
+//*****************************************************************************
+//
+//! @brief Disable the I3C SCL and SDA pins for a module.
+//!
+//! @param ui32Module - I3C module number (0, 1, or 2).
+//
+//*****************************************************************************
+extern void am_bsp_i3c_pins_disable(uint32_t ui32Module);
+
+//*****************************************************************************
+//
 //! @brief Set up the SDIO pins based on module and bus width.
 //!
 //! @param ui8SdioNum - SDIO/eMMC module number.
@@ -520,12 +508,97 @@ extern void am_bsp_sdio_pins_enable(uint8_t ui8SdioNum, uint8_t ui8BusWidth);
 
 //*****************************************************************************
 //
+//! @brief Disable the SDIO pins based on module and bus width.
+//!
+//! @param ui8SdioNum - SDIO/eMMC module number.
+//! @param ui8BusWidth - SDIO/eMMC bus width.
+//
+//*****************************************************************************
+extern void am_bsp_sdio_pins_disable(uint8_t ui8SdioNum, uint8_t ui8BusWidth);
+
+//*****************************************************************************
+//
 //! @brief Reset the SDIO peripheral interface for a module.
 //!
 //! @param ui32Module - SDIO/eMMC module number.
 //
 //*****************************************************************************
 extern void am_bsp_sdio_reset(uint32_t ui32Module);
+
+//*****************************************************************************
+//
+//! @brief  Set up the SD's CD pin.
+//!
+//! @param ui8SdioNum - SDIO module number (0 or 1)
+//! @param bEnable - Enable or disable card detection.
+//!
+//! This function configure SD's CD pin when enable or disable sd card detection.
+//
+//*****************************************************************************
+extern void am_bsp_sd_cd_pin_enable(uint8_t ui8SdioNum, bool bEnable);
+
+//*****************************************************************************
+//
+//! @brief  Set up the SD's WP pin.
+//!
+//! @param ui8SdioNum - SDIO module number (0 or 1)
+//! @param bEnable - Enable or disable write protect detection.
+//!
+//! This function configure SD's WP pin to detect sd card write protection.
+//
+//*****************************************************************************
+extern void am_bsp_sd_wp_pin_enable(uint8_t ui8SdioNum, bool bEnable);
+//! @brief Set up the XSPI pins based on the external device io mode.
+//!
+//! @param ui32Module  - XSPI module
+//! @param ui32DevIdx  - Device index CE0/CE1
+//! @param eXspiIoMode - XSPI I/O mode
+//!
+//! This function configures up to 16-pins for XSPI serial, dual, quad,
+//! dual-quad, octal and hex operation.
+//!
+//! @return None.
+//
+//*****************************************************************************
+extern void
+am_bsp_xspi_pins_enable(uint32_t ui32Module, uint32_t ui32DevIdx, am_hal_xspimc_io_mode_e eXspiIoMode);
+
+//*****************************************************************************
+//
+//! @brief Disable the XSPI pins based on the external device io mode.
+//!
+//! @param ui32Module  - XSPI module
+//! @param ui32DevIdx  - Device index CE0/CE1
+//! @param eXspiIoMode - XSPI I/O mode
+//!
+//! This function deconfigures up to 16-pins for XSPI serial, dual, quad,
+//! dual-quad, octal and hex operation.
+//!
+//! @return None.
+//
+//*****************************************************************************
+extern void
+am_bsp_xspi_pins_disable(uint32_t ui32Module, uint32_t ui32DevIdx, am_hal_xspimc_io_mode_e eXspiIoMode);
+
+//*****************************************************************************
+//
+//! @brief Get the xSPI device reset pin and pincfg.
+//!
+//! @param ui32Module  - XSPI module
+//! @param ui32DevIdx  - Device index CE0/CE1
+//! @param pPinnum     - Reset pin number
+//! @param pPincfg     - Reset pin config
+//!
+//! This function get the GPIO pin number and configuration for a specific xSPI device
+//!
+//! @return None.
+//
+//*****************************************************************************
+extern void
+am_bsp_xspi_reset_pincfg_get(uint32_t ui32Module, uint32_t ui32DevIdx,
+                             uint32_t *pPinnum,
+                             am_hal_gpio_pincfg_t *pPincfg);
+
 #endif // AM_BSP_H
 //*****************************************************************************
 //

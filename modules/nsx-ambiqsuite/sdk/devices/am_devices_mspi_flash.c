@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -78,11 +78,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Serial_CE0_MSPIConfig =
     .bSeparateIO          = true,
     .bTurnaround          = true,
 #if !defined(AM_PART_APOLLO3)
-    // #### INTERNAL BEGIN ####
-    // TODO - Fixme.  What is the proper value? (ui8WriteLatency = 0?)
-    // TODO - Fixme.  What is the proper value? (bEnWriteLatency = false?)
-    // TODO - Fixme.  What is the proper value? (.ui16DMATimeLimit = 0?)
-    // #### INTERNAL END ####
     .ui8WriteLatency      = 0,
     .bEnWriteLatency      = false,
     .bEmulateDDR          = false,
@@ -216,11 +211,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_CE0_MSPIConfig =
     .bSeparateIO          = false,
     .bTurnaround          = true,
 #if !defined(AM_PART_APOLLO3)
-    // #### INTERNAL BEGIN ####
-    // TODO - Fixme.  What is the proper value? (ui8WriteLatency = 0?)
-    // TODO - Fixme.  What is the proper value? (bEnWriteLatency = false?)
-    // TODO - Fixme.  What is the proper value? (ui16DMATimeLimit = 0?)
-    // #### INTERNAL END ####
     .ui8WriteLatency      = 0,
     .bEnWriteLatency      = false,
     .bEmulateDDR          = false,
@@ -246,9 +236,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_CE1_MSPIConfig =
   .ui8TurnAround        = 5,
 #elif defined (MACRONIX_MX25U12835F)
   .ui8TurnAround        = 4,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
   .eAddrCfg             = AM_HAL_MSPI_ADDR_3_BYTE,
   .eInstrCfg            = AM_HAL_MSPI_INSTR_1_BYTE,
@@ -261,9 +248,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_CE1_MSPIConfig =
   .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
   .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_QUAD_IO_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
   .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
   .ui32TCBSize          = 0,
@@ -290,11 +274,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Octal_CE0_MSPIConfig =
   .bSeparateIO          = false,
   .bTurnaround          = true,
 #if !defined(AM_PART_APOLLO3)
-    // #### INTERNAL BEGIN ####
-    // TODO - Fixme.  What is the proper value? (ui8WriteLatency = 0?)
-    // TODO - Fixme.  What is the proper value? (bEnWriteLatency = false?)
-    // TODO - Fixme.  What is the proper value? (ui16DMATimeLimit = 0?)
-    // #### INTERNAL END ####
     .ui8WriteLatency      = 0,
     .bEnWriteLatency      = false,
     .bEmulateDDR          = false,
@@ -408,9 +387,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Dual_1_2_2_CE0_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_DUAL_IO_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -445,9 +421,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Dual_1_1_2_CE0_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_DUAL_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -487,9 +460,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_1_1_4_CE0_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_QUAD_IO_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -529,9 +499,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_1_4_4_CE0_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_QUAD_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -566,9 +533,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Dual_1_2_2_CE1_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_DUAL_IO_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -603,9 +567,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Dual_1_1_2_CE1_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_DUAL_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -645,9 +606,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_1_1_4_CE1_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_QUAD_IO_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,
@@ -687,9 +645,6 @@ am_hal_mspi_dev_config_t MSPI_Flash_Quad_1_4_4_CE1_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_FAST_READ,
 #elif defined (CYPRESS_S25FS064S)
     .ui8ReadInstr         = AM_DEVICES_MSPI_FLASH_QUAD_READ,
-// #### INTERNAL BEGIN ####
-// TODO - Flag an error if another part.
-// #### INTERNAL END ####
 #endif
     .ui8WriteInstr        = AM_DEVICES_MSPI_FLASH_PAGE_PROGRAM,
     .ui32TCBSize          = 0,

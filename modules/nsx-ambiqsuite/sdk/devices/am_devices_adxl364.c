@@ -18,7 +18,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -172,9 +172,6 @@ int
 am_devices_adxl364_measurement_mode_set(void)
 {
 #ifdef NOTDEF
-// #### INTERNAL BEGIN ####
-    //fixme 364 does not need to set measurement mode separately
-// #### INTERNAL END ####
     uint32_t pui32Command[1];
     uint8_t *pui8Command;
 

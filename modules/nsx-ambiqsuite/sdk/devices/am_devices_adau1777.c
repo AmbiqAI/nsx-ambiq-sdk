@@ -66,7 +66,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include "am_devices_adau1777.h"
@@ -787,7 +787,7 @@ static uint32_t SIGMA_WRITE_REGISTER_BLOCK(uint8_t dev_addr, uint16_t reg,
 }
 
 uint32_t am_devices_adau1777_i2c_read(uint32_t dev_addr, uint16_t reg_addr,
-                                     uint32_t *p_buf, uint32_t size)
+                                      uint32_t *p_buf, uint32_t size)
 {
     am_hal_iom_transfer_t Transaction;
 
@@ -813,7 +813,7 @@ uint32_t am_devices_adau1777_i2c_read(uint32_t dev_addr, uint16_t reg_addr,
 }
 
 uint32_t am_devices_adau1777_i2c_write(uint32_t dev_addr, uint16_t reg_addr,
-                                      uint32_t *p_buf, uint32_t size)
+                                       uint32_t *p_buf, uint32_t size)
 {
     am_hal_iom_transfer_t Transaction;
 
@@ -844,7 +844,7 @@ uint32_t am_devices_adau1777_i2c_write(uint32_t dev_addr, uint16_t reg_addr,
 //
 // ****************************************************************************
 uint32_t am_devices_adau1777_i2c_init(uint32_t             ui32Module,
-                                     am_hal_iom_config_t *psIOMSettings)
+                                      am_hal_iom_config_t *psIOMSettings)
 {
     if (ui32Module > AM_REG_IOM_NUM_MODULES)
     {

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_AUDADC_H
@@ -957,16 +957,6 @@ extern uint32_t am_hal_audadc_interrupt_clear(void *pHandle, uint32_t ui32IntMas
 //
 //*****************************************************************************
 extern uint32_t am_hal_audadc_interrupt_service(void *pHandle, uint32_t ui32IntMask);
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-//! @brief Get number of entries currently in the FIFO.
-//
-//*****************************************************************************
-#if 0
-#define am_hal_audadc_fifo_count_get() AM_HAL_AUDADC_FIFO_COUNT(AUDADC->FIFO)
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

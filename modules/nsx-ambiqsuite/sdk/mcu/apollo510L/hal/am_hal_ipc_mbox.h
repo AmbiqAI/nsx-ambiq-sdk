@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -88,7 +88,7 @@ enum
     AM_HAL_IPC_MBOX_SIGNAL_MSG_RFXTAL_CONFIG_RSP,
     AM_HAL_IPC_MBOX_SIGNAL_MSG_IPC_SHM_CONFIG_REQ,
     AM_HAL_IPC_MBOX_SIGNAL_MSG_IPC_SHM_CONFIG_RSP,
-
+    AM_HAL_IPC_MBOX_SIGNAL_MSG_RSS_SLEEP_DURATION_NTF,
     AM_HAL_IPC_MBOX_SIGNAL_MSG_END
 };
 

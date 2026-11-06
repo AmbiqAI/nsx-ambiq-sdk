@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -202,14 +202,6 @@ extern "C"
 //             register in a multiple instance.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-/*
-#ifndef AM_CRITICAL_BEGIN
-#define AM_CRITICAL_BEGIN   uint32_t ui32Primask = am_hal_interrupt_master_disable()
-#define AM_CRITICAL_END     am_hal_interrupt_master_set(ui32Primask)
-#endif
-*/
-// #### INTERNAL END ####
 
 #define AM_REGan(module, instance, reg, operator, value)                    \
     AM_CRITICAL_BEGIN                                                       \

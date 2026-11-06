@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -70,7 +70,10 @@ am_devices_cooper_buffer(2) sLengthBytes;
 //
 //!
 //
-static am_devices_cooper_sbl_update_state_t gsSblUpdateState;
+static am_devices_cooper_sbl_update_state_t gsSblUpdateState =
+{
+    .bForceUpdateNeeded = false
+};
 
 //
 //!
@@ -1392,7 +1395,7 @@ bool iom_slave_read(void* pHandle, uint32_t* pBuf, uint32_t* psize)
     if (*psize > 0 )
     {
         PacketTrace((uint8_t*)msg, *psize);
-        if ( crc32 != msg->crc32 )
+        if ( crc32 != msg->msgCrc )
         {
             am_util_stdio_printf("iom_slave_read: CRC ERROR\r\n");
         }
@@ -1443,7 +1446,8 @@ void send_update(void* pHandle, uint32_t imgBlobSize)
     msg.imageSize = imgBlobSize;
     // Check if we are downloading a newer FW versiion
     if ((gsSblUpdateState.ui32CooperFWImageVersion < g_sFwImage.version)
-         || (gsSblUpdateState.ui32CooperVerRollBackConfig & 0x00000001))
+         || (gsSblUpdateState.ui32CooperVerRollBackConfig & 0x00000001)
+         || gsSblUpdateState.bForceUpdateNeeded)
     {
         msg.versionNumber = g_sFwImage.version;
     }
@@ -1611,9 +1615,6 @@ uint32_t am_devices_cooper_image_update_init(void* pHandle, uint32_t* pWorkBuf)
     // Check for the input data validity
     if (pHandle != NULL)
     {
-// #### INTERNAL BEGIN ####
-        // TODO: [A2SD-2206] for Rev B; Authenticate image using RSA Public Key
-// #### INTERNAL END ####
         // Initialize state machine
         gsSblUpdateState.ui32SblUpdateState = AM_DEVICES_COOPER_SBL_UPDATE_STATE_INIT;
         // Load the image address
@@ -1638,10 +1639,6 @@ uint32_t am_devices_cooper_image_update_init(void* pHandle, uint32_t* pWorkBuf)
         // Work buffer reuse non-blocking work buffer.
         //
         gsSblUpdateState.pWorkBuf = pWorkBuf;
-        //
-        // BLE controlller FW force update flag
-        //
-        gsSblUpdateState.bForceUpdateNeeded = false;
         // State is ready to go. Reset the cooper device
         return 0;
     }
@@ -2251,6 +2248,29 @@ uint32_t am_devices_cooper_reset_with_sbl_check(void* pHandle, am_devices_cooper
         am_util_stdio_printf("BLE Controller SBL Error 0x%x\r\n", u32SblStatus);
         return u32SblStatus;
     }
+}
+
+//*****************************************************************************
+//
+// Request Cooper SBL to force-update firmware on the next handshaking
+//
+//*****************************************************************************
+uint32_t am_devices_cooper_force_fw_update_enable(bool bEnable)
+{
+    if (bEnable)
+    {
+        if ( (g_sFwImage.pImageAddress == NULL)
+            || (g_sFwImage.imageSize == 0)
+            || (g_sFwImage.imageType != AM_DEVICES_COOPER_SBL_UPDATE_IMAGE_TYPE_FW) )
+        {
+            am_util_stdio_printf("No available image for force update\n");
+            return AM_DEVICES_COOPER_STATUS_ERROR;
+        }
+    }
+
+    gsSblUpdateState.bForceUpdateNeeded = bEnable;
+
+    return AM_DEVICES_COOPER_STATUS_SUCCESS;
 }
 
 //*****************************************************************************

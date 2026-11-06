@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -905,9 +905,6 @@ am_devices_mspi_mx25um51245g_cal_dummy_cycle(am_devices_mspi_mx25um51245g_t     
 static inline uint32_t
 am_devices_mspi_mx25um51245g_enter_command_mode(am_devices_mspi_mx25um51245g_t *pFlash)
 {
-// #### INTERNAL BEGIN ####
-// Purposely avoid using PIO at higher frequency to evade any timing issue
-// #### INTERNAL END ####
     am_hal_mspi_clock_e eTargetFreq;
     if (pFlash->stSetting.eClockFreq != AM_HAL_MSPI_CLK_24MHZ)
     {
@@ -2094,9 +2091,6 @@ am_devices_mspi_mx25um51245g_reset(void *pHandle)
     {
         return AM_DEVICES_MSPI_MX25UM51245G_STATUS_ERROR;
     }
-// #### INTERNAL BEGIN ####
-// hard reset in case of debug or cpu reset
-// #### INTERNAL END ####
     am_bsp_mspi_reset_pincfg_get(pFlash->ui32Module, pFlash->stSetting.eDeviceConfig, &ui32ResetPin, &sPinCfg);
 
     am_hal_gpio_output_set(ui32ResetPin);
@@ -2963,17 +2957,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {

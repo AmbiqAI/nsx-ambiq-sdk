@@ -67,10 +67,12 @@ class Snapshot:
     files: dict[str, FileInput]
     archives: tuple[str, ...]
     patches: dict[str, Patch]
+    source_commit: str
 
     def identity(self) -> dict:
         return {'root': str(self.root), 'revision': self.revision,
                 'upstream_commit': self.upstream_commit,
+                'source_commit': self.source_commit,
                 'inventory_sha256': hashlib.sha256(
                     json.dumps({path: asdict(value) for path, value in self.files.items()}, sort_keys=True).encode()).hexdigest()}
 
@@ -146,6 +148,12 @@ def snapshot(root: Path) -> Snapshot:
     commit = sdk.get('source_commit') if isinstance(sdk, dict) else None
     if not isinstance(commit, str) or not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError(f'{manifest_path}: record an immutable upstream source_commit before review')
+    provenance = sdk.get('source_patch_provenance')
+    upstream = commit
+    if provenance is not None:
+        upstream = provenance.get('upstream_commit') if isinstance(provenance, dict) else None
+        if not isinstance(upstream, str) or not re.fullmatch(r'[0-9a-f]{40}', upstream):
+            raise ValueError(f'{manifest_path}: source_patch_provenance requires an immutable upstream_commit')
     artifacts = intake.verify_artifact_hashes(root / PAYLOAD)
     artifacts.raise_if_not_ok(label=str(root))
     archives = tuple(sorted(artifacts.verified))
@@ -169,7 +177,7 @@ def snapshot(root: Path) -> Snapshot:
         verify_patch_queue(root, queue, files)
     if clean_revision(root) != revision:
         raise ValueError(f'Checkout changed during inventory: {root}')
-    return Snapshot(root, revision, commit, files, archives, patches)
+    return Snapshot(root, revision, upstream, files, archives, patches, commit)
 
 
 def expected_action(before: Patch | None, after: Patch | None) -> str:

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -983,9 +983,6 @@ am_devices_nationz_read(void)
 
     //
     // Make sure the pin is still set.
-    // #### INTERNAL BEGIN ####
-    // Looks like we get spurious interrupt signals occasionally.
-    // #### INTERNAL END ####
     //
 #if AM_APOLLO3_GPIO
     if ( am_hal_gpio_input_read(AM_BSP_GPIO_NATIONZ_IRQ) == 0 )

@@ -2,27 +2,25 @@
 
 The unified Ambiq SDK package for NSX: curated AmbiqSuite SDK-core modules.
 
-The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate used by NSX apps: SDK provider metadata, curated HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services. A single SDK provider, `nsx-ambiqsuite`, carries the curated AmbiqSuite payload: `stable-2026.06.18` content for the Apollo parts and the `npu-drop-2026.07.09` payload for the experimental `atomiq110` (see Current Coverage).
+The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate used by NSX apps: SDK provider metadata, curated HAL/BSP artifacts, CMSIS-Core, startup/system integration, board descriptors, SoC descriptors, and NSX-owned runtime services. A single SDK provider, `nsx-ambiqsuite`, carries the curated AmbiqSuite payload: the `stable-2026.11.05` intake candidate for Apollo parts and experimental `atomiq110` (see Current Coverage).
 
 It is not a full AmbiqSuite mirror. Optional middleware and examples such as FreeRTOS, TinyUSB, Cordio, USB stacks, CMSIS-NN, CMSIS-DSP, and AmbiqSuite sample applications belong in separate optional modules or applications.
 
 ## Current Coverage
 
-The distribution and every manifest under `modules/` use version `5.2.28`.
-The promoted AmbiqSuite payload is recorded under snapshot `stable-2026.09.01`,
-ref `stable`, commit `3062036c4f3e7822d27e6a842f226f423328a25a`, but it is not
-one build of that commit:
+The latest published distribution is `5.2.28`; module versions remain at that
+version until the next release is approved. This branch contains an unreleased
+`stable-2026.11.05` intake candidate from upstream commit
+`3cfb7d50718e6fb016f1a0128121cb40598109d5`.
 
-- Non-atomiq110 headers and all 67 non-atomiq110 HAL/BSP archives are
-  `stable-2026.06.18` (`caaf5af86087881647f56c70646c748d40c86e23`) content.
-  The headers carry the intake patches under `sdk-intake/patches/stable/`.
-- The experimental `atomiq110` headers are the `npu-drop-2026.07.09` payload.
-  Its atfe/acfe archives are recorded as built from `3062036c4f`; its gcc
-  archives come from an unrecorded, older source. The headers and archives do
-  not fully match.
-
-The release record lists these as known deviations. The repository does not
-identify any of these snapshots as an official numbered AmbiqSuite release.
+All 73 HAL/BSP archives were rebuilt from prepared source commit
+`6a2a0c08af553e33716f2e251cb74aa370e2ae0f`, which adds the reviewed AT110 XSPI
+capacity/alignment patches. The artifact manifest records both identities.
+The curated headers also carry the C++ compatibility patches under
+`sdk-intake/patches/stable/`. This is not an official numbered AmbiqSuite
+release. Candidate hardware qualification and the matching EM9305 transport
+update remain prerequisites for release; previous release evidence does not
+qualify this new payload.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
 Apollo2, Apollo3, Apollo4, Apollo330, and Apollo510 platforms. ACfE artifacts
@@ -33,7 +31,7 @@ are selected by the public `armclang` toolchain family.
 > **Experimental — not officially released:** `atomiq110` (AT110) and its `atomiq110_fpga_turbo` FPGA board are an early-evaluation preview only, not for production. See [Platform Maturity](docs/platform-coverage.md#platform-maturity).
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
-Release provenance and qualification are recorded in
+Published 5.2.28 provenance and qualification (not this candidate) are recorded in
 [`release/nsx-ambiq-sdk-5.2.28.yaml`](release/nsx-ambiq-sdk-5.2.28.yaml) and
 [`release/qualification-5.2.28.md`](release/qualification-5.2.28.md).
 The records of earlier versions are kept alongside them.

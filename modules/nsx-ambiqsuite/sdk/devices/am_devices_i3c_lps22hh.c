@@ -68,7 +68,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -548,9 +548,18 @@ am_devices_i3c_lps22hh_init(uint32_t ui32Module,
         return AM_DEVICES_LPS22HH_STATUS_INVALID_HANDLE;
     }
 
-#if defined(apollo510L_eb)
-    pDevHandle->ui8StaticAddr      = AM_DEVICES_LPS22HH_STATIC_ADDRESS_1;
-#elif defined(apollo510L_val)
+#ifdef I3C_CLOCK_DIV_ENABLE
+    //
+    // Configure I3C clock divider
+    //
+    ui32Status = am_hal_crm_clock_enable(AM_HAL_CRM_ID_I3C0REF + ui32Module, true, 0, I3C_CLOCK_DIV_VALUE);
+    if ( ui32Status != AM_HAL_STATUS_SUCCESS )
+    {
+        return ui32Status;
+    }
+#endif
+
+#if defined(apollo510L_val)
     pDevHandle->ui8StaticAddr      = AM_DEVICES_LPS22HH_STATIC_ADDRESS_2;
 #else
     pDevHandle->ui8StaticAddr      = AM_DEVICES_LPS22HH_STATIC_ADDRESS_1;

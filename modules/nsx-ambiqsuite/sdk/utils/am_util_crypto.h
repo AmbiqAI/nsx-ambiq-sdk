@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -24,13 +24,11 @@
 
 #include <time.h>
 
+/* Skip the incomplete tm declaration in C++: with ArmClang libc++, a redundant
+   global struct tm conflicts with using ::std::tm from <ctime>/<time.h>. */
+#if !defined(__cplusplus)
 /* As required by POSIX.1-2008, declare tm as incomplete type.
-   The actual definition is in time.h.
-   In C++, <time.h> brings std::tm into the global namespace via a
-   using-declaration, so this redundant global `struct tm;` is both
-   unnecessary and ill-formed (it clashes with the using-declared name under
-   Arm Compiler 6 / LLVM ATfE libc). Restrict it to C translation units. */
-#ifndef __cplusplus
+   The actual definition is in time.h. */
 struct tm;
 #endif
 
@@ -157,4 +155,3 @@ extern void am_util_crypto_gm_time_structure_set(struct tm *tm);
 //! @}
 //
 //*****************************************************************************
-

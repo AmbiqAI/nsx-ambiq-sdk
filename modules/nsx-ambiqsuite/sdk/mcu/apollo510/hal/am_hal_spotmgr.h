@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SPOTMGR_H
@@ -75,12 +75,6 @@ extern "C"
 #define AUDSSPWRST_ALL_PERIPH_MASK 0x4C4
 //! Check if it is the profile for collapsing STM and STM+Periph
 #define IS_PROFILE_COLLAPSE_STM_AND_STMP (g_sSpotMgrProfile.PROFILE_b.COLLAPSESTMANDSTMP == AM_HAL_SPOTMGR_COLLAPSE_STM_STMP_EN)
-// #### INTERNAL BEGIN ####
-//! Run PCM2.2 spotmgr HAL on PCM2.1 silicon
-// #define RUN_PCM2P2_HAL_ON_PCM2P1_SILICON
-//! Run spotmgr with debugger.
-// #define AM_HAL_SPOTMGR_IGNORE_DEBUGGING
-// #### INTERNAL END ####
 //! Mask of DEV peripherals monitored by SPOT manager
 #define DEVPWRST_MONITOR_PERIPH_MASK   DEVPWRST_ALL_PERIPH_MASK
 //! Mask of AUDSS peripherals monitored by SPOT manager
@@ -202,11 +196,6 @@ typedef union
     } MEMLDOCONFIG_b;
 } am_hal_spotmgr_memldo_settings_t;
 
-// #### INTERNAL BEGIN ####
-//
-//! Struct for E_TRIMCODE (internally EHVT_TRIMCODE) INFO1 regs.
-//
-// #### INTERNAL END ####
 typedef union
 {
     uint32_t E_TRIMCODE;
@@ -217,11 +206,6 @@ typedef union
     } E_TRIMCODE_b;
 } am_hal_spotmgr_e_trim_settings_t;
 
-// #### INTERNAL BEGIN ####
-//
-//! Struct for L_TRIMCODE (internally LVT_TRIMCODE) INFO1 regs.
-//
-// #### INTERNAL END ####
 typedef union
 {
     uint32_t L_TRIMCODE;
@@ -254,12 +238,7 @@ typedef union
 typedef struct
 {
     uint32_t ui32SpotMgrINFO1GlobalValid;
-    // #### INTERNAL BEGIN ####
-    // Power state 20 is defined as a safe power state, and its info is
-    // NOT directly from the INFO1. It acctually is power state 7 but the
-    // VDDF is the same as power state 12.
-    // #### INTERNAL END ####
-    am_hal_spotmgr_trim_settings_t         sPowerStateArray[21]; // 0x1370 ~ 0x13BC
+    am_hal_spotmgr_trim_settings_t         sPowerStateArray[24]; // 0x1370 ~ 0x13BC
     am_hal_spotmgr_gpu_vddc_ton_settings_t          sGpuVddcTon; // 0x13C0
     am_hal_spotmgr_gpu_vddf_ton_settings_t          sGpuVddfTon; // 0x13C4
     am_hal_spotmgr_stm_ton_settings_t                   sStmTon; // 0x13C8
@@ -375,6 +354,8 @@ typedef enum
     AM_HAL_SPOTMGR_STIM_MEMPWR, // Place holder - may be used in the future
     //! SSRAM power state included in SSRAMPWRST regs.
     AM_HAL_SPOTMGR_STIM_SSRAMPWR, // Place holder - may be used in the future
+    //! MRAM program activity. bOn true = program start, false = program end.
+    AM_HAL_SPOTMGR_STIM_MRAM_PROGRAM,
     //! Reset MCU power state in spotmgr_default_reset() function.
     AM_HAL_SPOTMGR_STIM_BACK_TO_DEFAULT_STATE,
     //! Initialise MCU power state after SPOTMGR and SIMOBUCK are both initialised.
@@ -582,7 +563,7 @@ extern uint32_t am_hal_spotmgr_tempco_pending_handle(void);
 
 //*****************************************************************************
 //
-//! @brief Restore power state to POR default
+//! @brief Restore power state to LP + Periph
 //!
 //! @return SUCCESS or other Failures.
 //

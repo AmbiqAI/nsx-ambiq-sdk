@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -48,18 +48,22 @@ typedef struct
 //*****************************************************************************
 //*****************************************************************************
 //
-//! @brief Return default NemaDC JDI configuration for LS014B7DD01.
+//! @brief Get default DC and panel configuration for LS014B7DD01.
 //!
-//! Populates panel resolution, JDI timing, and target clock rates.
+//! Fills `pDCCfg` with default JDI DC settings: JDI interface, fixed RGB222
+//! destination format, 280 x 280 panel resolution, JDI timing, and target
+//! clock rates. Fills `pDevCfg` with the default timer configuration used to
+//! generate VCOM/VA PWM waveforms. Callers may override fields before
+//! `am_hal_dc_config()` and `am_devices_display_ls014b7dd01_init()`.
 //!
-//! @param pHandle - Device handle (unused).
-//! @param pDCCfg  - Pointer to receive the DC configuration.
+//! @param pDCCfg  - Pointer to receive the default DC configuration.
+//! @param pDevCfg - Pointer to receive the default timer configuration.
 //!
 //! @return `AM_DEVICES_DISPLAY_STATUS_SUCCESS`.
 //
 //*****************************************************************************
-extern uint32_t am_devices_display_ls014b7dd01_get_parameter(void *pHandle,
-                                                             am_hal_dc_config_t *pDCCfg);
+extern uint32_t am_devices_display_ls014b7dd01_get_default_config(am_hal_dc_config_t *pDCCfg,
+                                                                  am_devices_display_timer_config_t *pDevCfg);
 //*****************************************************************************
 //
 //! @brief Initialize the SHARP LS014B7DD01 panel (JDI interface).
@@ -77,8 +81,8 @@ extern uint32_t am_devices_display_ls014b7dd01_get_parameter(void *pHandle,
 //
 //*****************************************************************************
 extern uint32_t am_devices_display_ls014b7dd01_init(uint32_t ui32Module,
-                                                    am_devices_display_timer_config_t *pDevCfg,
-                                                    void **ppHandle, void *pDCHandle);
+                                                    void **ppHandle, void *pDCHandle,
+                                                    am_devices_display_timer_config_t *pDevCfg);
 
 //*****************************************************************************
 //

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_GPIO_H
@@ -203,22 +203,27 @@ typedef enum
 } am_hal_gpio_drivestrength_e;
 
 //
-//! Extended drive strengths for very specific pads.
+//! Special drive strengths for very specific pads.
 //! Designated as relative full-driver strength.
-//! Certain pins can configure an extended drive strength.
-//! This matrix identifies those pins with extended drive strength configuration.
-//! GPIOs: 0-4, 35-39, 65-77, 81, 112.
+//! Certain pins can configure a special drive strength.
+//! This matrix identifies those pins with special drive strength configuration.
+//! GPIOs: 37-43, 79-93.
+//!
+//! Note: For high-speed pads, bit 12 (SR) must always be set to 1 if the
+//!       voltage is below 2.5V. On Atomiq device,
+//!       the high-speed pads max voltage is 2.2V. Therefore, only enum values
+//!       0x4-0x7 are valid (where bit 12 = 1).
+//!       Bits [11:10] select the drive strength pair (DS = 0-3).
 //
 typedef enum
 {
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P12X = 0x0,  // 0.12x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P25X = 0x1,  // 0.25x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P37X = 0x2,  // 0.37x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P5X  = 0x3,  // 0.5x  output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P63X = 0x4,  // 0.63x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P75X = 0x5,  // 0.75x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_0P88X = 0x6,  // 0.88x output driver selected
-    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_1P0X  = 0x7   // 1.0x  output driver selected
+    //
+    // Settings 0-3 are omitted on purpose, please see the above note for more details.
+    //
+    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_3V3_BEST    = 0x4,  // PVT1 - ODT 50 ohm, optimal setting for 3.3V
+    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_1V8_BEST    = 0x5,  // PVT2 - ODT 50 ohm, optimal setting for 1.8V
+    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_1V2_BEST    = 0x6,  // PVT3 - ODT 50 ohm, optimal setting for 1.2V
+    AM_HAL_GPIO_PIN_DRIVESTRENGTH_EXT_LOWEST_IMP  = 0x7   // Drive ODT 0 ohm, optimal impedance driver for all PVT
 } am_hal_gpio_drivestrength_ext_e;
 
 //
@@ -719,6 +724,67 @@ typedef struct
             volatile uint32_t b117 : 1;
             volatile uint32_t b118 : 1;
             volatile uint32_t b119 : 1;
+            volatile uint32_t b120 : 1;
+            volatile uint32_t b121 : 1;
+            volatile uint32_t b122 : 1;
+            volatile uint32_t b123 : 1;
+            volatile uint32_t b124 : 1;
+            volatile uint32_t b125 : 1;
+            volatile uint32_t b126 : 1;
+            volatile uint32_t b127 : 1;
+            volatile uint32_t b128 : 1;
+            volatile uint32_t b129 : 1;
+            volatile uint32_t b130 : 1;
+            volatile uint32_t b131 : 1;
+            volatile uint32_t b132 : 1;
+            volatile uint32_t b133 : 1;
+            volatile uint32_t b134 : 1;
+            volatile uint32_t b135 : 1;
+            volatile uint32_t b136 : 1;
+            volatile uint32_t b137 : 1;
+            volatile uint32_t b138 : 1;
+            volatile uint32_t b139 : 1;
+            volatile uint32_t b140 : 1;
+            volatile uint32_t b141 : 1;
+            volatile uint32_t b142 : 1;
+            volatile uint32_t b143 : 1;
+            volatile uint32_t b144 : 1;
+            volatile uint32_t b145 : 1;
+            volatile uint32_t b146 : 1;
+            volatile uint32_t b147 : 1;
+            volatile uint32_t b148 : 1;
+            volatile uint32_t b149 : 1;
+            volatile uint32_t b150 : 1;
+            volatile uint32_t b151 : 1;
+            volatile uint32_t b152 : 1;
+            volatile uint32_t b153 : 1;
+            volatile uint32_t b154 : 1;
+            volatile uint32_t b155 : 1;
+            volatile uint32_t b156 : 1;
+            volatile uint32_t b157 : 1;
+            volatile uint32_t b158 : 1;
+            volatile uint32_t b159 : 1;
+            volatile uint32_t b160 : 1;
+            volatile uint32_t b161 : 1;
+            volatile uint32_t b162 : 1;
+            volatile uint32_t b163 : 1;
+            volatile uint32_t b164 : 1;
+            volatile uint32_t b165 : 1;
+            volatile uint32_t b166 : 1;
+            volatile uint32_t b167 : 1;
+            volatile uint32_t b168 : 1;
+            volatile uint32_t b169 : 1;
+            volatile uint32_t b170 : 1;
+            volatile uint32_t b171 : 1;
+            volatile uint32_t b172 : 1;
+            volatile uint32_t b173 : 1;
+            volatile uint32_t b174 : 1;
+            volatile uint32_t b175 : 1;
+            volatile uint32_t b176 : 1;
+            volatile uint32_t b177 : 1;
+            volatile uint32_t b178 : 1;
+            volatile uint32_t b179 : 1;
+            volatile uint32_t b180 : 1;
         } Msk_b;
     } U;
 } am_hal_gpio_mask_t;
@@ -733,7 +799,9 @@ typedef struct
     .U.Msk[0] = 0,                      \
     .U.Msk[1] = 0,                      \
     .U.Msk[2] = 0,                      \
-    .U.Msk[3] = 0                      \
+    .U.Msk[3] = 0,                      \
+    .U.Msk[4] = 0,                      \
+    .U.Msk[5] = 0,                      \
 }
 
 //
@@ -745,6 +813,8 @@ typedef struct
     msk.U.Msk[1] = val;                     \
     msk.U.Msk[2] = val;                     \
     msk.U.Msk[3] = val;                     \
+    msk.U.Msk[4] = val;                     \
+    msk.U.Msk[5] = val;                     \
 }
 
 //
@@ -757,6 +827,8 @@ typedef struct
     pmsk->U.Msk[1] = val;                   \
     pmsk->U.Msk[2] = val;                   \
     pmsk->U.Msk[3] = val;                   \
+    pmsk->U.Msk[4] = val;                   \
+    pmsk->U.Msk[5] = val;                   \
 }
 
 //*****************************************************************************

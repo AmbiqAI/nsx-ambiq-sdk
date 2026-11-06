@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_DME_H
@@ -145,12 +145,18 @@ typedef enum
 
 //
 //! DME Channel Done Type
+//!
+//! @note For a multi-descriptor command link that uses
+//!       am_hal_dme_commandlink_execute() / am_hal_dme_ch_complete_wait(),
+//!       set non-final descriptors to AM_HAL_DME_DONETYPE_NOT_ASSERTED and
+//!       the final descriptor to AM_HAL_DME_DONETYPE_END_OF_COMMAND so
+//!       STAT_DONE is asserted only when the last command completes.
 //
 typedef enum
 {
-    AM_HAL_DME_DONETYPE_NOT_ASSERTED       = 0U,
-    AM_HAL_DME_DONETYPE_END_OF_COMMAND     = 1U,
-    AM_HAL_DME_DONETYPE_END_OF_AUTORESTART = 2U,
+    AM_HAL_DME_DONETYPE_NOT_ASSERTED       = 0U, //!< Do not assert STAT_DONE for this command.
+    AM_HAL_DME_DONETYPE_END_OF_COMMAND     = 1U, //!< Assert STAT_DONE when this command completes.
+    AM_HAL_DME_DONETYPE_END_OF_AUTORESTART = 3U, //!< Assert STAT_DONE at the end of an auto-restart sequence.
 } am_hal_dme_donetype_e;
 
 //
@@ -274,7 +280,7 @@ typedef union
         uint32_t ytype         : 3;  // Selects the Y-direction transfer mode for 1D/2D operation behavior.
         uint32_t               : 3;
         uint32_t regreloadtype : 3;  // Controls which initial registers are automatically reloaded when the command completes.
-        uint32_t donetype      : 3;  // Selects when the STAT_DONE flag is asserted for the command.
+        uint32_t donetype      : 3;  // Selects when STAT_DONE is asserted; use NOT_ASSERTED on non-final linked commands.
         uint32_t donepauseen   : 1;  // Requests an automatic pause when STAT_DONE is asserted.
         uint32_t usesrctrigin  : 1;  // Enables source trigger input usage for this command.
         uint32_t usedestrigin  : 1;  // Enables destination trigger input usage for this command.
@@ -570,63 +576,336 @@ extern const am_hal_dme_ch_config_t g_am_hal_dme_ch_config_default;
 // #### INTERNAL BEGIN ####
 //*****************************************************************************
 //
-//! @brief Pause all DME channels.
+//! @brief Pause all DME channels in the caller's security domain.
+//!
+//! Secure TZ and non-TZ builds use SEC_CTRL; Non-secure TZ builds
+//! (AM_HAL_TZ_NONSECURE) use NSEC_CTRL.
 //!
 //! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects channels in the caller's domain only. Secure software that
+//!       must pause Non-secure channels should call
+//!       am_hal_dme_all_ch_pause_ns().
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_all_ch_pause(void);
 
 //*****************************************************************************
 //
-//! @brief Stop all DME channels.
+//! @brief Stop all DME channels in the caller's security domain.
 //!
 //! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects channels in the caller's domain only.
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_all_ch_stop(void);
 
 //*****************************************************************************
 //
-//! @brief Read all-channel paused status.
+//! @brief Read all-channel paused status for the caller's security domain.
 //!
 //! @param pbPaused - Receives true when STATALLCHPAUSED is asserted.
 //!
 //! @return AM_HAL_STATUS_SUCCESS on success.
 //!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
+//!
+//! @note Reports the caller's domain only. Secure/non-TZ software that must
+//!       observe Non-secure pause state should call
+//!       am_hal_dme_all_ch_paused_ns().
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_all_ch_paused(bool *pbPaused);
 
 //*****************************************************************************
 //
-//! @brief Read all-channel stopped status.
+//! @brief Read all-channel stopped status for the caller's security domain.
 //!
 //! @param pbStopped - Receives true when STATALLCHSTOPPED is asserted.
 //!
 //! @return AM_HAL_STATUS_SUCCESS on success.
 //!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
+//!
+//! @note Reports the caller's domain only.
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_all_ch_stopped(bool *pbStopped);
 
 //*****************************************************************************
 //
-//! @brief Clear all-channel paused status and resume all DME channels.
+//! @brief Clear all-channel paused status and resume channels in the caller's
+//!        security domain.
 //!
 //! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects channels in the caller's domain only.
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_all_ch_pause_resume(void);
 
 //*****************************************************************************
 //
-//! @brief Clear all-channel stopped status.
+//! @brief Clear all-channel stopped status for the caller's security domain.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects channels in the caller's domain only.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_all_ch_stop_clear(void);
+
+#if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+//*****************************************************************************
+//
+//! @brief Pause all Non-secure-domain DME channels (NSEC_CTRL.ALLCHPAUSE).
+//!
+//! Built for Secure TZ only.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects Non-secure channels only. Use am_hal_dme_all_ch_pause() for
+//!       the caller's (Secure) domain.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_all_ch_pause_ns(void);
+
+//*****************************************************************************
+//
+//! @brief Read Non-secure-domain all-channel paused status
+//!        (NSECSTATUS.STATALLCHPAUSED).
+//!
+//! Built for Secure TZ only.
+//!
+//! @param pbPaused - Receives true when STATALLCHPAUSED is asserted.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
+//!
+//! @note Reports Non-secure channels only.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_all_ch_paused_ns(bool *pbPaused);
+
+//*****************************************************************************
+//
+//! @brief Clear Non-secure-domain all-channel paused status and resume
+//!        Non-secure channels.
+//!
+//! Built for Secure TZ only.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//!
+//! @note Affects Non-secure channels only.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_all_ch_pause_resume_ns(void);
+#endif // defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+
+#if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+//*****************************************************************************
+//
+//! @brief Configure whether a DME channel is non-secure.
+//!
+//! Programs DMA-350 @c SCFGCHSEC only. This does **not** update NVIC ITNS
+//! (Interrupt Target Non-Secure) for any DME IRQ line:
+//!   - Common IRQs (@c SYSDMECOMMONSECURE / @c SYSDMECOMMONNONSECURE) are
+//!     separate lines; ITNS for those is typically a one-time Secure boot
+//!     policy and does not need remapping on each channel security change.
+//!   - Per-channel IRQs (@c SYSDMECHANNELn) are a single IRQ number per
+//!     channel. ARM requires ITNS alignment with channel security when those
+//!     lines are used - higher layers (Secure firmware / application) must
+//!     disable, clear-pending, retarget ITNS, and re-enable as appropriate.
+//!
+//! Channel privilege (@c CHPRIV) is frame-local (Secure vs Non-secure) and is
+//! **not** transferred when security changes. After calling this function,
+//! call @c am_hal_dme_ch_priv_set() again to set privilege in the new domain.
+//!
+//! @param ui32Channel - DME channel index (0 to AM_HAL_DME_MAX_CHANNELS - 1).
+//! @param bNonSecure  - true to mark the channel non-secure, false for secure.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if ui32Channel is out of range.
+//!         AM_HAL_STATUS_FAIL if the programmed value does not read back.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ch_ns_set(uint32_t ui32Channel, bool bNonSecure);
+#endif // defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+
+//*****************************************************************************
+//
+//! @brief Configure whether a DME channel is privileged.
+//!
+//! This controls DMA channel APB/register privilege access only; it does not
+//! imply privileged filtering for system memory transfers. Attempts to query or
+//! modify inaccessible Secure channel state from Non-secure software may result
+//! in ineffective writes or invalid readback values due to RAZ/WI behavior.
+//!
+//! Privilege is programmed according to the channel's **current** security
+//! domain (@c SECCHCFG or @c NSECCHCFG). When channel security is changed via
+//! @c am_hal_dme_ch_ns_set(), privilege is not transferred to the other domain;
+//! call this function again after the security change.
+//!
+//! @param ui32Channel  - DME channel index (0 to AM_HAL_DME_MAX_CHANNELS - 1).
+//! @param bPrivileged  - true for privileged, false for unprivileged.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if ui32Channel is out of range.
+//!         AM_HAL_STATUS_FAIL if the programmed value does not read back.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ch_priv_set(uint32_t ui32Channel, bool bPrivileged);
+
+#if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+//*****************************************************************************
+//
+//! @brief Query whether a DME channel is non-secure.
+//!
+//! @param ui32Channel  - DME channel index (0 to AM_HAL_DME_MAX_CHANNELS - 1).
+//! @param pbNonSecure  - Receives true when the channel is non-secure.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ch_ns_get(uint32_t ui32Channel, bool *pbNonSecure);
+#endif // defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+
+//*****************************************************************************
+//
+//! @brief Query whether a DME channel is privileged.
+//!
+//! This reports DMA channel APB/register privilege state only; it does not
+//! describe system memory access privilege. Attempts to query inaccessible
+//! Secure channel state from Non-secure software may return invalid readback
+//! values due to RAZ behavior.
+//!
+//! @param ui32Channel   - DME channel index (0 to AM_HAL_DME_MAX_CHANNELS - 1).
+//! @param pbPrivileged  - Receives true when the channel is privileged.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ch_priv_get(uint32_t ui32Channel, bool *pbPrivileged);
+
+#if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+//*****************************************************************************
+//
+//! @brief Restore tracked TrustZone / privilege configuration to hardware.
+//!
+//! Re-applies the Secure track-on-write shadow (@c SCFGCHSEC0, per-frame
+//! @c CHPRIV, and @c SCFGCTRL policy bits) after DME power-loss. No-op success
+//! when nothing has been tracked, or when @c SCFGCTRL.SECCFGLCK is already set
+//! (locked until reset; SCFG is read-only and hardware still holds the config).
+//!
+//! Restore order when unlocked: @c SCFGCHSEC0, then Secure/Non-secure
+//! @c CHPRIV, then @c SCFGCTRL (so @c SECCFGLCK, if shadowed, is written last).
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success, when already locked, or when no
+//!         configuration has been tracked (no-op).
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_sec_config_restore(void);
+#endif // defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+
+//*****************************************************************************
+//
+//! @brief Enable secure access violation interrupt and NVIC line.
 //!
 //! @return AM_HAL_STATUS_SUCCESS.
 //
 //*****************************************************************************
-extern uint32_t am_hal_dme_all_ch_stop_clear(void);
+extern uint32_t am_hal_dme_secaccvio_interrupt_enable(void);
+
+//*****************************************************************************
+//
+//! @brief Disable secure access violation interrupt and NVIC line.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_secaccvio_interrupt_disable(void);
+
+//*****************************************************************************
+//
+//! @brief Read secure access violation interrupt status.
+//!
+//! @param pui32Status - Receives SCFGINTRSTATUS.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if pui32Status is NULL.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_secaccvio_interrupt_stat_get(uint32_t *pui32Status);
+
+//*****************************************************************************
+//
+//! @brief Clear secure access violation interrupt status.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_secaccvio_interrupt_clear(void);
+
+//*****************************************************************************
+//
+//! @brief Enable secure channel common interrupt and NVIC line.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_s_ch_interrupt_enable(void);
+
+//*****************************************************************************
+//
+//! @brief Disable secure channel common interrupt and NVIC line.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_s_ch_interrupt_disable(void);
+
+//*****************************************************************************
+//
+//! @brief Read secure channel common interrupt status.
+//!
+//! @param pui32Status - Receives bitmap of secure channels raising interrupt.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if pui32Status is NULL.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_s_ch_interrupt_stat_get(uint32_t *pui32Status);
+
+//*****************************************************************************
+//
+//! @brief Enable non-secure channel common interrupt and NVIC line.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ns_ch_interrupt_enable(void);
+
+//*****************************************************************************
+//
+//! @brief Disable non-secure channel common interrupt and NVIC line.
+//!
+//! @return AM_HAL_STATUS_SUCCESS.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ns_ch_interrupt_disable(void);
+
+//*****************************************************************************
+//
+//! @brief Read non-secure channel common interrupt status.
+//!
+//! @param pui32Status - Receives bitmap of non-secure channels raising interrupt.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!         AM_HAL_STATUS_INVALID_ARG if pui32Status is NULL.
+//
+//*****************************************************************************
+extern uint32_t am_hal_dme_ns_ch_interrupt_stat_get(uint32_t *pui32Status);
 // #### INTERNAL END ####
 
 //*****************************************************************************
@@ -639,9 +918,13 @@ extern uint32_t am_hal_dme_all_ch_stop_clear(void);
 //! @return AM_HAL_STATUS_SUCCESS on success.
 //!         AM_HAL_STATUS_INVALID_ARG if one or more arguments fail validation.
 //!         AM_HAL_STATUS_IN_USE if the channel is already open.
+//!         Other @c AM_HAL_STATUS_* values from @c am_hal_pwrctrl_periph_enable()
+//!         if the first-open power hold fails.
 //!
 //! @note The caller that obtains the token must ensure that the token is not
 //!       used for API access concurrently by more than one thread.
+//! @note The first successful open enables @c AM_HAL_PWRCTRL_PERIPH_DME so
+//!       MCUL/DME remain powered across deep sleep while any channel is open.
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_ch_open(uint32_t ui32Channel, am_hal_dme_ch_access_token_t *pToken);
@@ -654,6 +937,10 @@ extern uint32_t am_hal_dme_ch_open(uint32_t ui32Channel, am_hal_dme_ch_access_to
 //!
 //! @return AM_HAL_STATUS_SUCCESS on success.
 //!         AM_HAL_STATUS_INVALID_HANDLE if pToken is invalid.
+//!         Other @c AM_HAL_STATUS_* values from @c am_hal_pwrctrl_periph_disable()
+//!         if the last-close power release fails.
+//!
+//! @note Closing the last open channel disables @c AM_HAL_PWRCTRL_PERIPH_DME.
 //
 //*****************************************************************************
 extern uint32_t am_hal_dme_ch_close(am_hal_dme_ch_access_token_t *pToken);
@@ -756,6 +1043,14 @@ extern uint32_t am_hal_dme_ch_status_get(am_hal_dme_ch_access_token_t *pToken,
 //!
 //! @param pToken - Channel token returned from am_hal_dme_ch_open().
 //! @param ui32TimeoutUs - Timeout in microseconds. A value of 0 uses 1000 us.
+//!
+//! @note This function returns on the first terminal CHSTATUS event
+//!       (STAT_DONE, STAT_ERR, STAT_DISABLED, or STAT_STOPPED). It does not
+//!       inherently wait for an entire command link. For linked commands,
+//!       program non-final descriptors with
+//!       AM_HAL_DME_DONETYPE_NOT_ASSERTED and the final descriptor with
+//!       AM_HAL_DME_DONETYPE_END_OF_COMMAND so STAT_DONE occurs only after
+//!       the last command.
 //!
 //! @return AM_HAL_STATUS_SUCCESS when STAT_DONE is asserted.
 //!         AM_HAL_STATUS_TIMEOUT when no terminal completion source is asserted
@@ -875,6 +1170,14 @@ extern uint32_t am_hal_dme_command_execute(am_hal_dme_ch_access_token_t *pToken,
 //! @param pToken - Channel token from am_hal_dme_ch_open().
 //! @param pCmdDescriptor - Command descriptor to execute.
 //! @param ui32TimeoutUs - Wait timeout in microseconds; 0 selects the default.
+//!
+//! @note Completion wait returns on the first terminal CHSTATUS event, not
+//!       automatically at the end of every linked chain. To wait until the
+//!       final command completes successfully, set
+//!       AM_HAL_DME_DONETYPE_NOT_ASSERTED on every non-final descriptor and
+//!       AM_HAL_DME_DONETYPE_END_OF_COMMAND on the last descriptor. If an
+//!       intermediate command asserts STAT_DONE, the wait can return before
+//!       later descriptors run.
 //!
 //! @note For cacheable memory, callers must flush the descriptor buffer and
 //!       any source buffers before execution, and invalidate destination

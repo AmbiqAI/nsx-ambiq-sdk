@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_IOS_H
@@ -51,12 +51,6 @@ extern "C"
 #define AM_HAL_IOS_SPIMODE_2         _VAL2FLD(IOSLAVEFD0_CFG_SPOL,   IOSLAVEFD0_CFG_SPOL_SPI_MODES_1_2)
 #define AM_HAL_IOS_SPIMODE_3         _VAL2FLD(IOSLAVEFD0_CFG_SPOL,   IOSLAVEFD0_CFG_SPOL_SPI_MODES_0_3)
 
-// #### INTERNAL BEGIN ####
-#if 0 // A5RS-97
-#define AM_HAL_IOS_USE_I2C           _VAL2FLD(IOSLAVEFD0_CFG_IFCSEL, IOSLAVEFD0_CFG_IFCSEL_I2C)
-#define AM_HAL_IOS_I2C_ADDRESS(n)    _VAL2FLD(IOSLAVEFD0_CFG_I2CADDR, n)
-#endif
-// #### INTERNAL END ####
 #define AM_HAL_IOS_LSB_FIRST         _VAL2FLD(IOSLAVEFD0_CFG_LSB, 1)
 //! @}
 

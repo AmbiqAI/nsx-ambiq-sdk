@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CARD_H
@@ -453,21 +453,21 @@ extern "C"
 #define SDIO_HIGHSPEED_SUPPORT     0x1
 #define SDIO_HIGHSPEED_ENABLED     0x3
 #define SDIO_FULLSPEED_ENABLED     0x0
-#define SDIO_CARD_MAX_SPEED_LIMIT  100000000
-#define SDIO_CARD_FULL_SPEED_LIMIT 25000000
+#define SDIO_CARD_MAX_SPEED_LIMIT  96000000
+#define SDIO_CARD_FULL_SPEED_LIMIT 24000000
 
 // EMMC Speed
 #define MMC_LEGACY_HS               26000000
 #define MMC_SDR_HS                  52000000
 #define MMC_DDR_HS                  52000000
-#define MMC_HS200_MAX_SPEED_LIMIT   200000000
+#define MMC_HS200_MAX_SPEED_LIMIT   192000000
 
 //
 // Atomiq SDHC speed limitation settings
 //
-#define SDIO_SUPPORT_HS400_INSTANCE 2
-#define LEGACY_SDIO_MAX_SPEED_LIMIT 100000000
-#define MMC_HS_MAX_SPEED_LIMIT      50000000
+#define SDIO_SUPPORT_HS400_INSTANCE 1
+#define LEGACY_SDIO_MAX_SPEED_LIMIT 96000000
+#define MMC_HS_MAX_SPEED_LIMIT      48000000
 
 //
 // Internal macros

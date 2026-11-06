@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKGEN_H
@@ -40,8 +40,8 @@ extern "C"
 #define AM_HAL_CLKGEN_FREQ_LP_HZ            (250 * 1000000)
 #define AM_HAL_CLKGEN_FREQ_HP_HZ            (500 * 1000000)
 #define AM_HAL_CLKGEN_FREQ_MAX_HZ           AM_HAL_CLKGEN_FREQ_HP_HZ
-#define AM_HAL_CLKGEN_FREQ_HP192_HZ         (16 * 1000000)
-#define AM_HAL_CLKGEN_FREQ_HP250_HZ         (20 * 1000000)
+//#define AM_HAL_CLKGEN_FREQ_HP192_HZ         (16 * 1000000)
+//#define AM_HAL_CLKGEN_FREQ_HP250_HZ         (20 * 1000000)
 #else // ATOMIQ11X_FPGA
 #define AM_HAL_CLKGEN_FREQ_ULP_HZ           (100 * 1000000)
 #define AM_HAL_CLKGEN_FREQ_LP_HZ            (250 * 1000000)
@@ -73,39 +73,18 @@ extern "C"
 //
 typedef enum
 {
-    AM_HAL_CLKGEN_CONTROL_RTC_SEL_XTAL,
-    AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC,
     // #### INTERNAL BEGIN ####
-    AM_HAL_CLKGEN_CONTROL_SECURE_RTC_SEL_XTAL,
-    AM_HAL_CLKGEN_CONTROL_SECURE_RTC_SEL_LFRC,
-    // AM_HAL_CLKGEN_CONTROL_HFADJ_ENABLE,
-    // AM_HAL_CLKGEN_CONTROL_HFADJ_DISABLE,
-    // #### INTERNAL END ####
-    AM_HAL_CLKGEN_CONTROL_I3C0CLKEN_ENABLE,
-    AM_HAL_CLKGEN_CONTROL_I3C0CLKEN_DISABLE,
-    AM_HAL_CLKGEN_CONTROL_I3C1CLKEN_ENABLE,
-    AM_HAL_CLKGEN_CONTROL_I3C1CLKEN_DISABLE,
-    AM_HAL_CLKGEN_CONTROL_I3C2CLKEN_ENABLE,
-    AM_HAL_CLKGEN_CONTROL_I3C2CLKEN_DISABLE,
-    // #### INTERNAL BEGIN ####
-    // TODO: Confirm can be remove
-    // AM_HAL_CLKGEN_CONTROL_PLLVCOEN_ENABLE,
-    // AM_HAL_CLKGEN_CONTROL_PLLVCOEN_NORMALOP,
-    AM_HAL_CLKGEN_CONTROL_PLLDIVEN_ENABLE,
-    AM_HAL_CLKGEN_CONTROL_PLLDIVEN_NORMALOP,
+    AM_HAL_CLKGEN_CONTROL_I3C0APBCLKEN_NORMALOP,
+    AM_HAL_CLKGEN_CONTROL_I3C0APBCLKEN_AON,
+    AM_HAL_CLKGEN_CONTROL_I3C1APBCLKEN_NORMALOP,
+    AM_HAL_CLKGEN_CONTROL_I3C1APBCLKEN_AON,
+    AM_HAL_CLKGEN_CONTROL_I3C2APBCLKEN_NORMALOP,
+    AM_HAL_CLKGEN_CONTROL_I3C2APBCLKEN_AON,
     // #### INTERNAL END ####
     AM_HAL_CLKGEN_CONTROL_SELECT_EXTREF,
     AM_HAL_CLKGEN_CONTROL_SELECT_XT,
 } am_hal_clkgen_control_e;
 
-//
-//! Current RTC oscillator.
-//
-typedef enum
-{
-    AM_HAL_CLKGEN_STATUS_RTCOSC_XTAL,
-    AM_HAL_CLKGEN_STATUS_RTCOSC_LFRC,
-} am_hal_clkgen_status_rtcosc_e;
 
 //
 //! Clock Generation CLKOUT
@@ -245,25 +224,9 @@ typedef struct
 {
     //
     // ui32SysclkFreq
-    //!  Returns the current system clock frequency, in hertz.
-    // TODO: define a clearer term than "system clock frequency"
+    //!  Returns the current CPU clock frequency, in hertz.
+    //
     uint32_t    ui32SysclkFreq;
-
-    //
-    // eRTCOSC
-    //
-    //!  Returns the current RTC oscillator as one of:
-    //!  AM_HAL_CLKGEN_STATUS_RTCOSC_LFRC
-    //!  AM_HAL_CLKGEN_STATUS_RTCOSC_XTAL
-    //
-    uint32_t    eRTCOSC;
-
-    //
-    // bXtalFailure
-    //!  true = XTAL has failed (is enabled but not oscillating).  Also if the
-    //!         LFRC is selected as the oscillator in OCTRL.RTCOSEL.
-    //
-    bool        bXtalFailure;
 
     //
     // enable status for all the peripheral clocks.
@@ -301,21 +264,14 @@ typedef union
 //!
 //! This function is used to apply various controls on CLKGEN.
 //!
-//! @note IMPORTANT! This function MUST be called very early in execution of
-//!       an application with the parameter AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX
-//!       in order to set Atomiq11x to its required operating frequency.
 //!
 //! @param eControl - One of the following:
-//!     AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX
-//!     AM_HAL_CLKGEN_CONTROL_RTC_SEL_XTAL
-//!     AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC
-//!     AM_HAL_CLKGEN_CONTROL_HFADJ_ENABLE
-//!     AM_HAL_CLKGEN_CONTROL_HFADJ_DISABLE
+//!    AM_HAL_CLKGEN_CONTROL_SELECT_EXTREF,
+//!    AM_HAL_CLKGEN_CONTROL_SELECT_XT,
 //! @param pArgs - Pointer to arguments for Control Switch Case
 //!
 //! @return status      - generic or interface specific status.
 //!
-//! @note After starting the XTAL, a 2 second warm-up delay is required.
 //
 // ****************************************************************************
 extern uint32_t am_hal_clkgen_control(am_hal_clkgen_control_e eControl,
@@ -331,9 +287,6 @@ extern uint32_t am_hal_clkgen_control(am_hal_clkgen_control_e eControl,
 //!
 //! @return status      - generic or interface specific status.
 //!
-//! @note After selection of the RTC Oscillator, a 2 second delay is required
-//! before the new oscillator takes effect.  Therefore the CLKGEN.STATUS.OMODE
-//! bit will not reflect the new status until after the 2s wait period.
 //
 // ****************************************************************************
 extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
@@ -381,6 +334,7 @@ extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
 // ****************************************************************************
 extern uint32_t am_hal_clkgen_clkout_enable(bool bEnable,
                                             am_hal_clkgen_clkout_e eClkSelect);
+
 #ifdef __cplusplus
 }
 #endif

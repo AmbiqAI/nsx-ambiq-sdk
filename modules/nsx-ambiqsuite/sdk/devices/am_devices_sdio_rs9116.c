@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -62,6 +62,9 @@
 #include "am_util.h"
 #include "am_util_delay.h"
 #include "am_devices_sdio_rs9116.h"
+#if defined(AM_PART_ATOMIQ11X_API)
+#include "am_hal_sdhc_private.h"
+#endif
 
 //*****************************************************************************
 //
@@ -72,6 +75,31 @@ am_hal_card_host_t *pSdhcCardHost = NULL;
 am_hal_card_t       RS9116SdioCard;
 uint8_t             sdio_init_done = 0;
 uint32_t            ui32SdioModule = 0;
+
+#if defined(AM_PART_ATOMIQ11X_API)
+//
+// Atomiq requires an ADMA descriptor table for am_hal_card_host_set_xfer_mode().
+//
+static am_hal_sdhc_adma_desc_t g_Rs9116AdmaDescTable[AM_HAL_SDIO_MODULE_NUM][AM_HAL_ADMA_TABLE_NO_ENTRIES]
+    __attribute__((aligned(32)));
+
+//
+// SDIO interrupts. HOST0 -> SDIO0_IRQn, HOST1 -> EMMC_IRQn.
+//
+static const IRQn_Type g_Rs9116SdioInterrupts[] =
+{
+    SDIO0_IRQn,
+    EMMC_IRQn,
+};
+#endif
+
+#if defined(AM_PART_ATOMIQ11X_API)
+#define RS9116_SDIO_HOST_INDEX                                                 \
+    ((am_hal_host_inst_index_e)(AM_HAL_SDHC_CARD_HOST0 + ui32SdioModule))
+#else
+#define RS9116_SDIO_HOST_INDEX                                                 \
+    ((am_hal_host_inst_index_e)(AM_HAL_SDHC_CARD_HOST + ui32SdioModule))
+#endif
 
 //*****************************************************************************
 //
@@ -252,7 +280,7 @@ int32_t rsi_mcu_sdio_init(void)
     //
     // Configure SDIO PINs.
     //
-#if defined(AM_PART_APOLLO5_API)
+#if defined(AM_PART_APOLLO5_API) || defined(AM_PART_ATOMIQ11X_API)
     am_bsp_sdio_pins_enable(ui32SdioModule, AM_HAL_HOST_BUS_WIDTH_4);
 
     am_bsp_sdio_reset(ui32SdioModule);
@@ -265,7 +293,7 @@ int32_t rsi_mcu_sdio_init(void)
     //
     // Get the underlying SDHC card host instance
     //
-    pSdhcCardHost = am_hal_get_card_host((am_hal_host_inst_index_e)(AM_HAL_SDHC_CARD_HOST + ui32SdioModule), true);
+    pSdhcCardHost = am_hal_get_card_host(RS9116_SDIO_HOST_INDEX, true);
 
     if (pSdhcCardHost == NULL)
     {
@@ -273,6 +301,22 @@ int32_t rsi_mcu_sdio_init(void)
         return AM_DEVICES_SDIO_RS9116_STATUS_ERROR;
     }
     am_util_debug_printf("\n SDIO card host is found\n");
+
+#if defined(AM_PART_ATOMIQ11X_API)
+    //
+    // Enable SDIO IRQ and set ADMA before card_init (Atomiq HAL requirement).
+    //
+    NVIC_SetPriority(g_Rs9116SdioInterrupts[ui32SdioModule], AM_IRQ_PRIORITY_DEFAULT);
+    NVIC_EnableIRQ(g_Rs9116SdioInterrupts[ui32SdioModule]);
+
+    if (AM_HAL_STATUS_SUCCESS != am_hal_card_host_set_xfer_mode(pSdhcCardHost,
+                                                                AM_HAL_HOST_XFER_ADMA,
+                                                                g_Rs9116AdmaDescTable[ui32SdioModule]))
+    {
+        am_util_debug_printf("setting ADMA xfer mode failed\n");
+        return AM_DEVICES_SDIO_RS9116_STATUS_ERROR;
+    }
+#endif
 
     //
     // Check if card is present
@@ -301,7 +345,7 @@ int32_t rsi_mcu_sdio_init(void)
         AM_HAL_HOST_UHS_NONE) != AM_HAL_STATUS_SUCCESS)
     {
         am_util_delay_ms(1000);
-        am_util_debug_printf("setting SDR50 failed\n");
+        am_util_debug_printf("setting SDIO card cfg failed\n");
     }
 
     //
@@ -363,9 +407,9 @@ int32_t rsi_mcu_sdio_init(void)
 int32_t rsi_sdio_apply_timing(uint8_t ui8TxRxDelays[2])
 {
     //
-    // Get the uderlying SDHC card host instance
+    // Get the underlying SDHC card host instance
     //
-    pSdhcCardHost = am_hal_get_card_host((am_hal_host_inst_index_e)(AM_HAL_SDHC_CARD_HOST + ui32SdioModule), true);
+    pSdhcCardHost = am_hal_get_card_host(RS9116_SDIO_HOST_INDEX, true);
     if (pSdhcCardHost == NULL)
     {
         am_util_debug_printf("No such card host and stop\n");
@@ -408,9 +452,20 @@ int32_t rsi_sdio_timing_scan(am_hal_host_inst_index_e eIndex,
                              uint8_t ui8TxRxDelays[2],
                              am_hal_sdio_card_reset_func pSdioCardReset)
 {
+#if defined(AM_PART_ATOMIQ11X_API)
+    //
+    // Atomiq calibrate API also requires transfer mode and ADMA descriptor table.
+    //
+    return am_hal_sdio_card_calibrate(eIndex, eUHSMode, ui32Clock, eBusWidth,
+                                      AM_HAL_HOST_XFER_ADMA,
+                                      (uint8_t *)ui8CalibBuf, ui32StartAddr,
+                                      ui32BlockCnt, g_Rs9116AdmaDescTable[eIndex],
+                                      eIoVoltage, ui8TxRxDelays, pSdioCardReset);
+#else
     return am_hal_sdio_card_calibrate(eIndex, eUHSMode, ui32Clock, eBusWidth,
                                       (uint8_t *)ui8CalibBuf, ui32StartAddr,
                                       ui32BlockCnt, eIoVoltage, ui8TxRxDelays, pSdioCardReset);
+#endif
 }
 
 //*****************************************************************************

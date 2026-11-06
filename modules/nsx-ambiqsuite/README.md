@@ -7,22 +7,18 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 ## SDK Version
 
-`sdk/artifact-manifest.yaml` records **AmbiqSuite snapshot
-`stable-2026.09.01`**, source ref `stable`, source commit
-`3062036c4f3e7822d27e6a842f226f423328a25a`. It is not represented as an
-official numbered AmbiqSuite release, and the payload is not one build of it:
+`sdk/artifact-manifest.yaml` records the unreleased `stable-2026.11.05`
+candidate: upstream `3cfb7d50718e6fb016f1a0128121cb40598109d5`, prepared source
+`6a2a0c08af553e33716f2e251cb74aa370e2ae0f`. The latter includes the AT110 XSPI
+capacity/alignment source patches, applied before all 73 HAL/BSP archives were
+built. `source_patch_provenance` records the original source and patch hashes.
+The curated headers carry the separate C++ compatibility patches under
+`sdk-intake/patches/stable/`.
 
-- Apollo parts: headers and HAL/BSP archives are `stable-2026.06.18`
-  (`caaf5af86087881647f56c70646c748d40c86e23`) content. The headers carry the
-  intake patches under `sdk-intake/patches/stable/` (see
-  `release/source-ownership.yaml`).
-- `atomiq110` (experimental): headers are the `npu-drop-2026.07.09` payload;
-  the atfe/acfe archives are recorded as built from `3062036c4f`; the gcc
-  archives come from an unrecorded, older source. Headers and archives do not
-  fully match.
-
-`release/nsx-ambiq-sdk-5.2.28.yaml` records these as known deviations. The NSX
-distribution and module version is `5.2.28`.
+The module version remains `5.2.28` pending release preparation. That published
+version's release record describes its historical payload, not this candidate.
+The intake requires the matching EM9305 transport update and hardware
+qualification before release. It is not an official numbered AmbiqSuite release.
 
 ## Package Contents
 

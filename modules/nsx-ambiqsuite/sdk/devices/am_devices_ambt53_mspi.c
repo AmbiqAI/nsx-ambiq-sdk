@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -958,9 +958,6 @@ static void pfnMSPI_AMBT53_Callback(void *pCallbackCtxt, uint32_t status)
     // Set the DMA complete flag.
     *(volatile bool *)pCallbackCtxt = true;
 #if 1
-// #### INTERNAL BEGIN ####
-//TODO/read status and clear error, for debug use
-// #### INTERNAL END ####
     ambt53_status_reg_t stStatus = {0};
     am_devices_mspi_ambt53_status_get(&gAMBT53[0], &stStatus);
     if ( stStatus.STATUS & 0xFC )

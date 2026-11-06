@@ -2,7 +2,7 @@
 //
 //! @file am_mcu_apollo.h
 //!
-//! @brief Top Include for Apollo510 class devices.
+//! @brief Top include for Apollo510 class devices.
 //!
 //! This file provides all the includes necessary for an apollo device.
 //!
@@ -13,14 +13,14 @@
 //! @{
 //!
 //! Purpose: This module provides the primary hardware abstraction layer
-//! header for Apollo510 class devices, including all necessary includes
-//! for ARM architecture features, security extensions, and vector
-//! processing capabilities. It enables comprehensive access to device
-//! peripherals, system configuration, and hardware-specific features
-//! for embedded applications requiring Apollo510 functionality. The
-//! module supports ARM Security Extensions (CMSE), M-Profile Vector
-//! Extension (MVE/Helium), and provides the foundation for all
-//! Apollo510 HAL modules and system integration.
+//! header for the SoC, including all necessary includes for ARM architecture
+//! features, security extensions, and vector processing capabilities.
+//! It enables comprehensive access to device peripherals, system configuration,
+//! and hardware-specific features for embedded applications requiring SoC
+//! functionality.
+//! The  module supports ARM Security Extensions (CMSE), M-Profile Vector
+//! Extension (MVE/Helium), and provides the foundation for all SoC HAL
+//! modules and system integration.
 //
 //*****************************************************************************
 
@@ -29,7 +29,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -52,7 +52,9 @@
 #else
 // Compiler options for vector extensions are not enabled.
 #ifndef AM_HAL_SKIP_NO_MVE_WARNING
+#ifndef __ZEPHYR__
 #warning MVE intrinsics not available
+#endif
 #endif
 #endif
 
@@ -61,39 +63,6 @@ extern "C"
 {
 #endif
 
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-// FPGA-specific defines.
-//
-//*****************************************************************************
-//
-// Specify that the Apollo5 FPGA is in use.
-// If defined, it is assumed to designate the target SOF frequency in MHz.
-// For example, if the SOF frequency is designated as 12MHz or 48MHz, then
-//  APOLLO5_FPGA should be set to the value of 12 or 48, respectively.
-// If the value is changed, the HAL should be rebuilt.
-// This define used to support FPGA-specific differences in the HAL as well as
-//  modify timings within the HAL for the speed of the FPGA.
-//
-//
-// Some notes about FPGA target speeds.
-// - The SOF designated as 48MHz actually outputs HFRC at 25MHz.
-// - The SOF designated as 12MHz actually outputs HFRC at 6.25MHz.
-// - HFRC can be measured on designated pins by doing 2 things:
-//   1. Configuring CLKGEN->CLKOUT with CLKGEN_CLKOUT_CKSEL_HFRC and
-//      CLKGEN_CLKOUT_CKEN_EN.
-//   2. Configuring the GPIO with FNCSEL=CLKOUT.
-//
-//
-// #warning "am_mcu_apollo.h: APOLLO5_FPGA is defined here. Must be removed for silicon."
-//
-// It was defined here (as opposed to config.ini) for those instances when the
-// HAL is pulled into a debug (IDE) environment and needs to be defined there.
-// While defining it in config.ini is preferred, it does not work in the IDE.
-//
-// #define APOLLO5_FPGA            8      // FPGA SOF target frequency (in MHz)
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 //! AM_PART_APOLLO5B is deprecated, for backward compatibility purposes only.
@@ -170,6 +139,17 @@ extern "C"
 //
 // HAL MCU includes
 //
+// #### INTERNAL BEGIN ####
+#include "hal/mcu/am_hal_cc312.h"
+#include "hal/mcu/am_hal_cc312_aes.h"
+#include "hal/mcu/am_hal_cc312_aes_ccm.h"
+#include "hal/mcu/am_hal_cc312_aes_gcm.h"
+#include "hal/mcu/am_hal_cc312_chacha.h"
+#include "hal/mcu/am_hal_cc312_sha.h"
+#include "hal/mcu/am_hal_cc312_pka.h"
+#include "hal/mcu/am_hal_cc312_ecc.h"
+#include "hal/mcu/am_hal_cc312_ecdsa.h"
+// #### INTERNAL END ####
 #include "hal/mcu/am_hal_bootrom_helper.h"
 #include "hal/mcu/am_hal_cachectrl.h"
 #include "hal/mcu/am_hal_clkgen.h"
@@ -190,6 +170,7 @@ extern "C"
 #include "hal/mcu/am_hal_mram.h"
 #include "hal/mcu/am_hal_mram_recovery.h"
 #include "hal/mcu/am_hal_mspi.h"
+#include "hal/mcu/am_hal_puf.h"
 #include "hal/mcu/am_hal_reset.h"
 #include "hal/mcu/am_hal_rtc.h"
 #include "hal/mcu/am_hal_sdhc.h"
@@ -219,10 +200,6 @@ extern "C"
 #include "hal/am_hal_queue.h"
 #include "hal/am_hal_security.h"
 #include "hal/am_hal_stimer.h"
-// #### INTERNAL BEGIN ####
-//#include "hal/am_hal_shmem.h"
-//#include "hal/am_hal_system.h"
-// #### INTERNAL END ####
 #include "hal/am_hal_timer.h"
 #include "hal/am_hal_usb.h"
 #include "hal/am_hal_usbcharger.h"

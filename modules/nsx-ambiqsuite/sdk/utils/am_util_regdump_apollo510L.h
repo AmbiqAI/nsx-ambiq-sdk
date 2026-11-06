@@ -4,9 +4,10 @@
 //!
 //! @brief Functions to aid register dumping and debugging (AP510L specific)
 //!
-//! @addtogroup regdump_ap510L_utils Register Dump Functionality
+//! @addtogroup regdump_ap510l_utils Register Dump Functionality - Apollo510L
 //! @ingroup utils
 //! @{
+//!
 //
 //*****************************************************************************
 
@@ -15,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 

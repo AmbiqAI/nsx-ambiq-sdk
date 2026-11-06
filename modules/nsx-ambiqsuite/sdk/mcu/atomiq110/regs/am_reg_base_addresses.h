@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -68,6 +68,12 @@
 //
 #define SSRAM_BASEADDR_SECURE                   (0x31000000)
 #define SSRAM_MAX_SIZE_SECURE                   (3072UL * 1024UL)
+
+//
+// Secure HBLRAM space
+//
+#define HBLRAM_BASEADDR_SECURE                  (0x70000000)
+#define HBLRAM_MAX_SIZE_SECURE                  (262144UL * 1024UL)
 
 //
 // The RRAM space

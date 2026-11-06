@@ -50,7 +50,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -282,9 +282,6 @@ am_devices_mb85rc256v_term(void *pHandle)
         return AM_DEVICES_MB85RC256V_STATUS_ERROR;
     }
 
-// #### INTERNAL BEGIN ####
-    // TODO - no bsp function to disable pins
-// #### INTERNAL END ####
     //
     // Disable the IOM.
     //

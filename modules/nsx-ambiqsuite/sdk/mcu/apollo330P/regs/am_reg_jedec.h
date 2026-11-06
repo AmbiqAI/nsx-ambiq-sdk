@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_JEDEC_H
@@ -307,9 +307,6 @@ typedef struct
 #define JEDEC_CID3_CID_Pos                  0U
 #define JEDEC_CID3_CID_Msk                  (0x000000FFUL)
 
-// #### INTERNAL BEGIN ####
-// 2/26/25: The M55 base addresses confirmed by Mark Guzzi.
-// #### INTERNAL END ####
 //
 // The Arm Cortex-M55 ROM Table base address is 0xE00FFxxx.
 // The base address for Apollo510 JEP-106 ID is 0xE00FExxx.

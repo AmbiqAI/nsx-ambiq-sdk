@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -36,12 +36,6 @@ extern "C"
 //! @{
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-#if 0
-//#warning FixMe or RemoveMe: SBL_OFFSET
-#define AM_HAL_SYSTEM_NVRAM_SBL_OFFSET          0x00000000  // 0x0000C000
-#endif
-// #### INTERNAL END ####
 #define AM_HAL_SYSTEM_NVRAM_ADDR                (0x00000000 + AM_HAL_SYSTEM_NVRAM_SBL_OFFSET)
 #define AM_HAL_SYSTEM_NVRAM_SIZE                ((2 * 1024 * 1024) - AM_HAL_SYSTEM_NVRAM_SBL_OFFSET)
 #define AM_HAL_SYSTEM_NVRAM_NWDS                (AM_HAL_SYSTEM_NVRAM_SIZE / 4)

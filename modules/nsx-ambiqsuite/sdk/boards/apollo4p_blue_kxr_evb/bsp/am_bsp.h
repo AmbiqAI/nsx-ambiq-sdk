@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -44,12 +44,6 @@ extern "C"
 //*****************************************************************************
 extern am_devices_display_hw_config_t g_sDispCfg;
 #endif // DISP_CTRL_IP
-// #### INTERNAL BEGIN ####
-//
-// Define MCU_VALIDATION for building tests for the validation group.
-//
-//#define MCU_VALIDATION  1
-// #### INTERNAL END ####
 
 #define APOLLO4P_BLUE_KXR 1
 

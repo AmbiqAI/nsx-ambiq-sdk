@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SPOTMGR_TRIMVER_2_H
@@ -25,6 +25,15 @@
 extern "C"
 {
 #endif
+
+//*****************************************************************************
+//
+//! @brief Timer interrupt service for spotmgr trimver2.
+//!
+//! @return None.
+//
+//*****************************************************************************
+extern void am_hal_spotmgr_trimver_2_internal_timer_interrupt_service(void);
 
 //*****************************************************************************
 //
@@ -92,16 +101,6 @@ extern uint32_t am_hal_spotmgr_trimver_2_default_reset(void);
 //
 //*****************************************************************************
 extern uint32_t am_hal_spotmgr_trimver_2_init(void);
-
-//*****************************************************************************
-//
-//! @brief SIMOBUCK initialziation handling at stage just before enabling
-//!        SIMOBUCK
-//!
-//! @return SUCCESS or Failures.
-//
-//*****************************************************************************
-extern uint32_t am_hal_spotmgr_trimver_2_simobuck_init_bfr_enable(void);
 
 //*****************************************************************************
 //

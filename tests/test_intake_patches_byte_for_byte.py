@@ -18,6 +18,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = Path("modules/nsx-ambiqsuite/sdk")
 RELEASE = yaml.safe_load((REPO_ROOT / "release/nsx-ambiq-sdk-5.2.26.yaml").read_text(encoding="utf-8"))
+RELEASE_COMMIT = "ba0621638d57b71a7b0d4f76ddccf0706745ad77"
 
 
 def history_unavailable(reason: str) -> None:
@@ -28,15 +29,32 @@ def history_unavailable(reason: str) -> None:
 
 @pytest.mark.parametrize("baseline", RELEASE["consumer_upgrade"], ids=lambda entry: entry["from_tag"])
 def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, baseline: dict) -> None:
-    patches = sorted((repo_root / "sdk-intake/patches/stable").glob("*.patch"))
-    if not patches:
-        pytest.skip("stable intake patch queue retired; no patched files to reconstruct")
-
     probe = subprocess.run(
         ["git", "rev-parse", "--is-shallow-repository"], cwd=repo_root, capture_output=True, text=True
     )
     if probe.returncode != 0 or probe.stdout.strip() != "false":
         history_unavailable("git history unavailable or shallow")
+    released = subprocess.run(
+        ["git", "rev-parse", "--verify", "refs/tags/v5.2.26^{commit}"],
+        cwd=repo_root, capture_output=True, text=True,
+    )
+    if released.returncode != 0:
+        history_unavailable("release tag v5.2.26 is missing")
+    assert released.stdout.strip() == RELEASE_COMMIT, "v5.2.26 moved from its published commit"
+    # This is a historical release proof. Both the queue and resulting bytes
+    # must come from that release, independently of subsequent SDK intakes.
+    listing = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", RELEASE_COMMIT, "--", "sdk-intake/patches/stable"],
+        cwd=repo_root, capture_output=True, text=True, check=True,
+    )
+    patches = {
+        path: subprocess.run(
+            ["git", "show", f"{RELEASE_COMMIT}:{path}"],
+            cwd=repo_root, capture_output=True, check=True,
+        ).stdout
+        for path in listing.stdout.splitlines() if path.endswith(".patch")
+    }
+    assert patches, "published release must contain its intake patch queue"
     tag = baseline["from_tag"]
     commit = baseline["from_commit"]
     revision = subprocess.run(
@@ -49,8 +67,8 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
 
     paths = {
         line[len("+++ b/"):].strip()
-        for patch in patches
-        for line in patch.read_text(encoding="utf-8").splitlines()
+        for patch in patches.values()
+        for line in patch.decode("utf-8").splitlines()
         if line.startswith("+++ b/")
     }
     # The record's older upgrade path excludes atomiq110: that payload was
@@ -70,30 +88,21 @@ def test_intake_patches_match_release_baseline(repo_root: Path, tmp_path: Path, 
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(result.stdout)
 
-    for patch in patches:
+    for name, patch in patches.items():
         result = subprocess.run(
             ["git", "apply", *[f"--include={path}" for path in sorted(paths)], "-"],
-            input=patch.read_text(encoding="utf-8").encode("utf-8"), cwd=tmp_path, capture_output=True,
+            input=patch, cwd=tmp_path, capture_output=True,
         )
-        assert result.returncode == 0, f"{patch.name} cannot apply to {tag}:\n{result.stderr}"
+        assert result.returncode == 0, f"{name} cannot apply to {tag}:\n{result.stderr}"
 
     differences = []
     for path in sorted(paths):
         expected = (tmp_path / path).read_bytes()
-        actual = (repo_root / PAYLOAD / path).read_bytes()
+        actual = subprocess.run(
+            ["git", "show", f"{RELEASE_COMMIT}:{(PAYLOAD / path).as_posix()}"],
+            cwd=repo_root, capture_output=True, check=True,
+        ).stdout
         if expected != actual:
-            # Compare committed bytes: Git's clean filters may normalize a
-            # Windows checkout's CRLF. Keep detecting dirty edits outside hunks.
-            object_ids = []
-            for content, options in ((expected, []), (actual, [f"--path={(PAYLOAD / path).as_posix()}"])):
-                result = subprocess.run(
-                    ["git", "hash-object", *options, "--stdin"], input=content,
-                    cwd=repo_root, capture_output=True,
-                )
-                assert result.returncode == 0, result.stderr
-                object_ids.append(result.stdout.strip())
-            if object_ids[0] == object_ids[1]:
-                continue
             diff = difflib.diff_bytes(
                 difflib.unified_diff, expected.splitlines(keepends=True), actual.splitlines(keepends=True),
                 fromfile=f"{tag} + intake patches/{path}".encode(),

@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -2765,9 +2765,6 @@ extern "C"
 #define IGR_HIGH_MASK               ((uint32_t)0x0000FFFF)
 #define IGR_HIGH_RESET              0x00000000
 
-// #### INTERNAL BEGIN ####
-//TODO  EXT_NISR WD_NISR RW in spec ,it's should be RO.
-// #### INTERNAL END ####
 #define NMICFG_MASK                 ((uint32_t)0x000000C0)
 #define NMICFG_RESET                0x00000000
 
@@ -3428,9 +3425,6 @@ extern "C"
 #define IMR0_RESET                   0x00000000
 
 #define IGMR_ADDR                    BX1_REG(0x22e0)
-// #### INTERNAL BEGIN ####
-//TODO GM4~GM7 in SPEC ,but ceva code hasn't  GM4~GM7
-// #### INTERNAL END ####
 #define IGMR_MASK                    ((uint32_t)0x8001000F)
 #define IGMR_RESET                   0x00000000
 

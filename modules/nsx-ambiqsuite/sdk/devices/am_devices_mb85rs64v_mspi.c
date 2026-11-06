@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -46,11 +46,6 @@ const am_hal_mspi_dev_config_t      MSPI_FRAM_Serial_CE0_MSPIConfig =
     .ui8ReadInstr         = AM_DEVICES_MB85RS64V_READ,
     .ui8WriteInstr        = AM_DEVICES_MB85RS64V_WRITE,
 #if defined(AM_PART_APOLLO3P)
-    // #### INTERNAL BEGIN ####
-    // TODO - Fixme.  What is the proper value? (ui8WriteLatency = 0?)
-    // TODO - Fixme.  What is the proper value? (bEnWriteLatency = false?)
-    // TODO - Fixme.  What is the proper value? (.ui16DMATimeLimit = 0?)
-    // #### INTERNAL END ####
     .ui8WriteLatency      = 0,
     .bEnWriteLatency      = false,
     .bEmulateDDR          = false,

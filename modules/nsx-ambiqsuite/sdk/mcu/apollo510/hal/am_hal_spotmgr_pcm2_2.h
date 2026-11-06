@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SPOTMGR_PCM2_2_H
@@ -80,6 +80,10 @@ extern "C"
 //! and pArgs must point to the expected SSRAMPWRST when turning on,
 //! pArgs is ignored when turning off.
 //!
+//! When eStimulus is AM_HAL_SPOTMGR_STIM_MRAM_PROGRAM,
+//! bOn must be set to true when MRAM program starts and false when it ends.
+//! pArgs is ignored. Power treatment matches CRYPTO/USB/USBPHY/DISP/DISPPHY ON.
+//!
 //! @return SUCCESS or other Failures.
 //
 //*****************************************************************************
@@ -87,7 +91,7 @@ extern uint32_t am_hal_spotmgr_pcm2_2_power_state_update(am_hal_spotmgr_stimulus
 
 //*****************************************************************************
 //
-//! @brief Reset power state to POR default for PCM2.2
+//! @brief Reset power state to LP + Periph for PCM2.2
 //!
 //! @return SUCCESS or other Failures.
 //

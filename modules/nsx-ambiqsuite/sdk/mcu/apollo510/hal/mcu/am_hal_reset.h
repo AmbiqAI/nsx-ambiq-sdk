@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RSTGEN_H
@@ -73,12 +73,6 @@ typedef enum
     AM_HAL_RESET_STATUS_BOCORE      = RSTGEN_STAT_BOCSTAT_Msk,
     AM_HAL_RESET_STATUS_BOMEM       = RSTGEN_STAT_BOFSTAT_Msk,
     AM_HAL_RESET_STATUS_BOHPMEM     = RSTGEN_STAT_BOSSTAT_Msk,
-// #### INTERNAL BEGIN ####
-// FB-652 9/13/24 Deprecate BOCLVSTAT (presumably for both Apollo510 and Apollo510L).
-// AM_HAL_RESET_STATUS_BOLPCORE has therefore been removed. But maintain
-// the enumeration values as they were (at least for the time-being).
-//  AM_HAL_RESET_STATUS_BOLPCORE    = RSTGEN_STAT_BOCLVSTAT_Msk,
-// #### INTERNAL END ####
     AM_HAL_RESET_STATUS_RSVD        = RSTGEN_STAT_BOSSTAT_Msk + 1,
     AM_HAL_RESET_STATUS_AIRCR       = RSTGEN_STAT_AIRCRSTAT_Msk
 } am_hal_reset_status_e;
@@ -105,10 +99,6 @@ typedef struct
     bool    bBOCOREStat;    // Core Regulator Brownout event
     bool    bBOMEMStat;     // Memory Regulator Brownout event
     bool    bBOHPMEMStat;   // High power Memory Regulator Brownout event
-// #### INTERNAL BEGIN ####
-// FB-652 9/13/24 Deprecate BOCLVSTAT.
-// bool    bBOLPCOREStat;  // Low power Core Regulator Brownout event
-// #### INTERNAL END ####
     bool    bRsvd;
     bool    bAIRCRStat;     // AIRCR SYSRESETREQ
 } am_hal_reset_status_t;

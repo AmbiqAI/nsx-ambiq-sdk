@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -20,10 +20,6 @@
 
 #include "stdint.h"
 
-// #### INTERNAL BEGIN ####
-// Information about the memory map comes from the Confluence page Cayenne
-// Specifications (Camaro)->CPU Subsystem, Apr 2024.
-// #### INTERNAL END ####
 //
 // The following table is based on maximum memory sizing of Apollo330P,
 // specific SKUs may vary.
@@ -59,9 +55,6 @@
 // ****************************************************************************
 #define AM_REG_INFO0_BASEADDR           0x42000000
 #define AM_REG_INFO1_BASEADDR           0x42002000
-// #### INTERNAL BEGIN ####
-//#define AM_REG_INFOC_BASEADDR           0x400C2000
-// #### INTERNAL END ####
 #define AM_REG_OTP_INFO0_BASEADDR       0x42004000
 #define AM_REG_OTP_INFO1_BASEADDR       0x42006000
 #define AM_REG_OTP_INFOC_BASEADDR       0x400C2000
@@ -80,10 +73,6 @@
 // ****************************************************************************
 // MSPI aperture address ranges
 // ****************************************************************************
-// #### INTERNAL BEGIN ####
-// Information about the MSPI aperatures comes from the Confluence page Cayenne
-// Specifications (Camaro)->CPU Subsystem, Apr 2024.
-// #### INTERNAL END ####
 //
 // Please note that the END_ADDR as used here is actually the (end address + 1).
 //
@@ -96,9 +85,6 @@
 #define MSPI1_APERTURE_START_ADDR               (0x80000000UL)
 #define MSPI1_APERTURE_END_ADDR                 (0x84000000UL)
 #define MSPI2_APERTURE_START_ADDR               (0x84000000UL)
-// #### INTERNAL BEGIN ####
-// MSPI2 XIP memory size remained 64MB, see https://ambiqmicro.atlassian.net/browse/FBRDSW-543
-// #### INTERNAL END ####
 #define MSPI2_APERTURE_END_ADDR                 (0x88000000UL)
 
 #endif // AM_REG_BASE_ADDRESSES_H

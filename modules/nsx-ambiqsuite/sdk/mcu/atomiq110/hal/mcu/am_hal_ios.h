@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_IOS_H
@@ -125,24 +125,6 @@ extern "C"
 
 //*****************************************************************************
 //
-//! @name I/O Slave Interrupts triggers
-//! @{
-//! Macro definitions for I/O slave (IOS) interrupts.
-//!
-//! These macros may be used with am_hal_ios_interrupt_set and am_hal_ios_interrupt_clear
-//!
-//
-//*****************************************************************************
-#define AM_HAL_IOS_IOINTCTL_INT0    (0x01)
-#define AM_HAL_IOS_IOINTCTL_INT1    (0x02)
-#define AM_HAL_IOS_IOINTCTL_INT2    (0x04)
-#define AM_HAL_IOS_IOINTCTL_INT3    (0x08)
-#define AM_HAL_IOS_IOINTCTL_INT4    (0x10)
-#define AM_HAL_IOS_IOINTCTL_INT5    (0x20)
-//! @}
-
-//*****************************************************************************
-//
 //! @name I/O Slave host control register offsets
 //! @{
 //! Macro definitions for host control register offsets.
@@ -191,7 +173,7 @@ extern volatile uint8_t * const am_hal_iosfd1_pui8LRAM;
 //
 //! @brief Configuration structure for the IO slave module.
 //!
-//! This structure may be used along with the am_hal_ios_config() function to
+//! This structure may be used along with the am_hal_ios_configure() function to
 //! select key parameters of the IO Slave module. See the descriptions of each
 //! parameter within this structure for more information on what they control.
 //
@@ -222,7 +204,7 @@ typedef struct
     //! Read-Only section
     //!
     //! The IO Slave LRAM is split into three main sections. The first section
-    //! is a "Direct Write" section, which may be accessed for reads or write
+    //! is a "Direct Write" section, which may be accessed for reads or writes
     //! either directly through the Atomiq CPU, or over the SPI bus. The
     //! "Direct Write" section always begins at LRAM offset 0x0. At the end of
     //! the normal "Direct Write" space, there is a "Read Only" space, which is
@@ -238,7 +220,7 @@ typedef struct
     //! value must be a multiple of 8.
     //!
     //! For the avoidance of doubt this means 0x80 is 128 bytes. These functions
-    //! will shift right by 8 internally.
+    //! will shift right by 3 internally.
     //
     uint32_t ui32ROBase;
 
@@ -261,7 +243,7 @@ typedef struct
     //! must be a multiple of 8.
     //!
     //! For the avoidance of doubt this means 0x80 is 128 bytes. These functions
-    //! will shift right by 8 internally.
+    //! will shift right by 3 internally.
     //
     uint32_t ui32FIFOBase;
 
@@ -284,7 +266,7 @@ typedef struct
     //! must be a multiple of 8.
     //!
     //! For the avoidance of doubt this means 0x80 is 128 bytes. These functions
-    //! will shift right by 8 internally.
+    //! will shift right by 3 internally.
     //
     uint32_t ui32RAMBase;
 
@@ -322,14 +304,14 @@ typedef enum
     AM_HAL_IOS_REQ_ACC_INTGET,
     AM_HAL_IOS_REQ_ACC_INTEN_GET,
     AM_HAL_IOS_REQ_ACC_INTDIS,
+    AM_HAL_IOS_REQ_GET_DMA_DIR,
+    AM_HAL_IOS_REQ_SET_FIFO_PTR,
     AM_HAL_IOS_REQ_ARG_MAX,
 
     // Request without arg
     AM_HAL_IOS_REQ_READ_POLL = AM_HAL_IOS_REQ_ARG_MAX,
     AM_HAL_IOS_REQ_FIFO_UPDATE_CTR,
     AM_HAL_IOS_REQ_FIFO_BUF_CLR,
-    AM_HAL_IOS_REQ_GET_DMA_DIR,
-    AM_HAL_IOS_REQ_SET_FIFO_PTR,
     AM_HAL_IOS_REQ_MAX
 } am_hal_ios_request_e;
 
@@ -412,19 +394,13 @@ typedef struct
     //! For non-blocking transfers, the IOS HAL will call this callback
     //! function as soon as the requested action is complete.
     //
-    void (*pfnCallback[2])(uint32_t ui32ErrorStatus, void *pvContext);
+    am_hal_ios_callback_t pfnCallback[2];
 
     //
     //! This context variable will be saved and provided to the callback
     //! function when it is called.
     //
     void *pvContext[2];
-
-    //
-    //! This context variable will be saved and provided to the callback
-    //! function when it is called.
-    //
-    uint32_t ui32ErrorStatus[2];
 
     //
     //! Buffer
@@ -496,7 +472,6 @@ extern uint32_t am_hal_ios_enable(void *pHandle);
 //*****************************************************************************
 extern uint32_t am_hal_ios_disable(void *pHandle);
 
-// the following interrupts go back to the NVIC
 //*****************************************************************************
 //
 //! @brief IOS configuration function
@@ -504,7 +479,7 @@ extern uint32_t am_hal_ios_disable(void *pHandle);
 //! @param pHandle      - handle for the IOS.
 //! @param psConfig      - pointer to the IOS specific configuration.
 //!
-//! This function configures the interface settings for the IO Master.
+//! This function configures the interface settings for the IO Slave.
 //!
 //! @return status      - generic or interface specific status.
 //
@@ -577,7 +552,7 @@ extern uint32_t am_hal_ios_interrupt_status_get(void *pHandle,
 //! @param pHandle      - handle for the interface.
 //! @param ui32IntMask  - interface specific interrupt mask.
 //!
-//! This function clears the interrupts for the given peripheral.
+//! IOS interrupt service routine.
 //!
 //! @return status      - generic or interface specific status.
 //
@@ -600,7 +575,7 @@ extern uint32_t am_hal_ios_interrupt_service(void *pHandle, uint32_t ui32IntMask
 //! The maximum message size for the IO Slave is 1023 bytes.
 //!
 //! @note In order for SRAM copy operations in the function to work correctly,
-//! the \e am_hal_ios_buffer_service() function must be called in the ISR for
+//! the \e am_hal_ios_interrupt_service() function must be called in the ISR for
 //! the ioslave module.
 //!
 //! @return success or error code

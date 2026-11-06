@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RTC_H
@@ -65,10 +65,6 @@ am_hal_rtc_osc_select_e;
 //!
 //! either the reserved timer by  RTC_CDC_WA_USE_APP_STMR = 0 (default),
 //! or stimer from application by RTC_CDC_WA_USE_APP_STMR = 1 (XT for RTC only)
-// #### INTERNAL BEGIN ####
-//!   app stimer codes from Milton, and being verified with customer setups
-//!   https://ambiqmicro.atlassian.net/browse/COR-138?focusedCommentId=175558
-// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define RTC_CDC_WA_USE_APP_STMR 0
@@ -141,13 +137,6 @@ typedef struct am_hal_rtc_time_struct
     uint32_t ui32Minute;
     uint32_t ui32Second;
     uint32_t ui32Hundredths;
-// #### INTERNAL BEGIN ####
-    // ERR028 - Century Bit toggles when CEB == 1
-    //          and ui32Year == 99 and hence
-    //          cannot handle ui32Year rollover
-    //          from 99 -> 00
-    //uint32_t ui32CenturyEnable;
-// #### INTERNAL END ####
 }
 am_hal_rtc_time_t;
 

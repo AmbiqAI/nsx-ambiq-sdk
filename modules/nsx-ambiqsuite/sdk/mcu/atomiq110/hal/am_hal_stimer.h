@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_STIMER_H
@@ -104,10 +104,11 @@ extern "C"
 //
 //*****************************************************************************
 #define AM_HAL_STIMER_NO_CLK            _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_NOCLK)
-#define AM_HAL_STIMER_HFRC_6MHZ         _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_HFRC_7_8125MHZ)
-#define AM_HAL_STIMER_HFRC_375KHZ       _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_HFRC_488_KHZ)
+#define AM_HAL_STIMER_HFRC_7_8125MHZ    _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_HFRC_7_8125MHZ)
+#define AM_HAL_STIMER_HFRC_488KHZ       _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_HFRC_488_KHZ)
 #define AM_HAL_STIMER_XTAL_32KHZ        _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_XTAL_32KHZ)
 #define AM_HAL_STIMER_XTAL_8KHZ         _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_XTAL_8KHZ)
+#define AM_HAL_STIMER_XTAL_2KHZ         _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_XTAL_2KHZ)
 #define AM_HAL_STIMER_XTAL_1KHZ         _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_XTAL_1KHZ)
 #define AM_HAL_STIMER_XTAL_512HZ        _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_XTAL_512HZ)
 #define AM_HAL_STIMER_LFRC_NOMINAL      _VAL2FLD(STIMER_STCFG_CLKSEL, STIMER_STCFG_CLKSEL_LFRC_1KHZ)
@@ -125,22 +126,6 @@ extern "C"
 //
 //*****************************************************************************
 #define AM_HAL_STIMER_MIN_DELTA         4
-//! @}
-
-//*****************************************************************************
-//
-//! @name Capture Control Register options.
-//! @{
-//! Configuration options for capture control register.
-//!
-//! These options are to be used with the am_hal_stimer_capture_control_set
-//! function.
-//
-//*****************************************************************************
-#define AM_HAL_STIMER_CAPTURE0_ENABLE   _VAL2FLD(STIMER_CAPTURECONTROL_CAPTURE0, STIMER_CAPTURECONTROL_CAPTURE0_ENABLE)
-#define AM_HAL_STIMER_CAPTURE1_ENABLE   _VAL2FLD(STIMER_CAPTURECONTROL_CAPTURE1, STIMER_CAPTURECONTROL_CAPTURE1_ENABLE)
-#define AM_HAL_STIMER_CAPTURE2_ENABLE   _VAL2FLD(STIMER_CAPTURECONTROL_CAPTURE2, STIMER_CAPTURECONTROL_CAPTURE2_ENABLE)
-#define AM_HAL_STIMER_CAPTURE3_ENABLE   _VAL2FLD(STIMER_CAPTURECONTROL_CAPTURE3, STIMER_CAPTURECONTROL_CAPTURE3_ENABLE)
 //! @}
 
 //*****************************************************************************
@@ -193,9 +178,6 @@ extern uint32_t am_hal_stimer_config(uint32_t ui32STimerConfig);
 //
 //! @brief Check if the STIMER is running.
 //!
-//! This function should be used to perform the initial set-up of the
-//! stimer.
-//!
 //! @return true = STIMER running;  false = STIMER needs to be configured.
 //
 //*****************************************************************************
@@ -227,6 +209,17 @@ extern uint32_t am_hal_stimer_counter_get(void);
 //
 //*****************************************************************************
 extern void     am_hal_stimer_counter_clear(void);
+
+//*****************************************************************************
+//
+//! @brief Check if the compare value can be set without blocking.
+//!
+//! @param ui32CmprInstance is the compare register instance number (0-7).
+//!
+//! @return true if delta can be set safely without blocking.
+//
+//*****************************************************************************
+extern bool     am_hal_stimer_check_compare_delta_set(uint32_t ui32CmprInstance);
 
 //*****************************************************************************
 //
@@ -273,29 +266,38 @@ extern uint32_t am_hal_stimer_compare_get(uint32_t ui32CmprInstance);
 //*****************************************************************************
 //
 //! @brief Start capturing data with the specified capture register.
+//!        Use this function to start capturing.
 //!
-//! @param ui32CaptureNum is the Capture Register Number to read (0-3).
+//! @param ui32CaptureNum is the Capture Register Number to write (0-3).
 //! @param ui32GPIONumber is the pin number.
+//!        It must not be within range of AM_HAL_TIMER_UNSUPPORTED_GPIO_START
+//!        to AM_HAL_TIMER_UNSUPPORTED_GPIO_END.
+//!        It also must be in range of available GPIO pins.
 //! @param bPolarity: false (0) = Capture on low to high transition.
 //!                   true  (1) = Capture on high to low transition.
 //!
-//! Use this function to start capturing.
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!       AM_HAL_STATUS_INVALID_ARG if the pin number or capture number
+//!       is invalid.
+//!
 //
 //*****************************************************************************
-extern void     am_hal_stimer_capture_start(uint32_t ui32CaptureNum,
+extern uint32_t am_hal_stimer_capture_start(uint32_t ui32CaptureNum,
                                             uint32_t ui32GPIONumber,
                                             bool bPolarity);
 
 //*****************************************************************************
 //
 //! @brief Stop capturing data with the specified capture register.
+//!        Use this function to stop capturing.
 //!
-//! @param ui32CaptureNum is the Capture Register Number to read.
+//! @param ui32CaptureNum is the Capture Register Number to stop.
 //!
-//! Use this function to stop capturing.
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!       AM_HAL_STATUS_INVALID_ARG if the capture number is invalid.
 //
 //*****************************************************************************
-extern void     am_hal_stimer_capture_stop(uint32_t ui32CaptureNum);
+extern uint32_t am_hal_stimer_capture_stop(uint32_t ui32CaptureNum);
 
 //*****************************************************************************
 //
@@ -314,10 +316,10 @@ extern uint32_t am_hal_stimer_capture_get(uint32_t ui32CaptureNum);
 //
 //! @brief Set the current stimer nvram register value.
 //!
-//! @param ui32NvramNum is the NVRAM Register Number to read.
+//! @param ui32NvramNum is the NVRAM Register Number to write.
 //! @param ui32NvramVal is the value to write to NVRAM.
 //!
-//! This function can be used to read the value in an stimer NVRAM register.
+//! This function can be used to write value into an stimer NVRAM register.
 //
 //*****************************************************************************
 extern void am_hal_stimer_nvram_set(uint32_t ui32NvramNum, uint32_t ui32NvramVal);
@@ -394,7 +396,6 @@ extern void     am_hal_stimer_int_enable(uint32_t ui32Interrupt);
 //!     AM_HAL_STIMER_INT_CAPTUREC
 //!     AM_HAL_STIMER_INT_CAPTURED
 //!
-//! @return Return the enabled timer interrupts.
 //
 //*****************************************************************************
 extern uint32_t am_hal_stimer_int_enable_get(void);
@@ -504,10 +505,79 @@ extern void     am_hal_stimer_int_clear(uint32_t ui32Interrupt);
 //! The return value will be the logical OR of one or more of the following
 //! values:
 //!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//!
 //! @return Returns the stimer interrupt status.
 //
 //*****************************************************************************
 extern uint32_t am_hal_stimer_int_status_get(bool bEnabledOnly);
+
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @brief Set up the secure stimer.
+//!
+//! @param ui32STimerConfig is the value to load into the configuration reg.
+//!
+//! This function should be used to perform the initial set-up of the
+//! secure stimer.
+//!
+//! @return The 32-bit current config of the STimer Config register
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_config(uint32_t ui32STimerConfig);
+
+//*****************************************************************************
+//
+//! @brief Check if the secure STIMER is running.
+//!
+//! @return true = STIMER running;  false = STIMER needs to be configured.
+//
+//*****************************************************************************
+extern bool     am_hal_secure_stimer_is_running(void);
+
+//*****************************************************************************
+//
+//! @brief Reset the current secure stimer block to power-up state.
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_reset_config(void);
+
+//*****************************************************************************
+//
+//! @brief Get the current secure stimer value.
+//!
+//! This function can be used to read, uninvasively, the value in the
+//! secure stimer.
+//!
+//! @return The 32-bit value from the STimer counter register.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_counter_get(void);
+
+//*****************************************************************************
+//
+//! @brief Clear the secure stimer counter.
+//!
+//! This function clears the STimer Counter and leaves the secure stimer
+//! running.
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_counter_clear(void);
 
 //*****************************************************************************
 //
@@ -518,7 +588,322 @@ extern uint32_t am_hal_stimer_int_status_get(bool bEnabledOnly);
 //! @return true if delta can be set safely without blocking.
 //
 //*****************************************************************************
-extern bool     am_hal_stimer_check_compare_delta_set(uint32_t ui32CmprInstance);
+extern bool     am_hal_secure_stimer_check_compare_delta_set(
+                                                    uint32_t ui32CmprInstance);
+
+//*****************************************************************************
+//
+//! @brief Set the compare value.
+//!
+//! @param ui32CmprInstance is the compare register instance number (0-7).
+//! @param ui32Delta is the value to add to the STimer counter and load into
+//!        the comparator register.
+//!
+//! @note There is no way to set an absolute value into a comparator register.
+//!       Only deltas added to the STimer counter can be written to the compare
+//!       registers.
+//!       Back to back writes to COMPARE are not reliable. This function takes
+//!       care of adding necessary wait till the value can be safely written.
+//!       If blocking in this function is not desirable, application should
+//!       check for it beforehand using
+//!       am_hal_secure_stimer_check_compare_delta_set()
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!       The minimum value that can be set is AM_HAL_STIMER_MIN_DELTA. If the
+//!       value supplied is less - the function bumps it up to safe value and
+//!       returns AM_HAL_STIMER_DELTA_TOO_SMALL
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_compare_delta_set(
+                                                    uint32_t ui32CmprInstance,
+                                                    uint32_t ui32Delta);
+
+//*****************************************************************************
+//
+//! @brief Get the current secure stimer compare register value.
+//!
+//! @param ui32CmprInstance is the compare register instance number (0-7).
+//!
+//! This function can be used to read the value in a secure stimer compare
+//! register.
+//!
+//! @note stimer compare register cannot be reliably read immediately after
+//!       it has been written to. This function will block in a wait loop
+//!       till the value can be safely read.
+//!
+//! @return Return the compare register value.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_compare_get(uint32_t ui32CmprInstance);
+
+//*****************************************************************************
+//
+//! @brief Start capturing data with the specified capture register.
+//!        Use this function to start capturing.
+//!
+//! @param ui32CaptureNum is the Capture Register Number to write (0-3).
+//! @param ui32GPIONumber is the pin number.
+//!        it must be in range of AM_HAL_TIMER_SECURE_GPIO_START to
+//!        AM_HAL_TIMER_SECURE_GPIO_END.
+//! @param bPolarity: false (0) = Capture on low to high transition.
+//!                   true  (1) = Capture on high to low transition.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!       AM_HAL_STATUS_INVALID_ARG if the pin number or capture number
+//!       is invalid.
+//!
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_capture_start(uint32_t ui32CaptureNum,
+                                                   uint32_t ui32GPIONumber,
+                                                   bool bPolarity);
+
+//*****************************************************************************
+//
+//! @brief Stop capturing data with the specified capture register.
+//!        Use this function to stop capturing.
+//!
+//! @param ui32CaptureNum is the Capture Register Number to stop.
+//!
+//! @return AM_HAL_STATUS_SUCCESS on success.
+//!       AM_HAL_STATUS_INVALID_ARG if the capture number is invalid.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_capture_stop(uint32_t ui32CaptureNum);
+
+//*****************************************************************************
+//
+//! @brief Get the current secure stimer capture register value.
+//!
+//! @param ui32CaptureNum is the Capture Register Number to read.
+//!
+//! This function can be used to read the value in a secure stimer capture
+//! register.
+//!
+//! @return Return the capture register value.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_capture_get(uint32_t ui32CaptureNum);
+
+//*****************************************************************************
+//
+//! @brief Set the current secure stimer nvram register value.
+//!
+//! @param ui32NvramNum is the NVRAM Register Number to write.
+//! @param ui32NvramVal is the value to write to NVRAM.
+//!
+//! This function can be used to write value into a secure stimer NVRAM
+//! register.
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_nvram_set(uint32_t ui32NvramNum,
+                                               uint32_t ui32NvramVal);
+
+//*****************************************************************************
+//
+//! @brief Get the current secure stimer nvram register value.
+//!
+//! @param ui32NvramNum is the NVRAM Register Number to read.
+//!
+//! This function can be used to read the value in a secure stimer NVRAM
+//! register.
+//!
+//! @return Return the nvram register value.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_nvram_get(uint32_t ui32NvramNum);
+
+//*****************************************************************************
+//
+//! @brief Enables the selected secure system timer interrupt.
+//!
+//! @param ui32Interrupt is the interrupt to be used.
+//!
+//! This function will enable the selected interrupts in the secure STIMER
+//! interrupt enable register. In order to receive an interrupt from a secure
+//! stimer component, you will need to enable the interrupt for that
+//! component in this main register, as well as in the secure stimer
+//! configuration register (accessible though am_hal_secure_stimer_config()),
+//! and in the NVIC.
+//!
+//! ui32Interrupt should be the logical OR of one or more of the following
+//! values:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_int_enable(uint32_t ui32Interrupt);
+
+//*****************************************************************************
+//
+//! @brief Return the enabled secure stimer interrupts.
+//!
+//! This function will return all enabled interrupts in the secure STIMER
+//! interrupt enable register.
+//!
+//! @return return enabled interrupts. This will be a logical or of:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//!
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_int_enable_get(void);
+
+//*****************************************************************************
+//
+//! @brief Disables the selected secure stimer interrupt.
+//!
+//! @param ui32Interrupt is the interrupt to be used.
+//!
+//! This function will disable the selected interrupts in the secure STIMER
+//! interrupt register.
+//!
+//! ui32Interrupt should be the logical OR of one or more of the following
+//! values:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_int_disable(uint32_t ui32Interrupt);
+
+//*****************************************************************************
+//
+//! @brief Sets the selected secure stimer interrupt.
+//!
+//! @param ui32Interrupt is the interrupt to be used.
+//!
+//! This function will set the selected interrupts in the secure STIMER
+//! interrupt register.
+//!
+//! ui32Interrupt should be the logical OR of one or more of the following
+//! values:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_int_set(uint32_t ui32Interrupt);
+
+//*****************************************************************************
+//
+//! @brief Clears the selected secure stimer interrupt.
+//!
+//! @param ui32Interrupt is the interrupt to be used.
+//!
+//! This function will clear the selected interrupts in the secure STIMER
+//! interrupt register.
+//!
+//! ui32Interrupt should be the logical OR of one or more of the following
+//! values:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//
+//*****************************************************************************
+extern void     am_hal_secure_stimer_int_clear(uint32_t ui32Interrupt);
+
+//*****************************************************************************
+//
+//! @brief Returns either the enabled or raw secure stimer interrupt status.
+//!
+//! This function will return the secure stimer interrupt status.
+//!
+//! @param bEnabledOnly if true returns the status of the enabled
+//! interrupts only.
+//!
+//! The return value will be the logical OR of one or more of the following
+//! values:
+//!
+//!     AM_HAL_STIMER_INT_COMPAREA
+//!     AM_HAL_STIMER_INT_COMPAREB
+//!     AM_HAL_STIMER_INT_COMPAREC
+//!     AM_HAL_STIMER_INT_COMPARED
+//!     AM_HAL_STIMER_INT_COMPAREE
+//!     AM_HAL_STIMER_INT_COMPAREF
+//!     AM_HAL_STIMER_INT_COMPAREG
+//!     AM_HAL_STIMER_INT_COMPAREH
+//!
+//!     AM_HAL_STIMER_INT_OVERFLOW
+//!
+//!     AM_HAL_STIMER_INT_CAPTUREA
+//!     AM_HAL_STIMER_INT_CAPTUREB
+//!     AM_HAL_STIMER_INT_CAPTUREC
+//!     AM_HAL_STIMER_INT_CAPTURED
+//!
+//! @return Returns the secure stimer interrupt status.
+//
+//*****************************************************************************
+extern uint32_t am_hal_secure_stimer_int_status_get(bool bEnabledOnly);
+
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

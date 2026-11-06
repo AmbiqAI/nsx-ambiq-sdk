@@ -9,7 +9,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -255,16 +255,16 @@
 #define AM_REG_OTP_INFO1_TRIM_SBR_OTP_MAX_OTP_RETRY(n) (((uint32_t)(n) << 12) & 0x000FF000)
 #define AM_REG_OTP_INFO1_TRIM_SBR_OTP_MAX_OTP_RETRY_Pos 12
 #define AM_REG_OTP_INFO1_TRIM_SBR_OTP_MAX_OTP_RETRY_Msk 0x000FF000
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD10_S 10
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD10_M 0x00000C00
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD10(n) (((uint32_t)(n) << 10) & 0x00000C00)
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD10_Pos 10
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD10_Msk 0x00000C00
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD11_S 11
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD11_M 0x00000800
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD11(n) (((uint32_t)(n) << 11) & 0x00000800)
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD11_Pos 11
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_RESVD11_Msk 0x00000800
 #define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_S 0
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_M 0x000003FF
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK(n) (((uint32_t)(n) << 0) & 0x000003FF)
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_M 0x000007FF
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK(n) (((uint32_t)(n) << 0) & 0x000007FF)
 #define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_Pos 0
-#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_Msk 0x000003FF
+#define AM_REG_OTP_INFO1_TRIM_SBR_OTP_INT_MASK_Msk 0x000007FF
 
 // EXTIMGCERTADDR0 - The content certificate address for the validated extended image 0. (CM4 Radio Image Cert Address)  0x0 means unused.
 #define AM_REG_OTP_INFO1_EXTIMGCERTADDR0_ADDRESS_S 0

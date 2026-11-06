@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -119,11 +119,6 @@ extern const am_hal_gpio_pincfg_t g_AM_VALIDATION_GPIO;
 #define IOMSTR_IQRn                     IOMSTR7_IRQn
 
 //
-// ios_fullduplex
-//
-#define IOM_DUPLEX_TEST_MODULE      7
-
-//
 // ios_fullduplex/ios_fullduplex_host
 //
 #define AM_BSP_GPIO_TEST_IOM_SCK        AM_BSP_GPIO_IOM7_SCK
@@ -216,6 +211,13 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 //
 //*****************************************************************************
 #define AM_BSP_TP_IOM_MODULE                2
+
+//*****************************************************************************
+//
+// Click Board I2C interface definitions
+//
+//*****************************************************************************
+#define AM_BSP_I2C_CB_IOM_MODULE            1
 
 //*****************************************************************************
 //

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -67,7 +67,10 @@ typedef enum
     AM_HAL_USB_DEV_STATE_RESUMING,
     AM_HAL_USB_DEV_STATE_ACTIVE,
     AM_HAL_USB_DEV_STATE_SUSPENDING,
-    AM_HAL_USB_DEV_STATE_SUSPENDED
+    AM_HAL_USB_DEV_STATE_SUSPENDED,
+    // #### INTERNAL BEGIN ####
+    AM_HAL_USB_DEV_STATE_SLEPT,
+    // #### INTERNAL END ####
 }
 am_hal_usb_dev_state_e;
 
@@ -87,6 +90,9 @@ typedef enum
     AM_HAL_USB_DEV_EVT_SOF,
     AM_HAL_USB_DEV_EVT_RESUME,
     AM_HAL_USB_DEV_EVT_SUSPEND,
+    // #### INTERNAL BEGIN ####
+    AM_HAL_USB_DEV_EVT_SLEEP,
+    // #### INTERNAL END ####
     AM_HAL_USB_DEV_EVT_NUM
 }
 am_hal_usb_dev_event_e;
@@ -149,6 +155,22 @@ typedef enum
     AM_HAL_USB_OUT_DIR = 0,
     AM_HAL_USB_IN_DIR = 1
 } am_hal_usb_xfer_dir_e;
+
+//*****************************************************************************
+//
+//! @brief Packet-buffer mode allocated to a non-control endpoint.
+//!
+//! Values map directly to the USB controller's CONBUF register:
+//! 00=single, 01=double, 10=triple, 11=quad.
+//
+//*****************************************************************************
+typedef enum
+{
+    AM_HAL_USB_EP_BUFFER_COUNT_SINGLE = 0,
+    AM_HAL_USB_EP_BUFFER_COUNT_DOUBLE = 1,
+    AM_HAL_USB_EP_BUFFER_COUNT_TRIPLE = 2,
+    AM_HAL_USB_EP_BUFFER_COUNT_QUAD   = 3,
+} am_hal_usb_ep_buffer_count_e;
 
 //*****************************************************************************
 //
@@ -278,29 +300,123 @@ extern uint32_t am_hal_usb_set_dev_state(void *pHandle, am_hal_usb_dev_state_e e
 
 //*****************************************************************************
 //
+//! @brief Complete L2 suspend: gate controller clocks if still SUSPENDING.
+//!
+//! SUSPENDING is set in am_hal_usb_interrupt_service() on suspir before the
+//! suspend callback runs.
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_complete_l2_suspend(void *pHandle);
+
+//*****************************************************************************
+//
+//! @brief Complete L2 resume: set device state to ACTIVE.
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_complete_l2_resume(void *pHandle);
+
+// #### INTERNAL BEGIN ####
+// Note: Remote wakeup feature is declared as unsupported as mentioned in
+//       [CAR-3940]
+//
+//*****************************************************************************
+//
+//! @brief USB remote wakeup HAL support control
+//!
+//! Defaults to disabled (0). When disabled (the default), both
+//! am_hal_usb_start_remote_wakeup() and am_hal_usb_end_remote_wakeup()
+//! always return AM_HAL_STATUS_INVALID_OPERATION without touching hardware.
+//! The register-level implementation is retained for Ambiq-internal
+//! bring-up/validation and is only compiled in when this is set to 1 by the
+//! build; it is stripped from public source packages.
+//
+//*****************************************************************************
+#ifndef AM_HAL_USB_REMOTE_WAKEUP_SUPPORT
+#define AM_HAL_USB_REMOTE_WAKEUP_SUPPORT 0
+#endif
+// #### INTERNAL END ####
+
+//*****************************************************************************
+//
 //! @brief start the remote wakeup
 //!
 //! @param pHandle - handle for the module instance.
 //!
-//! This function is used by upper layer USB stack to start a remote wakeup action.
+//! Not supported. Always returns AM_HAL_STATUS_INVALID_OPERATION.
 //!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//! @return AM_HAL_STATUS_INVALID_OPERATION
 //
 //*****************************************************************************
 extern uint32_t am_hal_usb_start_remote_wakeup(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief stop the remote wakeup
+//! @brief end the remote wakeup
 //!
 //! @param pHandle - handle for the module instance.
 //!
-//! This function is used by upper layer USB stack to end a remote wakeup action.
+//! Not supported. Always returns AM_HAL_STATUS_INVALID_OPERATION.
+//!
+//! @return AM_HAL_STATUS_INVALID_OPERATION
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_end_remote_wakeup(void *pHandle);
+
+// #### INTERNAL BEGIN ####
+//*****************************************************************************
+//
+//! @brief LPM L1 support control
+//
+//*****************************************************************************
+#ifndef AM_HAL_USB_LPM_L1_SUPPORT
+#define AM_HAL_USB_LPM_L1_SUPPORT 1
+#endif
+
+#if AM_HAL_USB_LPM_L1_SUPPORT
+//*****************************************************************************
+//
+//! @brief Enable L1 Sleep
+//!
+//! @param pHandle - handle for the module instance.
+//!
+//! Sets sleep_entry=1 (auto UTMI gate on L1 entry), lpmnyet=0 (ACK), and
+//! enables the L1 IRQ. Called once after bus reset from the DCD.
 //!
 //! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
 //
 //*****************************************************************************
-extern uint32_t am_hal_usb_end_remote_wakeup(void *pHandle);
+extern uint32_t am_hal_usb_l1_enable(void *pHandle);
+
+//*****************************************************************************
+//
+//! @brief Disable L1 Sleep
+//!
+//! @param pHandle - handle for the module instance.
+//!
+//! Sets lpmnyet=1 (NYET / refuse L1 tokens), clears sleep_entry, and masks
+//! the L1 IRQ. Pair with am_hal_usb_l1_enable() to restore ACK / L1 entry.
+//!
+//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_l1_disable(void *pHandle);
+
+//*****************************************************************************
+//
+//! @brief read LPM-token bRemoteWake from hardware
+//!
+//! @param pHandle - handle for the module instance.
+//!
+//! Safe to call after a SLEEP event (lpmir already cleared in
+//! am_hal_usb_intr_status_get). Upper layer copies the result for policy;
+//! this value is not retained in HAL state.
+//!
+//! @return true if the latest LPM token granted device remote wake
+//
+//*****************************************************************************
+extern bool am_hal_usb_l1_remote_wakeup_get(void *pHandle);
+#endif
+// #### INTERNAL END ####
 
 //*****************************************************************************
 //
@@ -450,9 +566,9 @@ am_hal_usb_test_mode_e;
 //!
 //! @param pHandle - handle for the module instance.
 //!
-//! set a flag in the handle to indicate the current USB device in the test mode.
+//! USB test mode is not supported on this device.
 //!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//! @return AM_HAL_STATUS_INVALID_OPERATION
 //
 //*****************************************************************************
 extern uint32_t am_hal_usb_enter_test_mode(const void *pHandle);
@@ -464,10 +580,9 @@ extern uint32_t am_hal_usb_enter_test_mode(const void *pHandle);
 //! @param pHandle   - handle for the module instance.
 //! @param eTestMode - one of the test mode like TEST_SE0_NAK, TEST_J, TEST_K and TEST_PACKET.
 //!
-//! This function is used by upper layer USB stack to order the USB device controller
-//! to send the specific USB packet or signals to verify the timing and signal quaility.
+//! USB test mode is not supported on this device.
 //!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//! @return AM_HAL_STATUS_INVALID_OPERATION
 //
 //*****************************************************************************
 extern uint32_t am_hal_usb_test_mode(const void *pHandle, const am_hal_usb_test_mode_e eTestMode);
@@ -523,12 +638,29 @@ extern uint32_t am_hal_usb_ep_clear_stall(void *pHandle, uint8_t ui8EpAddr);
 
 //*****************************************************************************
 //
+//! @brief Abort the endpoint transfer
+//!
+//! @param pHandle Pointer to the USB handle
+//! @param ui8EpAddr Endpoint address
+//!
+//! This function is used by the upper layer USB stack to abort the endpoint
+//! transfer when the endpoint is closed.
+//!
+//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_ep_xfer_abort(void *pHandle, uint8_t ui8EpAddr);
+
+//*****************************************************************************
+//
 //! @brief submit a USB transfer
 //!
 //! @param pHandle   - handle for the module instance.
 //! @param ui8EpAddr - endpoint address including the endpoint direction
 //! @param pui8Buf   - the buffer for receiving the data from USB host or
-//!                    sending data to the USB host.
+//!                    sending data to the USB host. Must be non-NULL when
+//!                    \e ui32Len is non-zero; may be NULL for a zero-length
+//!                    transfer (ZLP).
 //! @param ui32Len   - the length of the buffer.
 //!
 //! This function is used by the upper layer USB stack to submit a transfer requst
@@ -635,6 +767,16 @@ extern uint32_t am_hal_usb_power_control(void *pHandle, am_hal_sysctrl_power_sta
 
 //*****************************************************************************
 //
+//! @brief Power up the USB PHY
+//!
+//! Release the USB PHY from power-down, enable the PHY PLL, configure clock
+//! selection, and enable UTMI TX output.
+//
+//*****************************************************************************
+extern void am_hal_usb_power_up_usb_phy(void);
+
+//*****************************************************************************
+//
 //! @brief turn on/off USB PHY reference clock
 //!
 //! @param pHandle - the handle of initialized USB instance
@@ -651,118 +793,6 @@ extern uint32_t am_hal_usb_power_control(void *pHandle, am_hal_sysctrl_power_sta
 //
 //*****************************************************************************
 extern uint32_t am_hal_usb_phy_clock_enable(void *pHandle, bool bEnable, am_hal_usb_dev_speed_e eSpeed);
-
-//*****************************************************************************
-//
-//! @brief enable the IN endpoints' interrupt
-//!
-//! @param pHandle     - the handle of initialized USB instance
-//! @param ui32IntMask  - the bit mask of IN endpoints' interrupt
-//!
-//! This function is used to enable the IN endpoints' interrupt.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_in_enable(void *pHandle, uint32_t ui32IntMask);
-
-//*****************************************************************************
-//
-//! @brief disable the IN endpoints' interrupt
-//!
-//! @param pHandle     - the handle of initialized USB instance
-//! @param ui32IntMask  - the bit mask of IN endpoints' interrupt
-//!
-//! This function is used to disable the IN endpoints' interrupt.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_in_disable(void *pHandle, uint32_t ui32IntMask);
-
-//*****************************************************************************
-//
-//! @brief clear the IN endpoints' interrupt status
-//!
-//! @param pHandle - the handle of initialized USB instance
-//!
-//! This function is used to clear the IN endpoints' interrupt status.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_in_clear(void *pHandle);
-
-//*****************************************************************************
-//
-//! @brief get the IN endpoints' interrupt status
-//!
-//! @param pHandle      - the handle of initialized USB instance
-//! @param ui32IntStatus - the IN endpoints' interrupt status
-//! @param bEnabledOnly   - only check enabled IN endpoint interrupt or not
-//!
-//! This function is used to get IN endpoints' interrupt status.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_in_status_get(void *pHandle, uint32_t *ui32IntStatus, bool bEnabledOnly);
-
-//*****************************************************************************
-//
-//! @brief enable the OUT endpoints' interrupt
-//!
-//! @param pHandle    - the handle of initialized USB instance
-//! @param ui32IntMask - the bit mask of OUT endpoints' interrupt
-//!
-//! This function is used to enable the OUT endpoints' interrupt.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_out_enable(void *pHandle, uint32_t ui32IntMask);
-
-//*****************************************************************************
-//
-//! @brief disable the endpoints' interrupt
-//!
-//! @param pHandle    - the handle of initialized USB instance
-//! @param ui32IntMask - the bit mask of OUT endpoints' interrupt
-//!
-//! This function is used to disable the OUT endpoints' interrupt.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_out_disable(void *pHandle, uint32_t ui32IntMask);
-
-//*****************************************************************************
-//
-//! @brief clear the OUT endpoints' interrupt status
-//!
-//! @param pHandle - the handle of initialized USB instance
-//!
-//! This function is used to clear the OUT endpoints' interrupt.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_out_clear(void *pHandle);
-
-//*****************************************************************************
-//
-//! @brief get the OUT endpoints' interrupt status
-//!
-//! @param pHandle      - the handle of initialized USB instance
-//! @param pui32IntStatus - pointer to the OUT endpoints' interrupt status
-//! @param bEnabledOnly   - only check enabled OUT endpoint interrupt or not
-//!
-//! This function is used to get the OUT endpoints' interrupt status.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
-//
-//*****************************************************************************
-extern uint32_t am_hal_usb_intr_ep_out_status_get(void *pHandle, uint32_t *pui32IntStatus, bool bEnabledOnly);
 
 //*****************************************************************************
 //
@@ -807,36 +837,64 @@ extern uint32_t am_hal_usb_intr_usb_clear(void *pHandle);
 
 //*****************************************************************************
 //
-//! @brief get the USB bus interrupt status
+//! @brief USB bus interrupt masks (`USBIRQ` / `USBIEN`).
 //!
-//! This function is used to get the USB bus interrupt status.
-//!
-//! @param pHandle      - the handle of initialized USB instance
-//! @param ui32IntStatus - the USB bus interrupt status
-//! @param bEnabledOnly   - only check enabled USB bus interrupt or not
-//!
-//! This function is used to get the USB bus interrupt status.
-//!
-//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//! Values match Atomiq USBIRQ/USBIEN bit positions (CMSIS masks). This is an
+//! atomiq110 ABI; Apollo4/5/510 keep their legacy soft packing.
 //
 //*****************************************************************************
-extern uint32_t am_hal_usb_intr_usb_status_get(void *pHandle, uint32_t *ui32IntStatus, bool bEnabledOnly);
+typedef enum
+{
+    USB_INTRUSB_SUDAVIR_Msk = USB_USBIRQ_USBIRQSUDAVIRQ_Msk, /* bit 0  */
+    USB_INTRUSB_SOF_Msk     = USB_USBIRQ_USBIRQSOFIRQ_Msk,    /* bit 1  */
+    USB_INTRUSB_Suspend_Msk = USB_USBIRQ_USBIRQSUSPIRQ_Msk,   /* bit 3  */
+    USB_INTRUSB_Reset_Msk   = USB_USBIRQ_USBIRQRESIRQ_Msk,    /* bit 4  */
+    // #### INTERNAL BEGIN ####
+#if AM_HAL_USB_LPM_L1_SUPPORT
+    USB_INTRUSB_L1_Msk      = USB_USBIRQ_USBIRQLPMIRQ_Msk,    /* bit 7  */
+#endif
+    // #### INTERNAL END ####
+    USB_INTRUSB_Resume_Msk  = USB_USBIRQ_USBIRQWUIREQ_Msk,    /* bit 15 */
+}
+am_hal_usb_usbirq_usbext_msk_e;
 
 //*****************************************************************************
 //
-//! @brief Enum for the USB device bus event mask bit.
+//! @brief USB IN endpoint interrupt masks (`IN07IRQ` / `IN07IEN` bits).
 //!
-//! This Enum are just some convenient utility for easing the programming.
+//! Values match Atomiq IN07IRQOUT07IRQ / IN07IENOUT07IEN (bit N = EPn).
 //
 //*****************************************************************************
-enum
+typedef enum
 {
-    USB_INTRUSB_Suspend_Msk = 0x1,
-    USB_INTRUSB_Resume_Msk  = 0x2,
-    USB_INTRUSB_Reset_Msk   = 0x4,
-    USB_INTRUSB_SOF_Msk     = 0x8,
-    USB_INTRIN_EP0_Msk      = 0x1,
-};
+    USB_INTRIN_EP0_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN0IRQ_Msk, /* bit 0 */
+    USB_INTRIN_EP1_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN1IRQ_Msk, /* bit 1 */
+    USB_INTRIN_EP2_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN2IRQ_Msk, /* bit 2 */
+    USB_INTRIN_EP3_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN3IRQ_Msk, /* bit 3 */
+    USB_INTRIN_EP4_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN4IRQ_Msk, /* bit 4 */
+    USB_INTRIN_EP5_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN5IRQ_Msk, /* bit 5 */
+    USB_INTRIN_EP6_Msk = USB_IN07IRQOUT07IRQ_IN07IRQIN6IRQ_Msk, /* bit 6 */
+}
+am_hal_usb_inxirq_msk_e;
+
+//*****************************************************************************
+//
+//! @brief USB OUT endpoint interrupt masks (`OUT07IRQ` / `OUT07IEN` bits).
+//!
+//! Values match Atomiq IN07IRQOUT07IRQ / IN07IENOUT07IEN (bit 16+N = EPn).
+//
+//*****************************************************************************
+typedef enum
+{
+    USB_INTROUT_EP0_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT0IRQ_Msk, /* bit 16 */
+    USB_INTROUT_EP1_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT1IRQ_Msk, /* bit 17 */
+    USB_INTROUT_EP2_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT2IRQ_Msk, /* bit 18 */
+    USB_INTROUT_EP3_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT3IRQ_Msk, /* bit 19 */
+    USB_INTROUT_EP4_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT4IRQ_Msk, /* bit 20 */
+    USB_INTROUT_EP5_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT5IRQ_Msk, /* bit 21 */
+    USB_INTROUT_EP6_Msk = USB_IN07IRQOUT07IRQ_OUT07IRQOUT6IRQ_Msk, /* bit 22 */
+}
+am_hal_usb_outxirq_msk_e;
 
 //*****************************************************************************
 //
@@ -844,17 +902,15 @@ enum
 //!
 //! This function is used to get all USB related interrupt status.
 //!
-//! @param pHandle          - the handle of initialized USB instance
-//! @param ui32IntrUsbStatus - the USB bus interrupt status
-//! @param ui32IntrInStatus  - the USB IN endpoint interrupt status
-//! @param ui32IntrOutStatus - the USB OUT endpoint interrupt status
-//! @param ui32IntrDMAStatus  - the USB DMA mode 0 interrupt status
-//! @param ui32IntrAutoDMAStatus - the USB Auto DMA interrupt status
+//! @param pHandle             - the handle of initialized USB instance
+//! @param ui32IntrUsbStatus   - USB bus interrupt status (USBIRQ/USBIEN soft = HW)
+//! @param ui32IntrEpStatus    - EP IRQ status (IN07IRQOUT07IRQ raw packing)
+//! @param ui32IntrAutoDMAStatus - USB Auto DMA interrupt status
 //!
 //! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
 //
 //*****************************************************************************
-extern uint32_t am_hal_usb_intr_status_get(void *pHandle, uint32_t *ui32IntrUsbStatus, uint32_t *ui32IntrInStatus, uint32_t *ui32IntrOutStatus,
+extern uint32_t am_hal_usb_intr_status_get(void *pHandle, uint32_t *ui32IntrUsbStatus, uint32_t *ui32IntrEpStatus,
                                           uint32_t *ui32IntrAutoDMAStatus);
 
 //*****************************************************************************
@@ -863,39 +919,35 @@ extern uint32_t am_hal_usb_intr_status_get(void *pHandle, uint32_t *ui32IntrUsbS
 //!
 //! This function is USB interrupt service routine function.
 //!
-//! @param pHandle - the handle of initialized USB instance
-//! @param ui32IntrUsbStatus - the USB bus interrupt status
-//! @param ui32IntrInStatus  - the USB IN endpoint interrupt status
-//! @param ui32IntrOutStatus - the USB OUT endpoint interrupt status
-//! @param ui32IntrDMAStatus  - the USB DMA mode 0 interrupt status
-//! @param ui32IntrAutoDMAStatus - the USB Auto DMA interrupt status
+//! @param pHandle             - the handle of initialized USB instance
+//! @param ui32IntrUsbStatus   - USB bus interrupt status
+//! @param ui32IntrEpStatus    - EP IRQ status (IN at [6:0], OUT at [22:16])
+//! @param ui32IntrAutoDMAStatus - USB Auto DMA interrupt status
 //!
 //
 //*****************************************************************************
-extern void am_hal_usb_interrupt_service(void *pHandle, uint32_t ui32IntrUsbStatus, uint32_t ui32IntrInStatus, uint32_t ui32IntrOutStatus,
+extern void am_hal_usb_interrupt_service(void *pHandle, uint32_t ui32IntrUsbStatus, uint32_t ui32IntrEpStatus,
                                         uint32_t ui32IntrAutoDMAStatus);
 
-//****************************************************************************
+//*****************************************************************************
 //
 //! @brief Macro to read and handle USB interrupts
 //!
 //! Application / USB stack can either call this macro, or implement its custom
 //! handling when usb isr is received
 //
-//****************************************************************************
+//*****************************************************************************
 #define am_hal_usb_handle_isr(pHandle)                  \
     {                                                   \
-        uint32_t int_status[4];                         \
+        uint32_t int_status[3];                         \
         am_hal_usb_intr_status_get(pHandle,             \
                                     &int_status[0],     \
                                     &int_status[1],     \
-                                    &int_status[2],     \
-                                    &int_status[3]);    \
+                                    &int_status[2]);    \
         am_hal_usb_interrupt_service(pHandle,           \
                                      int_status[0],     \
                                      int_status[1],     \
-                                     int_status[2],     \
-                                     int_status[3]);    \
+                                     int_status[2]);    \
     }
 
 //*****************************************************************************
@@ -912,18 +964,42 @@ extern uint32_t am_hal_usb_set_xfer_mode(void *pHandle, am_hal_usb_xfer_mode_e e
 
 //*****************************************************************************
 //
-//! @brief Set enable state for  Double Buffer for the Endpoint-Direction
-//!        combination
+//! @brief Set the packet-buffer count for a non-control endpoint direction.
+//!
+//! This function must be called before am_hal_usb_ep_init() for the selected
+//! endpoint direction.
 //!
 //! @param pHandle - the handle of initialized USB instance
-//! @param epnum   - EP number for the setting
+//! @param epnum   - EP number for the setting (1 to 6)
 //! @param dir     - Direction of the endpoint FIFO for the setting
-//! @param enable  - Whether to enable Double Buffer feature.
+//! @param eCount  - Endpoint packet-buffer mode (single to quad)
 //!
+//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
 //
 //*****************************************************************************
-extern uint32_t am_hal_usb_enable_ep_double_buffer(void *pHandle, uint8_t epnum, am_hal_usb_xfer_dir_e dir, bool enable);
+extern uint32_t am_hal_usb_set_ep_buffer_count(void *pHandle, uint8_t epnum,
+                                               am_hal_usb_xfer_dir_e dir,
+                                               am_hal_usb_ep_buffer_count_e eCount);
 
+//*****************************************************************************
+//
+//! @brief Get the configured packet-buffer count for a non-control endpoint
+//!        direction.
+//!
+//! @param pHandle - the handle of initialized USB instance
+//! @param epnum   - EP number for the setting (1 to 6)
+//! @param dir     - Direction of the endpoint FIFO for the setting
+//! @param peCount - Pointer to receive the configured packet-buffer mode
+//!
+//! @return one of am_hal_status_e like AM_HAL_STATUS_SUCCESS
+//
+//*****************************************************************************
+extern uint32_t am_hal_usb_get_ep_buffer_count(void *pHandle, uint8_t epnum,
+                                               am_hal_usb_xfer_dir_e dir,
+                                               am_hal_usb_ep_buffer_count_e *peCount);
+
+//*****************************************************************************
+//
 #ifdef __cplusplus
 }
 #endif

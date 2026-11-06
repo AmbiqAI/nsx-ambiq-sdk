@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSCTRL_H
@@ -44,9 +44,6 @@ extern "C"
 //! AM_HAL_SYSCTRL_DEEPSLEEP_WA:
 //!  Default: Undefined
 //
-// #### INTERNAL BEGIN ####
-// A2SD-1538
-// #### INTERNAL END ####
 //*****************************************************************************
 //#define AM_HAL_SYSCTRL_DEEPSLEEP_WA
 

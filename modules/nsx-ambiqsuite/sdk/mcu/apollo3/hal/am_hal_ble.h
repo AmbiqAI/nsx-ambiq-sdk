@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -458,10 +458,6 @@ extern uint32_t am_hal_ble_deinitialize(void *pHandle);
 //*****************************************************************************
 extern uint32_t am_hal_ble_config(void *pHandle, const am_hal_ble_config_t *psConfig);
 
-// #### INTERNAL BEGIN ####
-//TODO: Add power save/restore?
-//TODO: Add a control API with a RESET option to toggle Nationz HW reset.
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 //! @brief Enable the BLE module.

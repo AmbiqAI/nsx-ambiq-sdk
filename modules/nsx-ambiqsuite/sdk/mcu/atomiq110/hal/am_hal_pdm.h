@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -152,6 +152,39 @@ typedef enum
     AM_HAL_PDM_CLK_OFF        = 0xFF000000,
 }
 am_hal_pdm_clkspd_e;
+
+//*****************************************************************************
+//
+//! PDM external clock divider options.
+//
+//! This enum is typically used only when sub-I2S works in master mode
+//! (`bI2sMaster = true`). In this case, if no external PDM clock divider is
+//! provided, the interface clock may not reach the target 512 kHz or 1.536 MHz.
+//! The following combinations can be used to generate those two frequencies:
+//!   512 kHz Fpdmclk: ePDMClkSpeed = AM_HAL_PDM_CLK_MFRC_24MHZ | AM_HAL_PDM_CLK_DIV48;
+//! 1.536 MHz Fpdmclk: ePDMClkSpeed = AM_HAL_PDM_CLK_HFXTAL     | AM_HAL_PDM_CLK_DIV16;
+//! (assuming AM_HAL_PDM_CLK_HFXTAL = 24.576 MHz).
+//
+//*****************************************************************************
+typedef enum
+{
+    AM_HAL_PDM_CLK_DIV2  = ( 1 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV3  = ( 2 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV4  = ( 3 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV5  = ( 4 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV6  = ( 5 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV8  = ( 7 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV10 = ( 9 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV12 = (11 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV16 = (15 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV24 = (23 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV30 = (29 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV32 = (31 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV48 = (47 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV60 = (59 << AM_HAL_PDM_CRM_CLKDIV_POS),
+    AM_HAL_PDM_CLK_DIV96 = (95 << AM_HAL_PDM_CRM_CLKDIV_POS),
+}
+am_hal_pdm_clkdiv_e;
 
 //*****************************************************************************
 //

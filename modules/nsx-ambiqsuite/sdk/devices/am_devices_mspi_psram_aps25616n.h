@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -33,10 +33,10 @@ extern "C"
 //! @{
 //
 //*****************************************************************************
-#define AM_DEVICES_MSPI_PSRAM_DDR_GLOBAL_RESET 0xFFFF
-#define AM_DEVICES_MSPI_PSRAM_DDR_READ        0x2020
-#define AM_DEVICES_MSPI_PSRAM_DDR_WRITE       0xA0A0
-#define AM_DEVICES_MSPI_PSRAM_DDR_READ_REGISTER 0x4040
+#define AM_DEVICES_MSPI_PSRAM_DDR_GLOBAL_RESET   0xFFFF
+#define AM_DEVICES_MSPI_PSRAM_DDR_READ           0x2020
+#define AM_DEVICES_MSPI_PSRAM_DDR_WRITE          0xA0A0
+#define AM_DEVICES_MSPI_PSRAM_DDR_READ_REGISTER  0x4040
 #define AM_DEVICES_MSPI_PSRAM_DDR_WRITE_REGISTER 0xC0C0
 
 //! @}

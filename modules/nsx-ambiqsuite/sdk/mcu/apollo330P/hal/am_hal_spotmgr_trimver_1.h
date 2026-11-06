@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SPOTMGR_TRIMVER_1_H
@@ -31,12 +31,6 @@ extern "C"
 //! Defines
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-//
-// The CORELDOACTIVETRIM trim code reduced in simobuck init
-//
-// #define CORELDOACTIVETRIM_REDUCE_IN_SIMOBUCK_INIT  7
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //
@@ -113,30 +107,6 @@ extern uint32_t am_hal_spotmgr_trimver_1_default_reset(void);
 //
 //*****************************************************************************
 extern uint32_t am_hal_spotmgr_trimver_1_init(void);
-
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-//! @brief SIMOBUCK initialziation handling at stage just before enabling
-//!        SIMOBUCK
-//!
-//! @return SUCCESS or other Failures.
-//
-//*****************************************************************************
-extern uint32_t am_hal_spotmgr_trimver_1_simobuck_init_bfr_enable(void);
-
-//*****************************************************************************
-//
-//! @brief SIMOBUCK initialziation handling at stage just after enabling
-//!        SIMOBUCK
-//!
-//! @return SUCCESS or other Failures.
-//
-//*****************************************************************************
-extern uint32_t am_hal_spotmgr_trimver_1_simobuck_init_aft_enable(void);
-#endif
-// #### INTERNAL END ####
 
 #if NO_TEMPSENSE_IN_DEEPSLEEP
 //*****************************************************************************

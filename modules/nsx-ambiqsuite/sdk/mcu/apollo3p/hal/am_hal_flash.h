@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_FLASH_H
@@ -29,20 +29,6 @@ extern "C"
 #include <stdint.h>
 #include <stdbool.h>
 
-// #### INTERNAL BEGIN ####
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%                                                               %%%%%%%%%
-//%%%%%%%%  WARNING ADDRESS CONSTANTS ARE MANUALLY EXTRACTED FROM .txt   %%%%%%%%%
-//%%%%%%%%  in the boot loader compilation directory in the chip area.   %%%%%%%%%
-//%%%%%%%%  If you change the boot loader you have to change this file   %%%%%%%%%
-//%%%%%%%%  by hand.                                                     %%%%%%%%%
-//%%%%%%%%                                                               %%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 //! Flash Program keys.
@@ -50,17 +36,6 @@ extern "C"
 //*****************************************************************************
 #define AM_HAL_FLASH_PROGRAM_KEY            0x12344321
 #define AM_HAL_FLASH_INFO_KEY               0xD894E09E
-
-
-// #### INTERNAL BEGIN ####
-#if 0
-// These keys will not be published in the SDK. An application needing to use these
-// APIs would need to pass in the correct value of the keys - obtained from Ambiq
-// CAUTION!!!! - RECOVERY Key should not be released in SDK
-// TODO: We still need to figure out how to make it available to customers
-#define AM_HAL_FLASH_RECOVERY_KEY           0x5B3E75BC
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

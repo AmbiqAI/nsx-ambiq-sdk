@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -37,38 +37,6 @@
 #define SIGNAL_GPIO                         4
 #define SLAVE_BUFFER_SIZE                   128
 
-// ##### INTERNAL BEGIN #####
-//*****************************************************************************
-//
-//! IO Slave configuration structure.
-//
-//*****************************************************************************
-/*=====> put something like this in the user's program
-am_hal_ios_config_t main_sIOSConfig =
-{
-    //
-    //! Select SPI mode 0
-    //
-    .ui32InterfaceSelect = (  AM_HAL_IOS_USE_I2C
-                           // | AM_HAL_IOS_LSB_FIRST
-                            | AM_HAL_IOS_I2C_ADDRESS(0x4A)
-                            ),
-
-    //
-    //! Set up the Direct read section from 0x0 to 0x74, and use the rest for
-    //! FIFO space.
-    //
-    .ui32ROBase = FIFO_BASE,
-    .ui32FIFOBase = FIFO_BASE,
-    .ui32RAMBase = FIFO_END,
-
-    //
-    //! Set the FIFO threshold low, so we wake up less often.
-    //
-    .ui32FIFOThreshold = 32
-};
-                   <==== */
-// ##### INTERNAL END #####
 //*****************************************************************************
 //
 // Initialize the I/O Slave and get ready to commune with the hosts.
@@ -281,11 +249,6 @@ am_devices_i2cioshc_message_extract(am_devices_i2cioshc_message_t *psMessage,
 void
 am_devices_i2cioshc_write(uint8_t *pui8Data, uint8_t ui8Size)
 {
-//##### INTERNAL BEGIN #####
-    //
-    // TODO: Initialize the FIFO in preparation for sending the message
-    //
-//##### INTERNAL END #####
     //
     // "Send" the actual packet.
     //

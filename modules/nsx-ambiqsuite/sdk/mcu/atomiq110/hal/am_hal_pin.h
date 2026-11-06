@@ -4,7 +4,7 @@
 //!
 //! @brief Function select information for Atomiq110 GPIOs.
 //!
-//! Date: 03/03/2026
+//! Date: 09/30/2026
 //!
 //! @addtogroup pin_func Pin Functionality
 //! @ingroup atomiq110_hal
@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -36,9 +36,8 @@ extern "C"
 //! Define the number of actual and virtual GPIOs
 //
 //*****************************************************************************
-#define AM_HAL_PIN_TOTAL_GPIOS                  (160)
-#define AM_HAL_PIN_VIRTUAL_FIRST                (160)
-#define AM_HAL_PIN_VIRTUAL_GPIOS                (0)
+#define AM_HAL_PIN_TOTAL_GPIOS                  (176)
+#define AM_HAL_PIN_DEDICATED_FUNCSEL_FIRST      (155)
 
 //*****************************************************************************
 //
@@ -63,12 +62,12 @@ extern "C"
 #define AM_HAL_PIN_0_NCE0               7
 #define AM_HAL_PIN_0_OBSBUS0            8
 #define AM_HAL_PIN_0_DISP_QSPI_D0_OUT   9
-#define AM_HAL_PIN_0_SLFDSCL            10
+#define AM_HAL_PIN_0_RESERVED10         10
 #define AM_HAL_PIN_0_FPIO               11
 #define AM_HAL_PIN_0_DISP_QSPI_D0       12
 #define AM_HAL_PIN_0_DISP_SPI_SD        13
 #define AM_HAL_PIN_0_DISP_SPI_SDO       14
-#define AM_HAL_PIN_0_RESERVED15         15
+#define AM_HAL_PIN_0_OPCG_LOAD          15
 
 // PIN 1 functions
 #define AM_HAL_PIN_1_SWTRACE0           0
@@ -80,13 +79,13 @@ extern "C"
 #define AM_HAL_PIN_1_CT1                6
 #define AM_HAL_PIN_1_NCE1               7
 #define AM_HAL_PIN_1_OBSBUS1            8
-#define AM_HAL_PIN_1_VCMPO              9
+#define AM_HAL_PIN_1_PDM0_CLK           9
 #define AM_HAL_PIN_1_SLFDSDAWIR3        10
 #define AM_HAL_PIN_1_FPIO               11
 #define AM_HAL_PIN_1_DISP_QSPI_D1       12
 #define AM_HAL_PIN_1_DISP_SPI_DCX       13
 #define AM_HAL_PIN_1_RESERVED14         14
-#define AM_HAL_PIN_1_SCANOUT0           15
+#define AM_HAL_PIN_1_SCANSHFT           15
 
 // PIN 2 functions
 #define AM_HAL_PIN_2_SWTRACE1           0
@@ -98,12 +97,12 @@ extern "C"
 #define AM_HAL_PIN_2_CT2                6
 #define AM_HAL_PIN_2_NCE2               7
 #define AM_HAL_PIN_2_OBSBUS2            8
-#define AM_HAL_PIN_2_VCMPO              9
+#define AM_HAL_PIN_2_PDM0_DATA          9
 #define AM_HAL_PIN_2_RESERVED10         10
 #define AM_HAL_PIN_2_FPIO               11
 #define AM_HAL_PIN_2_DISP_QSPI_SCK      12
 #define AM_HAL_PIN_2_DISP_SPI_SCK       13
-#define AM_HAL_PIN_2_RESERVED14         14
+#define AM_HAL_PIN_2_HBL_PIO_DRAM_RESET_N  14
 #define AM_HAL_PIN_2_SCANRST            15
 
 // PIN 3 functions
@@ -121,8 +120,8 @@ extern "C"
 #define AM_HAL_PIN_3_FPIO               11
 #define AM_HAL_PIN_3_DISP_QSPI_D2       12
 #define AM_HAL_PIN_3_DISP_SPI_SDI       13
-#define AM_HAL_PIN_3_RESERVED14         14
-#define AM_HAL_PIN_3_SCANIN5            15
+#define AM_HAL_PIN_3_HBL_PIO_DRAM_SCLK  14
+#define AM_HAL_PIN_3_SCANCLK            15
 
 // PIN 4 functions
 #define AM_HAL_PIN_4_SWTRACE3           0
@@ -137,10 +136,10 @@ extern "C"
 #define AM_HAL_PIN_4_I2S0_SDIN          9
 #define AM_HAL_PIN_4_SLFDINT            10
 #define AM_HAL_PIN_4_FPIO               11
-#define AM_HAL_PIN_4_FLB_TDO            12
-#define AM_HAL_PIN_4_FLLOAD_DIR         13
-#define AM_HAL_PIN_4_MDA_TDO            14
-#define AM_HAL_PIN_4_SCANIN6            15
+#define AM_HAL_PIN_4_RESERVED12         12
+#define AM_HAL_PIN_4_RESERVED13         13
+#define AM_HAL_PIN_4_RESERVED14         14
+#define AM_HAL_PIN_4_OPCG_TRIG          15
 
 // PIN 5 functions
 #define AM_HAL_PIN_5_M0SCL              0
@@ -152,13 +151,13 @@ extern "C"
 #define AM_HAL_PIN_5_CT5                6
 #define AM_HAL_PIN_5_NCE5               7
 #define AM_HAL_PIN_5_OBSBUS5            8
-#define AM_HAL_PIN_5_RESERVED9          9
+#define AM_HAL_PIN_5_PDMI2S0_CLK        9
 #define AM_HAL_PIN_5_RESERVED10         10
 #define AM_HAL_PIN_5_FPIO               11
 #define AM_HAL_PIN_5_FLB_TDI            12
-#define AM_HAL_PIN_5_FLLOAD_DATA3       13
-#define AM_HAL_PIN_5_MDA_SRST           14
-#define AM_HAL_PIN_5_SCANOUT2           15
+#define AM_HAL_PIN_5_RESERVED13         13
+#define AM_HAL_PIN_5_RESERVED14         14
+#define AM_HAL_PIN_5_DFT_RET            15
 
 // PIN 6 functions
 #define AM_HAL_PIN_6_M0SDAWIR3          0
@@ -171,12 +170,12 @@ extern "C"
 #define AM_HAL_PIN_6_NCE6               7
 #define AM_HAL_PIN_6_OBSBUS6            8
 #define AM_HAL_PIN_6_I2S0_SDOUT         9
-#define AM_HAL_PIN_6_RESERVED10         10
+#define AM_HAL_PIN_6_PDMI2S0_SDOUT      10
 #define AM_HAL_PIN_6_FPIO               11
 #define AM_HAL_PIN_6_RESERVED12         12
 #define AM_HAL_PIN_6_RESERVED13         13
 #define AM_HAL_PIN_6_RESERVED14         14
-#define AM_HAL_PIN_6_SCANOUT1           15
+#define AM_HAL_PIN_6_DFT_ISO            15
 
 // PIN 7 functions
 #define AM_HAL_PIN_7_M0MISO             0
@@ -189,17 +188,17 @@ extern "C"
 #define AM_HAL_PIN_7_NCE7               7
 #define AM_HAL_PIN_7_OBSBUS7            8
 #define AM_HAL_PIN_7_XNCE2_0            9
-#define AM_HAL_PIN_7_RESERVED10         10
+#define AM_HAL_PIN_7_PDMI2S0_WS         10
 #define AM_HAL_PIN_7_FPIO               11
 #define AM_HAL_PIN_7_RESERVED12         12
 #define AM_HAL_PIN_7_RESERVED13         13
 #define AM_HAL_PIN_7_RESERVED14         14
-#define AM_HAL_PIN_7_SCANIN7            15
+#define AM_HAL_PIN_7_RESERVED15         15
 
 // PIN 8 functions
 #define AM_HAL_PIN_8_CMPRF1             0
 #define AM_HAL_PIN_8_TRIG1              1
-#define AM_HAL_PIN_8_I3CM0_SCL          2
+#define AM_HAL_PIN_8_RESERVED2          2
 #define AM_HAL_PIN_8_GPIO               3
 #define AM_HAL_PIN_8_UART3TX            4
 #define AM_HAL_PIN_8_UART5CTS           5
@@ -211,13 +210,13 @@ extern "C"
 #define AM_HAL_PIN_8_FPIO               11
 #define AM_HAL_PIN_8_RESERVED12         12
 #define AM_HAL_PIN_8_RESERVED13         13
-#define AM_HAL_PIN_8_RESERVED14         14
-#define AM_HAL_PIN_8_SCANOUT4           15
+#define AM_HAL_PIN_8_HBL_PIO_DRAM_SCAN_IN  14
+#define AM_HAL_PIN_8_SCANIN0            15
 
 // PIN 9 functions
 #define AM_HAL_PIN_9_CMPRF0             0
 #define AM_HAL_PIN_9_TRIG2              1
-#define AM_HAL_PIN_9_I3CM0_SDA          2
+#define AM_HAL_PIN_9_RESERVED2          2
 #define AM_HAL_PIN_9_GPIO               3
 #define AM_HAL_PIN_9_UART3RX            4
 #define AM_HAL_PIN_9_UART5RTS           5
@@ -230,7 +229,7 @@ extern "C"
 #define AM_HAL_PIN_9_RESERVED12         12
 #define AM_HAL_PIN_9_RESERVED13         13
 #define AM_HAL_PIN_9_RESERVED14         14
-#define AM_HAL_PIN_9_SCANOUT5           15
+#define AM_HAL_PIN_9_SCANIN1            15
 
 // PIN 10 functions
 #define AM_HAL_PIN_10_CMPIN0            0
@@ -248,7 +247,7 @@ extern "C"
 #define AM_HAL_PIN_10_RESERVED12        12
 #define AM_HAL_PIN_10_RESERVED13        13
 #define AM_HAL_PIN_10_RESERVED14        14
-#define AM_HAL_PIN_10_OPCG_LOAD         15
+#define AM_HAL_PIN_10_SCANIN2           15
 
 // PIN 11 functions
 #define AM_HAL_PIN_11_CMPIN1            0
@@ -264,17 +263,17 @@ extern "C"
 #define AM_HAL_PIN_11_RESERVED10        10
 #define AM_HAL_PIN_11_FPIO              11
 #define AM_HAL_PIN_11_FLB_TCLK          12
-#define AM_HAL_PIN_11_FLLOAD_ADDR0      13
-#define AM_HAL_PIN_11_MDA_TCK           14
-#define AM_HAL_PIN_11_SCANIN4           15
+#define AM_HAL_PIN_11_RESERVED13        13
+#define AM_HAL_PIN_11_RESERVED14        14
+#define AM_HAL_PIN_11_SCANIN3           15
 
 // PIN 12 functions
-#define AM_HAL_PIN_12_RESERVED0         0
+#define AM_HAL_PIN_12_XSPISDQS          0
 #define AM_HAL_PIN_12_TRIG1             1
 #define AM_HAL_PIN_12_I2S0_DATA         2
 #define AM_HAL_PIN_12_GPIO              3
-#define AM_HAL_PIN_12_RESERVED4         4
-#define AM_HAL_PIN_12_RESERVED5         5
+#define AM_HAL_PIN_12_UART0RX           4
+#define AM_HAL_PIN_12_UART4CTS          5
 #define AM_HAL_PIN_12_CT12              6
 #define AM_HAL_PIN_12_NCE12             7
 #define AM_HAL_PIN_12_OBSBUS12          8
@@ -284,10 +283,10 @@ extern "C"
 #define AM_HAL_PIN_12_RESERVED12        12
 #define AM_HAL_PIN_12_RESERVED13        13
 #define AM_HAL_PIN_12_RESERVED14        14
-#define AM_HAL_PIN_12_SCANIN3           15
+#define AM_HAL_PIN_12_SCANIN4           15
 
 // PIN 13 functions
-#define AM_HAL_PIN_13_RESERVED0         0
+#define AM_HAL_PIN_13_VCMPO             0
 #define AM_HAL_PIN_13_TRIG2             1
 #define AM_HAL_PIN_13_I2S0_WS           2
 #define AM_HAL_PIN_13_GPIO              3
@@ -300,9 +299,9 @@ extern "C"
 #define AM_HAL_PIN_13_DISP_SPI_CS_N     10
 #define AM_HAL_PIN_13_FPIO              11
 #define AM_HAL_PIN_13_FLB_FCLK          12
-#define AM_HAL_PIN_13_FLLOAD_DATA0      13
-#define AM_HAL_PIN_13_MDA_TDI           14
-#define AM_HAL_PIN_13_SCANIN0           15
+#define AM_HAL_PIN_13_RESERVED13        13
+#define AM_HAL_PIN_13_RESERVED14        14
+#define AM_HAL_PIN_13_SCANIN5           15
 
 // PIN 14 functions
 #define AM_HAL_PIN_14_ADCSE5            0
@@ -318,14 +317,14 @@ extern "C"
 #define AM_HAL_PIN_14_RESERVED10        10
 #define AM_HAL_PIN_14_FPIO              11
 #define AM_HAL_PIN_14_RESERVED12        12
-#define AM_HAL_PIN_14_FLLOAD_ADDR1      13
-#define AM_HAL_PIN_14_MDA_TRSTN         14
-#define AM_HAL_PIN_14_SCANIN2           15
+#define AM_HAL_PIN_14_RESERVED13        13
+#define AM_HAL_PIN_14_RESERVED14        14
+#define AM_HAL_PIN_14_SCANIN6           15
 
 // PIN 15 functions
 #define AM_HAL_PIN_15_ADCSE4            0
 #define AM_HAL_PIN_15_TRIG0             1
-#define AM_HAL_PIN_15_RESERVED2         2
+#define AM_HAL_PIN_15_I2S0_WS           2
 #define AM_HAL_PIN_15_GPIO              3
 #define AM_HAL_PIN_15_UART0TX           4
 #define AM_HAL_PIN_15_UART4RTS          5
@@ -336,27 +335,27 @@ extern "C"
 #define AM_HAL_PIN_15_REFCLK_EXT        10
 #define AM_HAL_PIN_15_FPIO              11
 #define AM_HAL_PIN_15_RESERVED12        12
-#define AM_HAL_PIN_15_FLLOAD_DATA1      13
+#define AM_HAL_PIN_15_RESERVED13        13
 #define AM_HAL_PIN_15_RESERVED14        14
-#define AM_HAL_PIN_15_SCANIN1           15
+#define AM_HAL_PIN_15_SCANIN7           15
 
 // PIN 16 functions
 #define AM_HAL_PIN_16_ADCSE3            0
 #define AM_HAL_PIN_16_TRIG1             1
 #define AM_HAL_PIN_16_I2S1_CLK          2
 #define AM_HAL_PIN_16_GPIO              3
-#define AM_HAL_PIN_16_UART0RX           4
-#define AM_HAL_PIN_16_UART4CTS          5
+#define AM_HAL_PIN_16_UART2RTS          4
+#define AM_HAL_PIN_16_UART1RX           5
 #define AM_HAL_PIN_16_CT16              6
 #define AM_HAL_PIN_16_NCE16             7
 #define AM_HAL_PIN_16_OBSBUS0           8
 #define AM_HAL_PIN_16_PDMI2S0_CLK       9
-#define AM_HAL_PIN_16_EN192MHz          10
+#define AM_HAL_PIN_16_RESERVED10        10
 #define AM_HAL_PIN_16_FPIO              11
 #define AM_HAL_PIN_16_RESERVED12        12
 #define AM_HAL_PIN_16_RESERVED13        13
-#define AM_HAL_PIN_16_RESERVED14        14
-#define AM_HAL_PIN_16_DFT_RET           15
+#define AM_HAL_PIN_16_HBL_PIO_DRAM_XWEB  14
+#define AM_HAL_PIN_16_LPG_LOAD          15
 
 // PIN 17 functions
 #define AM_HAL_PIN_17_ADCSE2            0
@@ -369,12 +368,12 @@ extern "C"
 #define AM_HAL_PIN_17_NCE17             7
 #define AM_HAL_PIN_17_OBSBUS1           8
 #define AM_HAL_PIN_17_I2S1_SDOUT        9
-#define AM_HAL_PIN_17_CLK192MHz         10
+#define AM_HAL_PIN_17_PDMI2S0_SDOUT     10
 #define AM_HAL_PIN_17_FPIO              11
 #define AM_HAL_PIN_17_RESERVED12        12
-#define AM_HAL_PIN_17_FLLOAD_STRB       13
-#define AM_HAL_PIN_17_MDA_TMS           14
-#define AM_HAL_PIN_17_RESERVED15        15
+#define AM_HAL_PIN_17_RESERVED13        13
+#define AM_HAL_PIN_17_HBL_PIO_DRAM_BYPASS_EN  14
+#define AM_HAL_PIN_17_LPG_ENABLE        15
 
 // PIN 18 functions
 #define AM_HAL_PIN_18_ADCSE1            0
@@ -390,9 +389,9 @@ extern "C"
 #define AM_HAL_PIN_18_RESERVED10        10
 #define AM_HAL_PIN_18_FPIO              11
 #define AM_HAL_PIN_18_FLB_TMS           12
-#define AM_HAL_PIN_18_FLLOAD_DATA2      13
-#define AM_HAL_PIN_18_MDA_HFRC_EXT      14
-#define AM_HAL_PIN_18_OPCG_TRIG         15
+#define AM_HAL_PIN_18_RESERVED13        13
+#define AM_HAL_PIN_18_RESERVED14        14
+#define AM_HAL_PIN_18_CME               15
 
 // PIN 19 functions
 #define AM_HAL_PIN_19_ADCSE0            0
@@ -404,53 +403,53 @@ extern "C"
 #define AM_HAL_PIN_19_CT19              6
 #define AM_HAL_PIN_19_NCE19             7
 #define AM_HAL_PIN_19_OBSBUS3           8
-#define AM_HAL_PIN_19_PDMI2S0_SDOUT     9
+#define AM_HAL_PIN_19_RESERVED9         9
 #define AM_HAL_PIN_19_RESERVED10        10
 #define AM_HAL_PIN_19_FPIO              11
 #define AM_HAL_PIN_19_FLB_TRSTN         12
-#define AM_HAL_PIN_19_FLLOAD_ADDR2      13
+#define AM_HAL_PIN_19_RESERVED13        13
 #define AM_HAL_PIN_19_RESERVED14        14
-#define AM_HAL_PIN_19_DFT_ISO           15
+#define AM_HAL_PIN_19_CMLE              15
 
 // PIN 20 functions
-#define AM_HAL_PIN_20_SWDCK             0
-#define AM_HAL_PIN_20_TRIG1             1
-#define AM_HAL_PIN_20_RESERVED2         2
+#define AM_HAL_PIN_20_SWDCK_0           0
+#define AM_HAL_PIN_20_SWDCK_1           1
+#define AM_HAL_PIN_20_SWDCK_2           2
 #define AM_HAL_PIN_20_GPIO              3
-#define AM_HAL_PIN_20_UART2RTS          4
-#define AM_HAL_PIN_20_UART1RX           5
+#define AM_HAL_PIN_20_SWDCK_4           4
+#define AM_HAL_PIN_20_SWDCK_5           5
 #define AM_HAL_PIN_20_CT20              6
 #define AM_HAL_PIN_20_NCE20             7
-#define AM_HAL_PIN_20_OBSBUS4           8
-#define AM_HAL_PIN_20_RESERVED9         9
-#define AM_HAL_PIN_20_RESERVED10        10
+#define AM_HAL_PIN_20_SWDCK_8           8
+#define AM_HAL_PIN_20_SWDCK_9           9
+#define AM_HAL_PIN_20_SWDCK_10          10
 #define AM_HAL_PIN_20_FPIO              11
-#define AM_HAL_PIN_20_RESERVED12        12
-#define AM_HAL_PIN_20_RESERVED13        13
-#define AM_HAL_PIN_20_RESERVED14        14
-#define AM_HAL_PIN_20_SCANCLK           15
+#define AM_HAL_PIN_20_SWDCK_12          12
+#define AM_HAL_PIN_20_SWDCK_13          13
+#define AM_HAL_PIN_20_SWDCK_14          14
+#define AM_HAL_PIN_20_SWDCK_15          15
 
 // PIN 21 functions
-#define AM_HAL_PIN_21_SWDIO             0
-#define AM_HAL_PIN_21_TRIG2             1
-#define AM_HAL_PIN_21_RESERVED2         2
+#define AM_HAL_PIN_21_SWDIO_0           0
+#define AM_HAL_PIN_21_SWDIO_1           1
+#define AM_HAL_PIN_21_SWDIO_2           2
 #define AM_HAL_PIN_21_GPIO              3
-#define AM_HAL_PIN_21_RESERVED4         4
-#define AM_HAL_PIN_21_RESERVED5         5
+#define AM_HAL_PIN_21_SWDIO_4           4
+#define AM_HAL_PIN_21_SWDIO_5           5
 #define AM_HAL_PIN_21_CT21              6
 #define AM_HAL_PIN_21_NCE21             7
-#define AM_HAL_PIN_21_OBSBUS5           8
-#define AM_HAL_PIN_21_RESERVED9         9
-#define AM_HAL_PIN_21_RESERVED10        10
+#define AM_HAL_PIN_21_SWDIO_8           8
+#define AM_HAL_PIN_21_SWDIO_9           9
+#define AM_HAL_PIN_21_SWDIO_10          10
 #define AM_HAL_PIN_21_FPIO              11
-#define AM_HAL_PIN_21_RESERVED12        12
-#define AM_HAL_PIN_21_RESERVED13        13
-#define AM_HAL_PIN_21_RESERVED14        14
-#define AM_HAL_PIN_21_SCANSHFT          15
+#define AM_HAL_PIN_21_SWDIO_12          12
+#define AM_HAL_PIN_21_SWDIO_13          13
+#define AM_HAL_PIN_21_SWDIO_14          14
+#define AM_HAL_PIN_21_SWDIO_15          15
 
 // PIN 22 functions
 #define AM_HAL_PIN_22_SLFDSCK           0
-#define AM_HAL_PIN_22_RESERVED1         1
+#define AM_HAL_PIN_22_SWTRACE2          1
 #define AM_HAL_PIN_22_SWO               2
 #define AM_HAL_PIN_22_GPIO              3
 #define AM_HAL_PIN_22_M1SCL             4
@@ -458,39 +457,39 @@ extern "C"
 #define AM_HAL_PIN_22_CT22              6
 #define AM_HAL_PIN_22_NCE22             7
 #define AM_HAL_PIN_22_OBSBUS6           8
-#define AM_HAL_PIN_22_VCMPO             9
-#define AM_HAL_PIN_22_SLFDSCL           10
+#define AM_HAL_PIN_22_RESERVED9         9
+#define AM_HAL_PIN_22_RESERVED10        10
 #define AM_HAL_PIN_22_FPIO              11
 #define AM_HAL_PIN_22_RESERVED12        12
 #define AM_HAL_PIN_22_RESERVED13        13
 #define AM_HAL_PIN_22_RESERVED14        14
-#define AM_HAL_PIN_22_SCANOUT3          15
+#define AM_HAL_PIN_22_RESERVED15        15
 
 // PIN 23 functions
 #define AM_HAL_PIN_23_SLFDMOSI          0
-#define AM_HAL_PIN_23_RESERVED1         1
-#define AM_HAL_PIN_23_PDM0_CLK          2
+#define AM_HAL_PIN_23_SWTRACE1          1
+#define AM_HAL_PIN_23_RESERVED2         2
 #define AM_HAL_PIN_23_GPIO              3
 #define AM_HAL_PIN_23_M1SDAWIR3         4
 #define AM_HAL_PIN_23_M1MOSI            5
 #define AM_HAL_PIN_23_CT23              6
 #define AM_HAL_PIN_23_NCE23             7
 #define AM_HAL_PIN_23_OBSBUS7           8
-#define AM_HAL_PIN_23_VCMPO             9
+#define AM_HAL_PIN_23_RESERVED9         9
 #define AM_HAL_PIN_23_SLFDSDAWIR3       10
 #define AM_HAL_PIN_23_FPIO              11
 #define AM_HAL_PIN_23_RESERVED12        12
 #define AM_HAL_PIN_23_RESERVED13        13
 #define AM_HAL_PIN_23_RESERVED14        14
-#define AM_HAL_PIN_23_SCANOUT6          15
+#define AM_HAL_PIN_23_DFT_RSVIN0        15
 
 // PIN 24 functions
 #define AM_HAL_PIN_24_SLFDMISO          0
 #define AM_HAL_PIN_24_TRIG3             1
-#define AM_HAL_PIN_24_PDM0_DATA         2
+#define AM_HAL_PIN_24_RESERVED2         2
 #define AM_HAL_PIN_24_GPIO              3
 #define AM_HAL_PIN_24_M1MISO            4
-#define AM_HAL_PIN_24_XNCE2_0           5
+#define AM_HAL_PIN_24_SWTRACE0          5
 #define AM_HAL_PIN_24_CT24              6
 #define AM_HAL_PIN_24_NCE24             7
 #define AM_HAL_PIN_24_OBSBUS8           8
@@ -500,7 +499,7 @@ extern "C"
 #define AM_HAL_PIN_24_RESERVED12        12
 #define AM_HAL_PIN_24_RESERVED13        13
 #define AM_HAL_PIN_24_RESERVED14        14
-#define AM_HAL_PIN_24_SCANOUT7          15
+#define AM_HAL_PIN_24_DFT_RSVIN1        15
 
 // PIN 25 functions
 #define AM_HAL_PIN_25_M2SCL             0
@@ -518,7 +517,7 @@ extern "C"
 #define AM_HAL_PIN_25_RESERVED12        12
 #define AM_HAL_PIN_25_RESERVED13        13
 #define AM_HAL_PIN_25_RESERVED14        14
-#define AM_HAL_PIN_25_SCANIN8           15
+#define AM_HAL_PIN_25_DFT_RSVIN2        15
 
 // PIN 26 functions
 #define AM_HAL_PIN_26_M2SDAWIR3         0
@@ -530,13 +529,13 @@ extern "C"
 #define AM_HAL_PIN_26_CT26              6
 #define AM_HAL_PIN_26_NCE26             7
 #define AM_HAL_PIN_26_OBSBUS10          8
-#define AM_HAL_PIN_26_VCMPO             9
+#define AM_HAL_PIN_26_RESERVED9         9
 #define AM_HAL_PIN_26_RESERVED10        10
 #define AM_HAL_PIN_26_FPIO              11
 #define AM_HAL_PIN_26_RESERVED12        12
 #define AM_HAL_PIN_26_RESERVED13        13
 #define AM_HAL_PIN_26_RESERVED14        14
-#define AM_HAL_PIN_26_SCANIN9           15
+#define AM_HAL_PIN_26_DFT_RSVIN3        15
 
 // PIN 27 functions
 #define AM_HAL_PIN_27_M2MISO            0
@@ -554,11 +553,11 @@ extern "C"
 #define AM_HAL_PIN_27_RESERVED12        12
 #define AM_HAL_PIN_27_RESERVED13        13
 #define AM_HAL_PIN_27_RESERVED14        14
-#define AM_HAL_PIN_27_RESERVED15        15
+#define AM_HAL_PIN_27_DFT_RSVOUT0       15
 
 // PIN 28 functions
 #define AM_HAL_PIN_28_SWO               0
-#define AM_HAL_PIN_28_VCMPO             1
+#define AM_HAL_PIN_28_RESERVED1         1
 #define AM_HAL_PIN_28_SLFDnCE           2
 #define AM_HAL_PIN_28_GPIO              3
 #define AM_HAL_PIN_28_UART0TX           4
@@ -572,11 +571,11 @@ extern "C"
 #define AM_HAL_PIN_28_RESERVED12        12
 #define AM_HAL_PIN_28_RESERVED13        13
 #define AM_HAL_PIN_28_RESERVED14        14
-#define AM_HAL_PIN_28_CME               15
+#define AM_HAL_PIN_28_DFT_RSVOUT1       15
 
 // PIN 29 functions
 #define AM_HAL_PIN_29_TRIG0             0
-#define AM_HAL_PIN_29_VCMPO             1
+#define AM_HAL_PIN_29_RESERVED1         1
 #define AM_HAL_PIN_29_I3CM0_SCL         2
 #define AM_HAL_PIN_29_GPIO              3
 #define AM_HAL_PIN_29_UART0RX           4
@@ -590,11 +589,11 @@ extern "C"
 #define AM_HAL_PIN_29_RESERVED12        12
 #define AM_HAL_PIN_29_RESERVED13        13
 #define AM_HAL_PIN_29_RESERVED14        14
-#define AM_HAL_PIN_29_CMLE              15
+#define AM_HAL_PIN_29_DFT_RSVOUT2       15
 
 // PIN 30 functions
 #define AM_HAL_PIN_30_TRIG1             0
-#define AM_HAL_PIN_30_VCMPO             1
+#define AM_HAL_PIN_30_RESERVED1         1
 #define AM_HAL_PIN_30_I3CM0_SDA         2
 #define AM_HAL_PIN_30_GPIO              3
 #define AM_HAL_PIN_30_UART0CTS          4
@@ -608,7 +607,7 @@ extern "C"
 #define AM_HAL_PIN_30_RESERVED12        12
 #define AM_HAL_PIN_30_RESERVED13        13
 #define AM_HAL_PIN_30_RESERVED14        14
-#define AM_HAL_PIN_30_RESERVED15        15
+#define AM_HAL_PIN_30_DFT_RSVOUT3       15
 
 // PIN 31 functions
 #define AM_HAL_PIN_31_M3SCL             0
@@ -620,13 +619,13 @@ extern "C"
 #define AM_HAL_PIN_31_CT31              6
 #define AM_HAL_PIN_31_NCE31             7
 #define AM_HAL_PIN_31_OBSBUS15          8
-#define AM_HAL_PIN_31_VCMPO             9
+#define AM_HAL_PIN_31_RESERVED9         9
 #define AM_HAL_PIN_31_RESERVED10        10
 #define AM_HAL_PIN_31_FPIO              11
 #define AM_HAL_PIN_31_RESERVED12        12
 #define AM_HAL_PIN_31_RESERVED13        13
 #define AM_HAL_PIN_31_RESERVED14        14
-#define AM_HAL_PIN_31_SCANOUT9          15
+#define AM_HAL_PIN_31_RESERVED15        15
 
 // PIN 32 functions
 #define AM_HAL_PIN_32_M3SDAWIR3         0
@@ -644,7 +643,7 @@ extern "C"
 #define AM_HAL_PIN_32_RESERVED12        12
 #define AM_HAL_PIN_32_RESERVED13        13
 #define AM_HAL_PIN_32_RESERVED14        14
-#define AM_HAL_PIN_32_LPG_ENABLE        15
+#define AM_HAL_PIN_32_RESERVED15        15
 
 // PIN 33 functions
 #define AM_HAL_PIN_33_M3MISO            0
@@ -662,7 +661,7 @@ extern "C"
 #define AM_HAL_PIN_33_RESERVED12        12
 #define AM_HAL_PIN_33_RESERVED13        13
 #define AM_HAL_PIN_33_RESERVED14        14
-#define AM_HAL_PIN_33_LPG_LOAD          15
+#define AM_HAL_PIN_33_RESERVED15        15
 
 // PIN 34 functions
 #define AM_HAL_PIN_34_M4SCL             0
@@ -674,7 +673,7 @@ extern "C"
 #define AM_HAL_PIN_34_CT34              6
 #define AM_HAL_PIN_34_NCE34             7
 #define AM_HAL_PIN_34_OBSBUS2           8
-#define AM_HAL_PIN_34_VCMPO             9
+#define AM_HAL_PIN_34_RESERVED9         9
 #define AM_HAL_PIN_34_I2S1_CLK          10
 #define AM_HAL_PIN_34_FPIO              11
 #define AM_HAL_PIN_34_RESERVED12        12
@@ -698,7 +697,7 @@ extern "C"
 #define AM_HAL_PIN_35_RESERVED12        12
 #define AM_HAL_PIN_35_RESERVED13        13
 #define AM_HAL_PIN_35_RESERVED14        14
-#define AM_HAL_PIN_35_SCANOUT8          15
+#define AM_HAL_PIN_35_RESERVED15        15
 
 // PIN 36 functions
 #define AM_HAL_PIN_36_M4MISO            0
@@ -719,7 +718,7 @@ extern "C"
 #define AM_HAL_PIN_36_RESERVED15        15
 
 // PIN 37 functions
-#define AM_HAL_PIN_37_XSPI1_0           0
+#define AM_HAL_PIN_37_XSPIM1_0          0
 #define AM_HAL_PIN_37_TRIG1             1
 #define AM_HAL_PIN_37_SWO               2
 #define AM_HAL_PIN_37_GPIO              3
@@ -737,7 +736,7 @@ extern "C"
 #define AM_HAL_PIN_37_RESERVED15        15
 
 // PIN 38 functions
-#define AM_HAL_PIN_38_XSPI1_1           0
+#define AM_HAL_PIN_38_XSPIM1_1          0
 #define AM_HAL_PIN_38_TRIG2             1
 #define AM_HAL_PIN_38_SWTRACECLK        2
 #define AM_HAL_PIN_38_GPIO              3
@@ -755,7 +754,7 @@ extern "C"
 #define AM_HAL_PIN_38_RESERVED15        15
 
 // PIN 39 functions
-#define AM_HAL_PIN_39_XSPI1_2           0
+#define AM_HAL_PIN_39_XSPIM1_2          0
 #define AM_HAL_PIN_39_TRIG3             1
 #define AM_HAL_PIN_39_SWTRACE0          2
 #define AM_HAL_PIN_39_GPIO              3
@@ -773,7 +772,7 @@ extern "C"
 #define AM_HAL_PIN_39_RESERVED15        15
 
 // PIN 40 functions
-#define AM_HAL_PIN_40_XSPI1_3           0
+#define AM_HAL_PIN_40_XSPIM1_3          0
 #define AM_HAL_PIN_40_TRIG1             1
 #define AM_HAL_PIN_40_SWTRACE1          2
 #define AM_HAL_PIN_40_GPIO              3
@@ -791,7 +790,7 @@ extern "C"
 #define AM_HAL_PIN_40_RESERVED15        15
 
 // PIN 41 functions
-#define AM_HAL_PIN_41_XSPI1_8           0
+#define AM_HAL_PIN_41_XSPIM1_9          0
 #define AM_HAL_PIN_41_TRIG0             1
 #define AM_HAL_PIN_41_SWTRACE2          2
 #define AM_HAL_PIN_41_GPIO              3
@@ -854,7 +853,7 @@ extern "C"
 #define AM_HAL_PIN_44_CT44              6
 #define AM_HAL_PIN_44_NCE44             7
 #define AM_HAL_PIN_44_OBSBUS12          8
-#define AM_HAL_PIN_44_VCMPO             9
+#define AM_HAL_PIN_44_RESERVED9         9
 #define AM_HAL_PIN_44_RESERVED10        10
 #define AM_HAL_PIN_44_FPIO              11
 #define AM_HAL_PIN_44_RESERVED12        12
@@ -947,7 +946,7 @@ extern "C"
 #define AM_HAL_PIN_49_I2S0_DATA         9
 #define AM_HAL_PIN_49_I2S0_SDOUT        10
 #define AM_HAL_PIN_49_FPIO              11
-#define AM_HAL_PIN_49_XNCE1_1           12
+#define AM_HAL_PIN_49_RESERVED12        12
 #define AM_HAL_PIN_49_RESERVED13        13
 #define AM_HAL_PIN_49_RESERVED14        14
 #define AM_HAL_PIN_49_RESERVED15        15
@@ -968,7 +967,7 @@ extern "C"
 #define AM_HAL_PIN_50_RESERVED12        12
 #define AM_HAL_PIN_50_RESERVED13        13
 #define AM_HAL_PIN_50_RESERVED14        14
-#define AM_HAL_PIN_50_EN96MHz           15
+#define AM_HAL_PIN_50_RESERVED15        15
 
 // PIN 51 functions
 #define AM_HAL_PIN_51_SDIF0_DAT1        0
@@ -986,30 +985,30 @@ extern "C"
 #define AM_HAL_PIN_51_RESERVED12        12
 #define AM_HAL_PIN_51_RESERVED13        13
 #define AM_HAL_PIN_51_RESERVED14        14
-#define AM_HAL_PIN_51_CLK96MHz          15
+#define AM_HAL_PIN_51_RESERVED15        15
 
 // PIN 52 functions
 #define AM_HAL_PIN_52_SDIF0_DAT2        0
 #define AM_HAL_PIN_52_TRIG2             1
-#define AM_HAL_PIN_52_XNCE1_0           2
+#define AM_HAL_PIN_52_PDM1_CLK          2
 #define AM_HAL_PIN_52_GPIO              3
 #define AM_HAL_PIN_52_UART4TX           4
 #define AM_HAL_PIN_52_RESERVED5         5
 #define AM_HAL_PIN_52_CT52              6
 #define AM_HAL_PIN_52_NCE52             7
 #define AM_HAL_PIN_52_OBSBUS4           8
-#define AM_HAL_PIN_52_VCMPO             9
+#define AM_HAL_PIN_52_RESERVED9         9
 #define AM_HAL_PIN_52_I2S0_CLK          10
 #define AM_HAL_PIN_52_FPIO              11
 #define AM_HAL_PIN_52_RESERVED12        12
 #define AM_HAL_PIN_52_RESERVED13        13
 #define AM_HAL_PIN_52_RESERVED14        14
-#define AM_HAL_PIN_52_RESERVED15        15
+#define AM_HAL_PIN_52_CLK96MHz          15
 
 // PIN 53 functions
 #define AM_HAL_PIN_53_SDIF0_DAT3        0
 #define AM_HAL_PIN_53_TRIG3             1
-#define AM_HAL_PIN_53_RESERVED2         2
+#define AM_HAL_PIN_53_PDM1_DATA         2
 #define AM_HAL_PIN_53_GPIO              3
 #define AM_HAL_PIN_53_UART4RX           4
 #define AM_HAL_PIN_53_RESERVED5         5
@@ -1022,12 +1021,12 @@ extern "C"
 #define AM_HAL_PIN_53_RESERVED12        12
 #define AM_HAL_PIN_53_RESERVED13        13
 #define AM_HAL_PIN_53_RESERVED14        14
-#define AM_HAL_PIN_53_RESERVED15        15
+#define AM_HAL_PIN_53_EN96MHz           15
 
 // PIN 54 functions
 #define AM_HAL_PIN_54_SDIF0_CLKOUT      0
 #define AM_HAL_PIN_54_TRIG0             1
-#define AM_HAL_PIN_54_RESERVED2         2
+#define AM_HAL_PIN_54_PDM2_CLK          2
 #define AM_HAL_PIN_54_GPIO              3
 #define AM_HAL_PIN_54_UART4CTS          4
 #define AM_HAL_PIN_54_RESERVED5         5
@@ -1045,7 +1044,7 @@ extern "C"
 // PIN 55 functions
 #define AM_HAL_PIN_55_SDIF0_CMD         0
 #define AM_HAL_PIN_55_TRIG1             1
-#define AM_HAL_PIN_55_RESERVED2         2
+#define AM_HAL_PIN_55_PDM2_DATA         2
 #define AM_HAL_PIN_55_GPIO              3
 #define AM_HAL_PIN_55_UART4RTS          4
 #define AM_HAL_PIN_55_RESERVED5         5
@@ -1061,7 +1060,7 @@ extern "C"
 #define AM_HAL_PIN_55_RESERVED15        15
 
 // PIN 56 functions
-#define AM_HAL_PIN_56_XSPI2_0           0
+#define AM_HAL_PIN_56_XSPIM2_0          0
 #define AM_HAL_PIN_56_TRIG2             1
 #define AM_HAL_PIN_56_SWTRACECTL        2
 #define AM_HAL_PIN_56_GPIO              3
@@ -1070,7 +1069,7 @@ extern "C"
 #define AM_HAL_PIN_56_CT56              6
 #define AM_HAL_PIN_56_NCE56             7
 #define AM_HAL_PIN_56_OBSBUS8           8
-#define AM_HAL_PIN_56_VCMPO             9
+#define AM_HAL_PIN_56_RESERVED9         9
 #define AM_HAL_PIN_56_I2S1_CLK          10
 #define AM_HAL_PIN_56_FPIO              11
 #define AM_HAL_PIN_56_RESERVED12        12
@@ -1079,7 +1078,7 @@ extern "C"
 #define AM_HAL_PIN_56_RESERVED15        15
 
 // PIN 57 functions
-#define AM_HAL_PIN_57_XSPI2_1           0
+#define AM_HAL_PIN_57_XSPIM2_1          0
 #define AM_HAL_PIN_57_TRIG3             1
 #define AM_HAL_PIN_57_SWO               2
 #define AM_HAL_PIN_57_GPIO              3
@@ -1088,7 +1087,7 @@ extern "C"
 #define AM_HAL_PIN_57_CT57              6
 #define AM_HAL_PIN_57_NCE57             7
 #define AM_HAL_PIN_57_OBSBUS9           8
-#define AM_HAL_PIN_57_VCMPO             9
+#define AM_HAL_PIN_57_RESERVED9         9
 #define AM_HAL_PIN_57_I2S1_WS           10
 #define AM_HAL_PIN_57_FPIO              11
 #define AM_HAL_PIN_57_RESERVED12        12
@@ -1097,9 +1096,9 @@ extern "C"
 #define AM_HAL_PIN_57_RESERVED15        15
 
 // PIN 58 functions
-#define AM_HAL_PIN_58_XSPI2_2           0
+#define AM_HAL_PIN_58_XSPIM2_2          0
 #define AM_HAL_PIN_58_RESERVED1         1
-#define AM_HAL_PIN_58_I3CM0_SCL         2
+#define AM_HAL_PIN_58_RESERVED2         2
 #define AM_HAL_PIN_58_GPIO              3
 #define AM_HAL_PIN_58_UART5RX           4
 #define AM_HAL_PIN_58_RESERVED5         5
@@ -1115,9 +1114,9 @@ extern "C"
 #define AM_HAL_PIN_58_RESERVED15        15
 
 // PIN 59 functions
-#define AM_HAL_PIN_59_XSPI2_3           0
+#define AM_HAL_PIN_59_XSPIM2_3          0
 #define AM_HAL_PIN_59_TRIG0             1
-#define AM_HAL_PIN_59_I3CM0_SDA         2
+#define AM_HAL_PIN_59_RESERVED2         2
 #define AM_HAL_PIN_59_GPIO              3
 #define AM_HAL_PIN_59_UART5CTS          4
 #define AM_HAL_PIN_59_RESERVED5         5
@@ -1133,7 +1132,7 @@ extern "C"
 #define AM_HAL_PIN_59_RESERVED15        15
 
 // PIN 60 functions
-#define AM_HAL_PIN_60_XSPI2_8           0
+#define AM_HAL_PIN_60_XSPIM2_8          0
 #define AM_HAL_PIN_60_TRIG1             1
 #define AM_HAL_PIN_60_SWO               2
 #define AM_HAL_PIN_60_GPIO              3
@@ -1153,7 +1152,7 @@ extern "C"
 // PIN 61 functions
 #define AM_HAL_PIN_61_M6SCL             0
 #define AM_HAL_PIN_61_M6SCK             1
-#define AM_HAL_PIN_61_I3CM1_SCL         2
+#define AM_HAL_PIN_61_RESERVED2         2
 #define AM_HAL_PIN_61_GPIO              3
 #define AM_HAL_PIN_61_UART1TX           4
 #define AM_HAL_PIN_61_RESERVED5         5
@@ -1171,7 +1170,7 @@ extern "C"
 // PIN 62 functions
 #define AM_HAL_PIN_62_M6SDAWIR3         0
 #define AM_HAL_PIN_62_M6MOSI            1
-#define AM_HAL_PIN_62_I3CM1_SDA         2
+#define AM_HAL_PIN_62_RESERVED2         2
 #define AM_HAL_PIN_62_GPIO              3
 #define AM_HAL_PIN_62_UART1RX           4
 #define AM_HAL_PIN_62_RESERVED5         5
@@ -1197,9 +1196,9 @@ extern "C"
 #define AM_HAL_PIN_63_NCE63             7
 #define AM_HAL_PIN_63_OBSBUS15          8
 #define AM_HAL_PIN_63_DISP_TE           9
-#define AM_HAL_PIN_63_XNCE2_0           10
+#define AM_HAL_PIN_63_RESERVED10        10
 #define AM_HAL_PIN_63_FPIO              11
-#define AM_HAL_PIN_63_XNCE2_1           12
+#define AM_HAL_PIN_63_RESERVED12        12
 #define AM_HAL_PIN_63_RESERVED13        13
 #define AM_HAL_PIN_63_RESERVED14        14
 #define AM_HAL_PIN_63_RESERVED15        15
@@ -1271,10 +1270,10 @@ extern "C"
 #define AM_HAL_PIN_67_RESERVED9         9
 #define AM_HAL_PIN_67_RESERVED10        10
 #define AM_HAL_PIN_67_FPIO              11
-#define AM_HAL_PIN_67_RESERVED12        12
+#define AM_HAL_PIN_67_FLB_TDO           12
 #define AM_HAL_PIN_67_RESERVED13        13
-#define AM_HAL_PIN_67_RESERVED14        14
-#define AM_HAL_PIN_67_RESERVED15        15
+#define AM_HAL_PIN_67_HBL_PIO_DRAM_SCAN_OUT  14
+#define AM_HAL_PIN_67_SCANOUT0          15
 
 // PIN 68 functions
 #define AM_HAL_PIN_68_M8SDAWIR3         0
@@ -1292,7 +1291,7 @@ extern "C"
 #define AM_HAL_PIN_68_RESERVED12        12
 #define AM_HAL_PIN_68_RESERVED13        13
 #define AM_HAL_PIN_68_RESERVED14        14
-#define AM_HAL_PIN_68_RESERVED15        15
+#define AM_HAL_PIN_68_SCANOUT1          15
 
 // PIN 69 functions
 #define AM_HAL_PIN_69_M8MISO            0
@@ -1310,7 +1309,7 @@ extern "C"
 #define AM_HAL_PIN_69_RESERVED12        12
 #define AM_HAL_PIN_69_RESERVED13        13
 #define AM_HAL_PIN_69_RESERVED14        14
-#define AM_HAL_PIN_69_RESERVED15        15
+#define AM_HAL_PIN_69_SCANOUT2          15
 
 // PIN 70 functions
 #define AM_HAL_PIN_70_M9SCL             0
@@ -1328,7 +1327,7 @@ extern "C"
 #define AM_HAL_PIN_70_RESERVED12        12
 #define AM_HAL_PIN_70_RESERVED13        13
 #define AM_HAL_PIN_70_RESERVED14        14
-#define AM_HAL_PIN_70_RESERVED15        15
+#define AM_HAL_PIN_70_SCANOUT3          15
 
 // PIN 71 functions
 #define AM_HAL_PIN_71_M9SDAWIR3         0
@@ -1346,7 +1345,7 @@ extern "C"
 #define AM_HAL_PIN_71_RESERVED12        12
 #define AM_HAL_PIN_71_RESERVED13        13
 #define AM_HAL_PIN_71_RESERVED14        14
-#define AM_HAL_PIN_71_RESERVED15        15
+#define AM_HAL_PIN_71_SCANOUT4          15
 
 // PIN 72 functions
 #define AM_HAL_PIN_72_M9MISO            0
@@ -1364,12 +1363,12 @@ extern "C"
 #define AM_HAL_PIN_72_RESERVED12        12
 #define AM_HAL_PIN_72_RESERVED13        13
 #define AM_HAL_PIN_72_RESERVED14        14
-#define AM_HAL_PIN_72_RESERVED15        15
+#define AM_HAL_PIN_72_SCANOUT5          15
 
 // PIN 73 functions
 #define AM_HAL_PIN_73_M10SCL            0
 #define AM_HAL_PIN_73_M10SCK            1
-#define AM_HAL_PIN_73_I3CM2_SCL         2
+#define AM_HAL_PIN_73_I3CM1_SCL         2
 #define AM_HAL_PIN_73_GPIO              3
 #define AM_HAL_PIN_73_RESERVED4         4
 #define AM_HAL_PIN_73_RESERVED5         5
@@ -1382,12 +1381,12 @@ extern "C"
 #define AM_HAL_PIN_73_RESERVED12        12
 #define AM_HAL_PIN_73_RESERVED13        13
 #define AM_HAL_PIN_73_RESERVED14        14
-#define AM_HAL_PIN_73_RESERVED15        15
+#define AM_HAL_PIN_73_SCANOUT6          15
 
 // PIN 74 functions
 #define AM_HAL_PIN_74_M10SDAWIR3        0
 #define AM_HAL_PIN_74_M10MOSI           1
-#define AM_HAL_PIN_74_I3CM2_SDA         2
+#define AM_HAL_PIN_74_I3CM1_SDA         2
 #define AM_HAL_PIN_74_GPIO              3
 #define AM_HAL_PIN_74_UART5TX           4
 #define AM_HAL_PIN_74_RESERVED5         5
@@ -1400,18 +1399,18 @@ extern "C"
 #define AM_HAL_PIN_74_RESERVED12        12
 #define AM_HAL_PIN_74_RESERVED13        13
 #define AM_HAL_PIN_74_RESERVED14        14
-#define AM_HAL_PIN_74_RESERVED15        15
+#define AM_HAL_PIN_74_SCANOUT7          15
 
 // PIN 75 functions
-#define AM_HAL_PIN_75_M10MISO           0
-#define AM_HAL_PIN_75_RESERVED1         1
+#define AM_HAL_PIN_75_M11SCL            0
+#define AM_HAL_PIN_75_M11SCK            1
 #define AM_HAL_PIN_75_RESERVED2         2
 #define AM_HAL_PIN_75_GPIO              3
-#define AM_HAL_PIN_75_UART5RX           4
+#define AM_HAL_PIN_75_UART5CTS          4
 #define AM_HAL_PIN_75_RESERVED5         5
 #define AM_HAL_PIN_75_CT75              6
 #define AM_HAL_PIN_75_NCE75             7
-#define AM_HAL_PIN_75_OBSBUS11          8
+#define AM_HAL_PIN_75_OBSBUS12          8
 #define AM_HAL_PIN_75_RESERVED9         9
 #define AM_HAL_PIN_75_RESERVED10        10
 #define AM_HAL_PIN_75_FPIO              11
@@ -1421,15 +1420,15 @@ extern "C"
 #define AM_HAL_PIN_75_RESERVED15        15
 
 // PIN 76 functions
-#define AM_HAL_PIN_76_M11SCL            0
-#define AM_HAL_PIN_76_M11SCK            1
-#define AM_HAL_PIN_76_RESERVED2         2
+#define AM_HAL_PIN_76_M11SDAWIR3        0
+#define AM_HAL_PIN_76_M11MOSI           1
+#define AM_HAL_PIN_76_PDM2_CLK          2
 #define AM_HAL_PIN_76_GPIO              3
-#define AM_HAL_PIN_76_UART5CTS          4
+#define AM_HAL_PIN_76_UART5RTS          4
 #define AM_HAL_PIN_76_RESERVED5         5
 #define AM_HAL_PIN_76_CT76              6
 #define AM_HAL_PIN_76_NCE76             7
-#define AM_HAL_PIN_76_OBSBUS12          8
+#define AM_HAL_PIN_76_OBSBUS13          8
 #define AM_HAL_PIN_76_RESERVED9         9
 #define AM_HAL_PIN_76_RESERVED10        10
 #define AM_HAL_PIN_76_FPIO              11
@@ -1439,15 +1438,15 @@ extern "C"
 #define AM_HAL_PIN_76_RESERVED15        15
 
 // PIN 77 functions
-#define AM_HAL_PIN_77_M11SDAWIR3        0
-#define AM_HAL_PIN_77_M11MOSI           1
-#define AM_HAL_PIN_77_PDM2_CLK          2
+#define AM_HAL_PIN_77_M11MISO           0
+#define AM_HAL_PIN_77_RESERVED1         1
+#define AM_HAL_PIN_77_PDM2_DATA         2
 #define AM_HAL_PIN_77_GPIO              3
-#define AM_HAL_PIN_77_UART5RTS          4
+#define AM_HAL_PIN_77_RESERVED4         4
 #define AM_HAL_PIN_77_RESERVED5         5
 #define AM_HAL_PIN_77_CT77              6
 #define AM_HAL_PIN_77_NCE77             7
-#define AM_HAL_PIN_77_OBSBUS13          8
+#define AM_HAL_PIN_77_OBSBUS14          8
 #define AM_HAL_PIN_77_RESERVED9         9
 #define AM_HAL_PIN_77_RESERVED10        10
 #define AM_HAL_PIN_77_FPIO              11
@@ -1457,15 +1456,15 @@ extern "C"
 #define AM_HAL_PIN_77_RESERVED15        15
 
 // PIN 78 functions
-#define AM_HAL_PIN_78_M11MISO           0
-#define AM_HAL_PIN_78_RESERVED1         1
-#define AM_HAL_PIN_78_PDM2_DATA         2
+#define AM_HAL_PIN_78_XSPIM1_4          0
+#define AM_HAL_PIN_78_32KHzXT           1
+#define AM_HAL_PIN_78_RESERVED2         2
 #define AM_HAL_PIN_78_GPIO              3
 #define AM_HAL_PIN_78_RESERVED4         4
 #define AM_HAL_PIN_78_RESERVED5         5
 #define AM_HAL_PIN_78_CT78              6
 #define AM_HAL_PIN_78_NCE78             7
-#define AM_HAL_PIN_78_OBSBUS14          8
+#define AM_HAL_PIN_78_OBSBUS15          8
 #define AM_HAL_PIN_78_RESERVED9         9
 #define AM_HAL_PIN_78_RESERVED10        10
 #define AM_HAL_PIN_78_FPIO              11
@@ -1475,15 +1474,15 @@ extern "C"
 #define AM_HAL_PIN_78_RESERVED15        15
 
 // PIN 79 functions
-#define AM_HAL_PIN_79_XSPI1_4           0
+#define AM_HAL_PIN_79_XSPIM1_5          0
 #define AM_HAL_PIN_79_32KHzXT           1
-#define AM_HAL_PIN_79_SWO               2
+#define AM_HAL_PIN_79_RESERVED2         2
 #define AM_HAL_PIN_79_GPIO              3
-#define AM_HAL_PIN_79_RESERVED4         4
+#define AM_HAL_PIN_79_UART4TX           4
 #define AM_HAL_PIN_79_RESERVED5         5
 #define AM_HAL_PIN_79_CT79              6
 #define AM_HAL_PIN_79_NCE79             7
-#define AM_HAL_PIN_79_OBSBUS15          8
+#define AM_HAL_PIN_79_OBSBUS0           8
 #define AM_HAL_PIN_79_RESERVED9         9
 #define AM_HAL_PIN_79_RESERVED10        10
 #define AM_HAL_PIN_79_FPIO              11
@@ -1493,15 +1492,15 @@ extern "C"
 #define AM_HAL_PIN_79_RESERVED15        15
 
 // PIN 80 functions
-#define AM_HAL_PIN_80_XSPI1_5           0
-#define AM_HAL_PIN_80_32KHzXT           1
-#define AM_HAL_PIN_80_SWO               2
+#define AM_HAL_PIN_80_XSPIM1_6          0
+#define AM_HAL_PIN_80_CLKOUT            1
+#define AM_HAL_PIN_80_RESERVED2         2
 #define AM_HAL_PIN_80_GPIO              3
-#define AM_HAL_PIN_80_UART4TX           4
+#define AM_HAL_PIN_80_UART4RX           4
 #define AM_HAL_PIN_80_RESERVED5         5
 #define AM_HAL_PIN_80_CT80              6
 #define AM_HAL_PIN_80_NCE80             7
-#define AM_HAL_PIN_80_OBSBUS0           8
+#define AM_HAL_PIN_80_OBSBUS1           8
 #define AM_HAL_PIN_80_RESERVED9         9
 #define AM_HAL_PIN_80_RESERVED10        10
 #define AM_HAL_PIN_80_FPIO              11
@@ -1511,15 +1510,15 @@ extern "C"
 #define AM_HAL_PIN_80_RESERVED15        15
 
 // PIN 81 functions
-#define AM_HAL_PIN_81_XSPI1_6           0
+#define AM_HAL_PIN_81_XSPIM1_7          0
 #define AM_HAL_PIN_81_CLKOUT            1
 #define AM_HAL_PIN_81_SWO               2
 #define AM_HAL_PIN_81_GPIO              3
-#define AM_HAL_PIN_81_UART4RX           4
+#define AM_HAL_PIN_81_UART4RTS          4
 #define AM_HAL_PIN_81_RESERVED5         5
 #define AM_HAL_PIN_81_CT81              6
 #define AM_HAL_PIN_81_NCE81             7
-#define AM_HAL_PIN_81_OBSBUS1           8
+#define AM_HAL_PIN_81_OBSBUS2           8
 #define AM_HAL_PIN_81_RESERVED9         9
 #define AM_HAL_PIN_81_RESERVED10        10
 #define AM_HAL_PIN_81_FPIO              11
@@ -1529,15 +1528,15 @@ extern "C"
 #define AM_HAL_PIN_81_RESERVED15        15
 
 // PIN 82 functions
-#define AM_HAL_PIN_82_XSPI1_7           0
-#define AM_HAL_PIN_82_CLKOUT            1
-#define AM_HAL_PIN_82_SWO               2
+#define AM_HAL_PIN_82_XSPIM1_8          0
+#define AM_HAL_PIN_82_SWO               1
+#define AM_HAL_PIN_82_RESERVED2         2
 #define AM_HAL_PIN_82_GPIO              3
-#define AM_HAL_PIN_82_UART4RTS          4
+#define AM_HAL_PIN_82_UART4CTS          4
 #define AM_HAL_PIN_82_RESERVED5         5
 #define AM_HAL_PIN_82_CT82              6
 #define AM_HAL_PIN_82_NCE82             7
-#define AM_HAL_PIN_82_OBSBUS2           8
+#define AM_HAL_PIN_82_OBSBUS3           8
 #define AM_HAL_PIN_82_RESERVED9         9
 #define AM_HAL_PIN_82_RESERVED10        10
 #define AM_HAL_PIN_82_FPIO              11
@@ -1547,15 +1546,15 @@ extern "C"
 #define AM_HAL_PIN_82_RESERVED15        15
 
 // PIN 83 functions
-#define AM_HAL_PIN_83_XSPI1_9           0
-#define AM_HAL_PIN_83_SWO               1
+#define AM_HAL_PIN_83_XSPIM1_10         0
+#define AM_HAL_PIN_83_32KHzXT           1
 #define AM_HAL_PIN_83_RESERVED2         2
 #define AM_HAL_PIN_83_GPIO              3
-#define AM_HAL_PIN_83_UART4CTS          4
+#define AM_HAL_PIN_83_UART1TX           4
 #define AM_HAL_PIN_83_RESERVED5         5
 #define AM_HAL_PIN_83_CT83              6
 #define AM_HAL_PIN_83_NCE83             7
-#define AM_HAL_PIN_83_OBSBUS3           8
+#define AM_HAL_PIN_83_OBSBUS4           8
 #define AM_HAL_PIN_83_RESERVED9         9
 #define AM_HAL_PIN_83_RESERVED10        10
 #define AM_HAL_PIN_83_FPIO              11
@@ -1565,15 +1564,15 @@ extern "C"
 #define AM_HAL_PIN_83_RESERVED15        15
 
 // PIN 84 functions
-#define AM_HAL_PIN_84_XSPI1_10          0
+#define AM_HAL_PIN_84_XSPIM1_11         0
 #define AM_HAL_PIN_84_32KHzXT           1
-#define AM_HAL_PIN_84_SWO               2
+#define AM_HAL_PIN_84_RESERVED2         2
 #define AM_HAL_PIN_84_GPIO              3
-#define AM_HAL_PIN_84_UART1TX           4
+#define AM_HAL_PIN_84_UART1RX           4
 #define AM_HAL_PIN_84_RESERVED5         5
 #define AM_HAL_PIN_84_CT84              6
 #define AM_HAL_PIN_84_NCE84             7
-#define AM_HAL_PIN_84_OBSBUS4           8
+#define AM_HAL_PIN_84_OBSBUS5           8
 #define AM_HAL_PIN_84_RESERVED9         9
 #define AM_HAL_PIN_84_RESERVED10        10
 #define AM_HAL_PIN_84_FPIO              11
@@ -1583,15 +1582,15 @@ extern "C"
 #define AM_HAL_PIN_84_RESERVED15        15
 
 // PIN 85 functions
-#define AM_HAL_PIN_85_XSPI1_11          0
-#define AM_HAL_PIN_85_32KHzXT           1
-#define AM_HAL_PIN_85_SWTRACE0          2
+#define AM_HAL_PIN_85_XSPIM1_12         0
+#define AM_HAL_PIN_85_CLKOUT            1
+#define AM_HAL_PIN_85_RESERVED2         2
 #define AM_HAL_PIN_85_GPIO              3
-#define AM_HAL_PIN_85_UART1RX           4
+#define AM_HAL_PIN_85_UART1RTS          4
 #define AM_HAL_PIN_85_RESERVED5         5
 #define AM_HAL_PIN_85_CT85              6
 #define AM_HAL_PIN_85_NCE85             7
-#define AM_HAL_PIN_85_OBSBUS5           8
+#define AM_HAL_PIN_85_OBSBUS6           8
 #define AM_HAL_PIN_85_RESERVED9         9
 #define AM_HAL_PIN_85_RESERVED10        10
 #define AM_HAL_PIN_85_FPIO              11
@@ -1601,15 +1600,15 @@ extern "C"
 #define AM_HAL_PIN_85_RESERVED15        15
 
 // PIN 86 functions
-#define AM_HAL_PIN_86_XSPI1_12          0
+#define AM_HAL_PIN_86_XSPIM1_13         0
 #define AM_HAL_PIN_86_CLKOUT            1
-#define AM_HAL_PIN_86_SWTRACE1          2
+#define AM_HAL_PIN_86_RESERVED2         2
 #define AM_HAL_PIN_86_GPIO              3
-#define AM_HAL_PIN_86_UART1RTS          4
+#define AM_HAL_PIN_86_UART1CTS          4
 #define AM_HAL_PIN_86_RESERVED5         5
 #define AM_HAL_PIN_86_CT86              6
 #define AM_HAL_PIN_86_NCE86             7
-#define AM_HAL_PIN_86_OBSBUS6           8
+#define AM_HAL_PIN_86_OBSBUS7           8
 #define AM_HAL_PIN_86_RESERVED9         9
 #define AM_HAL_PIN_86_RESERVED10        10
 #define AM_HAL_PIN_86_FPIO              11
@@ -1619,16 +1618,16 @@ extern "C"
 #define AM_HAL_PIN_86_RESERVED15        15
 
 // PIN 87 functions
-#define AM_HAL_PIN_87_XSPI1_13          0
-#define AM_HAL_PIN_87_CLKOUT            1
-#define AM_HAL_PIN_87_SWTRACE2          2
+#define AM_HAL_PIN_87_XSPIM1_18         0
+#define AM_HAL_PIN_87_RESERVED1         1
+#define AM_HAL_PIN_87_RESERVED2         2
 #define AM_HAL_PIN_87_GPIO              3
-#define AM_HAL_PIN_87_UART1CTS          4
+#define AM_HAL_PIN_87_UART5TX           4
 #define AM_HAL_PIN_87_RESERVED5         5
 #define AM_HAL_PIN_87_CT87              6
 #define AM_HAL_PIN_87_NCE87             7
-#define AM_HAL_PIN_87_OBSBUS7           8
-#define AM_HAL_PIN_87_VCMPO             9
+#define AM_HAL_PIN_87_OBSBUS8           8
+#define AM_HAL_PIN_87_RESERVED9         9
 #define AM_HAL_PIN_87_RESERVED10        10
 #define AM_HAL_PIN_87_FPIO              11
 #define AM_HAL_PIN_87_RESERVED12        12
@@ -1637,15 +1636,15 @@ extern "C"
 #define AM_HAL_PIN_87_RESERVED15        15
 
 // PIN 88 functions
-#define AM_HAL_PIN_88_XSPI1_14          0
-#define AM_HAL_PIN_88_I3CM2_SCL         1
-#define AM_HAL_PIN_88_SWTRACE3          2
+#define AM_HAL_PIN_88_XSPIM1_14         0
+#define AM_HAL_PIN_88_RESERVED1         1
+#define AM_HAL_PIN_88_RESERVED2         2
 #define AM_HAL_PIN_88_GPIO              3
-#define AM_HAL_PIN_88_UART5TX           4
+#define AM_HAL_PIN_88_UART5RX           4
 #define AM_HAL_PIN_88_RESERVED5         5
 #define AM_HAL_PIN_88_CT88              6
 #define AM_HAL_PIN_88_NCE88             7
-#define AM_HAL_PIN_88_OBSBUS8           8
+#define AM_HAL_PIN_88_OBSBUS9           8
 #define AM_HAL_PIN_88_RESERVED9         9
 #define AM_HAL_PIN_88_RESERVED10        10
 #define AM_HAL_PIN_88_FPIO              11
@@ -1655,15 +1654,15 @@ extern "C"
 #define AM_HAL_PIN_88_RESERVED15        15
 
 // PIN 89 functions
-#define AM_HAL_PIN_89_XSPI1_15          0
-#define AM_HAL_PIN_89_I3CM2_SDA         1
-#define AM_HAL_PIN_89_RESERVED2         2
+#define AM_HAL_PIN_89_XSPIM1_15         0
+#define AM_HAL_PIN_89_32KHzXT           1
+#define AM_HAL_PIN_89_UART0CTS          2
 #define AM_HAL_PIN_89_GPIO              3
-#define AM_HAL_PIN_89_UART5RX           4
+#define AM_HAL_PIN_89_UART5RTS          4
 #define AM_HAL_PIN_89_RESERVED5         5
 #define AM_HAL_PIN_89_CT89              6
 #define AM_HAL_PIN_89_NCE89             7
-#define AM_HAL_PIN_89_OBSBUS9           8
+#define AM_HAL_PIN_89_OBSBUS10          8
 #define AM_HAL_PIN_89_RESERVED9         9
 #define AM_HAL_PIN_89_RESERVED10        10
 #define AM_HAL_PIN_89_FPIO              11
@@ -1673,15 +1672,15 @@ extern "C"
 #define AM_HAL_PIN_89_RESERVED15        15
 
 // PIN 90 functions
-#define AM_HAL_PIN_90_XSPI1_16          0
-#define AM_HAL_PIN_90_32KHzXT           1
-#define AM_HAL_PIN_90_UART0CTS          2
+#define AM_HAL_PIN_90_XSPIM1_16         0
+#define AM_HAL_PIN_90_RESERVED1         1
+#define AM_HAL_PIN_90_RESERVED2         2
 #define AM_HAL_PIN_90_GPIO              3
-#define AM_HAL_PIN_90_UART5RTS          4
+#define AM_HAL_PIN_90_UART5CTS          4
 #define AM_HAL_PIN_90_RESERVED5         5
 #define AM_HAL_PIN_90_CT90              6
 #define AM_HAL_PIN_90_NCE90             7
-#define AM_HAL_PIN_90_OBSBUS10          8
+#define AM_HAL_PIN_90_OBSBUS11          8
 #define AM_HAL_PIN_90_RESERVED9         9
 #define AM_HAL_PIN_90_RESERVED10        10
 #define AM_HAL_PIN_90_FPIO              11
@@ -1691,15 +1690,15 @@ extern "C"
 #define AM_HAL_PIN_90_RESERVED15        15
 
 // PIN 91 functions
-#define AM_HAL_PIN_91_XSPI1_17          0
+#define AM_HAL_PIN_91_XSPIM1_17         0
 #define AM_HAL_PIN_91_RESERVED1         1
 #define AM_HAL_PIN_91_RESERVED2         2
 #define AM_HAL_PIN_91_GPIO              3
-#define AM_HAL_PIN_91_UART5CTS          4
+#define AM_HAL_PIN_91_UART0TX           4
 #define AM_HAL_PIN_91_RESERVED5         5
 #define AM_HAL_PIN_91_CT91              6
 #define AM_HAL_PIN_91_NCE91             7
-#define AM_HAL_PIN_91_OBSBUS11          8
+#define AM_HAL_PIN_91_OBSBUS12          8
 #define AM_HAL_PIN_91_RESERVED9         9
 #define AM_HAL_PIN_91_RESERVED10        10
 #define AM_HAL_PIN_91_FPIO              11
@@ -1709,15 +1708,15 @@ extern "C"
 #define AM_HAL_PIN_91_RESERVED15        15
 
 // PIN 92 functions
-#define AM_HAL_PIN_92_XSPI1_18          0
+#define AM_HAL_PIN_92_XNCE1_0_0         0
 #define AM_HAL_PIN_92_RESERVED1         1
-#define AM_HAL_PIN_92_RESERVED2         2
+#define AM_HAL_PIN_92_XNCE1_1_2         2
 #define AM_HAL_PIN_92_GPIO              3
-#define AM_HAL_PIN_92_UART0TX           4
+#define AM_HAL_PIN_92_UART0RX           4
 #define AM_HAL_PIN_92_RESERVED5         5
 #define AM_HAL_PIN_92_CT92              6
 #define AM_HAL_PIN_92_NCE92             7
-#define AM_HAL_PIN_92_OBSBUS12          8
+#define AM_HAL_PIN_92_OBSBUS13          8
 #define AM_HAL_PIN_92_RESERVED9         9
 #define AM_HAL_PIN_92_RESERVED10        10
 #define AM_HAL_PIN_92_FPIO              11
@@ -1727,15 +1726,15 @@ extern "C"
 #define AM_HAL_PIN_92_RESERVED15        15
 
 // PIN 93 functions
-#define AM_HAL_PIN_93_XSPI1_19          0
-#define AM_HAL_PIN_93_RESERVED1         1
-#define AM_HAL_PIN_93_RESERVED2         2
+#define AM_HAL_PIN_93_XSPIM2_4          0
+#define AM_HAL_PIN_93_DISP_QSPI_D0_OUT  1
+#define AM_HAL_PIN_93_DISP_QSPI_D0      2
 #define AM_HAL_PIN_93_GPIO              3
-#define AM_HAL_PIN_93_UART0RX           4
+#define AM_HAL_PIN_93_UART0RTS          4
 #define AM_HAL_PIN_93_RESERVED5         5
 #define AM_HAL_PIN_93_CT93              6
 #define AM_HAL_PIN_93_NCE93             7
-#define AM_HAL_PIN_93_OBSBUS13          8
+#define AM_HAL_PIN_93_OBSBUS14          8
 #define AM_HAL_PIN_93_RESERVED9         9
 #define AM_HAL_PIN_93_RESERVED10        10
 #define AM_HAL_PIN_93_FPIO              11
@@ -1745,15 +1744,15 @@ extern "C"
 #define AM_HAL_PIN_93_RESERVED15        15
 
 // PIN 94 functions
-#define AM_HAL_PIN_94_XSPI2_4           0
-#define AM_HAL_PIN_94_DISP_QSPI_D0_OUT  1
-#define AM_HAL_PIN_94_DISP_QSPI_D0      2
+#define AM_HAL_PIN_94_XSPIM2_5          0
+#define AM_HAL_PIN_94_CLKOUT            1
+#define AM_HAL_PIN_94_RESERVED2         2
 #define AM_HAL_PIN_94_GPIO              3
-#define AM_HAL_PIN_94_UART0RTS          4
+#define AM_HAL_PIN_94_UART2CTS          4
 #define AM_HAL_PIN_94_RESERVED5         5
 #define AM_HAL_PIN_94_CT94              6
 #define AM_HAL_PIN_94_NCE94             7
-#define AM_HAL_PIN_94_OBSBUS14          8
+#define AM_HAL_PIN_94_OBSBUS15          8
 #define AM_HAL_PIN_94_RESERVED9         9
 #define AM_HAL_PIN_94_RESERVED10        10
 #define AM_HAL_PIN_94_FPIO              11
@@ -1763,15 +1762,15 @@ extern "C"
 #define AM_HAL_PIN_94_RESERVED15        15
 
 // PIN 95 functions
-#define AM_HAL_PIN_95_XSPI2_5           0
+#define AM_HAL_PIN_95_XSPIM2_6          0
 #define AM_HAL_PIN_95_CLKOUT            1
 #define AM_HAL_PIN_95_RESERVED2         2
 #define AM_HAL_PIN_95_GPIO              3
-#define AM_HAL_PIN_95_UART2CTS          4
+#define AM_HAL_PIN_95_UART2TX           4
 #define AM_HAL_PIN_95_RESERVED5         5
 #define AM_HAL_PIN_95_CT95              6
 #define AM_HAL_PIN_95_NCE95             7
-#define AM_HAL_PIN_95_OBSBUS15          8
+#define AM_HAL_PIN_95_OBSBUS0           8
 #define AM_HAL_PIN_95_RESERVED9         9
 #define AM_HAL_PIN_95_RESERVED10        10
 #define AM_HAL_PIN_95_FPIO              11
@@ -1781,16 +1780,16 @@ extern "C"
 #define AM_HAL_PIN_95_RESERVED15        15
 
 // PIN 96 functions
-#define AM_HAL_PIN_96_XSPI2_6           0
-#define AM_HAL_PIN_96_CLKOUT            1
+#define AM_HAL_PIN_96_XSPIM2_7          0
+#define AM_HAL_PIN_96_32KHzXT           1
 #define AM_HAL_PIN_96_RESERVED2         2
 #define AM_HAL_PIN_96_GPIO              3
-#define AM_HAL_PIN_96_UART2TX           4
+#define AM_HAL_PIN_96_UART2RX           4
 #define AM_HAL_PIN_96_RESERVED5         5
 #define AM_HAL_PIN_96_CT96              6
 #define AM_HAL_PIN_96_NCE96             7
-#define AM_HAL_PIN_96_OBSBUS0           8
-#define AM_HAL_PIN_96_VCMPO             9
+#define AM_HAL_PIN_96_OBSBUS1           8
+#define AM_HAL_PIN_96_RESERVED9         9
 #define AM_HAL_PIN_96_RESERVED10        10
 #define AM_HAL_PIN_96_FPIO              11
 #define AM_HAL_PIN_96_RESERVED12        12
@@ -1799,16 +1798,16 @@ extern "C"
 #define AM_HAL_PIN_96_RESERVED15        15
 
 // PIN 97 functions
-#define AM_HAL_PIN_97_XSPI2_7           0
+#define AM_HAL_PIN_97_XSPIM2_9          0
 #define AM_HAL_PIN_97_32KHzXT           1
 #define AM_HAL_PIN_97_RESERVED2         2
 #define AM_HAL_PIN_97_GPIO              3
-#define AM_HAL_PIN_97_UART2RX           4
+#define AM_HAL_PIN_97_UART2RTS          4
 #define AM_HAL_PIN_97_RESERVED5         5
 #define AM_HAL_PIN_97_CT97              6
 #define AM_HAL_PIN_97_NCE97             7
-#define AM_HAL_PIN_97_OBSBUS1           8
-#define AM_HAL_PIN_97_VCMPO             9
+#define AM_HAL_PIN_97_OBSBUS2           8
+#define AM_HAL_PIN_97_RESERVED9         9
 #define AM_HAL_PIN_97_RESERVED10        10
 #define AM_HAL_PIN_97_FPIO              11
 #define AM_HAL_PIN_97_RESERVED12        12
@@ -1817,16 +1816,16 @@ extern "C"
 #define AM_HAL_PIN_97_RESERVED15        15
 
 // PIN 98 functions
-#define AM_HAL_PIN_98_XSPI2_9           0
-#define AM_HAL_PIN_98_32KHzXT           1
-#define AM_HAL_PIN_98_RESERVED2         2
+#define AM_HAL_PIN_98_PDM1_CLK          0
+#define AM_HAL_PIN_98_SDIF0_DAT0        1
+#define AM_HAL_PIN_98_DISP_QSPI_D0      2
 #define AM_HAL_PIN_98_GPIO              3
-#define AM_HAL_PIN_98_UART2RTS          4
+#define AM_HAL_PIN_98_RESERVED4         4
 #define AM_HAL_PIN_98_RESERVED5         5
 #define AM_HAL_PIN_98_CT98              6
 #define AM_HAL_PIN_98_NCE98             7
-#define AM_HAL_PIN_98_OBSBUS2           8
-#define AM_HAL_PIN_98_VCMPO             9
+#define AM_HAL_PIN_98_OBSBUS3           8
+#define AM_HAL_PIN_98_DISP_QSPI_D0_OUT  9
 #define AM_HAL_PIN_98_RESERVED10        10
 #define AM_HAL_PIN_98_FPIO              11
 #define AM_HAL_PIN_98_RESERVED12        12
@@ -1835,16 +1834,16 @@ extern "C"
 #define AM_HAL_PIN_98_RESERVED15        15
 
 // PIN 99 functions
-#define AM_HAL_PIN_99_PDM1_CLK          0
-#define AM_HAL_PIN_99_SDIF0_DAT0        1
-#define AM_HAL_PIN_99_DISP_QSPI_D0      2
+#define AM_HAL_PIN_99_PDM1_DATA         0
+#define AM_HAL_PIN_99_SDIF0_DAT1        1
+#define AM_HAL_PIN_99_DISP_QSPI_D1      2
 #define AM_HAL_PIN_99_GPIO              3
-#define AM_HAL_PIN_99_RESERVED4         4
+#define AM_HAL_PIN_99_UART5TX           4
 #define AM_HAL_PIN_99_RESERVED5         5
 #define AM_HAL_PIN_99_CT99              6
 #define AM_HAL_PIN_99_NCE99             7
-#define AM_HAL_PIN_99_OBSBUS3           8
-#define AM_HAL_PIN_99_DISP_QSPI_D0_OUT  9
+#define AM_HAL_PIN_99_OBSBUS4           8
+#define AM_HAL_PIN_99_RESERVED9         9
 #define AM_HAL_PIN_99_RESERVED10        10
 #define AM_HAL_PIN_99_FPIO              11
 #define AM_HAL_PIN_99_RESERVED12        12
@@ -1853,15 +1852,15 @@ extern "C"
 #define AM_HAL_PIN_99_RESERVED15        15
 
 // PIN 100 functions
-#define AM_HAL_PIN_100_PDM1_DATA        0
-#define AM_HAL_PIN_100_SDIF0_DAT1       1
-#define AM_HAL_PIN_100_DISP_QSPI_D1     2
+#define AM_HAL_PIN_100_PDM2_CLK         0
+#define AM_HAL_PIN_100_SDIF0_DAT2       1
+#define AM_HAL_PIN_100_DISP_QSPI_D2     2
 #define AM_HAL_PIN_100_GPIO             3
-#define AM_HAL_PIN_100_UART5TX          4
+#define AM_HAL_PIN_100_UART5RX          4
 #define AM_HAL_PIN_100_RESERVED5        5
 #define AM_HAL_PIN_100_CT100            6
 #define AM_HAL_PIN_100_NCE100           7
-#define AM_HAL_PIN_100_OBSBUS4          8
+#define AM_HAL_PIN_100_OBSBUS5          8
 #define AM_HAL_PIN_100_RESERVED9        9
 #define AM_HAL_PIN_100_RESERVED10       10
 #define AM_HAL_PIN_100_FPIO             11
@@ -1871,15 +1870,15 @@ extern "C"
 #define AM_HAL_PIN_100_RESERVED15       15
 
 // PIN 101 functions
-#define AM_HAL_PIN_101_PDM2_CLK         0
-#define AM_HAL_PIN_101_SDIF0_DAT2       1
-#define AM_HAL_PIN_101_DISP_QSPI_D2     2
+#define AM_HAL_PIN_101_PDM2_DATA        0
+#define AM_HAL_PIN_101_SDIF0_DAT3       1
+#define AM_HAL_PIN_101_DISP_QSPI_D3     2
 #define AM_HAL_PIN_101_GPIO             3
-#define AM_HAL_PIN_101_UART5RX          4
+#define AM_HAL_PIN_101_UART5RTS         4
 #define AM_HAL_PIN_101_RESERVED5        5
 #define AM_HAL_PIN_101_CT101            6
 #define AM_HAL_PIN_101_NCE101           7
-#define AM_HAL_PIN_101_OBSBUS5          8
+#define AM_HAL_PIN_101_OBSBUS6          8
 #define AM_HAL_PIN_101_RESERVED9        9
 #define AM_HAL_PIN_101_RESERVED10       10
 #define AM_HAL_PIN_101_FPIO             11
@@ -1889,15 +1888,15 @@ extern "C"
 #define AM_HAL_PIN_101_RESERVED15       15
 
 // PIN 102 functions
-#define AM_HAL_PIN_102_PDM2_DATA        0
-#define AM_HAL_PIN_102_SDIF0_DAT3       1
-#define AM_HAL_PIN_102_DISP_QSPI_D3     2
+#define AM_HAL_PIN_102_PDM0_CLK         0
+#define AM_HAL_PIN_102_SDIF0_CLKOUT     1
+#define AM_HAL_PIN_102_DISP_QSPI_SCK    2
 #define AM_HAL_PIN_102_GPIO             3
-#define AM_HAL_PIN_102_UART5RTS         4
+#define AM_HAL_PIN_102_UART5CTS         4
 #define AM_HAL_PIN_102_RESERVED5        5
 #define AM_HAL_PIN_102_CT102            6
 #define AM_HAL_PIN_102_NCE102           7
-#define AM_HAL_PIN_102_OBSBUS6          8
+#define AM_HAL_PIN_102_OBSBUS7          8
 #define AM_HAL_PIN_102_RESERVED9        9
 #define AM_HAL_PIN_102_RESERVED10       10
 #define AM_HAL_PIN_102_FPIO             11
@@ -1907,15 +1906,15 @@ extern "C"
 #define AM_HAL_PIN_102_RESERVED15       15
 
 // PIN 103 functions
-#define AM_HAL_PIN_103_PDM0_CLK         0
-#define AM_HAL_PIN_103_SDIF0_CLKOUT     1
-#define AM_HAL_PIN_103_DISP_QSPI_SCK    2
+#define AM_HAL_PIN_103_PDM0_DATA        0
+#define AM_HAL_PIN_103_SDIF0_CMD        1
+#define AM_HAL_PIN_103_DISP_TE          2
 #define AM_HAL_PIN_103_GPIO             3
-#define AM_HAL_PIN_103_UART5CTS         4
+#define AM_HAL_PIN_103_RESERVED4        4
 #define AM_HAL_PIN_103_RESERVED5        5
 #define AM_HAL_PIN_103_CT103            6
 #define AM_HAL_PIN_103_NCE103           7
-#define AM_HAL_PIN_103_OBSBUS7          8
+#define AM_HAL_PIN_103_OBSBUS8          8
 #define AM_HAL_PIN_103_RESERVED9        9
 #define AM_HAL_PIN_103_RESERVED10       10
 #define AM_HAL_PIN_103_FPIO             11
@@ -1925,16 +1924,16 @@ extern "C"
 #define AM_HAL_PIN_103_RESERVED15       15
 
 // PIN 104 functions
-#define AM_HAL_PIN_104_PDM0_DATA        0
-#define AM_HAL_PIN_104_SDIF0_CMD        1
-#define AM_HAL_PIN_104_RESERVED2        2
+#define AM_HAL_PIN_104_DISP_ENB         0
+#define AM_HAL_PIN_104_RESERVED1        1
+#define AM_HAL_PIN_104_DISP_QSPI_D0     2
 #define AM_HAL_PIN_104_GPIO             3
-#define AM_HAL_PIN_104_RESERVED4        4
+#define AM_HAL_PIN_104_UART1RX          4
 #define AM_HAL_PIN_104_RESERVED5        5
 #define AM_HAL_PIN_104_CT104            6
 #define AM_HAL_PIN_104_NCE104           7
-#define AM_HAL_PIN_104_OBSBUS8          8
-#define AM_HAL_PIN_104_DISP_TE          9
+#define AM_HAL_PIN_104_OBSBUS9          8
+#define AM_HAL_PIN_104_DISP_QSPI_D0_OUT  9
 #define AM_HAL_PIN_104_RESERVED10       10
 #define AM_HAL_PIN_104_FPIO             11
 #define AM_HAL_PIN_104_RESERVED12       12
@@ -1943,17 +1942,17 @@ extern "C"
 #define AM_HAL_PIN_104_RESERVED15       15
 
 // PIN 105 functions
-#define AM_HAL_PIN_105_DISP_ENB         0
-#define AM_HAL_PIN_105_I3CM1_SCL        1
-#define AM_HAL_PIN_105_RESERVED2        2
+#define AM_HAL_PIN_105_DISP_XRST        0
+#define AM_HAL_PIN_105_RESERVED1        1
+#define AM_HAL_PIN_105_DISP_QSPI_D1     2
 #define AM_HAL_PIN_105_GPIO             3
-#define AM_HAL_PIN_105_UART1RX          4
+#define AM_HAL_PIN_105_UART1TX          4
 #define AM_HAL_PIN_105_RESERVED5        5
 #define AM_HAL_PIN_105_CT105            6
 #define AM_HAL_PIN_105_NCE105           7
-#define AM_HAL_PIN_105_OBSBUS9          8
-#define AM_HAL_PIN_105_DISP_QSPI_D0     9
-#define AM_HAL_PIN_105_DISP_QSPI_D0_OUT  10
+#define AM_HAL_PIN_105_OBSBUS10         8
+#define AM_HAL_PIN_105_DISP_SPI_SDO     9
+#define AM_HAL_PIN_105_RESERVED10       10
 #define AM_HAL_PIN_105_FPIO             11
 #define AM_HAL_PIN_105_RESERVED12       12
 #define AM_HAL_PIN_105_RESERVED13       13
@@ -1961,17 +1960,17 @@ extern "C"
 #define AM_HAL_PIN_105_RESERVED15       15
 
 // PIN 106 functions
-#define AM_HAL_PIN_106_DISP_XRST        0
-#define AM_HAL_PIN_106_I3CM1_SDA        1
-#define AM_HAL_PIN_106_RESERVED2        2
+#define AM_HAL_PIN_106_DISP_R1          0
+#define AM_HAL_PIN_106_RESERVED1        1
+#define AM_HAL_PIN_106_DISP_QSPI_D2     2
 #define AM_HAL_PIN_106_GPIO             3
-#define AM_HAL_PIN_106_UART1TX          4
+#define AM_HAL_PIN_106_UART1CTS         4
 #define AM_HAL_PIN_106_RESERVED5        5
 #define AM_HAL_PIN_106_CT106            6
 #define AM_HAL_PIN_106_NCE106           7
-#define AM_HAL_PIN_106_OBSBUS10         8
-#define AM_HAL_PIN_106_DISP_QSPI_D1     9
-#define AM_HAL_PIN_106_DISP_SPI_SDO     10
+#define AM_HAL_PIN_106_OBSBUS11         8
+#define AM_HAL_PIN_106_RESERVED9        9
+#define AM_HAL_PIN_106_RESERVED10       10
 #define AM_HAL_PIN_106_FPIO             11
 #define AM_HAL_PIN_106_RESERVED12       12
 #define AM_HAL_PIN_106_RESERVED13       13
@@ -1979,16 +1978,16 @@ extern "C"
 #define AM_HAL_PIN_106_RESERVED15       15
 
 // PIN 107 functions
-#define AM_HAL_PIN_107_DISP_R1          0
-#define AM_HAL_PIN_107_I3CM2_SCL        1
-#define AM_HAL_PIN_107_RESERVED2        2
+#define AM_HAL_PIN_107_DISP_R2          0
+#define AM_HAL_PIN_107_RESERVED1        1
+#define AM_HAL_PIN_107_DISP_QSPI_D3     2
 #define AM_HAL_PIN_107_GPIO             3
-#define AM_HAL_PIN_107_UART1CTS         4
+#define AM_HAL_PIN_107_UART1RTS         4
 #define AM_HAL_PIN_107_RESERVED5        5
 #define AM_HAL_PIN_107_CT107            6
 #define AM_HAL_PIN_107_NCE107           7
-#define AM_HAL_PIN_107_OBSBUS11         8
-#define AM_HAL_PIN_107_DISP_QSPI_D2     9
+#define AM_HAL_PIN_107_OBSBUS12         8
+#define AM_HAL_PIN_107_RESERVED9        9
 #define AM_HAL_PIN_107_RESERVED10       10
 #define AM_HAL_PIN_107_FPIO             11
 #define AM_HAL_PIN_107_RESERVED12       12
@@ -1997,16 +1996,16 @@ extern "C"
 #define AM_HAL_PIN_107_RESERVED15       15
 
 // PIN 108 functions
-#define AM_HAL_PIN_108_DISP_R2          0
-#define AM_HAL_PIN_108_I3CM2_SDA        1
-#define AM_HAL_PIN_108_RESERVED2        2
+#define AM_HAL_PIN_108_DISP_G1          0
+#define AM_HAL_PIN_108_RESERVED1        1
+#define AM_HAL_PIN_108_DISP_QSPI_SCK    2
 #define AM_HAL_PIN_108_GPIO             3
-#define AM_HAL_PIN_108_UART1RTS         4
+#define AM_HAL_PIN_108_RESERVED4        4
 #define AM_HAL_PIN_108_RESERVED5        5
 #define AM_HAL_PIN_108_CT108            6
 #define AM_HAL_PIN_108_NCE108           7
-#define AM_HAL_PIN_108_OBSBUS12         8
-#define AM_HAL_PIN_108_DISP_QSPI_D3     9
+#define AM_HAL_PIN_108_OBSBUS13         8
+#define AM_HAL_PIN_108_DISP_SPI_CS_N    9
 #define AM_HAL_PIN_108_RESERVED10       10
 #define AM_HAL_PIN_108_FPIO             11
 #define AM_HAL_PIN_108_RESERVED12       12
@@ -2015,17 +2014,17 @@ extern "C"
 #define AM_HAL_PIN_108_RESERVED15       15
 
 // PIN 109 functions
-#define AM_HAL_PIN_109_DISP_G1          0
+#define AM_HAL_PIN_109_DISP_G2          0
 #define AM_HAL_PIN_109_RESERVED1        1
-#define AM_HAL_PIN_109_RESERVED2        2
+#define AM_HAL_PIN_109_DISP_QSPI_CS_N   2
 #define AM_HAL_PIN_109_GPIO             3
 #define AM_HAL_PIN_109_RESERVED4        4
 #define AM_HAL_PIN_109_RESERVED5        5
 #define AM_HAL_PIN_109_CT109            6
 #define AM_HAL_PIN_109_NCE109           7
-#define AM_HAL_PIN_109_OBSBUS13         8
-#define AM_HAL_PIN_109_DISP_QSPI_SCK    9
-#define AM_HAL_PIN_109_DISP_SPI_CS_N    10
+#define AM_HAL_PIN_109_OBSBUS14         8
+#define AM_HAL_PIN_109_DISP_SPI_RST     9
+#define AM_HAL_PIN_109_RESERVED10       10
 #define AM_HAL_PIN_109_FPIO             11
 #define AM_HAL_PIN_109_RESERVED12       12
 #define AM_HAL_PIN_109_RESERVED13       13
@@ -2033,7 +2032,7 @@ extern "C"
 #define AM_HAL_PIN_109_RESERVED15       15
 
 // PIN 110 functions
-#define AM_HAL_PIN_110_DISP_G2          0
+#define AM_HAL_PIN_110_DISP_B1          0
 #define AM_HAL_PIN_110_RESERVED1        1
 #define AM_HAL_PIN_110_RESERVED2        2
 #define AM_HAL_PIN_110_GPIO             3
@@ -2041,9 +2040,9 @@ extern "C"
 #define AM_HAL_PIN_110_RESERVED5        5
 #define AM_HAL_PIN_110_CT110            6
 #define AM_HAL_PIN_110_NCE110           7
-#define AM_HAL_PIN_110_OBSBUS14         8
-#define AM_HAL_PIN_110_DISP_SPI_RST     9
-#define AM_HAL_PIN_110_DISP_QSPI_CS_N   10
+#define AM_HAL_PIN_110_OBSBUS15         8
+#define AM_HAL_PIN_110_DISP_SPI_SD      9
+#define AM_HAL_PIN_110_DISP_SPI_SDO     10
 #define AM_HAL_PIN_110_FPIO             11
 #define AM_HAL_PIN_110_RESERVED12       12
 #define AM_HAL_PIN_110_RESERVED13       13
@@ -2051,17 +2050,17 @@ extern "C"
 #define AM_HAL_PIN_110_RESERVED15       15
 
 // PIN 111 functions
-#define AM_HAL_PIN_111_DISP_B1          0
+#define AM_HAL_PIN_111_DISP_B2          0
 #define AM_HAL_PIN_111_RESERVED1        1
 #define AM_HAL_PIN_111_RESERVED2        2
 #define AM_HAL_PIN_111_GPIO             3
-#define AM_HAL_PIN_111_RESERVED4        4
+#define AM_HAL_PIN_111_UART5TX          4
 #define AM_HAL_PIN_111_RESERVED5        5
 #define AM_HAL_PIN_111_CT111            6
 #define AM_HAL_PIN_111_NCE111           7
-#define AM_HAL_PIN_111_OBSBUS15         8
-#define AM_HAL_PIN_111_DISP_SPI_SD      9
-#define AM_HAL_PIN_111_DISP_SPI_SDO     10
+#define AM_HAL_PIN_111_OBSBUS0          8
+#define AM_HAL_PIN_111_DISP_SPI_DCX     9
+#define AM_HAL_PIN_111_RESERVED10       10
 #define AM_HAL_PIN_111_FPIO             11
 #define AM_HAL_PIN_111_RESERVED12       12
 #define AM_HAL_PIN_111_RESERVED13       13
@@ -2069,16 +2068,16 @@ extern "C"
 #define AM_HAL_PIN_111_RESERVED15       15
 
 // PIN 112 functions
-#define AM_HAL_PIN_112_DISP_B2          0
+#define AM_HAL_PIN_112_DISP_HST         0
 #define AM_HAL_PIN_112_RESERVED1        1
 #define AM_HAL_PIN_112_RESERVED2        2
 #define AM_HAL_PIN_112_GPIO             3
-#define AM_HAL_PIN_112_UART5TX          4
+#define AM_HAL_PIN_112_UART5RX          4
 #define AM_HAL_PIN_112_RESERVED5        5
 #define AM_HAL_PIN_112_CT112            6
 #define AM_HAL_PIN_112_NCE112           7
-#define AM_HAL_PIN_112_OBSBUS0          8
-#define AM_HAL_PIN_112_DISP_SPI_DCX     9
+#define AM_HAL_PIN_112_OBSBUS1          8
+#define AM_HAL_PIN_112_DISP_SPI_SCK     9
 #define AM_HAL_PIN_112_RESERVED10       10
 #define AM_HAL_PIN_112_FPIO             11
 #define AM_HAL_PIN_112_RESERVED12       12
@@ -2087,16 +2086,16 @@ extern "C"
 #define AM_HAL_PIN_112_RESERVED15       15
 
 // PIN 113 functions
-#define AM_HAL_PIN_113_DISP_HST         0
+#define AM_HAL_PIN_113_DISP_VST         0
 #define AM_HAL_PIN_113_RESERVED1        1
 #define AM_HAL_PIN_113_RESERVED2        2
 #define AM_HAL_PIN_113_GPIO             3
-#define AM_HAL_PIN_113_UART5RX          4
+#define AM_HAL_PIN_113_UART5RTS         4
 #define AM_HAL_PIN_113_RESERVED5        5
 #define AM_HAL_PIN_113_CT113            6
 #define AM_HAL_PIN_113_NCE113           7
-#define AM_HAL_PIN_113_OBSBUS1          8
-#define AM_HAL_PIN_113_DISP_SPI_SCK     9
+#define AM_HAL_PIN_113_OBSBUS2          8
+#define AM_HAL_PIN_113_DISP_SPI_SDI     9
 #define AM_HAL_PIN_113_RESERVED10       10
 #define AM_HAL_PIN_113_FPIO             11
 #define AM_HAL_PIN_113_RESERVED12       12
@@ -2105,16 +2104,16 @@ extern "C"
 #define AM_HAL_PIN_113_RESERVED15       15
 
 // PIN 114 functions
-#define AM_HAL_PIN_114_DISP_VST         0
+#define AM_HAL_PIN_114_DISP_HCK         0
 #define AM_HAL_PIN_114_RESERVED1        1
 #define AM_HAL_PIN_114_RESERVED2        2
 #define AM_HAL_PIN_114_GPIO             3
-#define AM_HAL_PIN_114_UART5RTS         4
+#define AM_HAL_PIN_114_UART5CTS         4
 #define AM_HAL_PIN_114_RESERVED5        5
 #define AM_HAL_PIN_114_CT114            6
 #define AM_HAL_PIN_114_NCE114           7
-#define AM_HAL_PIN_114_OBSBUS2          8
-#define AM_HAL_PIN_114_DISP_SPI_SDI     9
+#define AM_HAL_PIN_114_OBSBUS3          8
+#define AM_HAL_PIN_114_I2S0_CLK         9
 #define AM_HAL_PIN_114_RESERVED10       10
 #define AM_HAL_PIN_114_FPIO             11
 #define AM_HAL_PIN_114_RESERVED12       12
@@ -2123,17 +2122,17 @@ extern "C"
 #define AM_HAL_PIN_114_RESERVED15       15
 
 // PIN 115 functions
-#define AM_HAL_PIN_115_DISP_HCK         0
+#define AM_HAL_PIN_115_DISP_VCK         0
 #define AM_HAL_PIN_115_RESERVED1        1
 #define AM_HAL_PIN_115_RESERVED2        2
 #define AM_HAL_PIN_115_GPIO             3
-#define AM_HAL_PIN_115_UART5CTS         4
+#define AM_HAL_PIN_115_UART4TX          4
 #define AM_HAL_PIN_115_RESERVED5        5
 #define AM_HAL_PIN_115_CT115            6
 #define AM_HAL_PIN_115_NCE115           7
-#define AM_HAL_PIN_115_OBSBUS3          8
-#define AM_HAL_PIN_115_I2S0_CLK         9
-#define AM_HAL_PIN_115_RESERVED10       10
+#define AM_HAL_PIN_115_OBSBUS4          8
+#define AM_HAL_PIN_115_I2S0_DATA        9
+#define AM_HAL_PIN_115_I2S0_SDOUT       10
 #define AM_HAL_PIN_115_FPIO             11
 #define AM_HAL_PIN_115_RESERVED12       12
 #define AM_HAL_PIN_115_RESERVED13       13
@@ -2141,17 +2140,17 @@ extern "C"
 #define AM_HAL_PIN_115_RESERVED15       15
 
 // PIN 116 functions
-#define AM_HAL_PIN_116_DISP_VCK         0
+#define AM_HAL_PIN_116_DISP_TE          0
 #define AM_HAL_PIN_116_RESERVED1        1
 #define AM_HAL_PIN_116_RESERVED2        2
 #define AM_HAL_PIN_116_GPIO             3
-#define AM_HAL_PIN_116_UART4TX          4
+#define AM_HAL_PIN_116_UART4RX          4
 #define AM_HAL_PIN_116_RESERVED5        5
 #define AM_HAL_PIN_116_CT116            6
 #define AM_HAL_PIN_116_NCE116           7
-#define AM_HAL_PIN_116_OBSBUS4          8
-#define AM_HAL_PIN_116_I2S0_DATA        9
-#define AM_HAL_PIN_116_I2S0_SDOUT       10
+#define AM_HAL_PIN_116_OBSBUS5          8
+#define AM_HAL_PIN_116_I2S0_WS          9
+#define AM_HAL_PIN_116_RESERVED10       10
 #define AM_HAL_PIN_116_FPIO             11
 #define AM_HAL_PIN_116_RESERVED12       12
 #define AM_HAL_PIN_116_RESERVED13       13
@@ -2159,16 +2158,16 @@ extern "C"
 #define AM_HAL_PIN_116_RESERVED15       15
 
 // PIN 117 functions
-#define AM_HAL_PIN_117_DISP_TE          0
+#define AM_HAL_PIN_117_RESERVED0        0
 #define AM_HAL_PIN_117_RESERVED1        1
 #define AM_HAL_PIN_117_RESERVED2        2
 #define AM_HAL_PIN_117_GPIO             3
-#define AM_HAL_PIN_117_UART4RX          4
+#define AM_HAL_PIN_117_UART4RTS         4
 #define AM_HAL_PIN_117_RESERVED5        5
 #define AM_HAL_PIN_117_CT117            6
 #define AM_HAL_PIN_117_NCE117           7
-#define AM_HAL_PIN_117_OBSBUS5          8
-#define AM_HAL_PIN_117_I2S0_WS          9
+#define AM_HAL_PIN_117_OBSBUS6          8
+#define AM_HAL_PIN_117_I2S0_SDIN        9
 #define AM_HAL_PIN_117_RESERVED10       10
 #define AM_HAL_PIN_117_FPIO             11
 #define AM_HAL_PIN_117_RESERVED12       12
@@ -2181,12 +2180,12 @@ extern "C"
 #define AM_HAL_PIN_118_RESERVED1        1
 #define AM_HAL_PIN_118_RESERVED2        2
 #define AM_HAL_PIN_118_GPIO             3
-#define AM_HAL_PIN_118_UART4RTS         4
+#define AM_HAL_PIN_118_UART4CTS         4
 #define AM_HAL_PIN_118_RESERVED5        5
 #define AM_HAL_PIN_118_CT118            6
 #define AM_HAL_PIN_118_NCE118           7
-#define AM_HAL_PIN_118_OBSBUS6          8
-#define AM_HAL_PIN_118_I2S0_SDIN        9
+#define AM_HAL_PIN_118_OBSBUS7          8
+#define AM_HAL_PIN_118_RESERVED9        9
 #define AM_HAL_PIN_118_RESERVED10       10
 #define AM_HAL_PIN_118_FPIO             11
 #define AM_HAL_PIN_118_RESERVED12       12
@@ -2195,15 +2194,15 @@ extern "C"
 #define AM_HAL_PIN_118_RESERVED15       15
 
 // PIN 119 functions
-#define AM_HAL_PIN_119_RESERVED0        0
-#define AM_HAL_PIN_119_RESERVED1        1
+#define AM_HAL_PIN_119_I3CM0_SCL        0
+#define AM_HAL_PIN_119_I3CM1_SCL        1
 #define AM_HAL_PIN_119_RESERVED2        2
 #define AM_HAL_PIN_119_GPIO             3
-#define AM_HAL_PIN_119_UART4CTS         4
+#define AM_HAL_PIN_119_UART3TX          4
 #define AM_HAL_PIN_119_RESERVED5        5
 #define AM_HAL_PIN_119_CT119            6
 #define AM_HAL_PIN_119_NCE119           7
-#define AM_HAL_PIN_119_OBSBUS7          8
+#define AM_HAL_PIN_119_OBSBUS8          8
 #define AM_HAL_PIN_119_RESERVED9        9
 #define AM_HAL_PIN_119_RESERVED10       10
 #define AM_HAL_PIN_119_FPIO             11
@@ -2213,15 +2212,15 @@ extern "C"
 #define AM_HAL_PIN_119_RESERVED15       15
 
 // PIN 120 functions
-#define AM_HAL_PIN_120_RESERVED0        0
-#define AM_HAL_PIN_120_I3CM1_SCL        1
+#define AM_HAL_PIN_120_I3CM0_SDA        0
+#define AM_HAL_PIN_120_I3CM1_SDA        1
 #define AM_HAL_PIN_120_RESERVED2        2
 #define AM_HAL_PIN_120_GPIO             3
-#define AM_HAL_PIN_120_UART3TX          4
+#define AM_HAL_PIN_120_UART3RX          4
 #define AM_HAL_PIN_120_RESERVED5        5
 #define AM_HAL_PIN_120_CT120            6
 #define AM_HAL_PIN_120_NCE120           7
-#define AM_HAL_PIN_120_OBSBUS8          8
+#define AM_HAL_PIN_120_OBSBUS9          8
 #define AM_HAL_PIN_120_RESERVED9        9
 #define AM_HAL_PIN_120_RESERVED10       10
 #define AM_HAL_PIN_120_FPIO             11
@@ -2232,14 +2231,14 @@ extern "C"
 
 // PIN 121 functions
 #define AM_HAL_PIN_121_RESERVED0        0
-#define AM_HAL_PIN_121_I3CM1_SDA        1
+#define AM_HAL_PIN_121_I3CM2_SCL        1
 #define AM_HAL_PIN_121_RESERVED2        2
 #define AM_HAL_PIN_121_GPIO             3
-#define AM_HAL_PIN_121_UART3RX          4
+#define AM_HAL_PIN_121_UART3RTS         4
 #define AM_HAL_PIN_121_RESERVED5        5
 #define AM_HAL_PIN_121_CT121            6
 #define AM_HAL_PIN_121_NCE121           7
-#define AM_HAL_PIN_121_OBSBUS9          8
+#define AM_HAL_PIN_121_OBSBUS10         8
 #define AM_HAL_PIN_121_RESERVED9        9
 #define AM_HAL_PIN_121_RESERVED10       10
 #define AM_HAL_PIN_121_FPIO             11
@@ -2250,14 +2249,14 @@ extern "C"
 
 // PIN 122 functions
 #define AM_HAL_PIN_122_RESERVED0        0
-#define AM_HAL_PIN_122_I3CM2_SCL        1
+#define AM_HAL_PIN_122_I3CM2_SDA        1
 #define AM_HAL_PIN_122_RESERVED2        2
 #define AM_HAL_PIN_122_GPIO             3
-#define AM_HAL_PIN_122_UART3RTS         4
+#define AM_HAL_PIN_122_UART3CTS         4
 #define AM_HAL_PIN_122_RESERVED5        5
 #define AM_HAL_PIN_122_CT122            6
 #define AM_HAL_PIN_122_NCE122           7
-#define AM_HAL_PIN_122_OBSBUS10         8
+#define AM_HAL_PIN_122_OBSBUS11         8
 #define AM_HAL_PIN_122_RESERVED9        9
 #define AM_HAL_PIN_122_RESERVED10       10
 #define AM_HAL_PIN_122_FPIO             11
@@ -2268,14 +2267,14 @@ extern "C"
 
 // PIN 123 functions
 #define AM_HAL_PIN_123_RESERVED0        0
-#define AM_HAL_PIN_123_I3CM2_SDA        1
+#define AM_HAL_PIN_123_RESERVED1        1
 #define AM_HAL_PIN_123_RESERVED2        2
 #define AM_HAL_PIN_123_GPIO             3
-#define AM_HAL_PIN_123_UART3CTS         4
+#define AM_HAL_PIN_123_RESERVED4        4
 #define AM_HAL_PIN_123_RESERVED5        5
 #define AM_HAL_PIN_123_CT123            6
 #define AM_HAL_PIN_123_NCE123           7
-#define AM_HAL_PIN_123_OBSBUS11         8
+#define AM_HAL_PIN_123_OBSBUS12         8
 #define AM_HAL_PIN_123_RESERVED9        9
 #define AM_HAL_PIN_123_RESERVED10       10
 #define AM_HAL_PIN_123_FPIO             11
@@ -2293,7 +2292,7 @@ extern "C"
 #define AM_HAL_PIN_124_RESERVED5        5
 #define AM_HAL_PIN_124_CT124            6
 #define AM_HAL_PIN_124_NCE124           7
-#define AM_HAL_PIN_124_OBSBUS12         8
+#define AM_HAL_PIN_124_OBSBUS13         8
 #define AM_HAL_PIN_124_RESERVED9        9
 #define AM_HAL_PIN_124_RESERVED10       10
 #define AM_HAL_PIN_124_FPIO             11
@@ -2303,15 +2302,15 @@ extern "C"
 #define AM_HAL_PIN_124_RESERVED15       15
 
 // PIN 125 functions
-#define AM_HAL_PIN_125_RESERVED0        0
-#define AM_HAL_PIN_125_RESERVED1        1
-#define AM_HAL_PIN_125_RESERVED2        2
+#define AM_HAL_PIN_125_I3CM1_SCL        0
+#define AM_HAL_PIN_125_I3CM0_SCL        1
+#define AM_HAL_PIN_125_XNCE2_1          2
 #define AM_HAL_PIN_125_GPIO             3
-#define AM_HAL_PIN_125_RESERVED4        4
-#define AM_HAL_PIN_125_RESERVED5        5
+#define AM_HAL_PIN_125_UART2CTS         4
+#define AM_HAL_PIN_125_SWTRACECTL       5
 #define AM_HAL_PIN_125_CT125            6
 #define AM_HAL_PIN_125_NCE125           7
-#define AM_HAL_PIN_125_OBSBUS13         8
+#define AM_HAL_PIN_125_OBSBUS14         8
 #define AM_HAL_PIN_125_RESERVED9        9
 #define AM_HAL_PIN_125_RESERVED10       10
 #define AM_HAL_PIN_125_FPIO             11
@@ -2321,15 +2320,15 @@ extern "C"
 #define AM_HAL_PIN_125_RESERVED15       15
 
 // PIN 126 functions
-#define AM_HAL_PIN_126_I3CM1_SCL        0
-#define AM_HAL_PIN_126_RESERVED1        1
-#define AM_HAL_PIN_126_DBIB_D11         2
+#define AM_HAL_PIN_126_I3CM1_SDA        0
+#define AM_HAL_PIN_126_I3CM0_SDA        1
+#define AM_HAL_PIN_126_XNCE2_0          2
 #define AM_HAL_PIN_126_GPIO             3
-#define AM_HAL_PIN_126_RESERVED4        4
+#define AM_HAL_PIN_126_UART2RTS         4
 #define AM_HAL_PIN_126_RESERVED5        5
 #define AM_HAL_PIN_126_CT126            6
 #define AM_HAL_PIN_126_NCE126           7
-#define AM_HAL_PIN_126_OBSBUS14         8
+#define AM_HAL_PIN_126_OBSBUS15         8
 #define AM_HAL_PIN_126_RESERVED9        9
 #define AM_HAL_PIN_126_RESERVED10       10
 #define AM_HAL_PIN_126_FPIO             11
@@ -2339,15 +2338,15 @@ extern "C"
 #define AM_HAL_PIN_126_RESERVED15       15
 
 // PIN 127 functions
-#define AM_HAL_PIN_127_I3CM1_SDA        0
-#define AM_HAL_PIN_127_RESERVED1        1
-#define AM_HAL_PIN_127_DBIB_D12         2
+#define AM_HAL_PIN_127_I3CM2_SCL        0
+#define AM_HAL_PIN_127_I3CM1_SCL        1
+#define AM_HAL_PIN_127_XNCE2_0          2
 #define AM_HAL_PIN_127_GPIO             3
-#define AM_HAL_PIN_127_RESERVED4        4
+#define AM_HAL_PIN_127_UART2TX          4
 #define AM_HAL_PIN_127_RESERVED5        5
 #define AM_HAL_PIN_127_CT127            6
 #define AM_HAL_PIN_127_NCE127           7
-#define AM_HAL_PIN_127_OBSBUS15         8
+#define AM_HAL_PIN_127_OBSBUS0          8
 #define AM_HAL_PIN_127_RESERVED9        9
 #define AM_HAL_PIN_127_RESERVED10       10
 #define AM_HAL_PIN_127_FPIO             11
@@ -2357,15 +2356,15 @@ extern "C"
 #define AM_HAL_PIN_127_RESERVED15       15
 
 // PIN 128 functions
-#define AM_HAL_PIN_128_I3CM2_SCL        0
-#define AM_HAL_PIN_128_RESERVED1        1
-#define AM_HAL_PIN_128_DBIB_D13         2
+#define AM_HAL_PIN_128_I3CM2_SDA        0
+#define AM_HAL_PIN_128_I3CM1_SDA        1
+#define AM_HAL_PIN_128_XNCE2_1          2
 #define AM_HAL_PIN_128_GPIO             3
-#define AM_HAL_PIN_128_UART2TX          4
+#define AM_HAL_PIN_128_UART2RX          4
 #define AM_HAL_PIN_128_RESERVED5        5
 #define AM_HAL_PIN_128_CT128            6
 #define AM_HAL_PIN_128_NCE128           7
-#define AM_HAL_PIN_128_OBSBUS0          8
+#define AM_HAL_PIN_128_OBSBUS1          8
 #define AM_HAL_PIN_128_RESERVED9        9
 #define AM_HAL_PIN_128_RESERVED10       10
 #define AM_HAL_PIN_128_FPIO             11
@@ -2375,51 +2374,51 @@ extern "C"
 #define AM_HAL_PIN_128_RESERVED15       15
 
 // PIN 129 functions
-#define AM_HAL_PIN_129_I3CM2_SDA        0
-#define AM_HAL_PIN_129_RESERVED1        1
-#define AM_HAL_PIN_129_DBIB_D14         2
+#define AM_HAL_PIN_129_JTAG_TMS_0       0
+#define AM_HAL_PIN_129_JTAG_TMS_1       1
+#define AM_HAL_PIN_129_JTAG_TMS_2       2
 #define AM_HAL_PIN_129_GPIO             3
-#define AM_HAL_PIN_129_UART2RX          4
-#define AM_HAL_PIN_129_RESERVED5        5
+#define AM_HAL_PIN_129_JTAG_TMS_4       4
+#define AM_HAL_PIN_129_JTAG_TMS_5       5
 #define AM_HAL_PIN_129_CT129            6
 #define AM_HAL_PIN_129_NCE129           7
-#define AM_HAL_PIN_129_OBSBUS1          8
-#define AM_HAL_PIN_129_RESERVED9        9
-#define AM_HAL_PIN_129_RESERVED10       10
+#define AM_HAL_PIN_129_JTAG_TMS_8       8
+#define AM_HAL_PIN_129_JTAG_TMS_9       9
+#define AM_HAL_PIN_129_JTAG_TMS_10      10
 #define AM_HAL_PIN_129_FPIO             11
-#define AM_HAL_PIN_129_RESERVED12       12
-#define AM_HAL_PIN_129_RESERVED13       13
-#define AM_HAL_PIN_129_RESERVED14       14
-#define AM_HAL_PIN_129_RESERVED15       15
+#define AM_HAL_PIN_129_JTAG_TMS_12      12
+#define AM_HAL_PIN_129_JTAG_TMS_13      13
+#define AM_HAL_PIN_129_JTAG_TMS_14      14
+#define AM_HAL_PIN_129_JTAG_TMS_15      15
 
 // PIN 130 functions
-#define AM_HAL_PIN_130_RESERVED0        0
-#define AM_HAL_PIN_130_RESERVED1        1
-#define AM_HAL_PIN_130_DBIB_D15         2
+#define AM_HAL_PIN_130_JTAG_TRSTN_0     0
+#define AM_HAL_PIN_130_JTAG_TRSTN_1     1
+#define AM_HAL_PIN_130_SWTRACECTL       2
 #define AM_HAL_PIN_130_GPIO             3
-#define AM_HAL_PIN_130_UART2RTS         4
-#define AM_HAL_PIN_130_RESERVED5        5
+#define AM_HAL_PIN_130_JTAG_TRSTN_4     4
+#define AM_HAL_PIN_130_JTAG_TRSTN_5     5
 #define AM_HAL_PIN_130_CT130            6
 #define AM_HAL_PIN_130_NCE130           7
-#define AM_HAL_PIN_130_OBSBUS2          8
-#define AM_HAL_PIN_130_RESERVED9        9
-#define AM_HAL_PIN_130_RESERVED10       10
+#define AM_HAL_PIN_130_JTAG_TRSTN_8     8
+#define AM_HAL_PIN_130_JTAG_TRSTN_9     9
+#define AM_HAL_PIN_130_JTAG_TRSTN_10    10
 #define AM_HAL_PIN_130_FPIO             11
-#define AM_HAL_PIN_130_RESERVED12       12
-#define AM_HAL_PIN_130_RESERVED13       13
-#define AM_HAL_PIN_130_RESERVED14       14
-#define AM_HAL_PIN_130_RESERVED15       15
+#define AM_HAL_PIN_130_JTAG_TRSTN_12    12
+#define AM_HAL_PIN_130_JTAG_TRSTN_13    13
+#define AM_HAL_PIN_130_JTAG_TRSTN_14    14
+#define AM_HAL_PIN_130_JTAG_TRSTN_15    15
 
 // PIN 131 functions
-#define AM_HAL_PIN_131_RESERVED0        0
-#define AM_HAL_PIN_131_RESERVED1        1
+#define AM_HAL_PIN_131_SWTRACECLK       0
+#define AM_HAL_PIN_131_XNCE1_0          1
 #define AM_HAL_PIN_131_RESERVED2        2
 #define AM_HAL_PIN_131_GPIO             3
-#define AM_HAL_PIN_131_UART2CTS         4
+#define AM_HAL_PIN_131_RESERVED4        4
 #define AM_HAL_PIN_131_RESERVED5        5
 #define AM_HAL_PIN_131_CT131            6
 #define AM_HAL_PIN_131_NCE131           7
-#define AM_HAL_PIN_131_OBSBUS3          8
+#define AM_HAL_PIN_131_OBSBUS4          8
 #define AM_HAL_PIN_131_RESERVED9        9
 #define AM_HAL_PIN_131_RESERVED10       10
 #define AM_HAL_PIN_131_FPIO             11
@@ -2429,69 +2428,69 @@ extern "C"
 #define AM_HAL_PIN_131_RESERVED15       15
 
 // PIN 132 functions
-#define AM_HAL_PIN_132_RESERVED0        0
-#define AM_HAL_PIN_132_XNCE1_0          1
-#define AM_HAL_PIN_132_RESERVED2        2
+#define AM_HAL_PIN_132_JTAG_TCK_0       0
+#define AM_HAL_PIN_132_JTAG_TCK_1       1
+#define AM_HAL_PIN_132_JTAG_TCK_2       2
 #define AM_HAL_PIN_132_GPIO             3
-#define AM_HAL_PIN_132_UART0CTS         4
-#define AM_HAL_PIN_132_UART1TX          5
+#define AM_HAL_PIN_132_JTAG_TCK_4       4
+#define AM_HAL_PIN_132_JTAG_TCK_5       5
 #define AM_HAL_PIN_132_CT132            6
 #define AM_HAL_PIN_132_NCE132           7
-#define AM_HAL_PIN_132_OBSBUS4          8
-#define AM_HAL_PIN_132_RESERVED9        9
-#define AM_HAL_PIN_132_RESERVED10       10
+#define AM_HAL_PIN_132_JTAG_TCK_8       8
+#define AM_HAL_PIN_132_JTAG_TCK_9       9
+#define AM_HAL_PIN_132_JTAG_TCK_10      10
 #define AM_HAL_PIN_132_FPIO             11
-#define AM_HAL_PIN_132_RESERVED12       12
-#define AM_HAL_PIN_132_RESERVED13       13
-#define AM_HAL_PIN_132_RESERVED14       14
-#define AM_HAL_PIN_132_RESERVED15       15
+#define AM_HAL_PIN_132_JTAG_TCK_12      12
+#define AM_HAL_PIN_132_JTAG_TCK_13      13
+#define AM_HAL_PIN_132_JTAG_TCK_14      14
+#define AM_HAL_PIN_132_JTAG_TCK_15      15
 
 // PIN 133 functions
-#define AM_HAL_PIN_133_RESERVED0        0
-#define AM_HAL_PIN_133_XNCE2_1          1
-#define AM_HAL_PIN_133_RESERVED2        2
+#define AM_HAL_PIN_133_JTAG_TDI_0       0
+#define AM_HAL_PIN_133_JTAG_TDI_1       1
+#define AM_HAL_PIN_133_JTAG_TDI_2       2
 #define AM_HAL_PIN_133_GPIO             3
-#define AM_HAL_PIN_133_UART0TX          4
-#define AM_HAL_PIN_133_UART1CTS         5
+#define AM_HAL_PIN_133_JTAG_TDI_4       4
+#define AM_HAL_PIN_133_JTAG_TDI_5       5
 #define AM_HAL_PIN_133_CT133            6
 #define AM_HAL_PIN_133_NCE133           7
-#define AM_HAL_PIN_133_OBSBUS5          8
-#define AM_HAL_PIN_133_RESERVED9        9
-#define AM_HAL_PIN_133_RESERVED10       10
+#define AM_HAL_PIN_133_JTAG_TDI_8       8
+#define AM_HAL_PIN_133_JTAG_TDI_9       9
+#define AM_HAL_PIN_133_JTAG_TDI_10      10
 #define AM_HAL_PIN_133_FPIO             11
-#define AM_HAL_PIN_133_RESERVED12       12
-#define AM_HAL_PIN_133_RESERVED13       13
-#define AM_HAL_PIN_133_RESERVED14       14
-#define AM_HAL_PIN_133_RESERVED15       15
+#define AM_HAL_PIN_133_JTAG_TDI_12      12
+#define AM_HAL_PIN_133_JTAG_TDI_13      13
+#define AM_HAL_PIN_133_JTAG_TDI_14      14
+#define AM_HAL_PIN_133_JTAG_TDI_15      15
 
 // PIN 134 functions
-#define AM_HAL_PIN_134_RESERVED0        0
-#define AM_HAL_PIN_134_XNCE2_0          1
-#define AM_HAL_PIN_134_RESERVED2        2
+#define AM_HAL_PIN_134_JTAG_TDO_0       0
+#define AM_HAL_PIN_134_JTAG_TDO_1       1
+#define AM_HAL_PIN_134_JTAG_TDO_2       2
 #define AM_HAL_PIN_134_GPIO             3
-#define AM_HAL_PIN_134_UART0RX          4
-#define AM_HAL_PIN_134_UART1RTS         5
+#define AM_HAL_PIN_134_JTAG_TDO_4       4
+#define AM_HAL_PIN_134_JTAG_TDO_5       5
 #define AM_HAL_PIN_134_CT134            6
 #define AM_HAL_PIN_134_NCE134           7
-#define AM_HAL_PIN_134_OBSBUS6          8
-#define AM_HAL_PIN_134_RESERVED9        9
-#define AM_HAL_PIN_134_RESERVED10       10
+#define AM_HAL_PIN_134_JTAG_TDO_8       8
+#define AM_HAL_PIN_134_JTAG_TDO_9       9
+#define AM_HAL_PIN_134_JTAG_TDO_10      10
 #define AM_HAL_PIN_134_FPIO             11
-#define AM_HAL_PIN_134_RESERVED12       12
-#define AM_HAL_PIN_134_RESERVED13       13
-#define AM_HAL_PIN_134_RESERVED14       14
-#define AM_HAL_PIN_134_RESERVED15       15
+#define AM_HAL_PIN_134_JTAG_TDO_12      12
+#define AM_HAL_PIN_134_JTAG_TDO_13      13
+#define AM_HAL_PIN_134_JTAG_TDO_14      14
+#define AM_HAL_PIN_134_JTAG_TDO_15      15
 
 // PIN 135 functions
 #define AM_HAL_PIN_135_RESERVED0        0
 #define AM_HAL_PIN_135_RESERVED1        1
 #define AM_HAL_PIN_135_RESERVED2        2
 #define AM_HAL_PIN_135_GPIO             3
-#define AM_HAL_PIN_135_UART0RTS         4
-#define AM_HAL_PIN_135_UART1RX          5
+#define AM_HAL_PIN_135_UART4CTS         4
+#define AM_HAL_PIN_135_RESERVED5        5
 #define AM_HAL_PIN_135_CT135            6
 #define AM_HAL_PIN_135_NCE135           7
-#define AM_HAL_PIN_135_OBSBUS7          8
+#define AM_HAL_PIN_135_OBSBUS10         8
 #define AM_HAL_PIN_135_RESERVED9        9
 #define AM_HAL_PIN_135_RESERVED10       10
 #define AM_HAL_PIN_135_FPIO             11
@@ -2502,14 +2501,14 @@ extern "C"
 
 // PIN 136 functions
 #define AM_HAL_PIN_136_RESERVED0        0
-#define AM_HAL_PIN_136_I3CM2_SCL        1
+#define AM_HAL_PIN_136_32KHzXT          1
 #define AM_HAL_PIN_136_RESERVED2        2
 #define AM_HAL_PIN_136_GPIO             3
 #define AM_HAL_PIN_136_RESERVED4        4
 #define AM_HAL_PIN_136_RESERVED5        5
 #define AM_HAL_PIN_136_CT136            6
 #define AM_HAL_PIN_136_NCE136           7
-#define AM_HAL_PIN_136_OBSBUS8          8
+#define AM_HAL_PIN_136_OBSBUS11         8
 #define AM_HAL_PIN_136_RESERVED9        9
 #define AM_HAL_PIN_136_RESERVED10       10
 #define AM_HAL_PIN_136_FPIO             11
@@ -2520,14 +2519,14 @@ extern "C"
 
 // PIN 137 functions
 #define AM_HAL_PIN_137_RESERVED0        0
-#define AM_HAL_PIN_137_I3CM2_SDA        1
+#define AM_HAL_PIN_137_RESERVED1        1
 #define AM_HAL_PIN_137_RESERVED2        2
 #define AM_HAL_PIN_137_GPIO             3
-#define AM_HAL_PIN_137_RESERVED4        4
+#define AM_HAL_PIN_137_UART4RTS         4
 #define AM_HAL_PIN_137_RESERVED5        5
 #define AM_HAL_PIN_137_CT137            6
 #define AM_HAL_PIN_137_NCE137           7
-#define AM_HAL_PIN_137_OBSBUS9          8
+#define AM_HAL_PIN_137_OBSBUS12         8
 #define AM_HAL_PIN_137_RESERVED9        9
 #define AM_HAL_PIN_137_RESERVED10       10
 #define AM_HAL_PIN_137_FPIO             11
@@ -2541,11 +2540,11 @@ extern "C"
 #define AM_HAL_PIN_138_RESERVED1        1
 #define AM_HAL_PIN_138_RESERVED2        2
 #define AM_HAL_PIN_138_GPIO             3
-#define AM_HAL_PIN_138_UART4CTS         4
+#define AM_HAL_PIN_138_UART4TX          4
 #define AM_HAL_PIN_138_RESERVED5        5
 #define AM_HAL_PIN_138_CT138            6
 #define AM_HAL_PIN_138_NCE138           7
-#define AM_HAL_PIN_138_OBSBUS10         8
+#define AM_HAL_PIN_138_OBSBUS13         8
 #define AM_HAL_PIN_138_RESERVED9        9
 #define AM_HAL_PIN_138_RESERVED10       10
 #define AM_HAL_PIN_138_FPIO             11
@@ -2556,14 +2555,14 @@ extern "C"
 
 // PIN 139 functions
 #define AM_HAL_PIN_139_RESERVED0        0
-#define AM_HAL_PIN_139_32KHzXT          1
+#define AM_HAL_PIN_139_RESERVED1        1
 #define AM_HAL_PIN_139_RESERVED2        2
 #define AM_HAL_PIN_139_GPIO             3
-#define AM_HAL_PIN_139_RESERVED4        4
+#define AM_HAL_PIN_139_UART4RX          4
 #define AM_HAL_PIN_139_RESERVED5        5
 #define AM_HAL_PIN_139_CT139            6
 #define AM_HAL_PIN_139_NCE139           7
-#define AM_HAL_PIN_139_OBSBUS11         8
+#define AM_HAL_PIN_139_OBSBUS14         8
 #define AM_HAL_PIN_139_RESERVED9        9
 #define AM_HAL_PIN_139_RESERVED10       10
 #define AM_HAL_PIN_139_FPIO             11
@@ -2573,15 +2572,15 @@ extern "C"
 #define AM_HAL_PIN_139_RESERVED15       15
 
 // PIN 140 functions
-#define AM_HAL_PIN_140_RESERVED0        0
-#define AM_HAL_PIN_140_RESERVED1        1
+#define AM_HAL_PIN_140_SWTRACECLK       0
+#define AM_HAL_PIN_140_XSPISIO2         1
 #define AM_HAL_PIN_140_RESERVED2        2
 #define AM_HAL_PIN_140_GPIO             3
-#define AM_HAL_PIN_140_UART4RTS         4
+#define AM_HAL_PIN_140_RESERVED4        4
 #define AM_HAL_PIN_140_RESERVED5        5
 #define AM_HAL_PIN_140_CT140            6
 #define AM_HAL_PIN_140_NCE140           7
-#define AM_HAL_PIN_140_OBSBUS12         8
+#define AM_HAL_PIN_140_OBSBUS15         8
 #define AM_HAL_PIN_140_RESERVED9        9
 #define AM_HAL_PIN_140_RESERVED10       10
 #define AM_HAL_PIN_140_FPIO             11
@@ -2591,15 +2590,15 @@ extern "C"
 #define AM_HAL_PIN_140_RESERVED15       15
 
 // PIN 141 functions
-#define AM_HAL_PIN_141_RESERVED0        0
-#define AM_HAL_PIN_141_RESERVED1        1
+#define AM_HAL_PIN_141_SWTRACE0         0
+#define AM_HAL_PIN_141_XSPISIO3         1
 #define AM_HAL_PIN_141_RESERVED2        2
 #define AM_HAL_PIN_141_GPIO             3
-#define AM_HAL_PIN_141_UART4TX          4
+#define AM_HAL_PIN_141_RESERVED4        4
 #define AM_HAL_PIN_141_RESERVED5        5
 #define AM_HAL_PIN_141_CT141            6
 #define AM_HAL_PIN_141_NCE141           7
-#define AM_HAL_PIN_141_OBSBUS13         8
+#define AM_HAL_PIN_141_OBSBUS0          8
 #define AM_HAL_PIN_141_RESERVED9        9
 #define AM_HAL_PIN_141_RESERVED10       10
 #define AM_HAL_PIN_141_FPIO             11
@@ -2609,15 +2608,15 @@ extern "C"
 #define AM_HAL_PIN_141_RESERVED15       15
 
 // PIN 142 functions
-#define AM_HAL_PIN_142_RESERVED0        0
-#define AM_HAL_PIN_142_RESERVED1        1
-#define AM_HAL_PIN_142_RESERVED2        2
+#define AM_HAL_PIN_142_SWTRACE1         0
+#define AM_HAL_PIN_142_XSPISIO4         1
+#define AM_HAL_PIN_142_SDIF0_DAT4       2
 #define AM_HAL_PIN_142_GPIO             3
-#define AM_HAL_PIN_142_UART4RX          4
-#define AM_HAL_PIN_142_RESERVED5        5
+#define AM_HAL_PIN_142_UART0RX          4
+#define AM_HAL_PIN_142_UART5CTS         5
 #define AM_HAL_PIN_142_CT142            6
 #define AM_HAL_PIN_142_NCE142           7
-#define AM_HAL_PIN_142_OBSBUS14         8
+#define AM_HAL_PIN_142_OBSBUS1          8
 #define AM_HAL_PIN_142_RESERVED9        9
 #define AM_HAL_PIN_142_RESERVED10       10
 #define AM_HAL_PIN_142_FPIO             11
@@ -2627,15 +2626,15 @@ extern "C"
 #define AM_HAL_PIN_142_RESERVED15       15
 
 // PIN 143 functions
-#define AM_HAL_PIN_143_SWTRACECLK       0
-#define AM_HAL_PIN_143_XSPISIO2         1
-#define AM_HAL_PIN_143_RESERVED2        2
+#define AM_HAL_PIN_143_SWTRACE2         0
+#define AM_HAL_PIN_143_XSPISIO5         1
+#define AM_HAL_PIN_143_SDIF0_DAT5       2
 #define AM_HAL_PIN_143_GPIO             3
-#define AM_HAL_PIN_143_RESERVED4        4
-#define AM_HAL_PIN_143_RESERVED5        5
+#define AM_HAL_PIN_143_UART0TX          4
+#define AM_HAL_PIN_143_UART5RTS         5
 #define AM_HAL_PIN_143_CT143            6
 #define AM_HAL_PIN_143_NCE143           7
-#define AM_HAL_PIN_143_OBSBUS15         8
+#define AM_HAL_PIN_143_OBSBUS2          8
 #define AM_HAL_PIN_143_RESERVED9        9
 #define AM_HAL_PIN_143_RESERVED10       10
 #define AM_HAL_PIN_143_FPIO             11
@@ -2645,15 +2644,15 @@ extern "C"
 #define AM_HAL_PIN_143_RESERVED15       15
 
 // PIN 144 functions
-#define AM_HAL_PIN_144_SWTRACE0         0
-#define AM_HAL_PIN_144_XSPISIO3         1
-#define AM_HAL_PIN_144_RESERVED2        2
+#define AM_HAL_PIN_144_SWTRACE3         0
+#define AM_HAL_PIN_144_XSPISIO6         1
+#define AM_HAL_PIN_144_SDIF0_DAT6       2
 #define AM_HAL_PIN_144_GPIO             3
-#define AM_HAL_PIN_144_RESERVED4        4
-#define AM_HAL_PIN_144_RESERVED5        5
+#define AM_HAL_PIN_144_UART0CTS         4
+#define AM_HAL_PIN_144_UART5TX          5
 #define AM_HAL_PIN_144_CT144            6
 #define AM_HAL_PIN_144_NCE144           7
-#define AM_HAL_PIN_144_OBSBUS0          8
+#define AM_HAL_PIN_144_OBSBUS3          8
 #define AM_HAL_PIN_144_RESERVED9        9
 #define AM_HAL_PIN_144_RESERVED10       10
 #define AM_HAL_PIN_144_FPIO             11
@@ -2663,15 +2662,15 @@ extern "C"
 #define AM_HAL_PIN_144_RESERVED15       15
 
 // PIN 145 functions
-#define AM_HAL_PIN_145_SWTRACE1         0
-#define AM_HAL_PIN_145_XSPISIO4         1
-#define AM_HAL_PIN_145_SDIF0_DAT4       2
+#define AM_HAL_PIN_145_SWTRACECTL       0
+#define AM_HAL_PIN_145_XSPISIO7         1
+#define AM_HAL_PIN_145_SDIF0_DAT7       2
 #define AM_HAL_PIN_145_GPIO             3
-#define AM_HAL_PIN_145_UART0RX          4
-#define AM_HAL_PIN_145_UART5CTS         5
+#define AM_HAL_PIN_145_UART0RTS         4
+#define AM_HAL_PIN_145_UART5RX          5
 #define AM_HAL_PIN_145_CT145            6
 #define AM_HAL_PIN_145_NCE145           7
-#define AM_HAL_PIN_145_OBSBUS1          8
+#define AM_HAL_PIN_145_OBSBUS4          8
 #define AM_HAL_PIN_145_RESERVED9        9
 #define AM_HAL_PIN_145_RESERVED10       10
 #define AM_HAL_PIN_145_FPIO             11
@@ -2681,15 +2680,15 @@ extern "C"
 #define AM_HAL_PIN_145_RESERVED15       15
 
 // PIN 146 functions
-#define AM_HAL_PIN_146_SWTRACE2         0
-#define AM_HAL_PIN_146_XSPISIO5         1
-#define AM_HAL_PIN_146_SDIF0_DAT5       2
+#define AM_HAL_PIN_146_RESERVED0        0
+#define AM_HAL_PIN_146_RESERVED1        1
+#define AM_HAL_PIN_146_RESERVED2        2
 #define AM_HAL_PIN_146_GPIO             3
-#define AM_HAL_PIN_146_UART0TX          4
-#define AM_HAL_PIN_146_UART5RTS         5
+#define AM_HAL_PIN_146_UART3TX          4
+#define AM_HAL_PIN_146_RESERVED5        5
 #define AM_HAL_PIN_146_CT146            6
 #define AM_HAL_PIN_146_NCE146           7
-#define AM_HAL_PIN_146_OBSBUS2          8
+#define AM_HAL_PIN_146_OBSBUS5          8
 #define AM_HAL_PIN_146_RESERVED9        9
 #define AM_HAL_PIN_146_RESERVED10       10
 #define AM_HAL_PIN_146_FPIO             11
@@ -2699,15 +2698,15 @@ extern "C"
 #define AM_HAL_PIN_146_RESERVED15       15
 
 // PIN 147 functions
-#define AM_HAL_PIN_147_SWTRACE3         0
-#define AM_HAL_PIN_147_XSPISIO6         1
-#define AM_HAL_PIN_147_SDIF0_DAT6       2
+#define AM_HAL_PIN_147_RESERVED0        0
+#define AM_HAL_PIN_147_RESERVED1        1
+#define AM_HAL_PIN_147_RESERVED2        2
 #define AM_HAL_PIN_147_GPIO             3
-#define AM_HAL_PIN_147_UART0CTS         4
-#define AM_HAL_PIN_147_UART5TX          5
+#define AM_HAL_PIN_147_UART3RX          4
+#define AM_HAL_PIN_147_RESERVED5        5
 #define AM_HAL_PIN_147_CT147            6
 #define AM_HAL_PIN_147_NCE147           7
-#define AM_HAL_PIN_147_OBSBUS3          8
+#define AM_HAL_PIN_147_OBSBUS6          8
 #define AM_HAL_PIN_147_RESERVED9        9
 #define AM_HAL_PIN_147_RESERVED10       10
 #define AM_HAL_PIN_147_FPIO             11
@@ -2717,15 +2716,15 @@ extern "C"
 #define AM_HAL_PIN_147_RESERVED15       15
 
 // PIN 148 functions
-#define AM_HAL_PIN_148_SWTRACECTL       0
-#define AM_HAL_PIN_148_XSPISIO7         1
-#define AM_HAL_PIN_148_SDIF0_DAT7       2
+#define AM_HAL_PIN_148_RESERVED0        0
+#define AM_HAL_PIN_148_RESERVED1        1
+#define AM_HAL_PIN_148_RESERVED2        2
 #define AM_HAL_PIN_148_GPIO             3
-#define AM_HAL_PIN_148_UART0RTS         4
-#define AM_HAL_PIN_148_UART5RX          5
+#define AM_HAL_PIN_148_UART3CTS         4
+#define AM_HAL_PIN_148_RESERVED5        5
 #define AM_HAL_PIN_148_CT148            6
 #define AM_HAL_PIN_148_NCE148           7
-#define AM_HAL_PIN_148_OBSBUS4          8
+#define AM_HAL_PIN_148_OBSBUS7          8
 #define AM_HAL_PIN_148_RESERVED9        9
 #define AM_HAL_PIN_148_RESERVED10       10
 #define AM_HAL_PIN_148_FPIO             11
@@ -2739,11 +2738,11 @@ extern "C"
 #define AM_HAL_PIN_149_RESERVED1        1
 #define AM_HAL_PIN_149_RESERVED2        2
 #define AM_HAL_PIN_149_GPIO             3
-#define AM_HAL_PIN_149_UART3TX          4
+#define AM_HAL_PIN_149_UART3RTS         4
 #define AM_HAL_PIN_149_RESERVED5        5
 #define AM_HAL_PIN_149_CT149            6
 #define AM_HAL_PIN_149_NCE149           7
-#define AM_HAL_PIN_149_OBSBUS5          8
+#define AM_HAL_PIN_149_OBSBUS8          8
 #define AM_HAL_PIN_149_RESERVED9        9
 #define AM_HAL_PIN_149_RESERVED10       10
 #define AM_HAL_PIN_149_FPIO             11
@@ -2757,11 +2756,11 @@ extern "C"
 #define AM_HAL_PIN_150_RESERVED1        1
 #define AM_HAL_PIN_150_RESERVED2        2
 #define AM_HAL_PIN_150_GPIO             3
-#define AM_HAL_PIN_150_UART3RX          4
-#define AM_HAL_PIN_150_RESERVED5        5
+#define AM_HAL_PIN_150_UART2TX          4
+#define AM_HAL_PIN_150_UART4CTS         5
 #define AM_HAL_PIN_150_CT150            6
 #define AM_HAL_PIN_150_NCE150           7
-#define AM_HAL_PIN_150_OBSBUS6          8
+#define AM_HAL_PIN_150_OBSBUS9          8
 #define AM_HAL_PIN_150_RESERVED9        9
 #define AM_HAL_PIN_150_RESERVED10       10
 #define AM_HAL_PIN_150_FPIO             11
@@ -2775,11 +2774,11 @@ extern "C"
 #define AM_HAL_PIN_151_RESERVED1        1
 #define AM_HAL_PIN_151_RESERVED2        2
 #define AM_HAL_PIN_151_GPIO             3
-#define AM_HAL_PIN_151_UART3CTS         4
-#define AM_HAL_PIN_151_RESERVED5        5
+#define AM_HAL_PIN_151_UART2RX          4
+#define AM_HAL_PIN_151_UART4RTS         5
 #define AM_HAL_PIN_151_CT151            6
 #define AM_HAL_PIN_151_NCE151           7
-#define AM_HAL_PIN_151_OBSBUS7          8
+#define AM_HAL_PIN_151_OBSBUS10         8
 #define AM_HAL_PIN_151_RESERVED9        9
 #define AM_HAL_PIN_151_RESERVED10       10
 #define AM_HAL_PIN_151_FPIO             11
@@ -2793,11 +2792,11 @@ extern "C"
 #define AM_HAL_PIN_152_RESERVED1        1
 #define AM_HAL_PIN_152_RESERVED2        2
 #define AM_HAL_PIN_152_GPIO             3
-#define AM_HAL_PIN_152_UART3RTS         4
-#define AM_HAL_PIN_152_RESERVED5        5
+#define AM_HAL_PIN_152_UART2RTS         4
+#define AM_HAL_PIN_152_UART4RX          5
 #define AM_HAL_PIN_152_CT152            6
 #define AM_HAL_PIN_152_NCE152           7
-#define AM_HAL_PIN_152_OBSBUS8          8
+#define AM_HAL_PIN_152_OBSBUS11         8
 #define AM_HAL_PIN_152_RESERVED9        9
 #define AM_HAL_PIN_152_RESERVED10       10
 #define AM_HAL_PIN_152_FPIO             11
@@ -2811,11 +2810,11 @@ extern "C"
 #define AM_HAL_PIN_153_RESERVED1        1
 #define AM_HAL_PIN_153_RESERVED2        2
 #define AM_HAL_PIN_153_GPIO             3
-#define AM_HAL_PIN_153_UART2TX          4
-#define AM_HAL_PIN_153_UART4CTS         5
+#define AM_HAL_PIN_153_UART2CTS         4
+#define AM_HAL_PIN_153_UART4TX          5
 #define AM_HAL_PIN_153_CT153            6
 #define AM_HAL_PIN_153_NCE153           7
-#define AM_HAL_PIN_153_OBSBUS9          8
+#define AM_HAL_PIN_153_OBSBUS12         8
 #define AM_HAL_PIN_153_RESERVED9        9
 #define AM_HAL_PIN_153_RESERVED10       10
 #define AM_HAL_PIN_153_FPIO             11
@@ -2829,11 +2828,11 @@ extern "C"
 #define AM_HAL_PIN_154_RESERVED1        1
 #define AM_HAL_PIN_154_RESERVED2        2
 #define AM_HAL_PIN_154_GPIO             3
-#define AM_HAL_PIN_154_UART2RX          4
-#define AM_HAL_PIN_154_UART4RTS         5
+#define AM_HAL_PIN_154_UART0CTS         4
+#define AM_HAL_PIN_154_RESERVED5        5
 #define AM_HAL_PIN_154_CT154            6
 #define AM_HAL_PIN_154_NCE154           7
-#define AM_HAL_PIN_154_OBSBUS10         8
+#define AM_HAL_PIN_154_OBSBUS13         8
 #define AM_HAL_PIN_154_RESERVED9        9
 #define AM_HAL_PIN_154_RESERVED10       10
 #define AM_HAL_PIN_154_FPIO             11
@@ -2843,94 +2842,46 @@ extern "C"
 #define AM_HAL_PIN_154_RESERVED15       15
 
 // PIN 155 functions
-#define AM_HAL_PIN_155_RESERVED0        0
-#define AM_HAL_PIN_155_RESERVED1        1
-#define AM_HAL_PIN_155_RESERVED2        2
-#define AM_HAL_PIN_155_GPIO             3
-#define AM_HAL_PIN_155_UART2RTS         4
-#define AM_HAL_PIN_155_UART4RX          5
-#define AM_HAL_PIN_155_CT155            6
-#define AM_HAL_PIN_155_NCE155           7
-#define AM_HAL_PIN_155_OBSBUS11         8
-#define AM_HAL_PIN_155_RESERVED9        9
-#define AM_HAL_PIN_155_RESERVED10       10
-#define AM_HAL_PIN_155_FPIO             11
-#define AM_HAL_PIN_155_RESERVED12       12
-#define AM_HAL_PIN_155_RESERVED13       13
-#define AM_HAL_PIN_155_RESERVED14       14
-#define AM_HAL_PIN_155_RESERVED15       15
 
 // PIN 156 functions
-#define AM_HAL_PIN_156_RESERVED0        0
-#define AM_HAL_PIN_156_RESERVED1        1
-#define AM_HAL_PIN_156_RESERVED2        2
-#define AM_HAL_PIN_156_GPIO             3
-#define AM_HAL_PIN_156_UART2CTS         4
-#define AM_HAL_PIN_156_UART4TX          5
-#define AM_HAL_PIN_156_CT156            6
-#define AM_HAL_PIN_156_NCE156           7
-#define AM_HAL_PIN_156_OBSBUS12         8
-#define AM_HAL_PIN_156_RESERVED9        9
-#define AM_HAL_PIN_156_RESERVED10       10
-#define AM_HAL_PIN_156_FPIO             11
-#define AM_HAL_PIN_156_RESERVED12       12
-#define AM_HAL_PIN_156_RESERVED13       13
-#define AM_HAL_PIN_156_RESERVED14       14
-#define AM_HAL_PIN_156_RESERVED15       15
 
 // PIN 157 functions
-#define AM_HAL_PIN_157_RESERVED0        0
-#define AM_HAL_PIN_157_RESERVED1        1
-#define AM_HAL_PIN_157_RESERVED2        2
-#define AM_HAL_PIN_157_GPIO             3
-#define AM_HAL_PIN_157_UART0RX          4
-#define AM_HAL_PIN_157_RESERVED5        5
-#define AM_HAL_PIN_157_CT157            6
-#define AM_HAL_PIN_157_NCE157           7
-#define AM_HAL_PIN_157_OBSBUS13         8
-#define AM_HAL_PIN_157_RESERVED9        9
-#define AM_HAL_PIN_157_RESERVED10       10
-#define AM_HAL_PIN_157_FPIO             11
-#define AM_HAL_PIN_157_RESERVED12       12
-#define AM_HAL_PIN_157_RESERVED13       13
-#define AM_HAL_PIN_157_RESERVED14       14
-#define AM_HAL_PIN_157_RESERVED15       15
 
 // PIN 158 functions
-#define AM_HAL_PIN_158_RESERVED0        0
-#define AM_HAL_PIN_158_RESERVED1        1
-#define AM_HAL_PIN_158_RESERVED2        2
-#define AM_HAL_PIN_158_GPIO             3
-#define AM_HAL_PIN_158_UART0TX          4
-#define AM_HAL_PIN_158_RESERVED5        5
-#define AM_HAL_PIN_158_CT158            6
-#define AM_HAL_PIN_158_NCE158           7
-#define AM_HAL_PIN_158_OBSBUS14         8
-#define AM_HAL_PIN_158_RESERVED9        9
-#define AM_HAL_PIN_158_RESERVED10       10
-#define AM_HAL_PIN_158_FPIO             11
-#define AM_HAL_PIN_158_RESERVED12       12
-#define AM_HAL_PIN_158_RESERVED13       13
-#define AM_HAL_PIN_158_RESERVED14       14
-#define AM_HAL_PIN_158_RESERVED15       15
 
 // PIN 159 functions
-#define AM_HAL_PIN_159_RESERVED0        0
-#define AM_HAL_PIN_159_RESERVED1        1
-#define AM_HAL_PIN_159_RESERVED2        2
-#define AM_HAL_PIN_159_GPIO             3
-#define AM_HAL_PIN_159_UART0CTS         4
-#define AM_HAL_PIN_159_RESERVED5        5
-#define AM_HAL_PIN_159_CT159            6
-#define AM_HAL_PIN_159_NCE159           7
-#define AM_HAL_PIN_159_OBSBUS15         8
-#define AM_HAL_PIN_159_RESERVED9        9
-#define AM_HAL_PIN_159_RESERVED10       10
-#define AM_HAL_PIN_159_FPIO             11
-#define AM_HAL_PIN_159_RESERVED12       12
-#define AM_HAL_PIN_159_RESERVED13       13
-#define AM_HAL_PIN_159_RESERVED14       14
-#define AM_HAL_PIN_159_RESERVED15       15
+
+// PIN 160 functions
+
+// PIN 161 functions
+
+// PIN 162 functions
+
+// PIN 163 functions
+
+// PIN 164 functions
+
+// PIN 165 functions
+
+// PIN 166 functions
+
+// PIN 167 functions
+
+// PIN 168 functions
+
+// PIN 169 functions
+
+// PIN 170 functions
+
+// PIN 171 functions
+
+// PIN 172 functions
+
+// PIN 173 functions
+
+// PIN 174 functions
+
+// PIN 175 functions
 
 //*****************************************************************************
 //
@@ -2948,7 +2899,6 @@ typedef enum
     AM_HAL_PIN_FN_ANATEST1,
     AM_HAL_PIN_FN_ANATEST2,
     AM_HAL_PIN_FN_CLK96MHz,
-    AM_HAL_PIN_FN_CLK192MHz,
     AM_HAL_PIN_FN_CLKOUT,
     AM_HAL_PIN_FN_CLKOUT_32M,
     AM_HAL_PIN_FN_CME,
@@ -3109,18 +3059,16 @@ typedef enum
     AM_HAL_PIN_FN_CT152,
     AM_HAL_PIN_FN_CT153,
     AM_HAL_PIN_FN_CT154,
-    AM_HAL_PIN_FN_CT155,
-    AM_HAL_PIN_FN_CT156,
-    AM_HAL_PIN_FN_CT157,
-    AM_HAL_PIN_FN_CT158,
-    AM_HAL_PIN_FN_CT159,
-    AM_HAL_PIN_FN_DBIB_D11,
-    AM_HAL_PIN_FN_DBIB_D12,
-    AM_HAL_PIN_FN_DBIB_D13,
-    AM_HAL_PIN_FN_DBIB_D14,
-    AM_HAL_PIN_FN_DBIB_D15,
     AM_HAL_PIN_FN_DFT_ISO,
     AM_HAL_PIN_FN_DFT_RET,
+    AM_HAL_PIN_FN_DFT_RSVIN0,
+    AM_HAL_PIN_FN_DFT_RSVIN1,
+    AM_HAL_PIN_FN_DFT_RSVIN2,
+    AM_HAL_PIN_FN_DFT_RSVIN3,
+    AM_HAL_PIN_FN_DFT_RSVOUT0,
+    AM_HAL_PIN_FN_DFT_RSVOUT1,
+    AM_HAL_PIN_FN_DFT_RSVOUT2,
+    AM_HAL_PIN_FN_DFT_RSVOUT3,
     AM_HAL_PIN_FN_DISP_B1,
     AM_HAL_PIN_FN_DISP_B2,
     AM_HAL_PIN_FN_DISP_ENB,
@@ -3149,24 +3097,20 @@ typedef enum
     AM_HAL_PIN_FN_DISP_VST,
     AM_HAL_PIN_FN_DISP_XRST,
     AM_HAL_PIN_FN_EN96MHz,
-    AM_HAL_PIN_FN_EN192MHz,
     AM_HAL_PIN_FN_FLB_FCLK,
     AM_HAL_PIN_FN_FLB_TCLK,
     AM_HAL_PIN_FN_FLB_TDI,
     AM_HAL_PIN_FN_FLB_TDO,
     AM_HAL_PIN_FN_FLB_TMS,
     AM_HAL_PIN_FN_FLB_TRSTN,
-    AM_HAL_PIN_FN_FLLOAD_ADDR0,
-    AM_HAL_PIN_FN_FLLOAD_ADDR1,
-    AM_HAL_PIN_FN_FLLOAD_ADDR2,
-    AM_HAL_PIN_FN_FLLOAD_DATA0,
-    AM_HAL_PIN_FN_FLLOAD_DATA1,
-    AM_HAL_PIN_FN_FLLOAD_DATA2,
-    AM_HAL_PIN_FN_FLLOAD_DATA3,
-    AM_HAL_PIN_FN_FLLOAD_DIR,
-    AM_HAL_PIN_FN_FLLOAD_STRB,
     AM_HAL_PIN_FN_FPIO,
     AM_HAL_PIN_FN_GPIO,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_BYPASS_EN,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_RESET_N,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_SCAN_IN,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_SCAN_OUT,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_SCLK,
+    AM_HAL_PIN_FN_HBL_PIO_DRAM_XWEB,
     AM_HAL_PIN_FN_HFRC_EXT,
     AM_HAL_PIN_FN_I3CM0_SCL,
     AM_HAL_PIN_FN_I3CM1_SCL,
@@ -3184,17 +3128,69 @@ typedef enum
     AM_HAL_PIN_FN_I2S1_SDOUT,
     AM_HAL_PIN_FN_I2S0_WS,
     AM_HAL_PIN_FN_I2S1_WS,
+    AM_HAL_PIN_FN_JTAG_TCK_0,
+    AM_HAL_PIN_FN_JTAG_TCK_1,
+    AM_HAL_PIN_FN_JTAG_TCK_2,
+    AM_HAL_PIN_FN_JTAG_TCK_4,
+    AM_HAL_PIN_FN_JTAG_TCK_5,
+    AM_HAL_PIN_FN_JTAG_TCK_8,
+    AM_HAL_PIN_FN_JTAG_TCK_9,
+    AM_HAL_PIN_FN_JTAG_TCK_10,
+    AM_HAL_PIN_FN_JTAG_TCK_12,
+    AM_HAL_PIN_FN_JTAG_TCK_13,
+    AM_HAL_PIN_FN_JTAG_TCK_14,
+    AM_HAL_PIN_FN_JTAG_TCK_15,
+    AM_HAL_PIN_FN_JTAG_TDI_0,
+    AM_HAL_PIN_FN_JTAG_TDI_1,
+    AM_HAL_PIN_FN_JTAG_TDI_2,
+    AM_HAL_PIN_FN_JTAG_TDI_4,
+    AM_HAL_PIN_FN_JTAG_TDI_5,
+    AM_HAL_PIN_FN_JTAG_TDI_8,
+    AM_HAL_PIN_FN_JTAG_TDI_9,
+    AM_HAL_PIN_FN_JTAG_TDI_10,
+    AM_HAL_PIN_FN_JTAG_TDI_12,
+    AM_HAL_PIN_FN_JTAG_TDI_13,
+    AM_HAL_PIN_FN_JTAG_TDI_14,
+    AM_HAL_PIN_FN_JTAG_TDI_15,
+    AM_HAL_PIN_FN_JTAG_TDO_0,
+    AM_HAL_PIN_FN_JTAG_TDO_1,
+    AM_HAL_PIN_FN_JTAG_TDO_2,
+    AM_HAL_PIN_FN_JTAG_TDO_4,
+    AM_HAL_PIN_FN_JTAG_TDO_5,
+    AM_HAL_PIN_FN_JTAG_TDO_8,
+    AM_HAL_PIN_FN_JTAG_TDO_9,
+    AM_HAL_PIN_FN_JTAG_TDO_10,
+    AM_HAL_PIN_FN_JTAG_TDO_12,
+    AM_HAL_PIN_FN_JTAG_TDO_13,
+    AM_HAL_PIN_FN_JTAG_TDO_14,
+    AM_HAL_PIN_FN_JTAG_TDO_15,
+    AM_HAL_PIN_FN_JTAG_TMS_0,
+    AM_HAL_PIN_FN_JTAG_TMS_1,
+    AM_HAL_PIN_FN_JTAG_TMS_2,
+    AM_HAL_PIN_FN_JTAG_TMS_4,
+    AM_HAL_PIN_FN_JTAG_TMS_5,
+    AM_HAL_PIN_FN_JTAG_TMS_8,
+    AM_HAL_PIN_FN_JTAG_TMS_9,
+    AM_HAL_PIN_FN_JTAG_TMS_10,
+    AM_HAL_PIN_FN_JTAG_TMS_12,
+    AM_HAL_PIN_FN_JTAG_TMS_13,
+    AM_HAL_PIN_FN_JTAG_TMS_14,
+    AM_HAL_PIN_FN_JTAG_TMS_15,
+    AM_HAL_PIN_FN_JTAG_TRSTN_0,
+    AM_HAL_PIN_FN_JTAG_TRSTN_1,
+    AM_HAL_PIN_FN_JTAG_TRSTN_4,
+    AM_HAL_PIN_FN_JTAG_TRSTN_5,
+    AM_HAL_PIN_FN_JTAG_TRSTN_8,
+    AM_HAL_PIN_FN_JTAG_TRSTN_9,
+    AM_HAL_PIN_FN_JTAG_TRSTN_10,
+    AM_HAL_PIN_FN_JTAG_TRSTN_12,
+    AM_HAL_PIN_FN_JTAG_TRSTN_13,
+    AM_HAL_PIN_FN_JTAG_TRSTN_14,
+    AM_HAL_PIN_FN_JTAG_TRSTN_15,
     AM_HAL_PIN_FN_32KHzXT,
     AM_HAL_PIN_FN_LFRC_EXT,
     AM_HAL_PIN_FN_LPG_ENABLE,
     AM_HAL_PIN_FN_LPG_LOAD,
-    AM_HAL_PIN_FN_MDA_HFRC_EXT,
-    AM_HAL_PIN_FN_MDA_SRST,
-    AM_HAL_PIN_FN_MDA_TCK,
-    AM_HAL_PIN_FN_MDA_TDI,
-    AM_HAL_PIN_FN_MDA_TDO,
-    AM_HAL_PIN_FN_MDA_TMS,
-    AM_HAL_PIN_FN_MDA_TRSTN,
     AM_HAL_PIN_FN_M0MISO,
     AM_HAL_PIN_FN_M1MISO,
     AM_HAL_PIN_FN_M2MISO,
@@ -3205,7 +3201,6 @@ typedef enum
     AM_HAL_PIN_FN_M7MISO,
     AM_HAL_PIN_FN_M8MISO,
     AM_HAL_PIN_FN_M9MISO,
-    AM_HAL_PIN_FN_M10MISO,
     AM_HAL_PIN_FN_M11MISO,
     AM_HAL_PIN_FN_M0MOSI,
     AM_HAL_PIN_FN_M1MOSI,
@@ -3410,11 +3405,6 @@ typedef enum
     AM_HAL_PIN_FN_NCE152,
     AM_HAL_PIN_FN_NCE153,
     AM_HAL_PIN_FN_NCE154,
-    AM_HAL_PIN_FN_NCE155,
-    AM_HAL_PIN_FN_NCE156,
-    AM_HAL_PIN_FN_NCE157,
-    AM_HAL_PIN_FN_NCE158,
-    AM_HAL_PIN_FN_NCE159,
     AM_HAL_PIN_FN_OBSBUS0,
     AM_HAL_PIN_FN_OBSBUS1,
     AM_HAL_PIN_FN_OBSBUS2,
@@ -3463,8 +3453,6 @@ typedef enum
     AM_HAL_PIN_FN_SCANIN5,
     AM_HAL_PIN_FN_SCANIN6,
     AM_HAL_PIN_FN_SCANIN7,
-    AM_HAL_PIN_FN_SCANIN8,
-    AM_HAL_PIN_FN_SCANIN9,
     AM_HAL_PIN_FN_SCANOUT0,
     AM_HAL_PIN_FN_SCANOUT1,
     AM_HAL_PIN_FN_SCANOUT2,
@@ -3473,8 +3461,6 @@ typedef enum
     AM_HAL_PIN_FN_SCANOUT5,
     AM_HAL_PIN_FN_SCANOUT6,
     AM_HAL_PIN_FN_SCANOUT7,
-    AM_HAL_PIN_FN_SCANOUT8,
-    AM_HAL_PIN_FN_SCANOUT9,
     AM_HAL_PIN_FN_SCANRST,
     AM_HAL_PIN_FN_SCANSHFT,
     AM_HAL_PIN_FN_SCT36,
@@ -3495,11 +3481,32 @@ typedef enum
     AM_HAL_PIN_FN_SLFDMISO,
     AM_HAL_PIN_FN_SLFDMOSI,
     AM_HAL_PIN_FN_SLFDSCK,
-    AM_HAL_PIN_FN_SLFDSCL,
     AM_HAL_PIN_FN_SLFDSDAWIR3,
     AM_HAL_PIN_FN_SLFDnCE,
-    AM_HAL_PIN_FN_SWDCK,
-    AM_HAL_PIN_FN_SWDIO,
+    AM_HAL_PIN_FN_SWDCK_0,
+    AM_HAL_PIN_FN_SWDCK_1,
+    AM_HAL_PIN_FN_SWDCK_2,
+    AM_HAL_PIN_FN_SWDCK_4,
+    AM_HAL_PIN_FN_SWDCK_5,
+    AM_HAL_PIN_FN_SWDCK_8,
+    AM_HAL_PIN_FN_SWDCK_9,
+    AM_HAL_PIN_FN_SWDCK_10,
+    AM_HAL_PIN_FN_SWDCK_12,
+    AM_HAL_PIN_FN_SWDCK_13,
+    AM_HAL_PIN_FN_SWDCK_14,
+    AM_HAL_PIN_FN_SWDCK_15,
+    AM_HAL_PIN_FN_SWDIO_0,
+    AM_HAL_PIN_FN_SWDIO_1,
+    AM_HAL_PIN_FN_SWDIO_2,
+    AM_HAL_PIN_FN_SWDIO_4,
+    AM_HAL_PIN_FN_SWDIO_5,
+    AM_HAL_PIN_FN_SWDIO_8,
+    AM_HAL_PIN_FN_SWDIO_9,
+    AM_HAL_PIN_FN_SWDIO_10,
+    AM_HAL_PIN_FN_SWDIO_12,
+    AM_HAL_PIN_FN_SWDIO_13,
+    AM_HAL_PIN_FN_SWDIO_14,
+    AM_HAL_PIN_FN_SWDIO_15,
     AM_HAL_PIN_FN_SWO,
     AM_HAL_PIN_FN_SWTRACE0,
     AM_HAL_PIN_FN_SWTRACE1,
@@ -3540,8 +3547,40 @@ typedef enum
     AM_HAL_PIN_FN_XNCE1_1,
     AM_HAL_PIN_FN_XNCE2_0,
     AM_HAL_PIN_FN_XNCE2_1,
+    AM_HAL_PIN_FN_XNCE1_0_0,
+    AM_HAL_PIN_FN_XNCE1_1_2,
+    AM_HAL_PIN_FN_XSPIM1_0,
+    AM_HAL_PIN_FN_XSPIM1_1,
+    AM_HAL_PIN_FN_XSPIM1_2,
+    AM_HAL_PIN_FN_XSPIM1_3,
+    AM_HAL_PIN_FN_XSPIM1_4,
+    AM_HAL_PIN_FN_XSPIM1_5,
+    AM_HAL_PIN_FN_XSPIM1_6,
+    AM_HAL_PIN_FN_XSPIM1_7,
+    AM_HAL_PIN_FN_XSPIM1_8,
+    AM_HAL_PIN_FN_XSPIM1_9,
+    AM_HAL_PIN_FN_XSPIM2_0,
+    AM_HAL_PIN_FN_XSPIM2_1,
+    AM_HAL_PIN_FN_XSPIM2_2,
+    AM_HAL_PIN_FN_XSPIM2_3,
+    AM_HAL_PIN_FN_XSPIM2_4,
+    AM_HAL_PIN_FN_XSPIM2_5,
+    AM_HAL_PIN_FN_XSPIM2_6,
+    AM_HAL_PIN_FN_XSPIM2_7,
+    AM_HAL_PIN_FN_XSPIM2_8,
+    AM_HAL_PIN_FN_XSPIM2_9,
+    AM_HAL_PIN_FN_XSPIM1_10,
+    AM_HAL_PIN_FN_XSPIM1_11,
+    AM_HAL_PIN_FN_XSPIM1_12,
+    AM_HAL_PIN_FN_XSPIM1_13,
+    AM_HAL_PIN_FN_XSPIM1_14,
+    AM_HAL_PIN_FN_XSPIM1_15,
+    AM_HAL_PIN_FN_XSPIM1_16,
+    AM_HAL_PIN_FN_XSPIM1_17,
+    AM_HAL_PIN_FN_XSPIM1_18,
     AM_HAL_PIN_FN_XSPISCK,
     AM_HAL_PIN_FN_XSPISCSN,
+    AM_HAL_PIN_FN_XSPISDQS,
     AM_HAL_PIN_FN_XSPISIO0,
     AM_HAL_PIN_FN_XSPISIO1,
     AM_HAL_PIN_FN_XSPISIO2,
@@ -3550,36 +3589,6 @@ typedef enum
     AM_HAL_PIN_FN_XSPISIO5,
     AM_HAL_PIN_FN_XSPISIO6,
     AM_HAL_PIN_FN_XSPISIO7,
-    AM_HAL_PIN_FN_XSPI1_0,
-    AM_HAL_PIN_FN_XSPI1_1,
-    AM_HAL_PIN_FN_XSPI1_2,
-    AM_HAL_PIN_FN_XSPI1_3,
-    AM_HAL_PIN_FN_XSPI1_4,
-    AM_HAL_PIN_FN_XSPI1_5,
-    AM_HAL_PIN_FN_XSPI1_6,
-    AM_HAL_PIN_FN_XSPI1_7,
-    AM_HAL_PIN_FN_XSPI1_8,
-    AM_HAL_PIN_FN_XSPI1_9,
-    AM_HAL_PIN_FN_XSPI2_0,
-    AM_HAL_PIN_FN_XSPI2_1,
-    AM_HAL_PIN_FN_XSPI2_2,
-    AM_HAL_PIN_FN_XSPI2_3,
-    AM_HAL_PIN_FN_XSPI2_4,
-    AM_HAL_PIN_FN_XSPI2_5,
-    AM_HAL_PIN_FN_XSPI2_6,
-    AM_HAL_PIN_FN_XSPI2_7,
-    AM_HAL_PIN_FN_XSPI2_8,
-    AM_HAL_PIN_FN_XSPI2_9,
-    AM_HAL_PIN_FN_XSPI1_10,
-    AM_HAL_PIN_FN_XSPI1_11,
-    AM_HAL_PIN_FN_XSPI1_12,
-    AM_HAL_PIN_FN_XSPI1_13,
-    AM_HAL_PIN_FN_XSPI1_14,
-    AM_HAL_PIN_FN_XSPI1_15,
-    AM_HAL_PIN_FN_XSPI1_16,
-    AM_HAL_PIN_FN_XSPI1_17,
-    AM_HAL_PIN_FN_XSPI1_18,
-    AM_HAL_PIN_FN_XSPI1_19,
     AM_HAL_PIN_FN_XT_EXT
 } am_hal_pin_function_e;
 

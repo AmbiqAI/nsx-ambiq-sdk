@@ -21,6 +21,13 @@ OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
 
 
 def load_yaml(repo_root: Path, path: Path) -> dict:
+    if path in (ARTIFACT_MANIFEST, PROVIDER_MANIFEST, OWNERSHIP_INVENTORY):
+        release = yaml.safe_load((repo_root / RELEASE_MANIFEST).read_text(encoding="utf-8"))
+        revision = release_content_revision(repo_root, release)
+        if revision != "HEAD":
+            result = git(repo_root, "show", f"{revision}:{path.as_posix()}")
+            assert result.returncode == 0, result.stderr
+            return yaml.safe_load(result.stdout)
     return yaml.safe_load((repo_root / path).read_text(encoding="utf-8"))
 
 
@@ -296,7 +303,8 @@ def test_archives_introduced_in_matches_git_history(repo_root: Path) -> None:
                 parts = Path(info["path"]).parts
                 promoted = sdk_rel / "lib" / parts[0] / Path(*parts[2:])
                 result = subprocess.run(
-                    ["git", "-C", str(repo_root), "log", "-1", "--format=%H", "HEAD", "--", promoted.as_posix()],
+                    ["git", "-C", str(repo_root), "log", "-1", "--format=%H",
+                     release_content_revision(repo_root, release), "--", promoted.as_posix()],
                     capture_output=True,
                     text=True,
                 )
@@ -367,9 +375,9 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
                 blobs[path] = meta.split()[2]
         return blobs
 
-    head = archive_blobs("HEAD")
-    assert head
     release = load_yaml(repo_root, RELEASE_MANIFEST)
+    head = archive_blobs(release_content_revision(repo_root, release))
+    assert head
     for entry in release["consumer_upgrade"]:
         if git(repo_root, "cat-file", "-e", f"{entry['from_commit']}^{{commit}}").returncode != 0:
             history_unavailable(f"{entry['from_commit']} is not in this checkout")
@@ -435,10 +443,17 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
 
 
 def patched_provider_files(repo_root: Path) -> set[str]:
-    """Provider files touched by the committed intake patches, repo-relative."""
+    """Provider files touched by the release's intake patches, repo-relative."""
     touched = set()
-    for patch in (repo_root / "sdk-intake" / "patches").glob("*/*.patch"):
-        for line in patch.read_text(encoding="utf-8").splitlines():
+    revision = release_content_revision(repo_root, load_yaml(repo_root, RELEASE_MANIFEST))
+    listing = git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", "sdk-intake/patches")
+    assert listing.returncode == 0, listing.stderr
+    for patch in listing.stdout.splitlines():
+        if not patch.endswith(".patch"):
+            continue
+        result = git(repo_root, "show", f"{revision}:{patch}")
+        assert result.returncode == 0, result.stderr
+        for line in result.stdout.splitlines():
             if line.startswith("+++ b/"):
                 touched.add(f"modules/nsx-ambiqsuite/sdk/{line[len('+++ b/'):].strip()}")
     return touched
@@ -468,7 +483,8 @@ def test_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Pa
         base = entry["from_commit"]
         if git(repo_root, "cat-file", "-e", f"{base}^{{commit}}").returncode != 0:
             history_unavailable(f"{base} is not in this checkout")
-        names = git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD", "--", provider)
+        names = git(repo_root, "diff", "--name-only", "--no-renames", base,
+                    release_content_revision(repo_root, release), "--", provider)
         assert names.returncode == 0, names.stderr
         if entry.get("provider_content_unchanged") is True:
             # Releases after the header fixes must preserve the entire provider,
@@ -501,10 +517,13 @@ def test_provider_ownership_exceptions_are_release_deviations(repo_root: Path) -
         assert exception["id"] in deviations, exception["id"]
 
     declared_paths = {path for deviation in deviations.values() for path in deviation["paths"]}
-    patches = sorted((repo_root / "sdk-intake" / "patches").glob("*/*.patch"))
+    revision = release_content_revision(repo_root, release)
+    listing = git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", "sdk-intake/patches")
+    assert listing.returncode == 0, listing.stderr
+    patches = [Path(path) for path in listing.stdout.splitlines() if path.endswith(".patch")]
     for patch in patches:
         for path in (patch, patch.with_suffix(".yaml")):
-            assert path.relative_to(repo_root).as_posix() in declared_paths, path
+            assert path.as_posix() in declared_paths, path
 
 
 def test_nsx_cordio_vendored_revision_label_is_consistent(repo_root: Path) -> None:

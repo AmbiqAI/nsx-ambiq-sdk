@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -367,7 +367,7 @@ am_hal_uart_transfer_t;
     .pfnCallback = 0,                                                         \
     .pvContext = 0,                                                           \
     .ui32ErrorStatus = 0,                                                     \
-};
+}
 
 //
 //! UART Blocking Read Defaults.
@@ -434,7 +434,7 @@ am_hal_uart_transfer_t;
 //! @return HAL status code.
 //
 //*****************************************************************************
-#define am_hal_uart_power_enable(phandle) am_hal_uart_power_control(phandle, AM_HAL_SYSCTRL_WAKE, false);
+#define am_hal_uart_power_enable(phandle) am_hal_uart_power_control(phandle, AM_HAL_SYSCTRL_WAKE, false)
 
 //*****************************************************************************
 //
@@ -446,7 +446,7 @@ am_hal_uart_transfer_t;
 //! @return HAL status code.
 //
 //*****************************************************************************
-#define am_hal_uart_power_disable(phandle) am_hal_uart_power_control(phandle, AM_HAL_SYSCTRL_DEEPSLEEP, false);
+#define am_hal_uart_power_disable(phandle) am_hal_uart_power_control(phandle, AM_HAL_SYSCTRL_DEEPSLEEP, false)
 
 //*****************************************************************************
 //
@@ -625,7 +625,7 @@ extern uint32_t am_hal_uart_tx_flush(void *pHandle);
 //! This function reset uart tx states and abort active tx transaction, it should
 //! be called after am_hal_uart_tx_flush.
 //!
-//! @return HAL status code.
+//! @return void.
 //
 //*****************************************************************************
 extern void am_hal_uart_tx_abort(void *pHandle);
@@ -638,7 +638,7 @@ extern void am_hal_uart_tx_abort(void *pHandle);
 //!
 //! This function reset uart rx states and abort active rx transaction.
 //!
-//! @return HAL status code.
+//! @return void.
 //
 //*****************************************************************************
 extern void am_hal_uart_rx_abort(void *pHandle);

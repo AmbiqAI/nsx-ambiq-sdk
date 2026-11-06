@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -497,9 +497,6 @@ am_device_command_write(void *pMspiHandle,
 #else
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
   Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;
@@ -551,9 +548,6 @@ am_device_command_read(void *pMspiHandle,
 #else
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = true;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
   Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;
@@ -940,11 +934,6 @@ am_devices_mspi_psram_aps12808l_ddr_init(uint32_t ui32Module,
     //
     // Enable fault detection.
     //
-// #### INTERNAL BEGIN ####
-    //
-    // This driver is DDR and therefore is only for the APOLLO4 Family and up.
-    //
-// #### INTERNAL END ####
     am_hal_fault_capture_enable();
 
     // Allocate a vacant device handle
@@ -1032,9 +1021,6 @@ am_devices_mspi_psram_aps12808l_ddr_init(uint32_t ui32Module,
     }
 #endif
 
-// #### INTERNAL BEGIN ####
-// DQS Config. Need to check DQS config later as there will be silicon change in RevB.
-// #### INTERNAL END ####
     am_hal_mspi_dqs_t dqsCfg = gDDRDqsCfg[ui32Module];
     ui32Status = am_hal_mspi_control(pMspiHandle, AM_HAL_MSPI_REQ_DQS, &dqsCfg);
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
@@ -1882,17 +1868,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {
@@ -1922,18 +1897,6 @@ static const uint32_t ui32MspiXipBaseAddress[3] =
 
 const am_devices_mspi_psram_ddr_timing_config_t aps12808l_sConfigArray[] =
 {
-// #### INTERNAL BEGIN ####
-//    {1 , 0, 1}, // Turnaround=1 , RXNEG=0, RXDQSDELAY=Dummy
-//    {1 , 1, 1}, // Turnaround=1 , RXNEG=1, RXDQSDELAY=Dummy
-//    {2 , 0, 1}, // Turnaround=2 , RXNEG=0, RXDQSDELAY=Dummy
-//    {2 , 1, 1}, // Turnaround=2 , RXNEG=1, RXDQSDELAY=Dummy
-//    {3 , 0, 1}, // Turnaround=3 , RXNEG=0, RXDQSDELAY=Dummy
-//    {3 , 1, 1}, // Turnaround=3 , RXNEG=1, RXDQSDELAY=Dummy
-//    {4 , 0, 1}, // Turnaround=4 , RXNEG=0, RXDQSDELAY=Dummy
-//    {4 , 1, 1}, // Turnaround=4 , RXNEG=1, RXDQSDELAY=Dummy
-//    {5 , 0, 1}, // Turnaround=5 , RXNEG=0, RXDQSDELAY=Dummy
-//    {5 , 1, 1}, // Turnaround=5 , RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
     {6 , 0, 1}, // Turnaround=6 , RXNEG=0, RXDQSDELAY=Dummy
     {6 , 1, 1}, // Turnaround=6 , RXNEG=1, RXDQSDELAY=Dummy
     {7 , 0, 1}, // Turnaround=7 , RXNEG=0, RXDQSDELAY=Dummy
@@ -1950,12 +1913,6 @@ const am_devices_mspi_psram_ddr_timing_config_t aps12808l_sConfigArray[] =
     {12, 1, 1}, // Turnaround=12, RXNEG=1, RXDQSDELAY=Dummy
     {13, 0, 1}, // Turnaround=13, RXNEG=0, RXDQSDELAY=Dummy
     {13, 1, 1}, // Turnaround=13, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL BEGIN ####
-//    {14, 0, 1}, // Turnaround=14, RXNEG=0, RXDQSDELAY=Dummy
-//    {14, 1, 1}, // Turnaround=14, RXNEG=1, RXDQSDELAY=Dummy
-//    {15, 0, 1}, // Turnaround=15, RXNEG=0, RXDQSDELAY=Dummy
-//    {15, 1, 1}, // Turnaround=15, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
 };
 
 //*****************************************************************************
@@ -2539,17 +2496,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {

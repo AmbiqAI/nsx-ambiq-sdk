@@ -4,8 +4,8 @@
 //!
 //! @brief Functions for interfacing with the SYSTICK
 //!
-//! @addtogroup systick4_ap510L SYSTICK - System Tick Timer
-//! @ingroup apollo510L_hal
+//! @addtogroup systick_atomiq110 SYSTICK - System Tick Timer
+//! @ingroup atomiq110_hal
 //! @{
 //
 //*****************************************************************************
@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSTICK_H
@@ -48,11 +48,11 @@ typedef enum
 //
 //! @brief Initialize the SYSTICK.
 //!
-//! This function initialize the systick timer for operation.
+//! This function initializes the systick timer for operation.
 //!
 //! @note The SYSTICK timer can have either internal (Core) clock or external
 //!       reference clock.
-//! @return status.
+//! @return AM_HAL_STATUS_SUCCESS or AM_HAL_STATUS_INVALID_ARG.
 //
 //*****************************************************************************
 extern uint32_t am_hal_systick_init(am_hal_systick_t eClockSource);
@@ -77,10 +77,7 @@ extern void am_hal_systick_start(void);
 //!
 //! This function stops the systick timer.
 //!
-//! @note This timer does not run in deep-sleep mode as it runs from the core
-//! clock, which is gated in deep-sleep. If a timer is needed in deep-sleep use
-//! one of the ctimers instead. Also to note is this timer will consume higher
-//! power than the ctimers.
+//! @note See am_hal_systick_start() for deep-sleep behavior.
 //
 //*****************************************************************************
 extern void am_hal_systick_stop(void);
@@ -89,7 +86,7 @@ extern void am_hal_systick_stop(void);
 //
 //! @brief Enable the interrupt in the SYSTICK.
 //!
-//! This function enables the interupt in the systick timer.
+//! This function enables the interrupt in the systick timer.
 //
 //*****************************************************************************
 extern void am_hal_systick_int_enable(void);
@@ -98,7 +95,7 @@ extern void am_hal_systick_int_enable(void);
 //
 //! @brief Disable the interrupt in the SYSTICK.
 //!
-//! This function disables the interupt in the systick timer.
+//! This function disables the interrupt in the systick timer.
 //
 //*****************************************************************************
 extern void am_hal_systick_int_disable(void);
@@ -158,7 +155,7 @@ extern uint32_t am_hal_systick_count(void);
 //! @note If the SysTick timer is being used elsewhere, it will be corrupted
 //! by calling this function.
 //!
-//! @return 0 if successful.
+//! @return AM_HAL_STATUS_SUCCESS.
 //
 //*****************************************************************************
 extern uint32_t am_hal_systick_wait_ticks(uint32_t ui32Ticks);
@@ -169,13 +166,15 @@ extern uint32_t am_hal_systick_wait_ticks(uint32_t ui32Ticks);
 //!
 //! This function returns the number of SysTick ticks per millisecond.
 //!
-//! @param ui32TicksPerMs Number of Ticks per millisecond.
+//! @param pui32TicksPerMs Number of ticks per millisecond (output).
 //!
-//! @return 0 if successful.
+//! @return status - Status for the operation, as defined in am_hal_status_e
 //
 //*****************************************************************************
-extern uint32_t am_hal_systick_ticks_per_ms(uint32_t *ui32TickPerMs);
+extern uint32_t am_hal_systick_ticks_per_ms(uint32_t *pui32TicksPerMs);
 
+// #### INTERNAL BEGIN ####
+// TODO: implement this function
 //*****************************************************************************
 //
 //! @brief Delay the specified number of microseconds.
@@ -194,6 +193,7 @@ extern uint32_t am_hal_systick_ticks_per_ms(uint32_t *ui32TickPerMs);
 //*****************************************************************************
 extern uint32_t am_hal_systick_delay_us(uint32_t ui32NumUs);
 
+// #### INTERNAL END ####
 #ifdef __cplusplus
 }
 #endif

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -23,10 +23,6 @@
 
 #include "stdint.h"
 
-// #### INTERNAL BEGIN ####
-// Information about the memory map comes from the Confluence page Cayenne
-// Specifications (RevA)->CPU Subsystem, cDec 2022.
-// #### INTERNAL END ####
 //
 // The following table is based on maximum memory sizing of Apollo5,
 // specific SKUs may vary.
@@ -75,9 +71,6 @@
 // ****************************************************************************
 #define AM_REG_INFO0_BASEADDR           0x42000000
 #define AM_REG_INFO1_BASEADDR           0x42002000
-// #### INTERNAL BEGIN ####
-//#define AM_REG_INFOC_BASEADDR           0x400C2000
-// #### INTERNAL END ####
 #define AM_REG_OTP_INFO0_BASEADDR       0x42004000
 #define AM_REG_OTP_INFO1_BASEADDR       0x42006000
 #define AM_REG_OTP_INFOC_BASEADDR       0x400C2000
@@ -95,10 +88,6 @@
 // ****************************************************************************
 // MSPI aperture address ranges
 // ****************************************************************************
-// #### INTERNAL BEGIN ####
-// Information about the MSPI aperatures comes from the Confluence page Cayenne
-// Specifications (RevA)->CPU Subsystem, cDec 2022.
-// #### INTERNAL END ####
 //
 // Please note that the END_ADDR as used here is actually the (end address + 1).
 //

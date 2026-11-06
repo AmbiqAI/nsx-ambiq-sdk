@@ -11,30 +11,12 @@
 //
 //*****************************************************************************
 
-// #### INTERNAL BEGIN ####
-//!  Notes:
-//!      - A quick guide to connect a Sharp LCD to an Apollo EVK via IOM1:
-//!            - Sharp_display       EVK
-//!            - Pin 1 VIN           3.3v
-//!            - Pin 2 V3_3          n/c
-//!            - Pin 3 GND           gnd
-//!            - Pin 4 SCK           M1SCK   pad8
-//!            - Pin 5 MOSI          M1MOSI  pad10
-//!            - Pin 6 SCS           GPIO12
-//!            - Pin 7 EXTMODE       n/c
-//!            - Pin 8 DISP          n/c
-//!            - Pin 9 EXTCOMIN      n/c
-//!      - The Sharp LCD displays use an asserted high CS, the Apollo IOM
-//!        provides asserted LOW CEs. Therefore, the CS must be bit-banged
-//!        via a standard GPIO (GPIO 12 in the above case).
-// #### INTERNAL END ####
-
 //*****************************************************************************
 //
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -452,28 +434,6 @@ am_devices_display_ls013b4dn04_callbacks_config(am_hal_iom_callback_t pfnYield,
     display_ls013b4dn04_yield = pfnYield;
     display_ls013b4dn04_callback = pfnCallback;
 }
-
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// swizzle() - Static helper function.
-//
-//*****************************************************************************
-static uint8_t
-swizzle(uint8_t value)
-{
-    int8_t i8tmp, tmpbyte;
-    tmpbyte = 0;
-    for (i8tmp=0; i8tmp<8; i8tmp++)
-    {
-        tmpbyte |= ((value & 0x01) << (7-i8tmp));
-        value >>= 1;
-    }
-    return tmpbyte;
-} // swizzle()
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

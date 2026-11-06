@@ -112,20 +112,6 @@ typedef enum {
 #define __VTOR_PRESENT                 1        /*!< Set to 1 if CPU supports Vector Table Offset Register                     */
 #define __MPU_PRESENT                  1        /*!< MPU present                                                               */
 #define __FPU_PRESENT                  1        /*!< FPU present                                                               */
-// #### INTERNAL BEGIN ####
-#if 0 // These macros should be appropriately generated for Apollo1 and Apollo2. Till then, manually edit them out.
-#define __FPU_DP                       0        /*!< Double Precision FPU                                                      */
-#define __DSP_PRESENT                  0        /*!< DSP extension present                                                     */
-#define __ICACHE_PRESENT               1        /*!< Instruction Cache present                                                 */
-#define __DCACHE_PRESENT               1        /*!< Data Cache present                                                        */
-#define __ITCM_PRESENT                 1        /*!< Instruction TCM present                                                   */
-#define __DTCM_PRESENT                 1        /*!< Data TCM present                                                          */
-#define __PMU_PRESENT                  0        /*!< PMU present                                                               */
-#define __PMU_NUM_EVENTCNT             0        /*!< PMU Event Counters                                                        */
-#endif // 0
-// #### INTERNAL END ####
-
-
 
 /** @} */ /* End of group Configuration_of_CMSIS */
 

@@ -33,7 +33,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_DEVICES_SYSTEST_FPGA_H
@@ -128,9 +128,9 @@ typedef enum
 typedef enum
 {
     AM_DEVICES_FPGA_DAC_PD_NORMAL = 0,  // Normal operation
-    AM_DEVICES_FPGA_DAC_PD_1K     = 1,  // 1kΩ to GND
-    AM_DEVICES_FPGA_DAC_PD_100K   = 2,  // 100kΩ to GND
-    AM_DEVICES_FPGA_DAC_PD_500K   = 3   // 500kΩ to GND
+    AM_DEVICES_FPGA_DAC_PD_1K     = 1,  // 1kohm to GND
+    AM_DEVICES_FPGA_DAC_PD_100K   = 2,  // 100kohm to GND
+    AM_DEVICES_FPGA_DAC_PD_500K   = 3   // 500kohm to GND
 } am_devices_fpga_dac_pd_e;
 
 //

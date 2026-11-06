@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MCUCTRL_H
@@ -289,7 +289,8 @@ typedef struct
     am_hal_mcuctrl_ssram_e      eSharedSRAMSize;    // SSRAM Size
     am_hal_mcuctrl_rram_e       eRRAMSize;          // RRAM Size
     bool                        bDISP;              // DISP
-    bool                        bSupportHPMode;     // HP Mode
+    bool                        bSupportHPMode;     // HP Mode supported
+    bool                        bSupportLPMode;     // LP Mode supported
     bool                        bMIPIDSI;           // MIPI/DSI
     bool                        bGPU;               // GPU
     bool                        bUSB;               // USB

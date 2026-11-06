@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -117,6 +117,46 @@ extern "C"
 //*****************************************************************************
 #include "atomiq110.h"
 
+// #### INTERNAL BEGIN ####
+#if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE & 0x2)
+    // Remap CRYPTO instance if building for TZ secure
+    #undef  CRYPTO
+    #undef  CRYPTO_BASE
+
+    #define CRYPTO_BASE_NS (0x400C4000UL)
+    #define CRYPTO_BASE_S  (0x500C4000UL)
+    #define CRYPTO_BASE    (CRYPTO_BASE_S)
+
+    #define CRYPTO_NS      ((CRYPTO_Type *)(CRYPTO_BASE_NS))
+    #define CRYPTO_S       ((CRYPTO_Type *)(CRYPTO_BASE_S))
+    #define CRYPTO         CRYPTO_S
+
+    // Remap DME instance if building for TZ secure
+    #undef  DMEA
+    #undef  DMEA_BASE
+
+    #define DMEA_BASE_NS (0x400E3000UL)
+    #define DMEA_BASE_S  (0x500E3000UL)
+    #define DMEA_BASE    (DMEA_BASE_S)
+
+    #define DMEA_NS      ((DMEA_Type *)(DMEA_BASE_NS))
+    #define DMEA_S       ((DMEA_Type *)(DMEA_BASE_S))
+    #define DMEA         DMEA_S
+
+    // Remap NPU instance if building for TZ secure
+    #undef  NPU
+    #undef  NPU_BASE
+
+    #define NPU_BASE_NS (0x400E0000UL)
+    #define NPU_BASE_S  (0x500E0000UL)
+    #define NPU_BASE    (NPU_BASE_S)
+
+    #define NPU_NS      ((NPU_Type *)(NPU_BASE_NS))
+    #define NPU_S       ((NPU_Type *)(NPU_BASE_S))
+    #define NPU         NPU_S
+#endif
+// #### INTERNAL END ####
+
 //*****************************************************************************
 //
 // Global HAL
@@ -164,7 +204,8 @@ extern "C"
 #include "hal/mcu/am_hal_debug.h"
 #ifdef NEMA_PLATFORM
 #include "hal/mcu/am_hal_dc.h"
-//#include "hal/mcu/am_hal_dsi.h"
+#include "hal/mcu/am_hal_ddb.h"
+#include "hal/mcu/am_hal_dsi.h"
 #endif
 #include "hal/mcu/am_hal_lau.h"
 #include "hal/mcu/am_hal_i3c.h"
@@ -185,7 +226,15 @@ extern "C"
 #include "hal/mcu/am_hal_systick.h"
 #include "hal/mcu/am_hal_tpiu.h"
 #include "hal/mcu/am_hal_uart.h"
-// #include "hal/mcu/am_hal_uart_stream.h"
+#include "hal/mcu/am_hal_xspi_bridge.h"
+#include "hal/mcu/am_hal_uart_stream.h"
+// #### INTERNAL BEGIN ####
+#ifndef AM_HAL_BOOTROM_USE
+// #### INTERNAL END ####
+#include "hal/am_hal_xspimc.h"
+// #### INTERNAL BEGIN ####
+#endif
+// #### INTERNAL END ####
 
 //
 // HAL common includes
@@ -195,9 +244,9 @@ extern "C"
 // #include "hal/am_hal_audadc.h"
 #include "hal/am_hal_dcu.h"
 #include "hal/am_hal_gpio.h"
-// #include "hal/am_hal_i2s.h"
+#include "hal/am_hal_i2s.h"
 #include "hal/am_hal_info.h"
-// #include "hal/am_hal_infoc.h"
+#include "hal/am_hal_infoc.h"
 #include "hal/am_hal_mmu.h"
 #include "hal/am_hal_pdm.h"
 #include "hal/am_hal_pwrctrl.h"
@@ -206,15 +255,11 @@ extern "C"
 #include "hal/am_hal_security.h"
 #include "hal/am_hal_stimer.h"
 #include "hal/am_hal_timer.h"
-#if defined(AM_PART_ATOMIQ110_USB_DUMMY_TYPE)
-// TODO: (Will be remove) Use local USB_Type until CMSIS atomiq110 USB_Type is updated to latest.
-#include "hal/am_hal_usb_atomiq110_dummy_type.h"
-#endif
 #include "hal/am_hal_usb.h"
 // #include "hal/am_hal_usbcharger.h"
 #include "hal/am_hal_utils.h"
 // #include "hal/am_hal_vcomp.h"
-// #include "hal/am_hal_wdt.h"
+#include "hal/am_hal_wdt.h"
 #include "hal/am_hal_gpu.h"
 
 //

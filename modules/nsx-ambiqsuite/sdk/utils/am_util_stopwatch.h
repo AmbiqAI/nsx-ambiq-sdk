@@ -23,7 +23,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_UTIL_STOPWATCH_H
@@ -35,11 +35,6 @@ extern "C"
 #endif
 
 #include "am_mcu_apollo.h"
-// #### INTERNAL BEGIN ####
-#if 0 // Old way
-#include "hal/am_hal_rtc.h"
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

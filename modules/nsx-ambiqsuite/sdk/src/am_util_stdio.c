@@ -58,7 +58,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -1266,17 +1266,6 @@ am_util_stdio_vprintf(const char *pcFmt, va_list pArgs)
 void
 am_util_stdio_terminal_clear(void)
 {
-// #### INTERNAL BEGIN ####
-// The AMFlash utility application is no longer supported by Ambiq.
-// Therefore the following comment is no longer applicable.
-    //
-    // Escape codes to clear a terminal screen and put the cursor in the top
-    // left corner.
-    // We'll first print a number of spaces, which helps get the ITM in sync
-    // with AMFlash, especially after a reset event or a system clock
-    // frequency change.
-    //
-// #### INTERNAL END ####
     //
     // Simulate a clear terminal by printing a series of linefeeds.
     //

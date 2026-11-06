@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -663,6 +663,10 @@ am_devices_spipsram_reset(void *pHandle)
     {
         return AM_DEVICES_SPIPSRAM_STATUS_ERROR;
     }
+
+    // APS6404L tRST requires 50 ns before the next command.
+    am_util_delay_us(1U);
+
     return AM_DEVICES_SPIPSRAM_STATUS_SUCCESS;
 }
 
@@ -892,8 +896,12 @@ am_devices_spipsram_init_no_check(uint32_t ui32Module,
 #elif defined(AM_PART_APOLLO4) || defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) ||    \
       defined(AM_PART_APOLLO510)
     { 0, 0, 0, 0, 0, 0, 0, 0 };
-#elif defined(AM_PART_APOLLO330P_510L) || defined(AM_PART_APOLLO340)
+#elif defined(AM_PART_APOLLO330P_510L)
     { 0, 0, 0, 0, 0, 0};
+// #### INTERNAL BEGIN ####
+#elif defined(AM_PART_APOLLO340)
+    { 0, 0, 0, 0, 0, 0};
+// #### INTERNAL END ####
 #elif defined(AM_PART_ATOMIQ110)
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif
@@ -1636,4 +1644,3 @@ am_devices_spipsram_nonblocking_write(void *pHandle,
 //! @}
 //
 //*****************************************************************************
-

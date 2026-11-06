@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -33,6 +33,12 @@ typedef enum
     AM_HAL_CMDQ_IF_IOM3,
     AM_HAL_CMDQ_IF_IOM4,
     AM_HAL_CMDQ_IF_IOM5,
+    AM_HAL_CMDQ_IF_IOM6,
+    AM_HAL_CMDQ_IF_IOM7,
+    AM_HAL_CMDQ_IF_IOM8,
+    AM_HAL_CMDQ_IF_IOM9,
+    AM_HAL_CMDQ_IF_IOM10,
+    AM_HAL_CMDQ_IF_IOM11,
     AM_HAL_CMDQ_IF_MSPI0,
     AM_HAL_CMDQ_IF_MSPI1,
     AM_HAL_CMDQ_IF_MSPI2,

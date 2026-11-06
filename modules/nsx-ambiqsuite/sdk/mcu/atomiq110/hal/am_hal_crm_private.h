@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 //! @cond CRM_HAL_PRIVATE_FUNC
@@ -35,12 +35,9 @@ typedef enum
     AM_HAL_CRM_ID_ADC,
     AM_HAL_CRM_ID_DISPPLL,
     AM_HAL_CRM_ID_DSIESC,
-    AM_HAL_CRM_ID_DSISYS,
     AM_HAL_CRM_ID_DSIULPS,
     AM_HAL_CRM_ID_DSIPHYREF,
-    AM_HAL_CRM_ID_DSIPHYTX,
     AM_HAL_CRM_ID_EMMCXIN,
-    AM_HAL_CRM_ID_HBLMC,
     AM_HAL_CRM_ID_I2S0M,
     AM_HAL_CRM_ID_I2S1M,
     AM_HAL_CRM_ID_I3C0REF,
@@ -69,7 +66,6 @@ typedef enum
     AM_HAL_CRM_ID_UART4HF,
     AM_HAL_CRM_ID_UART5HF,
     AM_HAL_CRM_ID_USBPHYCORE,
-    AM_HAL_CRM_ID_XSPI0PHY,
     AM_HAL_CRM_ID_XSPI1PHY,
     AM_HAL_CRM_ID_XSPI2PHY,
 
@@ -82,26 +78,8 @@ typedef enum
 //=============================================================================
 typedef enum
 {
-    AM_HAL_CRM_CLKCFG_MUX_ID_DISPAXI,
-    AM_HAL_CRM_CLKCFG_MUX_ID_GFXAXI,
-    AM_HAL_CRM_CLKCFG_MUX_ID_GFXCORE,
-    AM_HAL_CRM_CLKCFG_MUX_ID_HBLSIFM,
-    AM_HAL_CRM_CLKCFG_MUX_ID_I2S0ASRC,
     AM_HAL_CRM_CLKCFG_MUX_ID_I2S0NCO,
     AM_HAL_CRM_CLKCFG_MUX_ID_I2S1NCO,
-    // #### INTERNAL BEGIN ####
-#ifdef AM_HAL_CRM_ENABLE_PLLCLKCFG
-    AM_HAL_CRM_CLKCFG_MUX_ID_PLLMFREF,
-    AM_HAL_CRM_CLKCFG_MUX_ID_PLLSFREF,
-#endif
-#ifdef AM_HAL_CRM_ENABLE_WDTCLKCFG
-    AM_HAL_CRM_CLKCFG_MUX_ID_SECUREWDT,
-    AM_HAL_CRM_CLKCFG_MUX_ID_WDT,
-#endif
-#ifdef AM_HAL_CRM_ENABLE_SSRAMCLKCFG
-    AM_HAL_CRM_CLKCFG_MUX_ID_SSRAM,
-#endif
-    // #### INTERNAL END ####
     AM_HAL_CRM_CLKCFG_MUX_ID_TPIU,
     // Keep this as the last element in the enum
     AM_HAL_CRM_CLKCFG_MUX_ID_COUNT,

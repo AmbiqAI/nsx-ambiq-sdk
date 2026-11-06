@@ -18,7 +18,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -42,19 +42,19 @@ am_devices_ls014b7dd01_t gLs014bdd01[AM_REG_DC_NUM_MODULES];
 
 //*****************************************************************************
 //
-// Fill in NemaDC configuration for the LS014B7DD01 JDI panel.
+// Get default DC and panel configuration for the LS014B7DD01 JDI panel.
 //
 //*****************************************************************************
 uint32_t
-am_devices_display_ls014b7dd01_get_parameter(void *pHandle,
-                                             am_hal_dc_config_t *pDCCfg)
+am_devices_display_ls014b7dd01_get_default_config(am_hal_dc_config_t *pDCCfg,
+                                                  am_devices_display_timer_config_t *pDevCfg)
 {
     pDCCfg->eInterface = AM_HAL_DC_IF_JDI;
     pDCCfg->bTEEnable = false;
     //
     // The destination color format is fixed as RGB222.
     //
-
+    g_sDispCfg.eInterface = DISP_IF_JDI;
     //
     // JDI timing values are derived from the panel datasheet and
     // MiP_PanelsAppNote.pdf. Resolution is 280 x 280 pixels.
@@ -71,11 +71,15 @@ am_devices_display_ls014b7dd01_get_parameter(void *pHandle,
     pDCCfg->sJDICfg.sJDITiming.HST_BSP_delay = 2;
     pDCCfg->sJDICfg.sJDITiming.HST_BSP_width = 4;
     pDCCfg->sJDICfg.sJDITiming.HCK_BCK_data_start = 1;
-    pDCCfg->sJDICfg.sJDITiming.ENB_GEN_delay = 90;
-    pDCCfg->sJDICfg.sJDITiming.ENB_GEN_width = 99;
+    pDCCfg->sJDICfg.sJDITiming.ENB_GEN_delay = 99;
+    pDCCfg->sJDICfg.sJDITiming.ENB_GEN_width = 90;
 
-    pDCCfg->sJDICfg.fTargetHCKBCKClk = 0.5;   // MHz
-    pDCCfg->sJDICfg.fTargetVCKGCKFF = 0.758;  // MHz
+    pDCCfg->sJDICfg.fTargetHCKBCKClk = 0.758;   // MHz
+    pDCCfg->sJDICfg.fTargetVCKGCKFF = 0.5;      // MHz
+
+    pDevCfg->ui32TimerNum = 7;
+    pDevCfg->eTimerClock = AM_HAL_TIMER_CLOCK_HFRC_30_518KHZ;
+    pDevCfg->ui32Frequency = 60;
 
     return AM_DEVICES_DISPLAY_STATUS_SUCCESS;
 }
@@ -87,13 +91,13 @@ am_devices_display_ls014b7dd01_get_parameter(void *pHandle,
 //*****************************************************************************
 uint32_t
 am_devices_display_ls014b7dd01_init(uint32_t ui32Module,
-                                    am_devices_display_timer_config_t *pDevCfg,
-                                    void **ppHandle, void *pDCHandle)
+                                    void **ppHandle, void *pDCHandle,
+                                    am_devices_display_timer_config_t *pDevCfg)
 {
     uint64_t ui64BaseFreq, ui64EndCounts;
     am_hal_timer_config_t TimerConfig ;
 
-    if(ui32Module > AM_REG_DC_NUM_MODULES)
+    if ( ui32Module > AM_REG_DC_NUM_MODULES )
     {
         return AM_HAL_STATUS_OUT_OF_RANGE;
     }

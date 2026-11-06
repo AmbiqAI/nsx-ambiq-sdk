@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_GLOBAL_H
@@ -77,11 +77,6 @@ extern "C"
 //
 //*****************************************************************************
 #define STATIC_ASSERT(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
-// #### INTERNAL BEGIN ####
-// Another solution.
-//#define STATIC_ASSERT(condition) typedef char pstatic_assert##__LINE__[ (condition) ? 1 : -1];
-//STATIC_ASSERT(sizeof(struct trim_regs_s) == (21 * 4))
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

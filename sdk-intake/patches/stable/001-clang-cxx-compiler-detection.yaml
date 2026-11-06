@@ -8,8 +8,7 @@ reason: >
   am_reg_macros_asm.h, or the MSPI PSRAM device headers falls through to
   "#error Compiler is unknown". The patch tests defined(__GNUC__) instead;
   armclang is still matched first by __ARMCC_VERSION. It also adds the
-  space missing in the AM_HAL_CARD_DEBUG / AM_DEVICE_RPMB_DEBUG string
-  pastes ("..."fmt), which C++11 lexes as a user-defined literal suffix and
+  space missing in the AM_DEVICE_RPMB_DEBUG string paste ("..."fmt), which C++11 lexes as a user-defined literal suffix and
   clang rejects. Every configuration that compiled before (C99 and later
   with gcc or clang, C++ with gcc, armclang) selects the same branch as
   before, so the prebuilt HAL/BSP archives are unaffected; older modes
@@ -17,3 +16,7 @@ reason: >
   AmbiqAI/nsx-ambiq-sdk#81. Retire once the fix lands upstream in
   AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
 upstream_ref: AmbiqAI/nsx-ambiq-sdk#82
+
+# Candidate3cfb7d5 already includes the four CARD_DEBUG spacing corrections.
+# RPMB spacing and all compiler-condition corrections remain necessary.
+# BKPT context is rebased while preserving upstream AM_ASM_BKPT_SAFE.

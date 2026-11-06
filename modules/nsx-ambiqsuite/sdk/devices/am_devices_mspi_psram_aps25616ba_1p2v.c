@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -554,9 +554,6 @@ am_device_command_write(void *pMspiHandle,
   Transaction.bTurnaround             = false;
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
   Transaction.pui32Buffer             = pData;
   //
@@ -603,9 +600,6 @@ am_device_command_read(void *pMspiHandle,
   Transaction.bTurnaround             = true;
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = true;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
   Transaction.pui32Buffer             = pData;
   //
@@ -945,13 +939,17 @@ am_devices_mspi_peripheral_init(uint32_t ui32Module,
   pPsram->stSetting.eClockFreq = MSPI_BASE_FREQUENCY;
 #if defined(USE_APS51216CA_E9)
   if (AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS != am_devices_mspi_psram_aps_z8_get_wlc(AM_DEVICES_MSPI_PSRAM_APS_Z8_WLC_7, &pPsram->stSetting.ui8WriteLatency) )
-#else
-  if (AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS != am_devices_mspi_psram_aps_z8_get_wlc(AM_DEVICES_MSPI_PSRAM_APS_Z8_WLC_6, &pPsram->stSetting.ui8WriteLatency) )
-#endif
   {
       am_util_debug_printf("Invalid Write Latency Code!\n");
       return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
   }
+#else
+  if (AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS != am_devices_mspi_psram_aps_z8_get_wlc(AM_DEVICES_MSPI_PSRAM_APS_Z8_WLC_6, &pPsram->stSetting.ui8WriteLatency) )
+  {
+      am_util_debug_printf("Invalid Write Latency Code!\n");
+      return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
+  }
+#endif
   pPsram->stSetting.ui8WriteLatency *= 2;
 #if defined(USE_APS51216BA) || defined(USE_APS51216CA_E9)
   pPsram->stSetting.ui8TurnAround = (AM_DEVICES_MSPI_PSRAM_APS_Z8_RLC_6 + 4) * 2;
@@ -1523,13 +1521,6 @@ am_devices_mspi_psram_aps25616ba_ddr_init(uint32_t ui32Module,
     {
         return AM_DEVICES_MSPI_PSRAM_STATUS_ERROR;
     }
-
-// #### INTERNAL BEGIN ####
-    //
-    // This driver is only for the Apollo5 famiy
-    // There is no fault enable function for the apollo5a
-    //
-// #### INTERNAL END ####
 
     //
     // Allocate a vacant device handle
@@ -2980,17 +2971,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {
@@ -3022,9 +3002,6 @@ find_mid_point(uint32_t* pVal)
 //
 //*****************************************************************************
 #if defined(AM_PART_APOLLO5_API)
-// #### INTERNAL BEGIN ####
-// CAYNSWS-1239 reduce timing scan time
-// #### INTERNAL END ####
 #define PSRAM_TIMING_SCAN_SIZE_BYTES (4*AM_DEVICES_MSPI_PSRAM_PAGE_SIZE)
 #else
 #define PSRAM_TIMING_SCAN_SIZE_BYTES (128*AM_DEVICES_MSPI_PSRAM_PAGE_SIZE)

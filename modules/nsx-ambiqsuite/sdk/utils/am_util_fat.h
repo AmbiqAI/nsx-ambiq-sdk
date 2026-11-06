@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_UTIL_FAT_H
@@ -34,11 +34,6 @@ extern "C"
 // Macro definitions
 //
 //*****************************************************************************
-
-// #### INTERNAL BEGIN ####
-// Some of these defines may be more suited as block-level defines and may
-//  need to be moved to devices.
-// #### INTERNAL END ####
 
 //
 // Define the flash partition that will contain the file system.

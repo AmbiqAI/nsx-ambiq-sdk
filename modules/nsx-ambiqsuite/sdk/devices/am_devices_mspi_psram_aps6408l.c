@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -31,9 +31,6 @@
 //
 //*****************************************************************************
 #define APS6408L_TIMEOUT             1000000
-// #### INTERNAL BEGIN ####
-// TODO-FIXME - What is clock base?  24MHz or 48MHz?
-// #### INTERNAL END ####
 #define APS6408L_MR_WRLAT       1
 #define APS6408L_MR_RDLAT       3
 #define APS6408L_OP_WRLAT       3
@@ -68,9 +65,6 @@ am_hal_mspi_dev_config_t  APS6408ModeRegisterConfig =
   .eDeviceConfig        = AM_HAL_MSPI_FLASH_OCTAL_CE0,
   .ui8WriteLatency      = APS6408L_MR_WRLAT,
   .eSpiMode             = AM_HAL_MSPI_SPI_MODE_0,
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - eClockFreq = 24MHz or 48MHz?
-// #### INTERNAL END ####
   .eClockFreq           = AM_HAL_MSPI_CLK_48MHZ,
   .bEnWriteLatency      = true,
   .bSendAddr            = true,
@@ -78,10 +72,6 @@ am_hal_mspi_dev_config_t  APS6408ModeRegisterConfig =
   .bSeparateIO          = false,
   .bTurnaround          = true,
   .bEmulateDDR          = true,
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - Is this correct? (ui16DMATimeLimit = 40?)
-// TODO - FIXME - Is this correct? (eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK128?)
-// #### INTERNAL END ####
   .ui16DMATimeLimit     = 40,
   .eDMABoundary         = AM_HAL_MSPI_BOUNDARY_BREAK128,
   .ui32TCBSize          = 0,
@@ -100,20 +90,12 @@ am_hal_mspi_dev_config_t  APS6408OperationConfig =
   .eDeviceConfig        = AM_HAL_MSPI_FLASH_OCTAL_CE0,
   .ui8WriteLatency      = APS6408L_OP_WRLAT,
   .eSpiMode             = AM_HAL_MSPI_SPI_MODE_0,
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - eClockFreq = 24MHz or 48MHz?
-// #### INTERNAL END ####
   .eClockFreq           = AM_HAL_MSPI_CLK_48MHZ,
   .bSendAddr            = true,
   .bSendInstr           = true,
   .bSeparateIO          = false,
   .bTurnaround          = true,
   .bEmulateDDR          = true,
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - Is this correct? (ui16DMATimeLimit = 40?)
-// TODO - FIXME - Is this correct? (eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK128?)
-// TODO - FIXME - Need to configure TCB for CQ. (ui32TCBSize = 0?)
-// #### INTERNAL END ####
   .ui16DMATimeLimit     = 40,
   .eDMABoundary         = AM_HAL_MSPI_BOUNDARY_BREAK128,
   .ui32TCBSize          = 0,
@@ -164,10 +146,6 @@ am_devices_mspi_psram_aps6408l_reset(void)
   // Create the individual write transaction.
   Transaction.ui32NumBytes      = 0;
   Transaction.bScrambling       = false;
-// #### INTERNAL BEGIN ####
-// TODO-FIXME - Is this correct??? (Transaction.bDCX = false?)
-// TODO-FIXME - Is this correct??? (Transaction.bEnWRLatency = true?)
-// #### INTERNAL END ####
   Transaction.bDCX              = false;
   Transaction.eDirection        = AM_HAL_MSPI_TX;
   Transaction.bSendAddr         = false;
@@ -207,10 +185,6 @@ am_devices_mspi_psram_aps6408l_id(void)
   // Create the individual read transaction.
   Transaction.ui32NumBytes      = 2;
   Transaction.bScrambling       = false;
-// #### INTERNAL BEGIN ####
-// TODO-FIXME - Is this correct??? (Transaction.bDCX = false?)
-// TODO-FIXME - Is this correct??? (Transaction.bEnWRLatency = true?)
-// #### INTERNAL END ####
   Transaction.bDCX              = false;
   Transaction.eDirection        = AM_HAL_MSPI_RX;
   Transaction.bSendAddr         = false;
@@ -294,10 +268,6 @@ am_devices_mspi_psram_aps6408l_init(uint32_t ui32Module,
   //
   Transaction.ui32NumBytes      = 0;
   Transaction.bScrambling       = false;
-// #### INTERNAL BEGIN ####
-// TODO-FIXME - Is this correct??? (Transaction.bDCX = false?)
-// TODO-FIXME - Is this correct??? (Transaction.bEnWRLatency = true?)
-// #### INTERNAL END ####
   Transaction.bDCX              = false;
   Transaction.eDirection        = AM_HAL_MSPI_TX;
   Transaction.bSendAddr         = true;
@@ -320,10 +290,6 @@ am_devices_mspi_psram_aps6408l_init(uint32_t ui32Module,
   //
   Transaction.ui32NumBytes      = 0;
   Transaction.bScrambling       = false;
-// #### INTERNAL BEGIN ####
-// TODO-FIXME - Is this correct??? (Transaction.bDCX = false?)
-// TODO-FIXME - Is this correct??? (Transaction.bEnWRLatency = true?)
-// #### INTERNAL END ####
   Transaction.bDCX              = false;
   Transaction.eDirection        = AM_HAL_MSPI_TX;
   Transaction.bSendAddr         = true;
@@ -375,9 +341,6 @@ am_devices_mspi_psram_aps6408l_init(uint32_t ui32Module,
 #ifdef AM_IRQ_PRIORITY_DEFAULT
   NVIC_SetPriority(MSPI0_IRQn, AM_IRQ_PRIORITY_DEFAULT);
 #endif // AM_IRQ_PRIORITY_DEFAULT
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - need to make the IRQ module-specific.
-// #### INTERNAL END ####
   NVIC_EnableIRQ(MSPI0_IRQn);
   am_hal_interrupt_master_enable();
 
@@ -428,9 +391,6 @@ am_devices_mspi_psram_deinit(am_hal_mspi_dev_config_t *psMSPISettings)
   //
   // Disable the MSPI interrupts.
   //
-// #### INTERNAL BEGIN ####
-// TODO - FIXME - need to make the IRQ module-specific.
-// #### INTERNAL END ####
   NVIC_DisableIRQ(MSPI0_IRQn);
 
   //

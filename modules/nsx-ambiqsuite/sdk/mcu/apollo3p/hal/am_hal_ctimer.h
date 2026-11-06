@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CTIMER_H
@@ -134,9 +134,6 @@ typedef enum
 //!  DEPRECATED Interrupt Status Bits
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-// FIXME: 31 common examples use AM_HAL_CTIMER_INT_TIMERA0
-// #### INTERNAL END ####
 #define AM_HAL_CTIMER_INT_TIMERA0           AM_HAL_CTIMER_INT_TIMERA0C0
 #define AM_HAL_CTIMER_INT_TIMERB0           AM_HAL_CTIMER_INT_TIMERB0C0
 #define AM_HAL_CTIMER_INT_TIMERA1           AM_HAL_CTIMER_INT_TIMERA1C0
