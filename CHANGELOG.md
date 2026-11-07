@@ -2,6 +2,19 @@
 
 All notable distribution changes are recorded here.
 
+## 5.2.29 - Unreleased
+
+- Refresh the AmbiqSuite provider to pinned `stable-2026.11.05` content and
+  rebuild all 73 HAL/BSP archives from a recorded prepared source.
+- Bind intake to exact source revisions and reviewed source patches; reserve
+  sufficient aligned AT110 XSPI caller storage across supported compiler ABIs.
+- Preserve C++ compatibility and update the EM9305 RX transport, deferred
+  retries, queued TX storage and full-duplex RX scratch capacity.
+- Verify GCC integration against 5.2.28 on AP3 Blue Plus, AP4 Blue Plus KXR,
+  AP330 Plus, AP510 and AP510B, plus AP510 USB and AP510B BLE traffic.
+  Exact evidence and exclusions are in `release/qualification-5.2.29.md`.
+- Update BLE Device Information Service default firmware version to 5.2.29.
+
 ## 5.2.28 - 2026-11-04
 
 - Make `AM_SHARED_RW` safe in either NSX/HAL header order and preserve shared
