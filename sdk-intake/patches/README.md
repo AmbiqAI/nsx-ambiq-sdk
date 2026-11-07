@@ -43,7 +43,9 @@ or `artifact-manifest.yaml`. Those are hash-verified output: allowing a patch
 to rewrite either would let a patch make a tampered archive verify against a
 manifest it also rewrote. `stage` rejects (fails closed) any patch whose
 `git apply --numstat` output touches either before it ever applies anything.
-Patches are for generated headers and system sources.
+Patches are for generated headers and consumer-compiled system/device sources.
+A device-source correction does not require rebuilding unrelated HAL/BSP
+archives; preserve their recorded source identity and hashes.
 
 ## Ordering And Failure
 

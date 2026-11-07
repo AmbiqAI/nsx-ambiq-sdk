@@ -830,7 +830,7 @@ uint32_t am_devices_em9305_block_write(void *pHandle,
 {
     uint32_t ui32ErrorStatus = AM_DEVICES_EM9305_STATUS_SUCCESS;
     am_hal_iom_buffer(EM9305_BUFFER_SIZE) sData;
-    am_hal_iom_buffer(16) sStas;
+    am_hal_iom_buffer(EM9305_BUFFER_SIZE) sStas;
     uint8_t em9305BufSize = 0;
     am_hal_iom_transfer_t       Transaction;
     am_devices_em9305_t *pIom = (am_devices_em9305_t *)pHandle;

@@ -73,6 +73,14 @@ _AUDIO_LIFECYCLE_APOLLO5 = (
 # Host fault models exercise NSX adapters without microphones or probe access.
 # Counts and backend requirements are acceptance criteria, not discovered from tests.
 ADAPTER_REGRESSIONS = (
+    Requirement('tests/test_em9305_device_tx.py::test_em9305_device_patch_bytes'),
+    Requirement('tests/test_em9305_device_tx.py::test_em9305_device_transmit', 14,
+                parameters=('length', 'credit', 'mode'), variants=(
+                    (16, 16, 'ok'), (17, 17, 'ok'), (255, 255, 'ok'),
+                    (259, 16, 'ok'), (259, 17, 'ok'), (259, 255, 'ok'),
+                    (260, 255, 'ok'), (0, 255, 'ok'), (17, 0, 'ok'),
+                    (17, 17, 'enable-error'), (17, 17, 'header-error'),
+                    (17, 17, 'data-error'), (17, 17, 'not-ready'), (259, 17, 'bitbang'))),
     Requirement('tests/test_em9305_rx.py::test_em9305_transmit_capacity', 7,
                 parameters=('scenario',), variants=tuple((s,) for s in (
                     'capacity-256', 'capacity-257', 'capacity-258', 'capacity-259',

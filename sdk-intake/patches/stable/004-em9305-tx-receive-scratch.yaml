@@ -1,0 +1,10 @@
+owner: apage224
+reason: >
+  The EM9305 blocking writer supplies only 16 bytes of receive scratch to
+  full-duplex transfers that can contain up to 255 bytes per controller
+  credit. Size that scratch to the existing maximum transport packet,
+  preserving word alignment, packet limits and SPI transaction behavior.
+  This consumer-compiled device source is not part of the prebuilt HAL/BSP
+  archives. Retire when upstream sizes the receive scratch for every
+  accepted transfer. Local tracking: AmbiqAI/nsx-ambiq-sdk#195; no upstream
+  submission has been made.
