@@ -36,3 +36,7 @@ uecc is an unmodified copy. cordio is unmodified except for these NSX edits
   IRQ counters together on radio boot.
   Requires the paired EM9305 device driver from that provider intake; other
   Cordio features and radio firmware are unchanged.
+
+- ble-host/sources/hci/ambiq/em9305/hci_drv_em9305.c: NSX rounds queued TX
+  storage up to whole words to hold the existing 259-byte packet limit.
+  The separate nonblocking transaction-control buffer is unchanged.
