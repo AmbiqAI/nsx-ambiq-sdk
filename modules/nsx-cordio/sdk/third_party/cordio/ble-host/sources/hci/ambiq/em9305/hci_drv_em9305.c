@@ -313,7 +313,10 @@ HciDrvRadioBoot(bool bColdBoot)
 {
     uint32_t ui32Status = AM_HAL_STATUS_FAIL;
 
-    WsfTimerStop(&g_RetryTimer);
+    if (g_RetryTimer.isStarted)
+    {
+        WsfTimerStop(&g_RetryTimer);
+    }
     g_ui32TxRetries = 0;
 
     //

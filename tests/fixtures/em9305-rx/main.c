@@ -12,6 +12,7 @@ static unsigned events, errors, last_error, reads, writes, resets, boots;
 static unsigned retry_starts, write_status, waits, other_timer_calls;
 static unsigned read_ceiling = 20000;
 static TickType_t ticks;
+static bool wsf_ready;
 void real_WsfSetEvent(wsfHandlerId_t, wsfEventMask_t);
 void real_WsfTimerStartMs(wsfTimer_t *, wsfTimerTicks_t);
 void real_WsfTimerStop(wsfTimer_t *);
@@ -44,7 +45,7 @@ void WsfTimerStartMs(wsfTimer_t *t, wsfTimerTicks_t ms) {
     if(t == &g_RetryTimer) { assert(ms >= WSF_MS_PER_TICK); retry_starts++; }
     real_WsfTimerStartMs(t,ms);
 }
-void WsfTimerStop(wsfTimer_t *t) { real_WsfTimerStop(t); }
+void WsfTimerStop(wsfTimer_t *t) { assert(wsf_ready); real_WsfTimerStop(t); }
 TickType_t xTaskGetTickCount(void) { return ticks; }
 BaseType_t xPortIsInsideInterrupt(void) { return pdFALSE; }
 TimerHandle_t xTimerCreate(const char *n, TickType_t t, int a, void *id, void (*cb)(TimerHandle_t)) {
@@ -128,7 +129,11 @@ static void handler(void) { HciDrvHandler(BLE_TRANSFER_NEEDED_EVENT,NULL); }
 
 int main(int argc, char **argv) {
     assert(argc == 2); const char *s=argv[1];
-    WsfOsInit(); WsfTimerInit();
+    if(!strcmp(s,"boot-before-wsf")) {
+        assert(HciDrvRadioBoot(false)==0 && boots==1 && !g_RetryTimer.isStarted);
+        puts("PASS"); return 0;
+    }
+    WsfOsInit(); WsfTimerInit(); wsf_ready=true;
     for(unsigned i=0;i<7;i++) WsfOsSetNextHandler(other_handler);
     assert(WsfOsSetNextHandler(HciDrvHandler)==7);
     HciDrvHandlerInit(7); HciDrvErrorHandlerSet(on_error); HciDrvEmptyWriteQueue(); g_IomDevHdl=&device;

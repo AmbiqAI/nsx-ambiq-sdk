@@ -59,7 +59,7 @@ def em9305_binary(repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> 
     "device-empty", "device-prior-empty", "device-full", "device-full-wrap",
     "device-full-no-irq", "device-command-error", "device-data-error",
     "device-not-ready", "device-259", "device-stale-counter", "device-reboot-irq", "integrated-full", "integrated-empty",
-    "dispatcher-empty", "dispatcher-tx", "tx-persistent", "tx-success-reset", "retry-lifecycle",
+    "boot-before-wsf", "dispatcher-empty", "dispatcher-tx", "tx-persistent", "tx-success-reset", "retry-lifecycle",
 ])
 def test_em9305_receive_contract(em9305_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(em9305_binary), scenario], capture_output=True,
