@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -13,8 +16,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.27.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.29.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
 OWNERSHIP_INVENTORY = Path("release/source-ownership.yaml")
@@ -92,7 +95,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.28"
+    assert root_version == "5.2.29"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -197,26 +200,26 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.27"
+    assert superseded["distribution"]["version"] == "5.2.28"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "993b7901a82008ac4cd523ffe0b125a016a8f6a8"
+    assert supersedes["commit"] == "e528eba6f43a45b97e08072ab46340f1ac3fdb16"
     assert supersedes["reason"].strip()
 
 
-def test_payload_provenance_matches_the_promoted_artifact_manifest(repo_root: Path) -> None:
+def test_historical_mixed_snapshot_provenance_matches_5_2_28_payload(repo_root: Path) -> None:
     """Release-level provenance must agree with the payload it describes.
 
     The `v5.2.23` defect was exactly a disagreement between recorded provenance
     and shipped bytes, so every provenance claim the release manifest makes is
     cross-checked against the artifact manifest rather than trusted.
     """
-    release = load_yaml(repo_root, RELEASE_MANIFEST)
-    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    release = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
+    artifact = historical_payload(repo_root, release, ARTIFACT_MANIFEST)
     provenance = release["payload_provenance"]
     upstream = release["upstream"]
 
@@ -442,10 +445,10 @@ def test_consumer_upgrade_paths_cover_every_changed_file(repo_root: Path) -> Non
         assert uncovered == [], (entry["from_version"], uncovered)
 
 
-def patched_provider_files(repo_root: Path) -> set[str]:
+def patched_provider_files(repo_root: Path, release: dict) -> set[str]:
     """Provider files touched by the release's intake patches, repo-relative."""
     touched = set()
-    revision = release_content_revision(repo_root, load_yaml(repo_root, RELEASE_MANIFEST))
+    revision = release_content_revision(repo_root, release)
     listing = git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", "sdk-intake/patches")
     assert listing.returncode == 0, listing.stderr
     for patch in listing.stdout.splitlines():
@@ -466,7 +469,7 @@ def is_atomiq110_specific(path: str) -> bool:
     )
 
 
-def test_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Path) -> None:
+def test_historical_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Path) -> None:
     """The record says intake patches 001/002 are the only change to provider
     headers and sources outside the atomiq110-specific files since each
     upgrade's starting commit. Check that against git, and check that the
@@ -475,8 +478,8 @@ def test_intake_patches_are_the_only_non_atomiq110_provider_change(repo_root: Pa
     Needs full git history: skipped in a local shallow clone, failed in CI.
     """
     require_full_history(repo_root)
-    release = load_yaml(repo_root, RELEASE_MANIFEST)
-    patched = patched_provider_files(repo_root)
+    release = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
+    patched = patched_provider_files(repo_root, release)
     assert patched
     provider = "modules/nsx-ambiqsuite/sdk"
     for entry in release["consumer_upgrade"]:
@@ -570,3 +573,122 @@ def test_source_ownership_inventory_covers_required_boundaries(repo_root: Path) 
         for path in entry.get("paths", [])
     ]
     assert all((repo_root / path).exists() for path in concrete_paths)
+
+
+def historical_payload(repo_root: Path, release: dict, path: Path) -> dict:
+    """Historical claims must use the immutable published tree, never HEAD."""
+    require_full_history(repo_root)
+    revision = release_content_revision(repo_root, release)
+    assert revision != "HEAD", "historical release tag is required"
+    result = git(repo_root, "show", f"{revision}:{path.as_posix()}")
+    assert result.returncode == 0, result.stderr
+    return yaml.safe_load(result.stdout)
+
+
+
+def release_bytes(repo_root: Path, release: dict, path: Path) -> bytes:
+    """Read proposed bytes locally, or published bytes at the immutable tag."""
+    revision = release_content_revision(repo_root, release)
+    if revision == "HEAD":
+        return path.read_bytes()
+    relative = path.relative_to(repo_root).as_posix()
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f"{revision}:{relative}"], capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout
+
+
+def release_files(repo_root: Path, release: dict, directory: Path, pattern: str) -> set[Path]:
+    revision = release_content_revision(repo_root, release)
+    if revision == "HEAD":
+        return set(directory.rglob(pattern))
+    listing = git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", str(directory.relative_to(repo_root)))
+    assert listing.returncode == 0, listing.stderr
+    return {repo_root / name for name in listing.stdout.splitlines() if Path(name).match(pattern)}
+
+def test_current_single_source_provenance_and_archive_hashes(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    provenance = release["payload_provenance"]
+    assert provenance["artifact_manifest_generated_at"] == artifact["build"]["generated_at"]
+    source = artifact["sdk"]["source_commit"]
+    assert source == "6a2a0c08af553e33716f2e251cb74aa370e2ae0f"
+    declared = {train["manifest_key"]: train for train in provenance["toolchain_trains"]}
+    assert set(declared) == set(artifact["build"]["toolchains"])
+    counts = dict.fromkeys(declared, 0)
+    promoted = set()
+    sdk = repo_root / "modules/nsx-ambiqsuite/sdk"
+    for section, key in (("parts", "hal_artifacts"), ("boards", "bsp_artifacts")):
+        for entry in artifact[section]:
+            for train, info in entry.get(key, {}).items():
+                parts = Path(info["path"]).parts
+                path = sdk / "lib" / parts[0] / Path(*parts[2:])
+                assert path not in promoted, path
+                promoted.add(path)
+                assert hashlib.sha256(release_bytes(repo_root, release, path)).hexdigest() == info["sha256"], path
+                counts[train] += 1
+    assert counts == {"gcc": 25, "atfe": 25, "acfe": 23}
+    assert promoted == release_files(repo_root, release, sdk / "lib", "*.a")
+    for key, train in declared.items():
+        assert train["archive_count"] == counts[key]
+        assert train["built_from_source_commit"] == source
+        assert train.get("abi_cflags") == artifact["build"]["toolchains"][key].get("abi_cflags")
+    for upgrade in release["consumer_upgrade"]:
+        assert upgrade["rebuilt_archive_count"] == sum(counts.values())
+        assert upgrade["changed_archive_count"] + upgrade["unchanged_archive_count"] == sum(counts.values())
+
+
+def test_current_source_and_staging_patch_provenance(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    provenance = release["payload_provenance"]
+    patchset_path = repo_root / provenance["source_patchset"]
+    patchset = json.loads(release_bytes(repo_root, release, patchset_path))
+    assert provenance["source_patch_provenance"] == artifact["sdk"]["source_patch_provenance"] == patchset
+    assert release["upstream"]["vendor_source_commit"] == patchset["upstream_commit"]
+    assert patchset["upstream_commit"] == "3cfb7d50718e6fb016f1a0128121cb40598109d5"
+    assert patchset["owner"].strip() and patchset["issue"].strip() and patchset["reason"].strip()
+    for patch in patchset["patches"]:
+        assert hashlib.sha256(release_bytes(repo_root, release, patchset_path.parent / patch["path"])).hexdigest() == patch["sha256"]
+    for entry in patchset["files"]:
+        path = repo_root / "modules/nsx-ambiqsuite/sdk" / entry["path"]
+        # Source hashes precede export's documented banner substitution. Undo
+        # only that substitution; every other prepared byte must still match.
+        content = release_bytes(repo_root, release, path).replace(
+            b"// Copyright (c) 2026, Ambiq Micro, Inc.\n// All rights reserved.",
+            b"// ${copyright}",
+        ).replace(release["upstream"]["snapshot_identity"].encode(), b"${version}")
+        assert hashlib.sha256(content).hexdigest() == entry["after_sha256"]
+        assert entry["before_sha256"] != entry["after_sha256"]
+    declared = provenance["staging_patches"]
+    actual = {str(path.relative_to(repo_root)) for path in release_files(repo_root, release, repo_root / "sdk-intake/patches/stable", "*.patch")}
+    assert {patch["path"] for patch in declared} == actual
+    for patch in declared:
+        assert hashlib.sha256(release_bytes(repo_root, release, repo_root / patch["path"])).hexdigest() == patch["sha256"]
+        metadata = yaml.safe_load(release_bytes(repo_root, release, repo_root / patch["metadata"]))
+        assert patch["owner"] == metadata["owner"]
+        assert patch["reason"] == metadata["reason"]
+
+
+def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    qualification = release["qualification"]
+    assert "inherits_from" not in qualification
+    assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
+    assert set(qualification["hardware_boards"]) <= set(qualification["scope"]["boards"])
+    assert qualification["evidence_candidate"] == "3648b7c254ec711bef98747b204c023685b06b1d"
+    for train in qualification["toolchains"]:
+        if train["artifact_manifest_key"] != "gcc":
+            assert train["hardware_status"] == "not_newly_qualified"
+
+
+def test_ble_firmware_defaults_match_distribution(repo_root: Path) -> None:
+    version = load_yaml(repo_root, RELEASE_MANIFEST)["distribution"]["version"]
+    ble = (repo_root / "modules/nsx-ble/src/ns_ble.c").read_text(encoding="utf-8")
+    dis = (repo_root / "modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c").read_text(
+        encoding="utf-8"
+    )
+    assert re.findall(r'\.firmwareRevision = "([^"]+)"', ble) == [version]
+    assert re.findall(r'ns_ble_select_string\(info\.firmwareRevision, "([^"]+)"\)', ble) == [version]
+    assert re.findall(r'#define DIS_DEFAULT_FW_REV\s+"([^"]+)"', dis) == [version]

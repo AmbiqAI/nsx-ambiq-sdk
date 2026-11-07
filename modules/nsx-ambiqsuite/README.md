@@ -7,18 +7,19 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 
 ## SDK Version
 
-`sdk/artifact-manifest.yaml` records the unreleased `stable-2026.11.05`
-candidate: upstream `3cfb7d50718e6fb016f1a0128121cb40598109d5`, prepared source
+`sdk/artifact-manifest.yaml` records the `stable-2026.11.05`
+intake: upstream `3cfb7d50718e6fb016f1a0128121cb40598109d5`, prepared source
 `6a2a0c08af553e33716f2e251cb74aa370e2ae0f`. The latter includes the AT110 XSPI
 capacity/alignment source patches, applied before all 73 HAL/BSP archives were
 built. `source_patch_provenance` records the original source and patch hashes.
-The curated headers carry the separate C++ compatibility patches under
-`sdk-intake/patches/stable/`.
+The curated payload carries four patches under `sdk-intake/patches/stable/`:
+compiler detection, unnamed-bitfield qualifiers, C++17 CC312 compatibility,
+and EM9305 full-duplex receive scratch capacity.
 
-The module version remains `5.2.28` pending release preparation. That published
-version's release record describes its historical payload, not this candidate.
-The intake requires the matching EM9305 transport update and hardware
-qualification before release. It is not an official numbered AmbiqSuite release.
+The coordinated distribution version is `5.2.29` (release candidate).
+The matching EM9305 transport fixes and bounded GCC hardware qualification
+are recorded in `release/qualification-5.2.29.md` at the repository root.
+This is not an official numbered AmbiqSuite release.
 
 ## Package Contents
 
