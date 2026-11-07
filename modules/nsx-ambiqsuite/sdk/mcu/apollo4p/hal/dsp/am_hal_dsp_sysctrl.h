@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_DSP_SYSCTRL_H
@@ -33,9 +33,6 @@ extern "C"
 // been flushed.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-// TODO: Do we need to do additional operation to flush PIF to AXI Buffers?
-// #### INTERNAL END ####
 #define _am_hal_dsp_flush_pif2axi()
 
 #define am_hal_sysctrl_membarrier()                                     \

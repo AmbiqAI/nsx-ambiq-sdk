@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -212,6 +212,13 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 //
 //*****************************************************************************
 #define AM_BSP_TP_IOM_MODULE                2
+
+//*****************************************************************************
+//
+// Click Board I2C interface definitions
+//
+//*****************************************************************************
+#define AM_BSP_I2C_CB_IOM_MODULE            1
 
 //*****************************************************************************
 //

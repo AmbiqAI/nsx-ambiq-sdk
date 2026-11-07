@@ -19,7 +19,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -31,21 +31,6 @@ extern "C"
 {
 #endif
 
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-// FPGA-specific defines.
-//
-//*****************************************************************************
-//
-//#warning am_mcu_apollo.h: APOLLO3_FPGA is defined here. Must be removed for silicon.
-//
-// It was defined here (as opposed to config.ini) for those instances when the
-// HAL is pulled into a debug (IDE) environment and needs to be defined there.
-// While defining it in config.ini is preferred, it does not work in the IDE.
-//
-//#define APOLLO3_FPGA    1
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 // AM_PART_APOLLO3_API indicates that this device uses the Apollo3 API.

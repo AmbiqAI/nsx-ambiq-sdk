@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_COMMON_H
@@ -51,9 +51,6 @@ extern "C"
 //*****************************************************************************
 typedef struct
 {
-// #### INTERNAL BEGIN ####
-// todo: After defining this structure, combine all the fields in one byte/word
-// #### INTERNAL END ####
     //! 5 bits: from 0 to 31(the actual DSP interrupt number)
     uint8_t intNo;
 

@@ -11,7 +11,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -19,10 +19,6 @@
 
 #include "stdint.h"
 
-// #### INTERNAL BEGIN ####
-// Information about the memory map comes from TBIRD-80.
-//
-// #### INTERNAL END ####
 // ****************************************************************************
 // RAM Memory Map:
 //  TCM:                             384KB      0x10000000 - 0x1005FFFF
@@ -47,26 +43,6 @@
 #define EXTRAM_MAX_SIZE                         (0)
 #define SSRAM1_MAX_SIZE                         (0)
 
-// #### INTERNAL BEGIN ####
-#if 0 // These are valid for Apollo4P. Apollo4L removes extended and SSRAM1.
-//
-// Extended RAM address space.
-// DSP0 layout is exactly as Apollo4b. DSP1RAMs were replaced in Apollo4p with SSRAM1.
-//
-#define EXTRAM_BASEADDR                         (SSRAM0_BASEADDR + SSRAM0_MAX_SIZE)
-#define DSP0IRAM_BASEADDR                       EXTRAM_BASEADDR
-#define DSP0IRAM_MAX_SIZE                       (128UL * 1024UL)
-#define DSP0DRAM_BASEADDR                       (DSP0IRAM_BASEADDR + DSP0IRAM_MAX_SIZE)
-#define DSP0DRAM_MAX_SIZE                       (256UL * 1024UL)
-#define EXTRAM_MAX_SIZE                         (DSP0IRAM_MAX_SIZE + DSP0DRAM_MAX_SIZE)
-
-//
-// SSRAM1 address space
-//
-#define SSRAM1_BASEADDR                         (EXTRAM_BASEADDR + EXTRAM_MAX_SIZE)
-#define SSRAM1_MAX_SIZE                         (1024UL * 1024UL)
-#endif // 0
-// #### INTERNAL END ####
 //
 // RAM sizes.
 // NONTCM_MAX_SIZE is the total of contiguous RAM after TCM (mix of SSRAM and Extended)

@@ -66,7 +66,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include "am_devices_tas2560.h"
@@ -396,6 +396,8 @@ const static uint32_t p_tas2560_mute_data[] = {
 //*****************************************************************************
 static void *g_tas2560_IOMHandle = NULL;
 
+#define TAS2560_MAX_WRITE_LEN 128
+
 //*****************************************************************************
 //
 // Local functions public.
@@ -427,7 +429,12 @@ static uint32_t tas2560_write(uint8_t chip_addr, uint8_t reg_addr,
         return AM_DEVICES_TAS2560_STATUS_FAIL;
     }
 
-    uint8_t send_buffer[sizeof(reg_addr) + 32 + length];
+    if (length > TAS2560_MAX_WRITE_LEN)
+    {
+        return AM_DEVICES_TAS2560_STATUS_OUT_OF_RANGE;
+    }
+
+    uint8_t send_buffer[sizeof(reg_addr) + TAS2560_MAX_WRITE_LEN];
     send_buffer[0] = reg_addr; // register address
     memcpy(send_buffer + 1, buffer, length);
 

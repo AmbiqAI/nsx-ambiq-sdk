@@ -18,7 +18,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -121,7 +121,7 @@ static am_hal_iom_config_t g_amHalIomConfig =
     .eInterfaceMode     = AM_HAL_IOM_SPI_MODE,
     .ui32ClockFreq      = 8000000ul,
     .eSpiMode           = AM_HAL_IOM_SPI_MODE_0,
-#if defined (AM_PART_APOLLO5_API)|| defined(AM_PART_ATOMIQ110)
+#if defined (AM_PART_APOLLO5_API) || defined(AM_PART_ATOMIQ110)
     .pNBTxnBuf          = NULL,
     .ui32NBTxnBufLength = 0,
 #else
@@ -176,7 +176,7 @@ am_devices_adxl363_init(am_devices_adxl363_t *psDevice)
         return AM_DEVICES_ADXL363_ERROR;
     }
 
-#if defined (AM_PART_APOLLO5_API)|| defined(AM_PART_ATOMIQ110)
+#if defined (AM_PART_APOLLO5_API) || defined(AM_PART_ATOMIQ110)
     g_amHalIomConfig.pNBTxnBuf = psDevice->pNBTxnBuf;
     g_amHalIomConfig.ui32NBTxnBufLength = psDevice->ui32NBTxnBufLength;
 #endif

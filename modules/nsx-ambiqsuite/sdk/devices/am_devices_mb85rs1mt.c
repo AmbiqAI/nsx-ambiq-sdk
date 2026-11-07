@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -683,13 +683,6 @@ am_devices_mb85rs1mt_blocking_read(void *pHandle, uint8_t *pui8RxBuffer,
     // Write the command to the device.
     //
 
-// #### INTERNAL BEGIN ####
-    // Corvette RX HW bug, CORVETTE-874. 0-byte xfer must be TX.
-    // This HW bug should be covered in the HAL, so test the HAL fix here by
-    // attempting to do a 0-byte RX transfer.
-    // TODO: What is the errata number?
-//  Transaction.eDirection      = AM_HAL_IOM_TX;
-// #### INTERNAL END ####
     Transaction.eDirection      = AM_HAL_IOM_RX;
     Transaction.ui32InstrLen    = 1;
 #if (defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || \
@@ -765,12 +758,6 @@ am_devices_mb85rs1mt_nonblocking_read(void *pHandle, uint8_t *pui8RxBuffer,
     // This one needs to keep CE asserted (via continue).
     //
 
-// #### INTERNAL BEGIN ####
-    // Corvette RX HW bug, CORVETTE-874. 0-byte xfer must be TX.
-    // This HW bug should be covered in the HAL, so test the HAL fix here by
-    // attempting to do a 0-byte RX transfer.
-//  Transaction.eDirection      = AM_HAL_IOM_TX;
-// #### INTERNAL END ####
     Transaction.eDirection      = AM_HAL_IOM_RX;
     Transaction.ui32InstrLen    = 1;
 #if (defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L) || \

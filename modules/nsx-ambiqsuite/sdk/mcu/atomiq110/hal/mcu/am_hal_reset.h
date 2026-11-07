@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RSTGEN_H
@@ -38,12 +38,12 @@ extern "C"
 //**************************************
 typedef enum
 {
-    AM_HAL_RESET_BROWNOUT_HIGH_ENABLE,
-    AM_HAL_RESET_WDT_RESET_ENABLE,
-    AM_HAL_RESET_SECURE_WDT_ENABLE,
-    AM_HAL_RESET_BROWNOUT_HIGH_DISABLE,
-    AM_HAL_RESET_WDT_RESET_DISABLE,
-    AM_HAL_RESET_SECURE_WDT_DISABLE
+    // Enables
+    AM_HAL_RESET_WDT_RESET_ENABLE,      // [1:1]
+    AM_HAL_RESET_SECURE_WDT_ENABLE,     // [2:2]
+    // Disables
+    AM_HAL_RESET_WDT_RESET_DISABLE,     // [1:1]
+    AM_HAL_RESET_SECURE_WDT_DISABLE     // [2:2]
 } am_hal_reset_configure_e;
 
 //**************************************
@@ -64,28 +64,52 @@ typedef enum
 //**************************************
 typedef enum
 {
-    AM_HAL_RESET_STATUS_EXTERNAL        = RSTGEN_STAT_EXRSTAT_Msk,
-    AM_HAL_RESET_STATUS_POA             = RSTGEN_STAT_POASTAT_Msk,
-    AM_HAL_RESET_STATUS_BOR             = RSTGEN_STAT_BORSTAT_Msk,
-    AM_HAL_RESET_STATUS_SWPOR           = RSTGEN_STAT_SWRSTAT_Msk,
-    AM_HAL_RESET_STATUS_SWPOI           = RSTGEN_STAT_POIRSTAT_Msk,
-    AM_HAL_RESET_STATUS_DEBUGGER        = RSTGEN_STAT_DBGRSTAT_Msk,
-    AM_HAL_RESET_STATUS_WDT             = RSTGEN_STAT_WDRSTAT_Msk,
-    AM_HAL_RESET_STATUS_BO18STAT        = RSTGEN_STAT_BO18STAT_Msk,
-    AM_HAL_RESET_STATUS_BO22STAT        = RSTGEN_STAT_BO22STAT_Msk,
-    AM_HAL_RESET_STATUS_BOCSTAT         = RSTGEN_STAT_BOCSTAT_Msk,
-    AM_HAL_RESET_STATUS_BOFSTAT         = RSTGEN_STAT_BOFSTAT_Msk,
-    AM_HAL_RESET_STATUS_BOSSTAT         = RSTGEN_STAT_BOSSTAT_Msk,
-    AM_HAL_RESET_STATUS_BOCLVSTAT       = RSTGEN_STAT_BOCLVSTAT_Msk,
-    AM_HAL_RESET_STATUS_BORFSTAT        = RSTGEN_STAT_BORFSTAT_Msk,
-    AM_HAL_RESET_STATUS_AIRCRSTAT       = RSTGEN_STAT_AIRCRSTAT_Msk,
-    AM_HAL_RESET_STATUS_SECUREWDRSTAT   = RSTGEN_STAT_SECUREWDRSTAT_Msk,
-    AM_HAL_RESET_STATUS_CM4TIMEOUTSTAT  = RSTGEN_STAT_CM4TIMEOUTSTAT_Msk,
-    AM_HAL_RESET_STATUS_EXRLSTAT        = RSTGEN_STAT_EXRLSTAT_Msk,
-    AM_HAL_RESET_STATUS_RETSTAT         = RSTGEN_STAT_RETSTAT_Msk,
+    AM_HAL_RESET_STATUS_EXTERNAL        = RSTGEN_STAT_EXRSTAT_Msk,          //  [0] Short External Reset (POR)
+    AM_HAL_RESET_STATUS_POA             = RSTGEN_STAT_POASTAT_Msk,          //  [1] Power On Analog Reset (POA)
+    AM_HAL_RESET_STATUS_BOR             = RSTGEN_STAT_BORSTAT_Msk,          //  [2] Brown-Out Reset
+    AM_HAL_RESET_STATUS_SWPOR           = RSTGEN_STAT_SWRSTAT_Msk,          //  [3] Software Power On Reset (SWPOR)
+    AM_HAL_RESET_STATUS_SWPOI           = RSTGEN_STAT_POIRSTAT_Msk,         //  [4] Software Power On Initialize (SWPOI)
+    AM_HAL_RESET_STATUS_DEBUGGER        = RSTGEN_STAT_DBGRSTAT_Msk,         //  [5] Debugger Reset
+    AM_HAL_RESET_STATUS_WDT             = RSTGEN_STAT_WDRSTAT_Msk,          //  [6] Watchdog Timer Reset
+    AM_HAL_RESET_STATUS_BO18STAT        = RSTGEN_STAT_BO18STAT_Msk,         //  [7] Brownout 1.8v unregulated supply
+    AM_HAL_RESET_STATUS_BOSSTAT         = RSTGEN_STAT_BOSSTAT_Msk,          //  [8] VDDS Analog Brownout Event
+    AM_HAL_RESET_STATUS_BOFHSTAT        = RSTGEN_STAT_BOFHSTAT_Msk,         //  [9] VDDFH Analog Brownout Event
+    AM_HAL_RESET_STATUS_BOFSTAT         = RSTGEN_STAT_BOFSTAT_Msk,          // [10] VDDF Analog Brownout Event
+    AM_HAL_RESET_STATUS_BOCULVSTAT      = RSTGEN_STAT_BOCULVSTAT_Msk,       // [11] VDDC_ULV Analog Brownout Event
+    AM_HAL_RESET_STATUS_BOCLVSTAT       = RSTGEN_STAT_BOCLVSTAT_Msk,        // [12] VDDC_LV Analog Brownout Event
+    AM_HAL_RESET_STATUS_BOCSTAT         = RSTGEN_STAT_BOCSTAT_Msk,          // [13] VDDC Analog Brownout Event
+    AM_HAL_RESET_STATUS_AIRCRSTAT       = RSTGEN_STAT_AIRCRSTAT_Msk,        // [14] System reset request (CM55 SYSRESETREQ)
+    AM_HAL_RESET_STATUS_SECUREWDRSTAT   = RSTGEN_STAT_SECUREWDRSTAT_Msk,    // [15] Secure watchdog Timer Reset
+    AM_HAL_RESET_STATUS_CM4TIMEOUTSTAT  = RSTGEN_STAT_CM4TIMEOUTSTAT_Msk,   // [16] Unused
+    AM_HAL_RESET_STATUS_EXRLSTAT        = RSTGEN_STAT_EXRLSTAT_Msk,         // [17] Long External Reset (POI)
+    AM_HAL_RESET_STATUS_RETSTAT         = RSTGEN_STAT_RETSTAT_Msk,          // [18] Retention Status, RW
+    AM_HAL_RESET_STATUS_BO22STAT        = RSTGEN_STAT_BO22STAT_Msk,         // [19] Unused
+    AM_HAL_RESET_STATUS_BORRAMSTAT      = RSTGEN_STAT_BORRAMSTAT_Msk,       // [20] RRAM brownout
 } am_hal_reset_status_e;
 
-#define AM_HAL_RESET_STATUS_MASK    0x4FFFF
+
+#define AM_HAL_RESET_STATUS_MASK    (                                                           \
+        RSTGEN_STAT_EXRSTAT_Msk         |   \
+        RSTGEN_STAT_POASTAT_Msk         |   \
+        RSTGEN_STAT_BORSTAT_Msk         |   \
+        RSTGEN_STAT_SWRSTAT_Msk         |   \
+        RSTGEN_STAT_POIRSTAT_Msk        |   \
+        RSTGEN_STAT_DBGRSTAT_Msk        |   \
+        RSTGEN_STAT_WDRSTAT_Msk         |   \
+        RSTGEN_STAT_BO18STAT_Msk        |   \
+        RSTGEN_STAT_BOSSTAT_Msk         |   \
+        RSTGEN_STAT_BOFHSTAT_Msk        |   \
+        RSTGEN_STAT_BOFSTAT_Msk         |   \
+        RSTGEN_STAT_BOCULVSTAT_Msk      |   \
+        RSTGEN_STAT_BOCLVSTAT_Msk       |   \
+        RSTGEN_STAT_BOCSTAT_Msk         |   \
+        RSTGEN_STAT_AIRCRSTAT_Msk       |   \
+        RSTGEN_STAT_SECUREWDRSTAT_Msk   |   \
+        RSTGEN_STAT_CM4TIMEOUTSTAT_Msk  |   \
+        RSTGEN_STAT_EXRLSTAT_Msk        |   \
+        RSTGEN_STAT_RETSTAT_Msk         |   \
+        RSTGEN_STAT_BO22STAT_Msk        |   \
+        RSTGEN_STAT_BORRAMSTAT_Msk )
 
 //**************************************
 //
@@ -95,34 +119,39 @@ typedef enum
 typedef struct
 {
     am_hal_reset_status_e
-            eStatus;         // Return all status bits from RSTGEN.STAT
-    bool    bEXTStat;        // External reset
-    bool    bPOAStat;        // Power-On reset
-    bool    bBORStat;        // Brown-Out reset
-    bool    bSWPORStat;      // SW Power-On reset
-    bool    bSWPOIStat;      // SW Power On Initialization reset
-    bool    bDBGRStat;       // Debugger reset
-    bool    bWDTStat;        // Watch Dog Timer reset
-    bool    bBO18Stat;       // 1.8V Unregulated Supply Brownout event
-    bool    bBO22Stat;       // 2.2V Unregulated Supply Brownout event
-    bool    bBOCStat;        // VDDC Analog Brownout Event event
-    bool    bBOFStat;        // VDDF Analog Brownout Event event
-    bool    bBOSStat;        // VDDS Analog Brownout Event event
-    bool    bBOCLVStat;      // VDDC_LV Analog Brownout Event event
-    bool    bBORFStat;       // VDDRF Analog Brownout Event event
-    bool    bAIRCRStat;      // AIRCR SYSRESETREQ
-    bool    bSecureWdtRst;   // Reset was initiated by a Secure Watchdog Timer Reset
-    bool    bCM4TimeoutStat; // CM4 timeout (AXI quiescence timout from CM4)
-    bool    bEXRLStat;       // Reset was initiated by a Long External Reset
-    bool    bRETStat;        // indicates that the memory contents are retained
+            eStatus;            // Return all status bits from RSTGEN.STAT
+    bool    bEXTStat;           // Short External Reset (POR)
+    bool    bPOAStat;           // Power On Analog Reset (POA)
+    bool    bBORStat;           // Brown-Out Reset
+    bool    bSWPORStat;         // Software Power On Reset (SWPOR)
+    bool    bSWPOIStat;         // Software Power On Initialize (SWPOI)
+    bool    bDBGRStat;          // Debugger Reset
+    bool    bWDTStat;           // Watchdog Timer Reset
+    bool    bBO18Stat;          // Brownout 1.8v unregulated supply
+    bool    bBOSStat;           // VDDS Analog Brownout Event
+    bool    bBOFHStat;          // VDDFH Analog Brownout Event
+    bool    bBOFStat;           // VDDF Analog Brownout Event
+    bool    bBOCULVStat;        // VDDC_ULV Analog Brownout Event
+    bool    bBOCLVStat;         // VDDC_LV Analog Brownout Event
+    bool    bBOCStat;           // VDDC Analog Brownout Event
+    bool    bAIRCRStat;         // System reset request (CM55 SYSRESETREQ)
+    bool    bSecureWdtRst;      // Secure watchdog Timer Reset
+    bool    bCM4TimeoutStat;    // Unused
+    bool    bEXRLStat;          // Long External Reset (POI)
+    bool    bRETStat;           // Retention Status, RW
+    bool    bBO22Stat;          // Unused
+    bool    bBORRAMStat;        // RRAM brownout
 } am_hal_reset_status_t;
 
 //
 //! Define interrupt bit(s)
 //
-#define AM_HAL_RESET_INTERRUPT_BODH     RSTGEN_INTEN_BODH_Msk
+#define AM_HAL_RESET_INTERRUPT_BODH     RSTGEN_INTEN_BODDIGS_Msk
 
+
+//
 // Global variable used to capture the reset status
+//
 extern uint32_t gAmHalResetStatus;
 
 //*****************************************************************************
@@ -132,9 +161,7 @@ extern uint32_t gAmHalResetStatus;
 //! This function will configure the specified reset conditions.
 //!
 //! @param eConfigure - One of configuration enumerations.
-//!     AM_HAL_RESET_BROWNOUT_HIGH_ENABLE
 //!     AM_HAL_RESET_WDT_RESET_ENABLE
-//!     AM_HAL_RESET_BROWNOUT_HIGH_DISABLE
 //!     AM_HAL_RESET_WDT_RESET_DISABLE
 //!
 //! @return status - generic or interface specific status.

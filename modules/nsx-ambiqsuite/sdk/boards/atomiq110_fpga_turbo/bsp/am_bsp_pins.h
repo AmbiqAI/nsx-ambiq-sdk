@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -617,6 +617,94 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_ITM_SWO;
 
 //*****************************************************************************
 //
+// XSPI_BRIDGE_SCK pin: xSPI bridge clock.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SCK         0
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SCK;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO0 pin: xSPI bridge data 0.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO0        1
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO0;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO1 pin: xSPI bridge data 1.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO1        2
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO1;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_CSN pin: xSPI bridge chip select.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_CSN         3
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_CSN;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO2 pin: xSPI bridge data 2.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO2        140
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO2;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO3 pin: xSPI bridge data 3.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO3        141
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO3;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO4 pin: xSPI bridge data 4.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO4        142
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO4;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO5 pin: xSPI bridge data 5.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO5        143
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO5;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO6 pin: xSPI bridge data 6.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO6        144
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO6;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_SIO7 pin: xSPI bridge data 7.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_SIO7        145
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_SIO7;
+
+//*****************************************************************************
+//
+// XSPI_BRIDGE_DQS pin: xSPI bridge data strobe.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPI_BRIDGE_DQS         12
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI_BRIDGE_DQS;
+
+//*****************************************************************************
+//
 // I2S0_DATA pin: I2S0 Bidirectional Data.
 //
 //*****************************************************************************
@@ -716,7 +804,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM0_DATA;
 // PDMI2S0_SDOUT pin: PDMI2S 0 Data Out Signal.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PDMI2S0_SDOUT           19
+#define AM_BSP_GPIO_PDMI2S0_SDOUT           17
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDMI2S0_SDOUT;
 
 //*****************************************************************************
@@ -740,7 +828,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDMI2S0_CLK;
 // PDM1_CLK pin: PDM 1 Clock Signal.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PDM1_CLK                99
+#define AM_BSP_GPIO_PDM1_CLK                98
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM1_CLK;
 
 //*****************************************************************************
@@ -748,7 +836,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM1_CLK;
 // PDM1_DATA pin: PDM 1 Data Signal.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PDM1_DATA               100
+#define AM_BSP_GPIO_PDM1_DATA               99
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM1_DATA;
 
 //*****************************************************************************
@@ -756,7 +844,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM1_DATA;
 // PDM2_CLK pin: PDM 2 Clock Signal.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PDM2_CLK                101
+#define AM_BSP_GPIO_PDM2_CLK                100
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM2_CLK;
 
 //*****************************************************************************
@@ -764,200 +852,288 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM2_CLK;
 // PDM2_DATA pin: PDM 2 Data Signal.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PDM2_DATA               102
+#define AM_BSP_GPIO_PDM2_DATA               101
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PDM2_DATA;
+
+//*****************************************************************************
+//
+// XSPIM1_CE0 pin: XSPIM1 chip select 0
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_CE0              42
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_CE0;
+
+//*****************************************************************************
+//
+// XSPIM1_CE1 pin: XSPIM1 chip select 1
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_CE1              43
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_CE1;
+
+//*****************************************************************************
+//
+// XSPIM1_D0 pin: XSPIM1 data 0.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D0               37
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D0;
+
+//*****************************************************************************
+//
+// XSPIM1_D1 pin: XSPIM1 data 1.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D1               38
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D1;
+
+//*****************************************************************************
+//
+// XSPIM1_D2 pin: XSPIM1 data 2.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D2               39
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D2;
+
+//*****************************************************************************
+//
+// XSPIM1_D3 pin: XSPIM1 data 3.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D3               40
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D3;
+
+//*****************************************************************************
+//
+// XSPIM1_D4 pin: XSPIM1 data 4.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D4               78
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D4;
+
+//*****************************************************************************
+//
+// XSPIM1_D5 pin: XSPIM1 data 5.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D5               79
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D5;
+
+//*****************************************************************************
+//
+// XSPIM1_D6 pin: XSPIM1 data 6.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D6               80
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D6;
+
+//*****************************************************************************
+//
+// XSPIM1_D7 pin: XSPIM1 data 7.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D7               81
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D7;
+
+//*****************************************************************************
+//
+// XSPIM1_SCK pin: XSPIM1 clock.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_SCK              82
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_SCK;
+
+//*****************************************************************************
+//
+// XSPIM1_DQSDM pin: XSPIM1 DQS DM.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_DQSDM            41
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_DQSDM;
+
+//*****************************************************************************
+//
+// XSPIM1_D8 pin: XSPIM1 data 8.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D8               83
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D8;
+
+//*****************************************************************************
+//
+// XSPIM1_D9 pin: XSPIM1 data 9.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D9               84
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D9;
+
+//*****************************************************************************
+//
+// XSPIM1_D10 pin: XSPIM1 data 10.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D10              85
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D10;
+
+//*****************************************************************************
+//
+// XSPIM1_D11 pin: XSPIM1 data 11.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D11              86
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D11;
+
+//*****************************************************************************
+//
+// XSPIM1_D12 pin: XSPIM1 data 12.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D12              88
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D12;
+
+//*****************************************************************************
+//
+// XSPIM1_D13 pin: XSPIM1 data 13.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D13              89
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D13;
+
+//*****************************************************************************
+//
+// XSPIM1_D14 pin: XSPIM1 data 14.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D14              90
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D14;
+
+//*****************************************************************************
+//
+// XSPIM1_D15 pin: XSPIM1 data 15.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_D15              91
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_D15;
+
+//*****************************************************************************
+//
+// XSPIM1_DQS1DM1 pin: XSPIM1 DQS1 DM1.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_XSPIM1_DQS1DM1          87
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM1_DQS1DM1;
 
 //*****************************************************************************
 //
 // PSRAM_RESET pin: Winbond PSRAM Reset.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_PSRAM_RESET             58
+#define AM_BSP_GPIO_PSRAM_RESET             66
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_PSRAM_RESET;
 
 //*****************************************************************************
 //
-// MSPI1_CE0 pin: MSPI1 chip select 0
+// XSPIM2_CE0 pin: XSPIM2 chip select 0
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_CE0               42
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_CE0;
+#define AM_BSP_GPIO_XSPIM2_CE0              127
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_CE0;
 
 //*****************************************************************************
 //
-// MSPI1_CE1 pin: MSPI1 chip select 1
+// XSPIM2_CE1 pin: XSPIM2 chip select 1
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_CE1               49
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_CE1;
+#define AM_BSP_GPIO_XSPIM2_CE1              128
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_CE1;
 
 //*****************************************************************************
 //
-// MSPI1_D0 pin: NOR Flash I/F using MSPI1 data 0.
+// XSPIM2_D0 pin: NOR Flash I/F using XSPIM2 data 0.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_D0                37
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_D0;
+#define AM_BSP_GPIO_XSPIM2_D0               56
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D0;
 
 //*****************************************************************************
 //
-// MSPI1_D1 pin: NOR Flash I/F using MSPI1 data 1.
+// XSPIM2_D1 pin: NOR Flash I/F using XSPIM2 data 1.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_D1                38
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_D1;
+#define AM_BSP_GPIO_XSPIM2_D1               57
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D1;
 
 //*****************************************************************************
 //
-// MSPI1_D2 pin: NOR Flash I/F using MSPI1 data 2.
+// XSPIM2_D2 pin: NOR Flash I/F using XSPIM2 data 2.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_D2                39
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_D2;
+#define AM_BSP_GPIO_XSPIM2_D2               58
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D2;
 
 //*****************************************************************************
 //
-// MSPI1_D3 pin: NOR Flash I/F using MSPI1 data 3.
+// XSPIM2_D3 pin: NOR Flash I/F using XSPIM2 data 3.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_D3                40
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_D3;
+#define AM_BSP_GPIO_XSPIM2_D3               59
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D3;
 
 //*****************************************************************************
 //
-// MSPI1_SCK pin: NOR Flash I/F using MSPI1 clock.
+// XSPIM2_D4 pin: NOR Flash I/F using XSPIM2 data 4.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_SCK               79
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_SCK;
+#define AM_BSP_GPIO_XSPIM2_D4               93
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D4;
 
 //*****************************************************************************
 //
-// MSPI1_DQSDM pin: NOR Flash I/F using MSPI1 DQS.
+// XSPIM2_D5 pin: NOR Flash I/F using XSPIM2 data 5.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_DQSDM             80
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_DQSDM;
+#define AM_BSP_GPIO_XSPIM2_D5               94
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D5;
 
 //*****************************************************************************
 //
-// MSPI1_RST pin: NOR Flash Reset.
+// XSPIM2_D6 pin: NOR Flash I/F using XSPIM2 data 6.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI1_RST               119
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI1_RST;
+#define AM_BSP_GPIO_XSPIM2_D6               95
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D6;
 
 //*****************************************************************************
 //
-// MSPI2_CE0 pin: MSPI2 chip select 0
+// XSPIM2_D7 pin: NOR Flash I/F using XSPIM2 data 7.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_CE0               134
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_CE0;
+#define AM_BSP_GPIO_XSPIM2_D7               96
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_D7;
 
 //*****************************************************************************
 //
-// MSPI2_CE1 pin: MSPI2 chip select 1
+// XSPIM2_SCK pin: NOR Flash I/F using XSPIM2 clock.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_CE1               133
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_CE1;
+#define AM_BSP_GPIO_XSPIM2_SCK              60
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_SCK;
 
 //*****************************************************************************
 //
-// MSPI2_D0 pin: NOR Flash I/F using MSPI2 data 0.
+// XSPIM2_DQSDM pin: NOR Flash I/F using XSPIM2 DQS.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D0                56
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D0;
+#define AM_BSP_GPIO_XSPIM2_DQSDM            97
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_DQSDM;
 
 //*****************************************************************************
 //
-// MSPI2_D1 pin: NOR Flash I/F using MSPI2 data 1.
+// XSPIM2_RST pin: NOR Flash Reset.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D1                57
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D1;
-
-//*****************************************************************************
-//
-// MSPI2_D2 pin: NOR Flash I/F using MSPI2 data 2.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D2                58
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D2;
-
-//*****************************************************************************
-//
-// MSPI2_D3 pin: NOR Flash I/F using MSPI2 data 3.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D3                59
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D3;
-
-//*****************************************************************************
-//
-// XSPI2_D4 pin: NOR Flash I/F using MSPI2 data 4.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_XSPI2_D4                94
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPI2_D4;
-
-//*****************************************************************************
-//
-// MSPI2_D5 pin: NOR Flash I/F using MSPI2 data 5.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D5                95
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D5;
-
-//*****************************************************************************
-//
-// MSPI2_D6 pin: NOR Flash I/F using MSPI2 data 6.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D6                96
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D6;
-
-//*****************************************************************************
-//
-// MSPI2_D7 pin: NOR Flash I/F using MSPI2 data 7.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D7                97
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D7;
-
-//*****************************************************************************
-//
-// MSPI2_SCK pin: NOR Flash I/F using MSPI2 clock.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_SCK               60
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_SCK;
-
-//*****************************************************************************
-//
-// MSPI2_DQSDM pin: NOR Flash I/F using MSPI2 DQS.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_DQSDM             98
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_DQSDM;
-
-//*****************************************************************************
-//
-// MSPI2_RST pin: NOR Flash Reset.
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_RST               119
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_RST;
-
-//*****************************************************************************
-//
-// MSPI2_D4_CLK pin: MSPI2 data 4 replace MSPI2_8(CLK).
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_MSPI2_D4_CLK            94
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_MSPI2_D4_CLK;
+#define AM_BSP_GPIO_XSPIM2_RST              44
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_XSPIM2_RST;
 
 //*****************************************************************************
 //
@@ -1012,7 +1188,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_CMD;
 // SDIO0_DAT4 pin: eMMC0 I/F using SDIO data 4.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_SDIO0_DAT4              145
+#define AM_BSP_GPIO_SDIO0_DAT4              142
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT4;
 
 //*****************************************************************************
@@ -1020,7 +1196,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT4;
 // SDIO0_DAT5 pin: eMMC0 I/F using SDIO data 5.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_SDIO0_DAT5              146
+#define AM_BSP_GPIO_SDIO0_DAT5              143
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT5;
 
 //*****************************************************************************
@@ -1028,7 +1204,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT5;
 // SDIO0_DAT6 pin: eMMC0 I/F using SDIO data 6.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_SDIO0_DAT6              147
+#define AM_BSP_GPIO_SDIO0_DAT6              144
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT6;
 
 //*****************************************************************************
@@ -1036,7 +1212,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT6;
 // SDIO0_DAT7 pin: eMMC0 I/F using SDIO data 7.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_SDIO0_DAT7              148
+#define AM_BSP_GPIO_SDIO0_DAT7              145
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_SDIO0_DAT7;
 
 //*****************************************************************************
@@ -1100,7 +1276,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_SPI_SCK;
 // DISP_SPI_CS_N pin: Display SPI CS.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_SPI_CS_N           101
+#define AM_BSP_GPIO_DISP_SPI_CS_N           13
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_SPI_CS_N;
 
 //*****************************************************************************
@@ -1108,7 +1284,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_SPI_CS_N;
 // DISP_QSPI_D0 pin: Display QSPI Data Out 0.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_D0            0
+#define AM_BSP_GPIO_DISP_QSPI_D0            104
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D0;
 
 //*****************************************************************************
@@ -1116,7 +1292,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D0;
 // DISP_QSPI_D1 pin: Display QSPI Data Out 1.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_D1            1
+#define AM_BSP_GPIO_DISP_QSPI_D1            105
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D1;
 
 //*****************************************************************************
@@ -1124,7 +1300,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D1;
 // DISP_QSPI_D2 pin: Display QSPI Data Out 2.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_D2            3
+#define AM_BSP_GPIO_DISP_QSPI_D2            106
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D2;
 
 //*****************************************************************************
@@ -1132,7 +1308,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D2;
 // DISP_QSPI_D3 pin: Display QSPI Data Out 3.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_D3            4
+#define AM_BSP_GPIO_DISP_QSPI_D3            107
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D3;
 
 //*****************************************************************************
@@ -1140,7 +1316,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_D3;
 // DISP_QSPI_SCK pin: Display QSPI Clock.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_SCK           2
+#define AM_BSP_GPIO_DISP_QSPI_SCK           108
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_SCK;
 
 //*****************************************************************************
@@ -1148,7 +1324,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_SCK;
 // DISP_QSPI_CS_N pin: Display CSX chip select.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_QSPI_CS_N          101
+#define AM_BSP_GPIO_DISP_QSPI_CS_N          109
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_CS_N;
 
 //*****************************************************************************
@@ -1156,7 +1332,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_QSPI_CS_N;
 // DISP_GEN pin: GATE ENABLE SIGNAL
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_GEN                105
+#define AM_BSP_GPIO_DISP_GEN                104
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_GEN;
 
 //*****************************************************************************
@@ -1164,7 +1340,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_GEN;
 // DISP_INTB pin: INITIAL SIGNAL FOR BINARY/GATE DRIVER
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_INTB               106
+#define AM_BSP_GPIO_DISP_INTB               105
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_INTB;
 
 //*****************************************************************************
@@ -1172,7 +1348,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_INTB;
 // DISP_R1 pin: RED OF ODD PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_R1                 107
+#define AM_BSP_GPIO_DISP_R1                 106
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_R1;
 
 //*****************************************************************************
@@ -1180,7 +1356,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_R1;
 // DISP_R2 pin: RED OF EVEN PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_R2                 108
+#define AM_BSP_GPIO_DISP_R2                 107
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_R2;
 
 //*****************************************************************************
@@ -1188,7 +1364,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_R2;
 // DISP_G1 pin: GREEN OF ODD PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_G1                 109
+#define AM_BSP_GPIO_DISP_G1                 108
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_G1;
 
 //*****************************************************************************
@@ -1196,7 +1372,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_G1;
 // DISP_G2 pin: GREEN OF EVEN PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_G2                 110
+#define AM_BSP_GPIO_DISP_G2                 109
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_G2;
 
 //*****************************************************************************
@@ -1204,7 +1380,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_G2;
 // DISP_B1 pin: BLUE OF ODD PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_B1                 111
+#define AM_BSP_GPIO_DISP_B1                 110
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_B1;
 
 //*****************************************************************************
@@ -1212,7 +1388,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_B1;
 // DISP_B2 pin: BLUE OF EVEN PIXELS
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_B2                 112
+#define AM_BSP_GPIO_DISP_B2                 111
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_B2;
 
 //*****************************************************************************
@@ -1220,7 +1396,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_B2;
 // DISP_BSP pin: START SIGNAL OF BINARY DRIVER
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_BSP                113
+#define AM_BSP_GPIO_DISP_BSP                112
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_BSP;
 
 //*****************************************************************************
@@ -1228,7 +1404,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_BSP;
 // DISP_GSP pin: START SIGNAL OF GATE DRIVER
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_GSP                114
+#define AM_BSP_GPIO_DISP_GSP                113
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_GSP;
 
 //*****************************************************************************
@@ -1236,7 +1412,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_GSP;
 // DISP_BCK pin: CLOCK OF BINARY DRIVER
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_BCK                115
+#define AM_BSP_GPIO_DISP_BCK                114
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_BCK;
 
 //*****************************************************************************
@@ -1244,7 +1420,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_BCK;
 // DISP_GCK pin: CLOCK OF GATE DRIVER
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_GCK                116
+#define AM_BSP_GPIO_DISP_GCK                115
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_GCK;
 
 //*****************************************************************************
@@ -1257,19 +1433,19 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_VA;
 
 //*****************************************************************************
 //
-// DISP_VB pin: INPHASE SIGNAL TO VCOM
-//
-//*****************************************************************************
-#define AM_BSP_GPIO_DISP_VB                 118
-extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_VB;
-
-//*****************************************************************************
-//
 // DISP_VCOM pin: PHASE SIGNAL TO VCOM
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_VCOM               119
+#define AM_BSP_GPIO_DISP_VCOM               118
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_VCOM;
+
+//*****************************************************************************
+//
+// DISP_VB pin: INPHASE SIGNAL TO VCOM
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_DISP_VB                 119
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_VB;
 
 //*****************************************************************************
 //
@@ -1300,7 +1476,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_TOUCH_INT;
 // DISP_DEVICE_TE pin: DISPLAY TE PIN
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_DEVICE_TE          10
+#define AM_BSP_GPIO_DISP_DEVICE_TE          103
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_DEVICE_TE;
 
 //*****************************************************************************
@@ -1308,7 +1484,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_DEVICE_TE;
 // DISP_DEVICE_RST pin: Display Device Reset.
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_DEVICE_RST         90
+#define AM_BSP_GPIO_DISP_DEVICE_RST         31
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_DEVICE_RST;
 
 //*****************************************************************************
@@ -1316,7 +1492,7 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_DEVICE_RST;
 // DISP_DSI_TE pin: defined it avoid error
 //
 //*****************************************************************************
-#define AM_BSP_GPIO_DISP_DSI_TE             10
+#define AM_BSP_GPIO_DISP_DSI_TE             103
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_DISP_DSI_TE;
 
 //*****************************************************************************
@@ -1334,6 +1510,54 @@ extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_CLKOUT;
 //*****************************************************************************
 #define AM_BSP_GPIO_FLASH_RESET             119
 extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_FLASH_RESET;
+
+//*****************************************************************************
+//
+// I3C0_SCL pin: I3C module 0 clock signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C0_SCL                125
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C0_SCL;
+
+//*****************************************************************************
+//
+// I3C0_SDA pin: I3C module 0 data signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C0_SDA                126
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C0_SDA;
+
+//*****************************************************************************
+//
+// I3C1_SCL pin: I3C module 1 clock signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C1_SCL                119
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C1_SCL;
+
+//*****************************************************************************
+//
+// I3C1_SDA pin: I3C module 1 data signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C1_SDA                120
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C1_SDA;
+
+//*****************************************************************************
+//
+// I3C2_SCL pin: I3C module 2 clock signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C2_SCL                121
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C2_SCL;
+
+//*****************************************************************************
+//
+// I3C2_SDA pin: I3C module 2 data signal.
+//
+//*****************************************************************************
+#define AM_BSP_GPIO_I3C2_SDA                122
+extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_I3C2_SDA;
 
 #ifdef __cplusplus
 }

@@ -93,9 +93,7 @@
 
 //
 // Default STIMER source when nothing else has claimed the block: the HFRC
-// divider tap the register map calls HFRC_488_KHZ. (AM_HAL_STIMER_HFRC_375KHZ
-// is a legacy Apollo3-era alias for that CLKSEL value; the tap really is
-// ~488 kHz on this part.)
+// divider tap the register map calls HFRC_488_KHZ.
 //
 // HFRC was chosen over the 32 kHz crystal deliberately. Both candidates trade
 // one uncertainty for another on the FPGA:
@@ -113,7 +111,7 @@
 // "exactly calibrated, possibly stopped": a mis-scaled deadline still fires,
 // just early or late, whereas a stopped counter never fires at all.
 //
-#define NSX_NPU_TB_STIMER_CFG (AM_HAL_STIMER_HFRC_375KHZ | AM_HAL_STIMER_CFG_RUN)
+#define NSX_NPU_TB_STIMER_CFG (AM_HAL_STIMER_HFRC_488KHZ | AM_HAL_STIMER_CFG_RUN)
 
 //
 // Rate of the virtual clock published to the driver, in ticks per millisecond.
@@ -234,18 +232,13 @@ static uint32_t nsx_npu_tb_clk_hz(am_hal_clkmgr_clock_id_e eClockId, uint32_t ui
 //
 //   HFRC_7_8125MHZ  500 MHz / 64      XTAL_32KHZ  32768 / 1
 //   HFRC_488_KHZ    500 MHz / 1024    XTAL_8KHZ   32768 / 4
-//   HFRC_16MHZ      500 MHz / 31.25   XTAL_2KHZ   32768 / 16
+//                                    XTAL_2KHZ   32768 / 16
 //                                     XTAL_1KHZ   32768 / 32
 //                                     XTAL_512HZ  32768 / 64
 //   LFRC_1KHZ       1 kHz nominal (the register map itself says "uncalibrated")
 //
-// The HFRC_16MHZ ratio is not a power of two, which is unusual for a hardware
-// divider and is the one entry here that the register map does not corroborate
-// beyond the tap's name. This module never *selects* that tap; it only honours
-// it when the application has, so an error there mis-scales the deadline of an
-// application that chose it rather than affecting the default path. The
-// CTIMER-fed taps (CTIMER0/1) run at whatever rate a timer this module does not
-// own produces and are deliberately absent.
+// The current register map has no selector 11 (formerly HFRC_16MHZ).
+// Unsupported selectors and CTIMER-fed taps have no known rate here.
 //
 // Accuracy caveat for atomiq110_fpga_turbo. The FPGA image is far slower than
 // silicon -- cmake/socs/facts/atomiq110.cmake records the turbo core at 25 MHz
@@ -273,7 +266,6 @@ typedef struct
 static const nsx_npu_tb_tap_t g_nsx_npu_tb_hfrc_taps[] = {
     { STIMER_STCFG_CLKSEL_HFRC_7_8125MHZ, 1U,   64U },
     { STIMER_STCFG_CLKSEL_HFRC_488_KHZ,   1U, 1024U },
-    { STIMER_STCFG_CLKSEL_HFRC_16MHZ,     4U,  125U }, // 1 / 31.25
 };
 
 static const nsx_npu_tb_tap_t g_nsx_npu_tb_xtal_taps[] = {
@@ -424,7 +416,6 @@ static uint32_t nsx_npu_tb_source_hz(uint32_t ui32ClkSel)
     {
         case STIMER_STCFG_CLKSEL_HFRC_7_8125MHZ:
         case STIMER_STCFG_CLKSEL_HFRC_488_KHZ:
-        case STIMER_STCFG_CLKSEL_HFRC_16MHZ:
             return nsx_npu_tb_scaled_hz(
                 g_nsx_npu_tb_hfrc_taps,
                 sizeof(g_nsx_npu_tb_hfrc_taps) / sizeof(g_nsx_npu_tb_hfrc_taps[0]),

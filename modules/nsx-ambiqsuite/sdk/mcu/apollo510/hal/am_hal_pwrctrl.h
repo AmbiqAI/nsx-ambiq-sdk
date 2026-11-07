@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -518,8 +518,8 @@ typedef struct
     uint32_t ui32TEMP_CAL_ATE;              // 00
     uint32_t ui32TEMP_CAL_MEASURED;         // 04
     uint32_t ui32TEMP_CAL_ADC_OFFSET;       // 08
+    uint32_t ui32CHIPSUBREV;                // 0C Apollo510
 // #### INTERNAL BEGIN ####
-//  uint32_t ui32CHIPSUBREV;                // 0C Apollo510
 //  uint32_t ui32TRIM_REV;                  // 10
 // #### INTERNAL END ####
     uint32_t ui32FT1_GDR1;                  // 14 Apollo510
@@ -928,7 +928,8 @@ extern uint32_t am_hal_pwrctrl_control(am_hal_pwrctrl_control_e eControl, void *
 //!   transition to a new application, such as the case of a secondary bootloader
 //!   transitioning to an application. Before calling this function, users
 //!   should switch CPU to LP if it is in HP mode, and turn off GPU if it was
-//!   turned on, turn off SDIO if it was turned on.
+//!   turned on, turn off SDIO if it was turned on. For PCM2.2 and later versions,
+//!   besides the requiremnets above, users should also turn off Crypto if it was turned on.
 //!
 //! - For PCM2.0 and previous versions, it is not a must to call this function.
 //!   But users should guarantee the following:

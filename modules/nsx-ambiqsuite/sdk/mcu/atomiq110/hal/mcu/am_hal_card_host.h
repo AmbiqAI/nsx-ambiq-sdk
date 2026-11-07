@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CARD_HOST_H
@@ -111,13 +111,14 @@ typedef enum
 //
 typedef enum
 {
-    AM_HAL_HOST_UHS_NONE = 0,
-    AM_HAL_HOST_UHS_SDR12 = 0,
-    AM_HAL_HOST_UHS_SDR25 = 1,
-    AM_HAL_HOST_UHS_SDR50 = 2,
+    AM_HAL_HOST_UHS_NONE   = 0,
+    AM_HAL_HOST_UHS_SDR12  = 0,
+    AM_HAL_HOST_UHS_SDR25  = 1,
+    AM_HAL_HOST_UHS_SDR50  = 2,
     AM_HAL_HOST_UHS_SDR104 = 3,
-    AM_HAL_HOST_UHS_DDR50 = 4,
-    AM_HAL_HOST_UHS_HS400 = 5,
+    AM_HAL_HOST_UHS_DDR50  = 4,
+    AM_HAL_HOST_UHS_HS400  = 5,
+    AM_HAL_HOST_UHS_HS200  = 6,
 } am_hal_host_uhs_mode_e;
 
 //
@@ -233,11 +234,11 @@ typedef struct am_hal_card_cfg_t
 struct am_hal_card_host_ops
 {
 // #### INTERNAL BEGIN ####
-#ifndef BOOTROM_USE
+#ifndef AM_HAL_BOOTROM_USE
 // #### INTERNAL END ####
     uint32_t (*init)(am_hal_card_host_t *pHost);
 // #### INTERNAL BEGIN ####
-#endif //BOOTROM_USE
+#endif //AM_HAL_BOOTROM_USE
 // #### INTERNAL END ####
     uint32_t (*deinit)(void *pHandle);
     uint32_t (*pwr_ctrl)(void *pHandle, bool bOnOff);
@@ -254,7 +255,7 @@ struct am_hal_card_host_ops
 };
 
 // #### INTERNAL BEGIN ####
-#ifndef BOOTROM_USE
+#ifndef AM_HAL_BOOTROM_USE
 // #### INTERNAL END ####
 //*****************************************************************************
 //
@@ -272,7 +273,7 @@ struct am_hal_card_host_ops
 //*****************************************************************************
 extern am_hal_card_host_t *am_hal_get_card_host(am_hal_host_inst_index_e eIndex, bool bReInit);
 // #### INTERNAL BEGIN ####
-#endif //BOOTROM_USE
+#endif //AM_HAL_BOOTROM_USE
 // #### INTERNAL END ####
 
 //*****************************************************************************

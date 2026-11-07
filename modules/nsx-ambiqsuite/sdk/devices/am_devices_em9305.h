@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_DEVICES_EM9305_H
@@ -139,6 +139,8 @@
 #define HCI_VSC_CRC_CALCULATE_CMD_LENGTH                8
 #define HCI_VSC_NVM_ERASE_PAGE_CMD_LENGTH               2
 #define HCI_VSC_SET_TX_POWER_LEVEL_CMD_LENGTH           1
+#define HCI_VSC_SET_ADV_TX_POWER_CMD_LENGTH             1
+#define HCI_VSC_SET_CONN_TX_POWER_CMD_LENGTH            3
 #define HCI_VSC_NVM_ERASE_NVM_MAIN_CMD_LENGTH           0
 #define HCI_VSC_START_TRANSMIT_TEST_CMD_LENGTH          6
 #define HCI_VSC_END_TRANSMIT_TEST_CMD_LENGTH            0
@@ -187,6 +189,10 @@ typedef enum
     HCI_VSC_CALCULATE_TRIM_VALUE_CMD_OPCODE          = 0xFCF1,
     // Set local supported feature
     HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_OPCODE            = 0xFFF2,
+    // Set advertising Tx power level
+    HCI_VSC_SET_ADV_TX_POWER_CMD_OPCODE              = 0xFFF5,
+    // Set connection Tx power level
+    HCI_VSC_SET_CONN_TX_POWER_CMD_OPCODE             = 0xFFF6,
 }vsc_opcode;
 
 //*****************************************************************************
@@ -248,7 +254,7 @@ typedef enum
     AM_DEVICES_EM9305_DATA_TRANSFER_ERROR,
     AM_DEVICES_EM9305_STATUS_INVALID_OPERATION,
     AM_DEVICES_EM9305_INSUFFICIENT_LEN ,
-    AM_DEVICES_EM9305_CKECKSUM_ERROR ,
+    AM_DEVICES_EM9305_CHECKSUM_ERROR ,
     AM_DEVICES_EM9305_SEND_CMD_FAIL ,
     AM_DEVICES_EM9305_INCORRECT_DATA_TYPE,
     AM_DEVICES_EM9305_GET_MEM_INFO_FAIL,
@@ -446,7 +452,7 @@ extern uint32_t am_devices_em9305_command_write(void* pHandle,
 //!         On failure:
 //!         `AM_DEVICES_EM9305_STATUS_ERROR`.
 //!         `AM_DEVICES_EM9305_SEND_CMD_FAIL`.
-//!         `AM_DEVICES_EM9305_CKECKSUM_ERROR`.
+//!         `AM_DEVICES_EM9305_CHECKSUM_ERROR`.
 //!         Errors propagated from `am_devices_em9305_command_write()` through
 //!         update helpers, such as
 //!         `AM_DEVICES_EM9305_STATUS_INVALID_OPERATION`,
@@ -543,7 +549,7 @@ extern bool am_devices_em9305_erase_page(NvmPage *pErasePage, uint8_t size);
 //!         `AM_DEVICES_EM9305_DATA_TRANSFER_ERROR`.
 //
 //*****************************************************************************
-extern uint32_t am_devices_em9305_get_fw_verion(void *pHandle, uint32_t *image_ver);
+extern uint32_t am_devices_em9305_get_fw_version(void *pHandle, uint32_t *image_ver);
 
 //*****************************************************************************
 //
@@ -732,16 +738,6 @@ extern void am_devices_em9305_request_counter_set(bool bIncrement);
 //
 //*****************************************************************************
 extern uint32_t am_devices_em9305_request_counter_get(void);
-
-// #### INTERNAL BEGIN ####
-// FIXME: CC
-//
-//  IOM definitions for device drivers need to happen in the BSP. Change this
-//      to am_devices_em9305_config_iom_default();
-//  Also need to change implementation here to be more dependent on BSP. We
-//      cannot just hardcode the IOM6 here.
-//
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

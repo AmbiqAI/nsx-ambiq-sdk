@@ -11,7 +11,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -2798,15 +2798,9 @@ static int prepare_test_pattern(uint32_t pattern_index, uint8_t* buff, uint32_t 
 }
 
 #if defined(AM_PART_APOLLO4_API)
-// #### INTERNAL BEGIN ####
-// FALCSW-698 9/13/23 DAXI Buffer Alignment Restrictions.
-// #### INTERNAL END ####
 static AM_SHARED_RW uint8_t  ui8TxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] AM_BIT_ALIGNED(128);
 static AM_SHARED_RW uint8_t  ui8RxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] AM_BIT_ALIGNED(128);
 #elif defined(AM_PART_APOLLO5_API)
-// #### INTERNAL BEGIN ####
-// a cache line is 32 bytes
-// #### INTERNAL END ####
 static AM_SHARED_RW uint8_t  ui8TxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] __attribute__((aligned(32)));
 static AM_SHARED_RW uint8_t  ui8RxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] __attribute__((aligned(32)));
 #else
@@ -3007,17 +3001,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MCUCTRL_H
@@ -167,11 +167,6 @@ extern const am_hal_mcuctrl_control_arg_t g_amHalMcuctrlArgBLEDefault;
 // Define the size of fields derived from the PARTNUM register
 #define AM_HAL_MCUCTRL_CHIPPN_NV_SIZE_N     (_FLD2VAL(MCUCTRL_CHIPPN_MRAMSIZE, 0xFFFFFFFF) + 1)
 #define AM_HAL_MCUCTRL_CHIPPN_SRAM_SIZE_N   (_FLD2VAL(MCUCTRL_CHIPPN_SRAMSIZE, 0xFFFFFFFF) + 1)
-// #### INTERNAL BEGIN ####
-#if 0
-#define AM_HAL_MCUCTRL_CHIPPN_TCM_SIZE_N    AM_HAL_MCUCTRL_CHIPPN_SRAM_SIZE_N
-#endif
-// #### INTERNAL END ####
 
 // Define the size of fields derived from the SKU register
 #define AM_HAL_MCUCTRL_SKU_SSRAM_SIZE_N     (_FLD2VAL(MCUCTRL_SKU_SKUSRAMSIZE, 0xFFFFFFFF) + 1)
@@ -221,9 +216,6 @@ typedef enum
 } am_hal_mcuctrl_dtcm_e;
 
 //
-// #### INTERNAL BEGIN ####
-// Per TBIRD-3, only 2 SRAM SKUs are valid for revC and TBird:
-// #### INTERNAL END ####
 //! SKU SSRAM size: 0=1MB,   1=2MB, 2=1MB,   3=2MB
 //! SKU MRAM  size: 0=0.5MB, 1=1MB, 2=1.5MB, 3=2MB,
 //
@@ -322,17 +314,6 @@ typedef struct
     //
     uint32_t ui32SSRAMSize;
 
-// #### INTERNAL BEGIN ####
-#if 0
-// Note: We considered adding a total RAM for Apollo4p, but decided against it
-//       since it would be incompatible with the Apollo4b SDK in the R4.0.0
-//       release. Plus the total can be computed from the TCM + SSRAM values.
-    //
-    //! Total RAM Size (TCM + SRAM + Extended)
-    //
-    uint32_t ui32TotalRAMSize;
-#endif
-// #### INTERNAL END ####
     //
     //! MRAM Size.
     //

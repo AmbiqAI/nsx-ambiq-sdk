@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSCTRL_H
@@ -51,7 +51,8 @@ typedef enum
 {
   AM_HAL_SYSCTRL_WAKE,
   AM_HAL_SYSCTRL_NORMALSLEEP,
-  AM_HAL_SYSCTRL_DEEPSLEEP
+  AM_HAL_SYSCTRL_DEEPSLEEP,
+  AM_HAL_SYSCTRL_OFF,
 } am_hal_sysctrl_power_state_e;
 
 #define SYNC_READ       0x47FF0000
@@ -134,4 +135,3 @@ extern void am_hal_sysctrl_force_buck_active_in_deepsleep(bool bFrcBuckAct);
 //! @}
 //
 //*****************************************************************************
-

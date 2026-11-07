@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -35,11 +35,6 @@
 #if defined (apollo4l_eb)
 #define TC58CYG0_QUAD_CLKON4_MODE_EN
 #endif
-// #### INTERNAL BEGIN ####
-//
-//! @note TC58CYG0_QUAD_CLKON4_MODE_EN is currently only tested for the apollo4l_eb
-//
-// #### INTERNAL END ####
 
 #define AM_DEVICES_MSPI_TC58CYG0_TIMEOUT       1000000
 #define AM_DEVICES_MSPI_TC58CYG0_ERASE_TIMEOUT 1000000
@@ -288,9 +283,15 @@ static struct
 //! MSPI interrupts.
 static const IRQn_Type mspi_interrupts[] =
 {
+#if AM_REG_MSPI_NUM_MODULES >= 1
     MSPI0_IRQn,
+#endif
+#if AM_REG_MSPI_NUM_MODULES >= 2
     MSPI1_IRQn,
+#endif
+#if AM_REG_MSPI_NUM_MODULES >= 3
     MSPI2_IRQn,
+#endif
 };
 
 //
@@ -328,9 +329,6 @@ static am_devices_mspi_tc58cyg0_sdr_timing_config_t SDRTimingConfigStored;
 #if defined (AM_PART_APOLLO3P)
 static uint8_t PageBuffer[AM_DEVICES_MSPI_TC58CYG0_PAGE_FULL_SIZE];
 #elif defined(AM_PART_APOLLO4_API)
-// #### INTERNAL BEGIN ####
-// This is a part of the software workaround to avoid the glitch on D1 in 1-1-4 mode by sending addr in data
-// #### INTERNAL END ####
 AM_SHARED_RW static uint8_t PageBuffer[AM_DEVICES_MSPI_TC58CYG0_PAGE_FULL_SIZE + 8] AM_BIT_ALIGNED(128);
 #elif defined(AM_PART_APOLLO5_API)
 AM_SHARED_RW static uint8_t PageBuffer[AM_DEVICES_MSPI_TC58CYG0_PAGE_FULL_SIZE + 32] __attribute__((aligned(32)));
@@ -712,9 +710,6 @@ am_devices_mspi_tc58cyg0_command_write(void *pHandle, uint8_t ui8Instr, bool bSe
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     stMSPIFlashPIOTransaction.bContinue          = false;   // MSPI CONT is deprecated for Apollo4
 #endif
 
@@ -838,9 +833,6 @@ am_devices_mspi_tc58cyg0_command_read(void *pHandle, uint8_t ui8Instr, bool bSen
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     stMSPIFlashPIOTransaction.bContinue          = false;   // MSPI CONT is deprecated for Apollo4
 #endif
 
@@ -1456,9 +1448,6 @@ am_devices_mspi_tc58cyg0_write(void *pHandle, uint32_t ui32PageNum,
     }
 #endif
 
-// #### INTERNAL BEGIN ####
-// This is a software workaround to avoid the glitch on D1 in 1-1-4 mode by sending addr in data
-// #### INTERNAL END ####
 #if defined(AM_PART_APOLLO4_API) || defined(AM_PART_APOLLO5_API)
     uint8_t i;
     uint16_t ui16PageOffset = 0;
@@ -1685,9 +1674,6 @@ am_devices_mspi_tc58cyg0_block_erase(void *pHandle, uint32_t ui32BlockNum)
 
 #if defined(AM_PART_APOLLO4_API) || defined(AM_PART_APOLLO5_API)
 #if defined(AM_PART_APOLLO4_API)
-// #### INTERNAL BEGIN ####
-// FALCSW-698 9/13/23 DAXI Buffer Alignment Restrictions.
-// #### INTERNAL END ####
 static uint8_t write_oob[AM_DEVICES_MSPI_TC58CYG0_PAGE_OOB_SIZE] AM_BIT_ALIGNED(128);
 static uint8_t read_oob[AM_DEVICES_MSPI_TC58CYG0_PAGE_OOB_SIZE] AM_BIT_ALIGNED(128);
 
@@ -1813,9 +1799,6 @@ am_devices_mspi_tc58cyg0_timing_check_write(void *pHandle, uint32_t ui32PageNum,
 
 #if defined(AM_PART_APOLLO4_API) || defined(AM_PART_APOLLO5_API)
     // Prepare the source data buffer.
-    // #### INTERNAL BEGIN ####
-    // This is a software workaround to avoid the glitch on D1 in 1-1-4 mode by sending addr in data
-    // #### INTERNAL END ####
     uint16_t ui16PageOffset = 0;
     if (pFlash->sCurrentSetting.eDeviceConfig == AM_HAL_MSPI_FLASH_QUAD_CE0_1_1_4 ||
         pFlash->sCurrentSetting.eDeviceConfig == AM_HAL_MSPI_FLASH_QUAD_CE1_1_1_4)
@@ -2388,18 +2371,6 @@ find_mid_point(uint32_t* pVal)
 #if defined(AM_PART_APOLLO4) || defined(AM_PART_APOLLO4B)
 const am_devices_mspi_tc58cyg0_sdr_timing_config_t tc58cyg0_sConfigArray[] =
 {
-// #### INTERNAL BEGIN ####
-//    {1 , 0, 1}, // Turnaround=1 , RXNEG=0, RXDQSDELAY=Dummy
-//    {1 , 1, 1}, // Turnaround=1 , RXNEG=1, RXDQSDELAY=Dummy
-//    {2 , 0, 1}, // Turnaround=2 , RXNEG=0, RXDQSDELAY=Dummy
-//    {2 , 1, 1}, // Turnaround=2 , RXNEG=1, RXDQSDELAY=Dummy
-//    {3 , 0, 1}, // Turnaround=3 , RXNEG=0, RXDQSDELAY=Dummy
-//    {3 , 1, 1}, // Turnaround=3 , RXNEG=1, RXDQSDELAY=Dummy
-//    {4 , 0, 1}, // Turnaround=4 , RXNEG=0, RXDQSDELAY=Dummy
-//    {4 , 1, 1}, // Turnaround=4 , RXNEG=1, RXDQSDELAY=Dummy
-//    {5 , 0, 1}, // Turnaround=5 , RXNEG=0, RXDQSDELAY=Dummy
-//    {5 , 1, 1}, // Turnaround=5 , RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
     {6 , 0, 1}, // Turnaround=6 , RXNEG=0, RXDQSDELAY=Dummy
     {6 , 1, 1}, // Turnaround=6 , RXNEG=1, RXDQSDELAY=Dummy
     {7 , 0, 1}, // Turnaround=7 , RXNEG=0, RXDQSDELAY=Dummy
@@ -2414,14 +2385,6 @@ const am_devices_mspi_tc58cyg0_sdr_timing_config_t tc58cyg0_sConfigArray[] =
     {11, 1, 1}, // Turnaround=11, RXNEG=1, RXDQSDELAY=Dummy
     {12, 0, 1}, // Turnaround=12, RXNEG=0, RXDQSDELAY=Dummy
     {12, 1, 1}, // Turnaround=12, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL BEGIN ####
-//    {13, 0, 1}, // Turnaround=13, RXNEG=0, RXDQSDELAY=Dummy
-//    {13, 1, 1}, // Turnaround=13, RXNEG=1, RXDQSDELAY=Dummy
-//    {14, 0, 1}, // Turnaround=14, RXNEG=0, RXDQSDELAY=Dummy
-//    {14, 1, 1}, // Turnaround=14, RXNEG=1, RXDQSDELAY=Dummy
-//    {15, 0, 1}, // Turnaround=15, RXNEG=0, RXDQSDELAY=Dummy
-//    {15, 1, 1}, // Turnaround=15, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
 };
 #else
 const am_devices_mspi_tc58cyg0_sdr_timing_config_t tc58cyg0_sConfigArray[] =

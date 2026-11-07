@@ -14,7 +14,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_GLOBAL_H
@@ -72,11 +72,6 @@ extern "C"
 //
 //*****************************************************************************
 #define STATIC_ASSERT(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
-// #### INTERNAL BEGIN ####
-// Another solution.
-//#define STATIC_ASSERT(condition) typedef char pstatic_assert##__LINE__[ (condition) ? 1 : -1];
-//STATIC_ASSERT(sizeof(struct trim_regs_s) == (21 * 4))
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //
@@ -284,7 +279,6 @@ am_hal_triple_read( uint32_t ui32TimerAddr, uint32_t ui32Data[]);
 //! a 0 to the left to ensure 2-digit width.
 #define AM_HAL_INTERNAL_TIMER_NUM_A 15
 #define AM_HAL_INTERNAL_TIMER_NUM_B 14
-
 //
 //! Take over the interrupt handler for whichever timer we're using.
 //

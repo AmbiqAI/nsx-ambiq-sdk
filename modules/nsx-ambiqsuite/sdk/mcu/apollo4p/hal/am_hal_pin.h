@@ -19,26 +19,9 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-// IMPORTANT: This is a generated file!!
-//
-// To update pin definitions:
-//     Modify the pathnames appropriately in the following script,
-//     ambiqsuite/scripts/apollo4/generate_funcsel.py
-// then run the script:
-//   CD mcu/apollo4
-//   ../../scripts/apollo4/generate_funcsel.py
-//
-// Note: The generate_funcsel.py script contains hard-coded relative paths
-//       that must be modified for the system it's being run on.
-//
-//*****************************************************************************
-// #### INTERNAL END ####
 
 #ifndef AM_HAL_PIN_H
 #define AM_HAL_PIN_H

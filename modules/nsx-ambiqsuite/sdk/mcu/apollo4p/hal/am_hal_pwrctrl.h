@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -74,10 +74,6 @@ extern "C"
 //!      0 = Do not assist VDDC.
 //!      1 = Activate LDOs in parallel when disabling SIMOBUCK.
 //!  Default: 1
-// #### INTERNAL BEGIN ####
-// A2SD-2248 AM_HAL_PWRCTRL_LDOS_FOR_VDDC. This option is dependent on
-// AM_HAL_PWRCTL_SET_CORELDO_MEMLDO_IN_PARALLEL.
-// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_LDOS_FOR_VDDC                    1
@@ -92,11 +88,6 @@ extern "C"
 //!      0 = Leave inactive.
 //!      1 = Set trims to short.
 //!  Default: 1
-// #### INTERNAL BEGIN ####
-// There was originally a comment (prior to 8/20/21):
-//      1 = Set trims to short.  Uses extra power in Deepsleep.
-// Jamie says the comment is only true if the short is not removed before DS.
-// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTL_SHORT_VDDF_TO_VDDS                1
@@ -113,9 +104,6 @@ extern "C"
 //! Option to connect MCU core to VDDC_LV for increased power efficiency. Ambiq
 //! recommends this option be enabled for all new applications
 //
-// #### INTERNAL BEGIN ####
-// See FB-350 for discussion and detail concerning this option.
-// #### INTERNAL END ####
 //
 //! Default: 1 for RevC
 //*****************************************************************************
@@ -147,10 +135,6 @@ extern "C"
 //!          AM_HAL_PWRCTL_HPLP_WA
 //!          AM_HAL_PWRCTL_SHORT_VDDC_TO_VDDCLV
 //!  Default: 0
-// #### INTERNAL BEGIN ####
-// This is only needed if the Apollo4 Plus is used up to 70C
-// TODO: Will need to revisit naming of this macro
-// #### INTERNAL END ####
 //
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_70C_WA    0
@@ -345,65 +329,6 @@ typedef enum
     AM_HAL_PWRCTRL_CONTROL_TEMPCO_GETMEASTEMP,  // TempCo, return the measured temperature
 #endif // AM_HAL_TEMPCO_LP
 } am_hal_pwrctrl_control_e;
-
-// #### INTERNAL BEGIN ####
-//*****************************************************************************
-//
-//! DSP memory control settings.
-//
-//*****************************************************************************
-#if 0
-  // Check that all the reg defs are consistent with enums below.
-#if ((0 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_NONE)     &&  \
-     (0 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_NONE)   &&  \
-     (1 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_GROUP0)   &&  \
-     (1 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_GROUP0) &&  \
-     (3 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_ALL)      &&  \
-     (3 == PWRCTRL_DSP0MEMRETCFG_IRAMPWDDSP0OFF_ALL)    &&  \
-     (0 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1IRAM_NONE)     &&  \
-     (0 == PWRCTRL_DSP1MEMRETCFG_IRAMPWDDSP1OFF_NONE)   &&  \
-     (1 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1IRAM_GROUP0)   &&  \
-     (1 == PWRCTRL_DSP1MEMRETCFG_IRAMPWDDSP1OFF_GROUP0))
-#error DSP IRAM Register Definitions do not support enum defintion!
-#endif
-
-//
-//! DSP IRAM Select
-//
-typedef enum
-{
-    AM_HAL_PWRCTRL_DSP_IRAM_NONE        = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_NONE,
-    AM_HAL_PWRCTRL_DSP_IRAM_BANK0_ONLY  = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_GROUP0,
-    AM_HAL_PWRCTRL_DSP_IRAM_ALL_BANKS   = PWRCTRL_DSP0MEMPWREN_PWRENDSP0IRAM_ALL
-}
-am_hal_pwrctrl_dsp_iram_select_e;
-
-// Check that all the reg defs are consistent with enums below.
-#if ((0 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_NONE)     &&  \
-     (0 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_NONE)   &&  \
-     (1 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_GROUP0)   &&  \
-     (1 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_GROUP0) &&  \
-     (3 == PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_ALL)      &&  \
-     (3 == PWRCTRL_DSP0MEMRETCFG_DRAMPWDDSP0OFF_ALL)    &&  \
-     (0 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1DRAM_NONE)     &&  \
-     (0 == PWRCTRL_DSP1MEMRETCFG_DRAMPWDDSP1OFF_NONE)   &&  \
-     (1 == PWRCTRL_DSP1MEMPWREN_PWRENDSP1DRAM_GROUP0)   &&  \
-     (1 == PWRCTRL_DSP1MEMRETCFG_DRAMPWDDSP1OFF_GROUP0))
-)
-#error DSP IRAM Register Definitions do not support enum defintion!
-#endif
-
-//
-//! DPS DRAM Select
-//
-typedef enum
-{
-    AM_HAL_PWRCTRL_DSP_DRAM_NONE        = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_NONE,
-    AM_HAL_PWRCTRL_DSP_DRAM_BANK0_ONLY  = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_GROUP0,
-    AM_HAL_PWRCTRL_DSP_DRAM_ALL_BANKS   = PWRCTRL_DSP0MEMPWREN_PWRENDSP0DRAM_ALL
-} am_hal_pwrctrl_dsp_dram_select_e;
-#endif
-// #### INTERNAL END ####
 
 //
 //! DSP memory config settings.

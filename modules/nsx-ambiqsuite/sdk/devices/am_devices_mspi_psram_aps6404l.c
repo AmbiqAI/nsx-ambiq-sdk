@@ -24,7 +24,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -39,11 +39,6 @@
 // Global variables.
 //
 //*****************************************************************************
-// ##### INTERNAL BEGIN #####
-//
-// APS6404L_QUAD_CLKON4_MODE_EN is currently only tested for the apollo4p_eb
-//
-// ##### INTERNAL END #####
 //#define APS6404L_QUAD_CLKON4_MODE_EN
 
 #define AM_DEVICES_MSPI_PSRAM_TIMEOUT             1000000
@@ -520,9 +515,6 @@ am_device_command_write(void *pMspiHandle,
 #else
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
   Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;
@@ -582,9 +574,6 @@ am_device_command_read(void *pMspiHandle,
 #else
   Transaction.bDCX                    = false;
   Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
   Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
   Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;
@@ -1107,9 +1096,6 @@ am_devices_mspi_psram_init(uint32_t ui32Module,
     //
     // Apply SDR timing config
     //
-    // #### INTERNAL BEGIN ####
-    // DQS Config. To enable timing tuning for SDR mode
-    // #### INTERNAL END ####
     ui32Status = am_hal_mspi_control(pMspiHandle, AM_HAL_MSPI_REQ_DQS, &gSDREnableFineDelayCfg);
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
     {
@@ -2112,17 +2098,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {

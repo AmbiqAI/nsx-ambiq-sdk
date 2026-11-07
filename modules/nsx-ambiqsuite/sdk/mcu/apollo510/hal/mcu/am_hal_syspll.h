@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSPLL_H
@@ -220,9 +220,6 @@ typedef struct
         .ui16FBDivInt  = 12, \
         .ui32FBDivFrac = 0, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter (FOUTPOSTDIV) = 104ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for AUDADC using 32MHz XTAL as PLL reference
 //! clock. PLL outputs for this setting:
@@ -238,9 +235,6 @@ typedef struct
         .ui16FBDivInt  = 13, \
         .ui32FBDivFrac = 13824426, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter (FOUTPOSTDIV) = 108ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for telco applications at 16kHz,16-bit,1CH
 //! PLL Outputs for this setting:
@@ -257,9 +251,6 @@ typedef struct
         .ui16FBDivInt  = 11, \
         .ui32FBDivFrac = 8724152, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter (FOUTPOSTDIV) = 54ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for telco applications at 16kHz,16-bit,2CH
 //! PLL Outputs for this setting:
@@ -276,9 +267,6 @@ typedef struct
         .ui16FBDivInt  = 13, \
         .ui32FBDivFrac = 13824426, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter (FOUTPOSTDIV) = 54ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for telco applications at 48kHz,16-bit,2CH
 //! PLL Outputs for this setting:
@@ -295,9 +283,6 @@ typedef struct
         .ui16FBDivInt  = 12, \
         .ui32FBDivFrac = 4831838, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter (FOUTPOSTDIV) = 81ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for audio applications at 44.1kHz,32-bit,2CH
 //! PLL Outputs for this setting:
@@ -313,9 +298,6 @@ typedef struct
         .ui16FBDivInt  = 14, \
         .ui32FBDivFrac = 1879048, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter = 102ppm
-// #### INTERNAL END ####
 
 //! Default system PLL settings for audio applications at 48kHz,32-bit,2CH
 //! PLL Outputs for this setting:
@@ -331,9 +313,6 @@ typedef struct
         .ui16FBDivInt  = 13, \
         .ui32FBDivFrac = 13824426, \
     }
-// #### INTERNAL BEGIN ####
-// Calculated Max Period Jitter = 108ppm
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

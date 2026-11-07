@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -39,7 +39,7 @@
 #define AM_HAL_IOM_MAX_BLOCKING_WAIT    500000 // 0.5 sec
 
 //
-//! Size guideline for allocation of application supploed buffers
+//! Size guideline for allocation of application supplied buffers
 //
 #define AM_HAL_IOM_CQ_ENTRY_SIZE               (24 * sizeof(uint32_t))
 #define AM_HAL_IOM_HIPRIO_ENTRY_SIZE           (8 * sizeof(uint32_t))
@@ -469,9 +469,7 @@ typedef enum
   //! Pass uint32_t as pArgs
   AM_HAL_IOM_REQ_SPI_WRTHRESH,
   //! Pass uint32_t as pArgs
-  AM_HAL_IOM_REQ_LINK_MSPI,
-  //! pArgs N/A
-  AM_HAL_IOM_REQ_LINK_CM4,
+  AM_HAL_IOM_REQ_LINK_XSPIMC,
   //! Pause the CQ gracefully
   //! pArgs N/A
   AM_HAL_IOM_REQ_PAUSE,
@@ -498,10 +496,8 @@ typedef enum
   //! Raw CQ transaction
   //! Pass am_hal_iom_cq_raw_t * as pArgs
   AM_HAL_IOM_REQ_CQ_RAW,
-// #### INTERNAL BEGIN ####
   //! Pass uint32_t as pArgs
-  AM_HAL_IOM_REQ_LINK_GPIO,     // TODO FIXME - Not yet implemented
-// #### INTERNAL END ####
+  AM_HAL_IOM_REQ_LINK_GPIO,
   AM_HAL_IOM_REQ_MAX
 } am_hal_iom_request_e;
 
@@ -552,7 +548,7 @@ union                                   \
 //
 //! Max Frequency supported in HAL
 //
-#define AM_HAL_IOM_MAX_FREQ AM_HAL_IOM_24MHZ
+#define AM_HAL_IOM_MAX_FREQ AM_HAL_IOM_48MHZ
 
 //*****************************************************************************
 //
@@ -610,6 +606,8 @@ extern uint32_t am_hal_iom_initialize(uint32_t ui32Module, void **ppHandle);
 //! @param psConfig      - pointer to the IOM specific configuration.
 //!
 //! This function configures the interface settings for the IO Master.
+//! IOM10 supports only the I2C interface. Configuring IOM10 for SPI returns
+//! AM_HAL_STATUS_INVALID_ARG.
 //!
 //! @return status      - generic or interface specific status.
 //

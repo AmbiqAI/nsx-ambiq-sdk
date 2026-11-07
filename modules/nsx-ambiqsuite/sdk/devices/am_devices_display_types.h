@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_DEVICES_DISPLAY_TYPES_H
@@ -113,7 +113,7 @@ typedef enum
 //
 //! @brief The interface type between Apollo SoC and the display panel.
 //!
-//! @note Apollo DC IP supports SPI4, DSPI, QSPI , DBI, JDI and MIPI-DSI together
+//! @note Apollo DC IP supports SPI3, SPI4, DSPI, QSPI , DBI, JDI and MIPI-DSI together
 //! with DSI IP. Apollo MSPI IP supports QSPI for now. For more details, please
 //! refer to the apollo SoCs datasheet.
 //
@@ -127,7 +127,8 @@ typedef enum
     DISP_IF_JDI                     = 0x08,
     DISP_IF_DPI                     = 0x10,
     DISP_IF_DBI                     = 0x20,
-    DISP_IF_QSPI_DDR                = 0x40
+    DISP_IF_QSPI_DDR                = 0x40,
+    DISP_IF_SPI3                    = 0x80
 } am_devices_disp_if_e;
 
 //*****************************************************************************

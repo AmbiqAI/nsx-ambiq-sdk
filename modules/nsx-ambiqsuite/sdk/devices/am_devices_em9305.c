@@ -50,7 +50,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -180,6 +180,9 @@ void** g_ppIomHandle;
 
 bool g_bIsSleep = false;
 static volatile uint32_t g_ui32SipCounter;
+
+// Counter for syncing interrupt count with HciDrvIntService
+volatile uint32_t g_ui32InterruptsSeenCopy;
 
 //*****************************************************************************
 //
@@ -464,7 +467,7 @@ am_devices_em9305_init(uint32_t ui32Module, am_devices_em9305_config_t *pDevConf
         *ppIomHandle = *g_ppIomHandle;
 
         uint32_t image_version = 0;
-        uint32_t ui32Status = am_devices_em9305_get_fw_verion(*ppHandle, &image_version);
+        uint32_t ui32Status = am_devices_em9305_get_fw_version(*ppHandle, &image_version);
 
         if ( (ui32Status == AM_DEVICES_EM9305_STATUS_SUCCESS)
              && (image_version!=EM9305_FW_VER_INVALID) )
@@ -548,7 +551,7 @@ am_devices_em9305_init(uint32_t ui32Module, am_devices_em9305_config_t *pDevConf
 #endif
 
     uint32_t image_version = 0;
-    ui32Status = am_devices_em9305_get_fw_verion(*ppHandle, &image_version);
+    ui32Status = am_devices_em9305_get_fw_version(*ppHandle, &image_version);
 
     if ( (ui32Status == AM_DEVICES_EM9305_STATUS_SUCCESS)
          && (image_version!=EM9305_FW_VER_INVALID) )
@@ -940,6 +943,7 @@ am_devices_em9305_block_read(void *pHandle,
     am_hal_iom_buffer(2) sStas;
     uint8_t ui8RxBytes;
     uint32_t ui32ErrorStatus = AM_DEVICES_EM9305_STATUS_SUCCESS;
+    uint32_t g_ui32InterruptsSeenOld = g_ui32InterruptsSeenCopy;
 
     sCommand.bytes[0] = EM9305_SPI_HEADER_RX;
     sCommand.bytes[1] = 0x0;
@@ -1077,15 +1081,24 @@ am_devices_em9305_block_read(void *pHandle,
                 }
             }
 
-            if (ui32ErrorStatus == AM_DEVICES_EM9305_NOT_READY)
+            if (ui32ErrorStatus != AM_DEVICES_EM9305_STATUS_SUCCESS)
             {
                 break;
             }
 
             //
-            // Check that the EM9305 is ready or the receive FIFO is not full.
+            // READY + STS2==0: empty after retries. Keep prior bytes as SUCCESS;
+            // otherwise NO_DATA_TX (do not treat as NOT_READY).
             //
-            if (( sStas.bytes[0] != EM9305_STS1_READY_VALUE ) || ( sStas.bytes[1] == 0x00))
+            if ((sStas.bytes[0] == EM9305_STS1_READY_VALUE) && (sStas.bytes[1] == 0))
+            {
+                EM9305_SPI_DEVICE_DESELECT();
+                ui32ErrorStatus = *ui32NumBytes ? AM_DEVICES_EM9305_STATUS_SUCCESS :
+                                                 AM_DEVICES_EM9305_NO_DATA_TX;
+                break;
+            }
+
+            if (sStas.bytes[0] != EM9305_STS1_READY_VALUE)
             {
                 EM9305_SPI_DEVICE_DESELECT();
                 am_util_debug_printf("EM9305 Not Ready sStas.byte0 = 0x%02x, sStas.byte1 = 0x%02x\n", sStas.bytes[0], sStas.bytes[1]);
@@ -1100,14 +1113,21 @@ am_devices_em9305_block_read(void *pHandle,
 
             if (ui8RxBytes != 0)
             {
-                if ((*ui32NumBytes + ui8RxBytes) > EM9305_BUFFER_SIZE )
+                //
+                // Soft-stop: host assemble buffer full, but RDY may still be
+                // high. Return SUCCESS with bytes already read; unread STS2
+                // payload stays in the EM9305 FIFO for the next block_read.
+                //
+                if ((*ui32NumBytes + ui8RxBytes) > EM9305_BUFFER_SIZE)
                 {
-                    //
-                    // Error. Packet too large.
-                    //
                     EM9305_SPI_DEVICE_DESELECT();
-                    am_util_debug_printf("HCI RX Error (STATUS ERROR) Packet Too Large %d, %d\n", sStas.bytes[0], sStas.bytes[1]);
-                    ui32ErrorStatus = AM_DEVICES_EM9305_DATA_LENGTH_ERROR;
+
+                    // if EM9305_BUFFER_SIZE exceeded without additional GPIO interrupt, return length error
+                    if (g_ui32InterruptsSeenCopy == g_ui32InterruptsSeenOld)
+                    {
+                        am_util_debug_printf("HCI RX Error (STATUS ERROR) Packet Too Large %d, %d\n", sStas.bytes[0], sStas.bytes[1]);
+                        ui32ErrorStatus = AM_DEVICES_EM9305_DATA_LENGTH_ERROR;
+                    }
                     break;
                 }
 
@@ -2002,7 +2022,7 @@ static uint32_t check_data(void *pHandle)
             //
             if (actual_crc != expected_crc)
             {
-                ui32ErrorStatus = AM_DEVICES_EM9305_CKECKSUM_ERROR;
+                ui32ErrorStatus = AM_DEVICES_EM9305_CHECKSUM_ERROR;
                 am_util_stdio_printf("Invalid CRC32 from 0x%08x to 0x%08x (0x%08x instead of 0x%08x)\n",
                        addr, addr + data_len, actual_crc, expected_crc);
                 break;
@@ -2220,7 +2240,7 @@ void am_devices_em9305_hsclk_req(bool enable)
 // Read BLE firmware version number
 //
 //*****************************************************************************
-uint32_t am_devices_em9305_get_fw_verion(void *pHandle, uint32_t *image_ver)
+uint32_t am_devices_em9305_get_fw_version(void *pHandle, uint32_t *image_ver)
 {
     return read_data_cmd(pHandle, EM9305_NVM_INFO_PAGE1_START_ADDR, (uint8_t*)image_ver, EM9305_FW_VER_NUM_LEN);
 }

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -27,6 +27,20 @@
 #ifdef __cplusplus
 extern "C"
 {
+#endif
+
+#if defined(AM_PART_ATOMIQ110)
+#define I3C_CLOCK_DIV_ENABLE
+#endif
+
+#ifdef I3C_CLOCK_DIV_ENABLE
+#include "hal/am_hal_crm_private.h"
+
+#ifdef ATOMIQ11X_FPGA
+#define I3C_CLOCK_DIV_VALUE           1
+#else
+#define I3C_CLOCK_DIV_VALUE           4
+#endif
 #endif
 
 //*****************************************************************************

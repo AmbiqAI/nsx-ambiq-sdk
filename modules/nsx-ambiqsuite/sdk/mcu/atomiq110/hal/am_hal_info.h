@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_INFO_H
@@ -28,13 +28,6 @@ extern "C"
 
 #include <stdint.h>
 #include <stdbool.h>
-
-
-// #### INTERNAL BEGIN ####
-#warning TODO FIXME am_hal_info.h Temporary workarounds until INFO definitions catch up with 'RRAM' naming
-// #### INTERNAL END ####
-#define AM_HAL_INFO_INFOSPACE_RRAM_INFO1    AM_HAL_INFO_INFOSPACE_RRAM_INFO1
-
 
 //*****************************************************************************
 //

@@ -99,6 +99,30 @@ def test_inventory_requires_review_and_does_not_modify_inputs(checkouts):
     assert review.git(after, 'status', '--porcelain') == ''
 
 
+def test_prepared_source_is_distinct_from_upstream(checkouts):
+    before, after = checkouts
+    data = manifest(after)
+    data['sdk']['source_commit'] = 'b' * 40
+    data['sdk']['source_patch_provenance'] = {'upstream_commit': 'a' * 40}
+    save_manifest(after, data)
+    commit(after)
+    report = review.review(before, after)
+    assert report['candidate']['source_commit'] == 'b' * 40
+    assert report['candidate']['upstream_commit'] == 'a' * 40
+    assert report['different_upstream_commit'] is False
+
+
+@pytest.mark.parametrize('provenance', [{}, {'upstream_commit': 'stable'}, []])
+def test_invalid_prepared_upstream_is_rejected(checkouts, provenance):
+    _, after = checkouts
+    data = manifest(after)
+    data['sdk']['source_patch_provenance'] = provenance
+    save_manifest(after, data)
+    commit(after)
+    with pytest.raises(ValueError, match='immutable upstream_commit'):
+        review.snapshot(after)
+
+
 @pytest.mark.parametrize('action', ['retain', 'update', 'retire', 'add'])
 def test_patch_dispositions(checkouts, action):
     before, after = checkouts

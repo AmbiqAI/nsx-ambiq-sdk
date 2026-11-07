@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RTC_H
@@ -35,18 +35,6 @@ extern "C"
 //! @{
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-#if 0
-//
-// CSV-349, https://ambiqmicro.atlassian.net/browse/CSV-349
-// As of 6/18/19, the validation team discovered that this switch of the
-// RTC to LFRC would lock up some A1 and B0 parts. Until the problem
-// is root-caused and a solid workaround determined, we must skip it.
-// We'll leave it defined for internal use.
-//
-#define AM_HAL_RTC_OSC_LFRC          0x1
-#endif
-// #### INTERNAL END ####
 #define AM_HAL_RTC_OSC_XT            0x0
 //! @}
 
@@ -144,9 +132,6 @@ typedef struct am_hal_rtc_time_struct
 //! @param ui32OSC The clock source for the RTC.\n
 //! Valid values for ui32OSC are:
 //!
-// #### INTERNAL BEGIN ####
-//!     - AM_HAL_RTC_OSC_LFRC
-// #### INTERNAL END ####
 //!     - AM_HAL_RTC_OSC_XT
 //!
 //!

@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include "am_mcu_apollo.h"
@@ -333,9 +333,6 @@ am_devices_mspi_rm69330_command_write(void *pHandle,
 #else
     Transaction.bDCX                    = false;
     Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     Transaction.bContinue               = false;  // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
     Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;
@@ -446,9 +443,6 @@ am_devices_mspi_rm69330_command_read(void *pHandle,
 #else
     Transaction.bDCX                    = false;
     Transaction.bEnWRLatency            = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     Transaction.bContinue               = false;    // MSPI CONT is deprecated for Apollo4
 #if defined(AM_PART_APOLLO4)
     Transaction.eDeviceNum              = AM_HAL_MSPI_DEVICE0;

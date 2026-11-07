@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -35,6 +36,9 @@ def test_vendor_layout_from_sdk_target(repo_root: Path, tmp_path: Path, family: 
 {assertion}(sizeof(wchar_t) == {expected_wchar}, "selected vendor wchar ABI");
 {assertion}(sizeof(am_hal_pdm_config_t) == {28 if short else 56}, "real PDM layout");
 {assertion}(offsetof(am_hal_pdm_config_t, ui32DecimationRate) == {8 if short else 20}, "real PDM offset");
+{assertion}(sizeof(am_hal_pwrctrl_info1_regs_t) == 132, "INFO1 public layout");
+{assertion}(offsetof(am_hal_pwrctrl_info1_regs_t, ui32CHIPSUBREV) == 68, "INFO1 silicon subrevision");
+{assertion}(offsetof(am_hal_pwrctrl_info1_regs_t, ui32FT1_GDR1) == 72, "INFO1 following field");
 uint32_t vendor_call(void *handle) {{
     static am_hal_pdm_config_t config;
     return am_hal_pdm_configure(handle, &config);
@@ -66,6 +70,11 @@ uint32_t vendor_call(void *handle) {{
     # relocatable ELF and require ABI warnings to be fatal. No MMIO executes.
     gcc = compiler_for_test("gcc")
     archive = repo_root / f"modules/nsx-ambiqsuite/sdk/lib/{artifact}/apollo510/libam_hal.a"
+    archive_symbols = subprocess.check_output(
+        [str(gcc.parent / "arm-none-eabi-nm"), "-S", str(archive)], text=True)
+    info1_sizes = re.findall(r"^\s*[0-9a-fA-F]+\s+([0-9a-fA-F]+)\s+[BbDd]\s+g_sINFO1regs$",
+                            archive_symbols, re.MULTILINE)
+    assert [int(size, 16) for size in info1_sizes] == [132], "INFO1 archive/header layout mismatch"
     linked = tmp_path / "vendor-linked.o"
     result = subprocess.run([str(gcc.parent / "arm-none-eabi-ld"), "-r", "--fatal-warnings", "-z", "noexecstack",
         "-u", "am_hal_pdm_configure", str(obj), str(archive), "-o", str(linked)], capture_output=True, text=True)

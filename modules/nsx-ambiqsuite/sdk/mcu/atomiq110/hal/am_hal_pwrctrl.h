@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -221,6 +221,15 @@ typedef enum
 } am_hal_pwrctrl_npu_mode_e;
 
 //
+//! Peripheral GPU Mode power enum.
+//
+typedef enum
+{
+    AM_HAL_PWRCTRL_GPU_MODE_LOW_POWER        = PWRCTRL_GFXPERFREQ_GFXPERFREQ_LP, // 250Mhz
+    AM_HAL_PWRCTRL_GPU_MODE_HIGH_PERFORMANCE = PWRCTRL_GFXPERFREQ_GFXPERFREQ_HP, // 500Mhz
+} am_hal_pwrctrl_gpu_mode_e;
+
+//
 //! Peripheral MCU Mode power enum.
 //
 typedef enum
@@ -305,6 +314,9 @@ typedef enum
     AM_HAL_PWRCTRL_PERIPH_EMMCPHY,   // Bit 19
     AM_HAL_PWRCTRL_PERIPH_HBLRAM,    // Bit 20
     AM_HAL_PWRCTRL_PERIPH_XSPISLV,   // Bit 21
+
+    // DMEPWRCTRL
+    AM_HAL_PWRCTRL_PERIPH_DME,       // Bit 0: hold MCUL on for DME
     AM_HAL_PWRCTRL_PERIPH_MAX
 } am_hal_pwrctrl_periph_e;
 
@@ -313,6 +325,110 @@ typedef enum
 // MCU memory control settings.
 //
 //*****************************************************************************
+
+//
+//! Memory vote master settings.
+//!
+//! Each value identifies a logical master that can request a memory power vote.
+//! Multiple logical masters may share the same aggregated vote path.
+//
+typedef enum
+{
+    // CPU vote masters.
+    AM_HAL_PWRCTRL_VOTE_MASTER_CPU_AXI,
+    AM_HAL_PWRCTRL_VOTE_MASTER_CPU_APB,
+
+    // GPU vote master.
+    AM_HAL_PWRCTRL_VOTE_MASTER_GPU,
+    // NPU vote master.
+    AM_HAL_PWRCTRL_VOTE_MASTER_NPU,
+    // DC vote master.
+    AM_HAL_PWRCTRL_VOTE_MASTER_DC,
+    // DME vote master.
+    AM_HAL_PWRCTRL_VOTE_MASTER_DME,
+
+    // APBDMA vote masters.
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_LPADC,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_ADC,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_I2S0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_I2S1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_I3C0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_I3C1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_I3C2,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_PDM0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_PDM1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_PDM2,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM2,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM3,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM4,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM5,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM6,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM7,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM8,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM9,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM10,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOM11,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOSFD0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_IOSFD1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_SDIO0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART0,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART1,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART2,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART3,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART4,
+    AM_HAL_PWRCTRL_VOTE_MASTER_APBDMA_UART5,
+
+    // HSP vote masters.
+    AM_HAL_PWRCTRL_VOTE_MASTER_HSP_CRYPTO,
+    AM_HAL_PWRCTRL_VOTE_MASTER_HSP_XSPISLV,
+    AM_HAL_PWRCTRL_VOTE_MASTER_HSP_EMMC,
+    AM_HAL_PWRCTRL_VOTE_MASTER_HSP_USB,
+    AM_HAL_PWRCTRL_VOTE_MASTER_HSP_XSPI2,
+    AM_HAL_PWRCTRL_VOTE_MASTER_MAX
+} am_hal_pwrctrl_vote_master_e;
+
+//
+//! Memory vote target settings.
+//!
+//! Each value identifies a memory that can receive a power vote from a master.
+//
+typedef enum
+{
+    AM_HAL_PWRCTRL_VOTE_MEMORY_SSRAM0,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_SSRAM1,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_SSRAM2,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_XSPI0,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_XSPI1,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_XSPI2,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_NVM,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_HBLRAM,
+    AM_HAL_PWRCTRL_VOTE_MEMORY_MAX
+} am_hal_pwrctrl_vote_memory_e;
+
+//
+//! Memory identifiers for retention status queries.
+//!
+//! Each value identifies a memory whose retention state can be read.
+//
+typedef enum
+{
+    AM_HAL_PWRCTRL_MEMORY_NVM0,
+    AM_HAL_PWRCTRL_MEMORY_TCM00,
+    AM_HAL_PWRCTRL_MEMORY_TCM01,
+    AM_HAL_PWRCTRL_MEMORY_TCM1,
+    AM_HAL_PWRCTRL_MEMORY_SSRAMGP0,
+    AM_HAL_PWRCTRL_MEMORY_SSRAMGP1,
+    AM_HAL_PWRCTRL_MEMORY_SSRAMGP2,
+    AM_HAL_PWRCTRL_MEMORY_XSPI0,
+    AM_HAL_PWRCTRL_MEMORY_XSPI1,
+    AM_HAL_PWRCTRL_MEMORY_XSPI2,
+    AM_HAL_PWRCTRL_MEMORY_HBLRAM,
+    AM_HAL_PWRCTRL_MEMORY_NPURAM,
+    AM_HAL_PWRCTRL_MEMORY_ETB,
+    AM_HAL_PWRCTRL_MEMORY_MAX
+} am_hal_pwrctrl_memory_e;
 
 //
 //! DTCM enable settings.
@@ -344,16 +460,6 @@ typedef enum
 } am_hal_pwrctrl_nvm_select_e;
 
 //
-//! NVM power down modes settings.
-//
-typedef enum
-{
-    AM_HAL_PWRCTRL_NVM_RETENTION_POWER_DOWN       = PWRCTRL_MEMRETCFG_NVMPWDCFG_RETPWDEN,
-    AM_HAL_PWRCTRL_NVM_DEEP_POWER_DOWN            = PWRCTRL_MEMRETCFG_NVMPWDCFG_DEEPPWDEN,
-    AM_HAL_PWRCTRL_NVM_FULL_POWER_DOWN            = PWRCTRL_MEMRETCFG_NVMPWDCFG_FULLPWDEN,
-} am_hal_pwrctrl_nvm_power_down_select_e;
-
-//
 //!ROM settings.
 //
 typedef enum
@@ -382,13 +488,6 @@ typedef struct
     //! NVM configuration.
     //
     am_hal_pwrctrl_nvm_select_e         eNVMCfg;
-
-    //
-    //! NVM power down modes configuration.
-    //
-    am_hal_pwrctrl_nvm_power_down_select_e eNVMPowerDown;
-
-    bool                                bKeepNVMOnInDeepSleep;
 } am_hal_pwrctrl_mcu_memory_config_t;
 
 //
@@ -419,48 +518,6 @@ typedef enum
     AM_HAL_PWRCTRL_SRAM_2M           = PWRCTRL_SSRAMPWREN_PWRENSSRAM_GROUP0 | PWRCTRL_SSRAMPWREN_PWRENSSRAM_GROUP1,
     AM_HAL_PWRCTRL_SRAM_3M           = PWRCTRL_SSRAMPWREN_PWRENSSRAM_ALL,
 } am_hal_pwrctrl_sram_select_e;
-
-typedef struct
-{
-    //
-    //! SRAM banks to enable.
-    //
-    am_hal_pwrctrl_sram_select_e        eSRAMCfg;
-
-    //
-    //! For each of the eActiveWithXxx settings:
-    //!  AM_HAL_PWRCTRL_SRAM_NONE    = This component has no association with SSRAM.
-    //!  AM_HAL_PWRCTRL_SRAM_1M_GRP0 = Group1 ignored by this component. Group0 is active when this component is powered on.
-    //!  AM_HAL_PWRCTRL_SRAM_1M_GRP1 = Group0 ignored by this component. Group1 is active when this component is powered on.
-    //!  AM_HAL_PWRCTRL_SRAM_ALL     = All SRAM active when this component is powered on.
-    //
-
-    //
-    //! Activate SRAM when the MCU is active.
-    //
-    am_hal_pwrctrl_sram_select_e        eActiveWithMCU;
-
-    //
-    //! Activate SRAM when the Graphics is active.
-    //
-    am_hal_pwrctrl_sram_select_e        eActiveWithGFX;
-
-    //
-    //! Activate SRAM when the DISPLAY is active.
-    //
-    am_hal_pwrctrl_sram_select_e        eActiveWithDISP;
-
-    //
-    //! Retain SRAM in deep sleep.
-    //! For SRAM retention:
-    //!  AM_HAL_PWRCTRL_SRAM_NONE    = Retain all SRAM in deepsleep.
-    //!  AM_HAL_PWRCTRL_SRAM_1M_GRP0 = Retain Group0, power down Group1 in deepsleep.
-    //!  AM_HAL_PWRCTRL_SRAM_1M_GRP1 = Retain Group1, power down Group0 in deepsleep.
-    //!  AM_HAL_PWRCTRL_SRAM_ALL     = Retain all SRAM in deepsleep.
-    //
-    am_hal_pwrctrl_sram_select_e        eSRAMRetain;
-
-} am_hal_pwrctrl_sram_memcfg_t;
 
 //*****************************************************************************
 //
@@ -518,6 +575,11 @@ typedef struct
     //! AUDADCSTATUS - Power Status Register for audio ADC Block
     //
     uint32_t ui32AudioADC;
+
+    //
+    //! DMEPWRCTRL - DME power control and MCUL power status
+    //
+    uint32_t ui32DME;
 } am_hal_pwrctrl_status_t;
 
 //*****************************************************************************
@@ -681,7 +743,7 @@ typedef enum
 //
 //*****************************************************************************
 extern const am_hal_pwrctrl_mcu_memory_config_t      g_DefaultMcuMemCfg;
-extern const am_hal_pwrctrl_sram_memcfg_t            g_DefaultSRAMCfg;
+extern const am_hal_pwrctrl_sram_select_e            g_DefaultSRAMCfg;
 //! @}
 
 //*****************************************************************************
@@ -743,6 +805,30 @@ extern uint32_t am_hal_pwrctrl_npu_mode_status(am_hal_pwrctrl_npu_mode_e *peCurr
 //*****************************************************************************
 extern uint32_t am_hal_pwrctrl_npu_mode_select(am_hal_pwrctrl_npu_mode_e ePowerMode);
 
+// ****************************************************************************
+//
+//! @brief Return the current GPU performance mode.
+//!
+//! @param peCurrentPowerMode is a ptr to a variable to save the current status.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors.
+//
+// ****************************************************************************
+extern uint32_t am_hal_pwrctrl_gpu_mode_status(am_hal_pwrctrl_gpu_mode_e *peCurrentPowerMode);
+
+//*****************************************************************************
+//
+//! @brief Change the GPU performance mode.
+//!
+//! @param ePowerMode is the performance mode for the GPU
+//!
+//! Select the power mode for the GPU.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors.
+//
+//*****************************************************************************
+extern uint32_t am_hal_pwrctrl_gpu_mode_select(am_hal_pwrctrl_gpu_mode_e ePowerMode);
+
 //*****************************************************************************
 //
 //! @brief Configure the power settings for the MCU memory.
@@ -769,6 +855,67 @@ extern uint32_t am_hal_pwrctrl_mcu_memory_config(am_hal_pwrctrl_mcu_memory_confi
 //
 //*****************************************************************************
 extern uint32_t am_hal_pwrctrl_mcu_memory_config_get(am_hal_pwrctrl_mcu_memory_config_t *psConfig);
+
+//*****************************************************************************
+//
+//! @brief Request memory vote.
+//!
+//! @param eVoteMaster is the logical vote master.
+//! @param eVoteMem is the vote memory target.
+//!
+//! Requests a vote for eVoteMem from eVoteMaster and increments the
+//! reference count. Returns AM_HAL_STATUS_OUT_OF_RANGE on reference count overflow.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
+//
+//*****************************************************************************
+extern uint32_t am_hal_pwrctrl_mem_vote_request(am_hal_pwrctrl_vote_master_e eVoteMaster,
+                                                am_hal_pwrctrl_vote_memory_e eVoteMem);
+
+//*****************************************************************************
+//
+//! @brief Release memory vote.
+//!
+//! @param eVoteMaster is the logical vote master.
+//! @param eVoteMem is the vote memory target.
+//!
+//! Releases the vote for eVoteMem from eVoteMaster and decrements the reference
+//! count. Returns AM_HAL_STATUS_INVALID_OPERATION on unmatched release.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
+//
+//*****************************************************************************
+extern uint32_t am_hal_pwrctrl_mem_vote_release(am_hal_pwrctrl_vote_master_e eVoteMaster,
+                                                am_hal_pwrctrl_vote_memory_e eVoteMem);
+
+//*****************************************************************************
+//
+//! @brief Get memory vote status.
+//!
+//! @param eVoteMaster is the logical vote master.
+//! @param eVoteMem is the vote memory target.
+//! @param pbVote returns true when eVoteMaster currently has a vote requested
+//!               for eVoteMem.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
+//
+//*****************************************************************************
+extern uint32_t am_hal_pwrctrl_mem_vote_status_get(am_hal_pwrctrl_vote_master_e eVoteMaster,
+                                                   am_hal_pwrctrl_vote_memory_e eVoteMem,
+                                                   bool *pbVote);
+
+//*****************************************************************************
+//
+//! @brief Read memory retention status.
+//!
+//! @param eMemory is the memory target.
+//! @param bRetained returns true if the memory is in retention.
+//!
+//! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
+//
+//*****************************************************************************
+extern uint32_t am_hal_pwrctrl_mem_retention_status_get(am_hal_pwrctrl_memory_e eMemory,
+                                                        bool *bRetained);
 
 //*****************************************************************************
 //
@@ -802,28 +949,27 @@ extern uint32_t am_hal_pwrctrl_rom_disable(void);
 //
 //! @brief Configure the power settings for the Shared RAM.
 //!
-//! @param psConfig is a structure describing the desired memory configuration.
+//! @param eConfig selects the amount of Shared RAM to enable.
 //!
-//! Use this function to enable, disable, or change the sleep configuration of
-//! MCU memory.
+//! Use this function to enable or disable Shared RAM groups.
 //!
 //! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
 //
 //*****************************************************************************
-extern uint32_t am_hal_pwrctrl_sram_config(am_hal_pwrctrl_sram_memcfg_t *psConfig);
+extern uint32_t am_hal_pwrctrl_sram_config(am_hal_pwrctrl_sram_select_e eConfig);
 
 //*****************************************************************************
 //
 //! @brief Get the power settings for the Shared RAM.
 //!
-//! @param psConfig is a structure describing the desired memory configuration.
+//! @param peConfig receives the current Shared RAM configuration.
 //!
-//! Use this function to check the current settings for the MCU memories.
+//! Use this function to check the current Shared RAM configuration.
 //!
 //! @return AM_HAL_STATUS_SUCCESS or applicable PWRCTRL errors
 //
 //*****************************************************************************
-extern uint32_t am_hal_pwrctrl_sram_config_get(am_hal_pwrctrl_sram_memcfg_t *psConfig);
+extern uint32_t am_hal_pwrctrl_sram_config_get(am_hal_pwrctrl_sram_select_e *peConfig);
 
 //*****************************************************************************
 //

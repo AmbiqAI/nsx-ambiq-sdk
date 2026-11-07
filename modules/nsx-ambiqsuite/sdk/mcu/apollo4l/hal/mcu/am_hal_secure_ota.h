@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -228,9 +228,6 @@ typedef struct
    am_image_opt3_t  opt3;
 } am_image_opt_info_t;
 
-// #### INTERNAL BEGIN ####
-// #### INTERNAL END ####
-
 //
 //! Maximum number of OTAs
 //
@@ -321,9 +318,6 @@ typedef enum
     AM_HAL_OTA_STATUS_FAILURE               =          0x00000002,
     AM_HAL_OTA_STATUS_PENDING               =          0x00000003,
     // Remaining values are used as numbers - only bits 27, 29, 30, 31 can be used - Along with setting the FAILURE indication as value 2 in bits 0,1
-// #### INTERNAL BEGIN ####
-    // Not using bit 28 - just to allow for images to be in SRAM in future
-// #### INTERNAL END ####
     AM_HAL_OTA_STATUS_INVALID_OWNER         = (int32_t)0x80000002,
     AM_HAL_OTA_STATUS_AUTH_POLICY           =          0x40000002,
     AM_HAL_OTA_STATUS_ENC_POLICY            = (int32_t)0xC0000002,

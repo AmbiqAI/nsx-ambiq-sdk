@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -242,9 +242,6 @@ typedef struct
    am_image_opt3_t  opt3;
 } am_image_opt_info_t;
 
-// #### INTERNAL BEGIN ####
-// #### INTERNAL END ####
-
 //
 //! Maximum number of OTAs
 //
@@ -293,21 +290,6 @@ typedef struct
 // Store the b1 to store the return status - pass/fail
 // b0 is used to indicate pending/done
 #define AM_HAL_OTA_VALID_MASK                0x3
-// #### INTERNAL BEGIN ####
-/* Apollo5 memory map
-ITCM 0x00000000
-     0x00003FFF
-MRAM 0x00400000
-     0x007FFFFF
-RAM  0x20000000
-     0x2037FFFF
-MSPI 0x60000000
-     0x6FFFFFFF
-     0x80000000
-     0x8FFFFFFF
-So assuming we never use MSPI for OTA...bits 24, 25, 26, 27, 28, 30, 31 are available (will always be 0 in address)
-*/
-// #### INTERNAL END ####
 // bits 24, 25, 26, 27, 28, 30, 31 will always be 0 in address - Along with bits 0, 1 (as it needs to be word aligned)
 #define AM_HAL_OTA_ADDR_MASK           0x20FFFFFC
 // Use bit 24, 25, 26, 27 to store the return status, if failure

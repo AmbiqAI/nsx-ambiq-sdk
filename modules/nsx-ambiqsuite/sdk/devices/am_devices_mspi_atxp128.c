@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -570,9 +570,6 @@ am_devices_mspi_atxp128_command_write(void *pHandle, uint8_t ui8Instr, bool bSen
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     stMSPIFlashPIOTransaction.bContinue = false;    // MSPI CONT is deprecated for Apollo4
 #endif
 
@@ -739,9 +736,6 @@ am_devices_mspi_atxp128_command_read(void *pHandle, uint8_t ui8Instr, bool bSend
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
     stMSPIFlashPIOTransaction.bContinue          = false;   // MSPI CONT is deprecated for Apollo4
 #endif
 
@@ -1023,9 +1017,6 @@ am_devices_mspi_atxp128_init(uint32_t ui32Module,
         return AM_DEVICES_MSPI_ATXP128_STATUS_ERROR;
     }
 
-// #### INTERNAL BEGIN ####
-//    TODO: Should register for RXF here instead of relying on application
-// #### INTERNAL END ####
 //  ui32Status = am_hal_mspi_interrupt_enable(pMspiHandle, AM_HAL_MSPI_INT_CQUPD | AM_HAL_MSPI_INT_ERR | AM_HAL_MSPI_INT_RX_FIFO_FULL);
     ui32Status = am_hal_mspi_interrupt_enable(pMspiHandle, AM_HAL_MSPI_INT_CQUPD | AM_HAL_MSPI_INT_ERR );
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
@@ -2357,110 +2348,6 @@ am_devices_mspi_atxp128_disable_scrambling(void *pHandle)
     return AM_DEVICES_MSPI_ATXP128_STATUS_SUCCESS;
 }
 
-// #### INTERNAL BEGIN ####
-#if 0
-//
-// Static helper function:
-//  Generate the test data patterns.
-//  Length has to be multiple of 4bytes
-//  returns true if length error, otherwise returns false
-//
-const uint8_t test_pattern[FLASH_TEST_PATTERN_NUMBER] =
-{
-    0x55,   // inversion = 0xAA
-    0x5A,   // inversion = 0xA5
-    0x3C,   // inversion = 0xC3
-    0xF0,   // inversion = 0x0F
-    0x00    // inversion = 0xFF
-};
-
-//
-// Static function:
-//  verifies the data pattern in the echo-with-inversion way
-//
-static bool
-flash_verify_pattern(uint8_t pattern, uint8_t* buffer, uint32_t length)
-{
-    uint8_t current_byte;
-    for ( uint32_t i = 0; i < length; i++ )
-    {
-        if (i % 2 )
-        {
-            // odd, byte = ~pattern
-            current_byte = ~pattern;
-        }
-        else
-        {
-            // even, byte = pattern
-            current_byte = pattern;
-        }
-
-        if ( current_byte != buffer[i] )
-        {
-            return true;
-        }
-    }
-
-    return false;
-
-}
-
-//
-// Static function:
-//  checks the timing parameters set for octal communication
-//  returns true if verify failure happens, otherwise returns false
-//
-static bool
-flash_check(void* pFlashHandle, uint32_t length)
-{
-    // Try to use as less ram as possible in stack
-    uint32_t ui32NumberOfBytesLeft = length;
-    uint32_t ui32TestBytes = 0;
-    uint32_t ui32AddressOffset = 0;
-    uint8_t ui8PatternCounter = 0;
-    uint8_t ui8RxBuffer[FLASH_CHECK_DATA_SIZE_BYTES] = {0};
-
-    while ( ui32NumberOfBytesLeft )
-    {
-        if ( ui32NumberOfBytesLeft > FLASH_CHECK_DATA_SIZE_BYTES )
-        {
-            ui32TestBytes = FLASH_CHECK_DATA_SIZE_BYTES;
-            ui32NumberOfBytesLeft -= FLASH_CHECK_DATA_SIZE_BYTES;
-        }
-        else
-        {
-            ui32TestBytes = ui32NumberOfBytesLeft;
-            ui32NumberOfBytesLeft = 0;
-        }
-
-        //
-        // Test using echo with inversion
-        // Note: we cannot use this for read array command timing scan
-        // This command takes 4 dummy bytes but read array command takes 8
-        //
-        am_devices_mspi_atxp128_echo_with_inversion(pFlashHandle,
-                                                    test_pattern[ui8PatternCounter%FLASH_TEST_PATTERN_NUMBER],
-                                                    ui32TestBytes,    // size has to be lower than AM_HAL_MSPI_MAX_PIO_TRANS_SIZE
-                                                    ui8RxBuffer);
-
-        //
-        // Verify the result
-        //
-        if ( flash_verify_pattern(test_pattern[ui8PatternCounter%FLASH_TEST_PATTERN_NUMBER], ui8RxBuffer, ui32TestBytes) )
-        {
-//            am_util_debug_printf("    Failed to verify at offset 0x%08x!\n", ui32AddressOffset);
-            // verify failed, return directly
-          return true;
-        }
-        ui32AddressOffset += ui32TestBytes;
-        ui8PatternCounter++;
-    }
-
-    return false;
-}
-#endif // use echo-with-inversion
-// #### INTERNAL END ####
-
 //*****************************************************************************
 //
 //! @brief
@@ -2785,17 +2672,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {

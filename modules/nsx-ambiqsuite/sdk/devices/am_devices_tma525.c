@@ -59,7 +59,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -75,12 +75,6 @@
 // Local definitions.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-//
-// On Apollo5a, APBDMA cannot access TCM across 1k boundary.
-// On Apollo510 this limit is 4k; So need to limit the cmd buffer to 4k alignment in TCM.
-//
-// #### INTERNAL END ####
 #if defined(AM_PART_APOLLO5_API)
 static uint32_t DMATCBBuffer[256] __attribute__((aligned(4096)));
 #else

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SDHC_H
@@ -86,6 +86,10 @@ typedef struct
     uint32_t regINTSIG;
     uint32_t regAUTO;
     uint32_t regSDIOCTRL;
+    uint32_t regEMMCPHYDLLTAP;
+    uint32_t regEMMCPHYIO0;
+    uint32_t regEMMCPHYIO1;
+    uint32_t regEMMCPHYCLKCTRL;
 } am_hal_sdhc_register_state_t;
 
 typedef uint32_t dma_addr_t;

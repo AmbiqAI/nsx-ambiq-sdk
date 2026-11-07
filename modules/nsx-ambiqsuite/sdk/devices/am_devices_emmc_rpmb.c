@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -78,7 +78,7 @@ am_devices_emmc_mebedtls_init(void)
     g_RpmbRndContext.rndState = &g_RpmbRndState;
     g_RpmbRndContext.entropyCtx = &g_RpmbMbedtlsEntropy;
 
-#if defined (AM_PART_APOLLO5_API)
+#if defined (AM_PART_APOLLO5_API) || defined (AM_PART_ATOMIQ11X_API)
     ui32Status = am_hal_pwrctrl_periph_enabled(AM_HAL_PWRCTRL_PERIPH_OTP, &bOTPEnabled);
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
     {
@@ -147,7 +147,7 @@ am_devices_emmc_mebedtls_deinit(void)
     {
         AM_DEVICE_RPMB_DEBUG("Error in power down of Crypto module\n");
     }
-#if defined (AM_PART_APOLLO5_API)
+#if defined (AM_PART_APOLLO5_API) || defined (AM_PART_ATOMIQ11X_API)
     //
     // Power down OTP as well.
     //

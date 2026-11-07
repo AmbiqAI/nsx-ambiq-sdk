@@ -99,7 +99,7 @@ def test_cli_refuses_reused_evidence_and_selection_overrides(repo_root: Path, tm
 
 
 def test_same_abi_count_cannot_hide_missing_combinations():
-    requirement = GCC[0]
+    requirement = next(r for r in GCC if r.selector.endswith('::test_vendor_layout_from_sdk_target'))
     gate = Gate((requirement,))
     items = [SimpleNamespace(nodeid=requirement.selector + f'[repeat{i}]',
              callspec=SimpleNamespace(params={'family': 'gcc', 'language': 'C', 'selection': 'default'}))

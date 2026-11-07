@@ -221,19 +221,6 @@ index 7561aa4..e870a60 100644
  __attribute__((naked))
  void
  am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
-diff --git a/mcu/apollo4l/hal/mcu/am_hal_card.h b/mcu/apollo4l/hal/mcu/am_hal_card.h
-index ba0527b..ed660d3 100644
---- a/mcu/apollo4l/hal/mcu/am_hal_card.h
-+++ b/mcu/apollo4l/hal/mcu/am_hal_card.h
-@@ -468,7 +468,7 @@ extern "C"
- // Internal macros
- //
- #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
--#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
-+#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
- 
- #define SECTOR_MODE       0x4
- #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
 diff --git a/mcu/apollo4p/hal/am_hal_global.h b/mcu/apollo4p/hal/am_hal_global.h
 index 88affa8..685e6c3 100644
 --- a/mcu/apollo4p/hal/am_hal_global.h
@@ -247,19 +234,6 @@ index 88affa8..685e6c3 100644
  __attribute__((naked))
  void
  am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
-diff --git a/mcu/apollo4p/hal/mcu/am_hal_card.h b/mcu/apollo4p/hal/mcu/am_hal_card.h
-index 9ec9a33..97cdb67 100644
---- a/mcu/apollo4p/hal/mcu/am_hal_card.h
-+++ b/mcu/apollo4p/hal/mcu/am_hal_card.h
-@@ -468,7 +468,7 @@ extern "C"
- // Internal macros
- //
- #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
--#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
-+#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
- 
- #define SECTOR_MODE       0x4
- #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
 diff --git a/mcu/apollo510/hal/am_hal_global.h b/mcu/apollo510/hal/am_hal_global.h
 index 5b18eaa..a3dd40d 100644
 --- a/mcu/apollo510/hal/am_hal_global.h
@@ -273,19 +247,6 @@ index 5b18eaa..a3dd40d 100644
  __attribute__((naked))
  void
  am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
-diff --git a/mcu/apollo510/hal/mcu/am_hal_card.h b/mcu/apollo510/hal/mcu/am_hal_card.h
-index 0f1924c..64a8b4c 100644
---- a/mcu/apollo510/hal/mcu/am_hal_card.h
-+++ b/mcu/apollo510/hal/mcu/am_hal_card.h
-@@ -470,7 +470,7 @@ extern "C"
- // Internal macros
- //
- #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
--#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
-+#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
- 
- #define SECTOR_MODE       0x4
- #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
 diff --git a/mcu/apollo510L/hal/am_hal_global.h b/mcu/apollo510L/hal/am_hal_global.h
 index 247da51..1dd43b0 100644
 --- a/mcu/apollo510L/hal/am_hal_global.h
@@ -312,29 +273,15 @@ index d368fb4..aa208f4 100644
  __attribute__((naked))
  void
  am_hal_triple_read(uint32_t ui32TimerAddr, uint32_t ui32Data[]);
-diff --git a/mcu/atomiq110/hal/mcu/am_hal_card.h b/mcu/atomiq110/hal/mcu/am_hal_card.h
-index 500e382..67a9c29 100644
---- a/mcu/atomiq110/hal/mcu/am_hal_card.h
-+++ b/mcu/atomiq110/hal/mcu/am_hal_card.h
-@@ -473,7 +473,7 @@ extern "C"
- // Internal macros
- //
- #define SDIO_TIMING_SCAN_MIN_ACCEPTANCE_LENGTH  2 // Acceptable length should be determined based on system level test.
--#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - "fmt, __LINE__, ##__VA_ARGS__)
-+#define AM_HAL_CARD_DEBUG(fmt, ...) am_util_debug_printf("[CARD] line %04d - " fmt, __LINE__, ##__VA_ARGS__)
- 
- #define SECTOR_MODE       0x4
- #define CARD_RDY_BIT      ((uint32_t)0x1 << 31)
 diff --git a/mcu/atomiq110/regs/am_reg_macros.h b/mcu/atomiq110/regs/am_reg_macros.h
-index 508b0bb..3598fa9 100644
 --- a/mcu/atomiq110/regs/am_reg_macros.h
 +++ b/mcu/atomiq110/regs/am_reg_macros.h
-@@ -228,7 +228,7 @@ _Pragma("GCC diagnostic pop")
+@@ -227,7 +227,7 @@
  // Macro for BKPT instruction
  //*****************************************************************************
  #ifndef AM_ASM_BKPT
 -#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC_STDC_INLINE__)
 +#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC__)
  #define AM_ASM_BKPT(n)          __asm("    bkpt "#n)
- #elif defined(__IAR_SYSTEMS_ICC__)
- #define AM_ASM_BKPT(n)          asm("    bkpt "#n)
+ #define AM_ASM_BKPT_SAFE(n)                                                     \
+                 do{                                                             \

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_RTC_H
@@ -138,13 +138,6 @@ typedef struct am_hal_rtc_time_struct
     uint32_t ui32Minute;
     uint32_t ui32Second;
     uint32_t ui32Hundredths;
-// #### INTERNAL BEGIN ####
-    // ERR028 - Century Bit toggles when CEB == 1
-    //          and ui32Year == 99 and hence
-    //          cannot handle ui32Year rollover
-    //          from 99 -> 00
-    //uint32_t ui32CenturyEnable;
-// #### INTERNAL END ####
 }
 am_hal_rtc_time_t;
 

@@ -2,8 +2,7 @@
 //
 //! @file am_hal_clkmgr_private.h
 //!
-//! @brief Clock manager functions that manage system clocks and minimize
-//!        power consumption by powering down clocks when possible.
+//! @brief Clock manager private APIs for HAL-internal use.
 //!
 //! @addtogroup clkmgr_at110 CLKMGR - Clock Manager
 //! @ingroup atomiq110_hal
@@ -16,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 //! @cond CLKMGR_PRIVATE_FUNC
@@ -29,30 +28,6 @@ extern "C"
 #endif
 
 #include "am_hal_clkmgr.h"
-
-//*****************************************************************************
-//
-//! @brief Clock manager handling before CPU enters deepsleep
-//!
-//! @note This API is inteded for use by HAL only. Do not call this API from
-//!       Application/BSP.
-//! @note This API is to be called from the critical section of the deep sleep
-//!       handling
-//
-//*****************************************************************************
-extern void am_hal_clkmgr_private_deepsleep_enter();
-
-//*****************************************************************************
-//
-//! @brief Clock manager handling after CPU exits from deepsleep
-//!
-//! @note This API is inteded for use by HAL only. Do not call this API from
-//!       Application/BSP.
-//! @note This API is to be called from the critical section of the deep sleep
-//!       handling
-//
-//*****************************************************************************
-extern void am_hal_clkmgr_private_deepsleep_exit();
 
 #ifdef __cplusplus
 }

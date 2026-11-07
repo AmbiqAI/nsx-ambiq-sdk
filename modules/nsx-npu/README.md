@@ -71,6 +71,11 @@ publish a fixed 1 µs virtual clock scaled at the tap rate that is live at each
 read, so reconfiguring or clearing STIMER — before, between, or during
 inferences — never rescales an in-flight deadline.
 
+The current AT110 register map does not define selector 11.
+It is treated as an unknown rate, like the CTIMER-fed taps;
+the default remains selector 2. FPGA rate calibration still requires hardware
+validation and is not established by a successful compile.
+
 Arming is best-effort: `nsx_npu_init` still succeeds if it fails, but then
 every inference wait is unbounded. That is logged (`WARNING nsx-npu: inference
 timeout not armed ...`) and can be asserted on:

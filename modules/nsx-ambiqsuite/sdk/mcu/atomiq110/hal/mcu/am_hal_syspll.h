@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_SYSPLL_H
@@ -50,10 +50,12 @@ extern "C"
 #define AM_HAL_SYSPLL_VCO_FREQ_MAX_MHZ          (1000U)
 #define AM_HAL_SYSPLL_REF_FREQ_MIN_MHZ          (4U)
 #define AM_HAL_SYSPLL_REF_FREQ_MAX_MHZ          (250U)
+#define AM_HAL_SYSPLL_FREF_HFRC_DIV8_FREQ_HZ    (62500000U)
 #define AM_HAL_SYSPLL_FPFD_FREQ_MIN_MHZ         (4U)
 #define AM_HAL_SYSPLL_FPFD_FREQ_MAX_MHZ         (50U)
 #define AM_HAL_SYSPLL_POST_DIV_MIN              (1U)
 #define AM_HAL_SYSPLL_POST_DIV_MAX              (32U)
+#define AM_HAL_SYSPLL_PHASE_DIV_MAX             (64U)
 #define AM_HAL_SYSPLL_SA_DIV_MIN                (2U)
 #define AM_HAL_SYSPLL_SA_DIV_MAX                (128U)
 
@@ -87,6 +89,18 @@ typedef enum
 
 // ****************************************************************************
 //
+//! @enum am_hal_mempll_foutphaseen_e
+//! @brief MEMPLL Phase output enable
+//
+// ****************************************************************************
+typedef enum
+{
+    AM_HAL_MEMPLL_FOUTPHASEEN_DISABLE    = MCUCTRL_MEMPLLCTL_PHASEFOUT2PHEN_DISABLE,
+    AM_HAL_MEMPLL_FOUTPHASEEN_ENABLE     = MCUCTRL_MEMPLLCTL_PHASEFOUT2PHEN_ENABLE,
+} am_hal_mempll_foutphaseen_e;
+
+// ****************************************************************************
+//
 //! @enum am_hal_syspll_bypass_e
 //! @brief System PLL bypass select.
 //
@@ -105,9 +119,9 @@ typedef enum
 // ****************************************************************************
 typedef enum
 {
-    AM_HAL_SYSPLL_FREFSEL_HFRCDIV10    = MCUCTRL_SYSPLLCTL_SYSPLLFREFSEL_HFRCDIV10,
+    AM_HAL_SYSPLL_FREFSEL_HFRC_DIV8    = MCUCTRL_SYSPLLCTL_SYSPLLFREFSEL_HFRCDIV10,
     AM_HAL_SYSPLL_FREFSEL_EXTREFCLK    = MCUCTRL_SYSPLLCTL_SYSPLLFREFSEL_EXTREFCLK,
-    AM_HAL_SYSPLL_FREFSEL_XTAL48MHz    = MCUCTRL_SYSPLLCTL_SYSPLLFREFSEL_HFXTAL48MHZ,
+    AM_HAL_SYSPLL_FREFSEL_XTAL_HS      = MCUCTRL_SYSPLLCTL_SYSPLLFREFSEL_HFXTAL48MHZ,
 } am_hal_syspll_frefsel_e;
 
 // ****************************************************************************
@@ -418,14 +432,15 @@ extern uint32_t am_hal_syspll_bypass_set(void *pHandle, bool bBypass);
 //! @param ui32Div   - divider value.
 //!
 //! This function configures the output divider for the system PLL.
-//!
-//! Note: For MEMPLL, ui32OutID is not used.
+//! This function returns AM_HAL_STATUS_INVALID_OPERATION for MEMPLL.
 //!
 //! @return status   - generic or interface specific status.
-//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured successfully.
+//!         - AM_HAL_STATUS_SUCCESS: System PLL output divider configured
+//!            successfully.
 //!         - AM_HAL_STATUS_INVALID_HANDLE: Invalid pHandle.
 //!         - AM_HAL_STATUS_INVALID_ARG: Invalid ui32OutId or ui32Div.
 //!         - AM_HAL_STATUS_OUT_OF_RANGE: ui32Div out of range.
+//!         - AM_HAL_STATUS_INVALID_OPERATION: Invalid operation for MEMPLL.
 //
 //*****************************************************************************
 extern uint32_t am_hal_syspll_output_config(void *pHandle, uint32_t ui32OutId, uint32_t ui32Div);

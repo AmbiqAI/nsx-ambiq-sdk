@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MSPI_H
@@ -131,10 +131,6 @@ extern "C"
 //*****************************************************************************
 typedef enum
 {
-// #### INTERNAL BEGIN ####
-    // Error in DMA Transition due to known issue in Apollo4 Rev B (TODO FIXME - Add Errata reference here).
-    // Edit: For revC and T-Bird, ERR063 is no longer an issue. This error should be removed.
-// #### INTERNAL END ####
   AM_HAL_MSPI_FIFO_FULL_CONDITION = AM_HAL_STATUS_MODULE_SPECIFIC_START
 } am_hal_mspi_err_e;
 
@@ -612,9 +608,6 @@ typedef enum
 //
 typedef struct
 {
-// #### INTERNAL BEGIN ####
-    // FIXME: No descripttion.
-// #### INTERNAL END ####
     //
     uint32_t                    ui32CEBreak;
 
@@ -630,9 +623,6 @@ typedef struct
     //! Byte enable always on for all lanes
     bool                        bBEOn;
 
-// #### INTERNAL BEGIN ####
-    // FIXME: No descripttion.
-// #### INTERNAL END ####
     //
     //bool                        bAFIFOLVL;
 

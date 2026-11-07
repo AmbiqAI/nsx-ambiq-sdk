@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKMGR_H
@@ -262,10 +262,6 @@ typedef struct
 //
 typedef struct
 {
-// #### INTERNAL BEGIN ####
-// XOCONFIG and Radio Tune are needed for silicon validation and maybe
-// removed for SDK release.
-// #### INTERNAL END ####
     //
     //! RF OSC frequency trim
     //

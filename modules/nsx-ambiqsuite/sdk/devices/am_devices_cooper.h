@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -315,10 +315,8 @@ enum PARAM_ID
     //! RF BTIPT
     PARAM_ID_RF_BTIPT_GAIN_SETTING      = 0x40,
 
-// #### INTERNAL BEGIN ####
     //! Memory write enable
     PARAM_ID_MEM_WRITE_ENABLE           = 0x50,
-// #### INTERNAL END ####
 
     PARAM_ID_BT_LINK_KEY_FIRST          = 0x60,
     PARAM_ID_BT_LINK_KEY_LAST           = 0x67,
@@ -496,9 +494,9 @@ typedef enum
 #define NVDS_PARAMETER_BD_ADDRESS       PARAM_ID_BD_ADDRESS, 0x06, 0x06, 0x22, 0x44, 0x66, 0x88, 0x48, 0x59
 //! Device name
 #define NVDS_PARAMETER_DEVICE_NAME      PARAM_ID_DEVICE_NAME, 0x06, 0x06, 0x43, 0x6F, 0x6F, 0x70, 0x65, 0x72
-// #### INTERNAL BEGIN ####
-//! Memory write enable
+//! Memory write enable (debug use only)
 #define NVDS_PARAMETER_MEM_WRITE_ENABLE PARAM_ID_MEM_WRITE_ENABLE, 0x06, 0x01, 0x01
+// #### INTERNAL BEGIN ####
 #if defined APOLLO4_ATE
 #define NVDS_PARAMETER_EXT_32K_CLK_SOURCE PARAM_ID_32K_CLK_SOURCE, 0x06, 0x01, 0x00
 #else
@@ -1130,6 +1128,21 @@ extern uint32_t am_devices_cooper_crystal_trim_set(void *pHandle, uint32_t ui32T
 //
 //*****************************************************************************
 extern uint32_t am_devices_cooper_reset_with_sbl_check(void* pHandle, am_devices_cooper_config_t* pDevConfig);
+
+//*****************************************************************************
+//
+//! @brief Request Cooper SBL to force-update firmware on the next handshaking
+//!
+//! Update is performed entirely in SBL and does not require Cooper application FW.
+//! am_devices_cooper_get_FwImage() may need to be called to get available firmware
+//! image before enabling force update.
+//!
+//! @param bEnable true to force re-flash even when Cooper reports the same version.
+//!
+//! @return status from am_devices_cooper_status_t
+//
+//*****************************************************************************
+extern uint32_t am_devices_cooper_force_fw_update_enable(bool bEnable);
 
 #ifdef __cplusplus
 }

@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -110,10 +110,6 @@ typedef enum
 //! AM_HAL_PWRCTRL_VDDF_BOOST_WA:
 //!  Default: Defined
 //
-// #### INTERNAL BEGIN ####
-// Corrects APB hang (BLEIF issue)
-// HSP20-871, HSP20-176
-// #### INTERNAL END ####
 //*****************************************************************************
 #define AM_HAL_PWRCTRL_VDDF_BOOST_WA
 

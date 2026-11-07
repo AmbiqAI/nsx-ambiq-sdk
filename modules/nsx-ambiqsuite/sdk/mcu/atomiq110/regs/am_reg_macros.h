@@ -11,7 +11,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -217,8 +217,22 @@ _Pragma("GCC diagnostic pop")
 #ifndef AM_ASM_BKPT
 #if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6000000)) || defined(__GNUC__)
 #define AM_ASM_BKPT(n)          __asm("    bkpt "#n)
+#define AM_ASM_BKPT_SAFE(n)                                                     \
+                do{                                                             \
+                    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)       \
+                    {                                                           \
+                        __asm("    bkpt "#n);                                   \
+                    }                                                           \
+                  }while(0)
 #elif defined(__IAR_SYSTEMS_ICC__)
 #define AM_ASM_BKPT(n)          asm("    bkpt "#n)
+                  #define AM_ASM_BKPT_SAFE(n)                                                     \
+                do{                                                             \
+                    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)       \
+                    {                                                           \
+                        __asm("    bkpt "#n);                                   \
+                    }                                                           \
+                  }while(0)
 #else
 #error Compiler unknown, cannot define BKPT instruction.
 #endif

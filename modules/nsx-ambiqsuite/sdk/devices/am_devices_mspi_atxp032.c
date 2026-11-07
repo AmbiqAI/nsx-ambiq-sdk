@@ -52,7 +52,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -68,11 +68,6 @@
 // Global variables.
 //
 //*****************************************************************************
-// #### INTERNAL BEGIN ####
-//
-// ATXP032_QUAD_CLKON4_MODE_EN is currently only tested for the apollo4p_eb
-//
-// #### INTERNAL END ####
 //#define ATXP032_QUAD_CLKON4_MODE_EN
 
 // #### INTERNAL BEGIN ####
@@ -345,6 +340,7 @@ am_hal_mspi_dev_config_t MSPI_ATXP032_Quad_CE1_MSPIConfig =
 #endif
 };
 
+#if !defined(AM_PART_APOLLO340)
 am_hal_mspi_dev_config_t MSPI_ATXP032_Octal_CE0_MSPIConfig =
 {
   .eSpiMode             = AM_HAL_MSPI_SPI_MODE_0,
@@ -440,6 +436,7 @@ am_hal_mspi_dev_config_t MSPI_ATXP032_Octal_CE1_MSPIConfig =
     .scramblingEndAddr    = 0,
 #endif
 };
+#endif
 
 struct
 {
@@ -451,8 +448,10 @@ struct
     {AM_HAL_MSPI_FLASH_SERIAL_CE1,                  &MSPI_ATXP032_Serial_CE1_MSPIConfig},
     {AM_HAL_MSPI_FLASH_QUAD_CE0,                    &MSPI_ATXP032_Quad_CE0_MSPIConfig},
     {AM_HAL_MSPI_FLASH_QUAD_CE1,                    &MSPI_ATXP032_Quad_CE1_MSPIConfig},
+#if !defined(AM_PART_APOLLO340)
     {AM_HAL_MSPI_FLASH_OCTAL_CE0,                   &MSPI_ATXP032_Octal_CE0_MSPIConfig},
     {AM_HAL_MSPI_FLASH_OCTAL_CE1,                   &MSPI_ATXP032_Octal_CE1_MSPIConfig},
+#endif
 };
 
 #if defined(AM_PART_APOLLO4) || defined(AM_PART_APOLLO4B)
@@ -686,10 +685,12 @@ am_device_init_flash(void *pHandle)
         case AM_HAL_MSPI_FLASH_QUAD_CE1:
             am_devices_mspi_atxp032_command_write(pHandle, AM_DEVICES_ATXP032_ENTER_QUAD_MODE, false, 0, ui32PIOBuffer, 0);
             break;
+#if !defined(AM_PART_APOLLO340)
         case AM_HAL_MSPI_FLASH_OCTAL_CE0:
         case AM_HAL_MSPI_FLASH_OCTAL_CE1:
             am_devices_mspi_atxp032_command_write(pHandle, AM_DEVICES_ATXP032_ENTER_OCTAL_MODE, false, 0, ui32PIOBuffer, 0);
             break;
+#endif
         default:
             return AM_DEVICES_MSPI_ATXP032_STATUS_ERROR;
     }
@@ -738,8 +739,10 @@ am_device_deinit_flash(void *pHandle)
             break;
         case AM_HAL_MSPI_FLASH_QUAD_CE0:
         case AM_HAL_MSPI_FLASH_QUAD_CE1:
+#if !defined(AM_PART_APOLLO340)
         case AM_HAL_MSPI_FLASH_OCTAL_CE0:
         case AM_HAL_MSPI_FLASH_OCTAL_CE1:
+#endif
             ui32Status = am_devices_mspi_atxp032_command_write(pHandle, AM_DEVICES_ATXP032_RETURN_TO_SPI_MODE, false, 0, ui32PIOBuffer, 0);
             if (AM_HAL_STATUS_SUCCESS != ui32Status)
             {
@@ -827,9 +830,6 @@ am_devices_mspi_atxp032_command_write(void *pHandle, uint8_t ui8Instr, bool bSen
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
    stMSPIFlashPIOTransaction.bContinue           = false;   // MSPI CONT is deprecated for Apollo4
 #endif // AM_PART_APOLLO4_API || AM_PART_APOLLO5_API
 
@@ -1004,12 +1004,14 @@ am_devices_mspi_atxp032_command_read(void *pHandle, uint8_t ui8Instr, bool bSend
     }
 #endif
 
+#if !defined(AM_PART_APOLLO340)
     if ( (pFlash->stSetting.eDeviceConfig == AM_HAL_MSPI_FLASH_OCTAL_CE0) ||
          (pFlash->stSetting.eDeviceConfig == AM_HAL_MSPI_FLASH_OCTAL_CE1) )
     {
         stMSPIFlashPIOTransaction.bTurnaround    = true;
     }
     else
+#endif
     {
         stMSPIFlashPIOTransaction.bTurnaround    = false;
     }
@@ -1065,9 +1067,6 @@ am_devices_mspi_atxp032_command_read(void *pHandle, uint8_t ui8Instr, bool bSend
 #endif
     stMSPIFlashPIOTransaction.bDCX               = false;
     stMSPIFlashPIOTransaction.bEnWRLatency       = false;
-// #### INTERNAL BEGIN ####
-// FALCSW-426 7/29/22 Deprecate MSPI CONT bit. (See also A3DS-25.)
-// #### INTERNAL END ####
    stMSPIFlashPIOTransaction.bContinue           = false;   // MSPI CONT is deprecated for Apollo4
 #endif
 
@@ -1259,7 +1258,9 @@ am_devices_mspi_atxp032_init(uint32_t ui32Module, am_devices_mspi_atxp032_config
     {
         case AM_HAL_MSPI_FLASH_SERIAL_CE0:
         case AM_HAL_MSPI_FLASH_QUAD_CE0:
+#if !defined(AM_PART_APOLLO340)
         case AM_HAL_MSPI_FLASH_OCTAL_CE0:
+#endif
             gAmAtxp032[ui32Index].stSetting = MSPI_ATXP032_Serial_CE0_MSPIConfig;
             tempDevCfg = MSPI_ATXP032_Serial_CE0_MSPIConfig;
 
@@ -1283,7 +1284,9 @@ am_devices_mspi_atxp032_init(uint32_t ui32Module, am_devices_mspi_atxp032_config
 
         case AM_HAL_MSPI_FLASH_SERIAL_CE1:
         case AM_HAL_MSPI_FLASH_QUAD_CE1:
+#if !defined(AM_PART_APOLLO340)
         case AM_HAL_MSPI_FLASH_OCTAL_CE1:
+#endif
             gAmAtxp032[ui32Index].stSetting = MSPI_ATXP032_Serial_CE1_MSPIConfig;
             tempDevCfg = MSPI_ATXP032_Serial_CE1_MSPIConfig;
 
@@ -1439,9 +1442,6 @@ am_devices_mspi_atxp032_init(uint32_t ui32Module, am_devices_mspi_atxp032_config
         return AM_DEVICES_MSPI_ATXP032_STATUS_ERROR;
     }
 
-// #### INTERNAL BEGIN ####
-//    TODO: Should register for RXF here instead of relying on application
-// #### INTERNAL END ####
 //  ui32Status = am_hal_mspi_interrupt_enable(pMspiHandle, AM_HAL_MSPI_INT_CQUPD | AM_HAL_MSPI_INT_ERR | AM_HAL_MSPI_INT_RX_FIFO_FULL);
     ui32Status = am_hal_mspi_interrupt_enable(pMspiHandle, AM_HAL_MSPI_INT_CQUPD | AM_HAL_MSPI_INT_ERR );
     if (AM_HAL_STATUS_SUCCESS != ui32Status)
@@ -2467,6 +2467,7 @@ am_devices_mspi_atxp032_write(void *pHandle, uint8_t *pui8TxBuffer,
                     }
                     bWriteComplete = (0 == ((ui32PIOBuffer[0] >> 16) & AM_DEVICES_ATXP032_WIP));
                     break;
+#if !defined(AM_PART_APOLLO340)
                 case AM_HAL_MSPI_FLASH_OCTAL_CE0:
                 case AM_HAL_MSPI_FLASH_OCTAL_CE1:
                     ui32Status = am_devices_mspi_atxp032_command_read(pHandle, AM_DEVICES_MSPI_ATXP032_READ_STATUS_BYTE1, false, 0, ui32PIOBuffer, 6);
@@ -2476,6 +2477,7 @@ am_devices_mspi_atxp032_write(void *pHandle, uint8_t *pui8TxBuffer,
                     }
                     bWriteComplete = (0 == (ui32PIOBuffer[1] & AM_DEVICES_ATXP032_WIP));
                     break;
+#endif
                 default:
                     return AM_DEVICES_MSPI_ATXP032_STATUS_ERROR;
             }
@@ -2669,6 +2671,7 @@ mspi_atxp032_dma_write(void *pHandle, uint8_t *pui8TxBuffer,
                     }
                     bWriteComplete = (0 == ((ui32PIOBuffer[0] >> 16) & AM_DEVICES_ATXP032_WIP));
                     break;
+#if !defined(AM_PART_APOLLO340)
                 case AM_HAL_MSPI_FLASH_OCTAL_CE0:
                 case AM_HAL_MSPI_FLASH_OCTAL_CE1:
                     ui32Status = am_devices_mspi_atxp032_command_read(pHandle, AM_DEVICES_MSPI_ATXP032_READ_STATUS_BYTE1, false, 0, ui32PIOBuffer, 6);
@@ -2678,6 +2681,7 @@ mspi_atxp032_dma_write(void *pHandle, uint8_t *pui8TxBuffer,
                     }
                     bWriteComplete = (0 == (ui32PIOBuffer[1] & AM_DEVICES_ATXP032_WIP));
                     break;
+#endif
                 default:
                     return AM_DEVICES_MSPI_ATXP032_STATUS_ERROR;
             }
@@ -2850,6 +2854,7 @@ am_devices_mspi_atxp032_sector_erase(void *pHandle, uint32_t ui32SectorAddress)
                 }
                 bEraseComplete = (0 == ((ui32PIOBuffer[0] >> 16) & AM_DEVICES_ATXP032_WIP));
                 break;
+#if !defined(AM_PART_APOLLO340)
             case AM_HAL_MSPI_FLASH_OCTAL_CE0:
             case AM_HAL_MSPI_FLASH_OCTAL_CE1:
                 ui32Status = am_devices_mspi_atxp032_command_read(pHandle, AM_DEVICES_MSPI_ATXP032_READ_STATUS_BYTE1, false, 0, ui32PIOBuffer, 6);
@@ -2859,6 +2864,7 @@ am_devices_mspi_atxp032_sector_erase(void *pHandle, uint32_t ui32SectorAddress)
                 }
                 bEraseComplete = (0 == (ui32PIOBuffer[1] & AM_DEVICES_ATXP032_WIP));
                 break;
+#endif
             default:
                 return AM_DEVICES_MSPI_ATXP032_STATUS_ERROR;
         }
@@ -3019,142 +3025,6 @@ am_devices_mspi_atxp032_disable_scrambling(void *pHandle)
 
 #if defined(AM_PART_APOLLO4_API) || defined(AM_PART_APOLLO5_API)
 
-// #### INTERNAL BEGIN ####
-#if 0
-//
-// Static helper function:
-//  Generate the test data patterns.
-//  Length has to be multiple of 4bytes
-//  returns true if length error, otherwise returns false
-//
-const uint8_t test_pattern[FLASH_TEST_PATTERN_NUMBER] =
-{
-    0x55,   // inversion = 0xAA
-    0x5A,   // inversion = 0xA5
-    0x3C,   // inversion = 0xC3
-    0xF0,   // inversion = 0x0F
-    0x00    // inversion = 0xFF
-};
-
-//
-// Static function:
-//  verifies the data pattern in the echo-with-inversion way
-//
-//*****************************************************************************
-//
-//! @brief Handle flash verify pattern.
-//!
-//! Internal helper for the flash verify pattern operation.
-//!
-//! @param pattern - Pointer to pattern.
-//! @param buffer - Data buffer pointer.
-//! @param length - Length/count for length.
-//!
-//! @return true if the operation succeeds; otherwise false.
-//
-//*****************************************************************************
-static bool
-flash_verify_pattern(uint8_t pattern, uint8_t* buffer, uint32_t length)
-{
-    uint8_t current_byte;
-    for ( uint32_t i = 0; i < length; i++ )
-    {
-        if (i % 2 )
-        {
-            //
-            // odd, byte = ~pattern
-            //
-            current_byte = ~pattern;
-        }
-        else
-        {
-            //
-            // even, byte = pattern
-            //
-            current_byte = pattern;
-        }
-
-        if ( current_byte != buffer[i] )
-        {
-            return true;
-        }
-    }
-
-    return false;
-
-}
-
-//
-// Static function:
-//  checks the timing parameters set for octal communication
-//  returns true if verify failure happens, otherwise returns false
-//
-//*****************************************************************************
-//
-//! @brief Handle flash check.
-//!
-//! Internal helper for the flash check operation.
-//!
-//! @param pFlashHandle - Pointer to the device handle.
-//! @param length - Length/count for length.
-//!
-//! @return true if the operation succeeds; otherwise false.
-//
-//*****************************************************************************
-static bool
-flash_check(void* pFlashHandle, uint32_t length)
-{
-    //
-    // Try to use as less ram as possible in stack
-    //
-    uint32_t ui32NumberOfBytesLeft = length;
-    uint32_t ui32TestBytes = 0;
-    uint32_t ui32AddressOffset = 0;
-    uint8_t ui8PatternCounter = 0;
-    uint8_t ui8RxBuffer[FLASH_CHECK_DATA_SIZE_BYTES] = {0};
-
-    while ( ui32NumberOfBytesLeft )
-    {
-        if ( ui32NumberOfBytesLeft > FLASH_CHECK_DATA_SIZE_BYTES )
-        {
-            ui32TestBytes = FLASH_CHECK_DATA_SIZE_BYTES;
-            ui32NumberOfBytesLeft -= FLASH_CHECK_DATA_SIZE_BYTES;
-        }
-        else
-        {
-            ui32TestBytes = ui32NumberOfBytesLeft;
-            ui32NumberOfBytesLeft = 0;
-        }
-
-        //
-        // Test using echo with inversion
-        // Note: we cannot use this for read array command timing scan
-        // This command takes 4 dummy bytes but read array command takes 8
-        //
-        am_devices_mspi_atxp032_echo_with_inversion(pFlashHandle,
-                                                    test_pattern[ui8PatternCounter%FLASH_TEST_PATTERN_NUMBER],
-                                                    ui32TestBytes,    // size has to be lower than AM_HAL_MSPI_MAX_PIO_TRANS_SIZE
-                                                    ui8RxBuffer);
-
-        //
-        // Verify the result
-        //
-        if ( flash_verify_pattern(test_pattern[ui8PatternCounter%FLASH_TEST_PATTERN_NUMBER], ui8RxBuffer, ui32TestBytes) )
-        {
-            //
-            // verify failed, return directly
-            //
-            return true;
-        }
-        ui32AddressOffset += ui32TestBytes;
-        ui8PatternCounter++;
-    }
-
-    return false;
-}
-#endif // use echo-with-inversion
-// #### INTERNAL END ####
-
 //*****************************************************************************
 //
 //! @brief Prepare test pattern.
@@ -3247,15 +3117,9 @@ static int prepare_test_pattern(uint32_t pattern_index, uint8_t* buff, uint32_t 
 }
 
 #if defined(AM_PART_APOLLO4_API)
-// #### INTERNAL BEGIN ####
-// FALCSW-698 9/13/23 DAXI Buffer Alignment Restrictions.
-// #### INTERNAL END ####
 static AM_SHARED_RW uint8_t  ui8TxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] AM_BIT_ALIGNED(128);
 static AM_SHARED_RW uint8_t  ui8RxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] AM_BIT_ALIGNED(128);
 #elif defined(AM_PART_APOLLO5_API)
-// #### INTERNAL BEGIN ####
-// a cache line is 32 bytes
-// #### INTERNAL END ####
 static AM_SHARED_RW uint8_t  ui8TxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] __attribute__((aligned(32)));
 static AM_SHARED_RW uint8_t  ui8RxBuffer[FLASH_TIMING_SCAN_SIZE_BYTES] __attribute__((aligned(32)));
 #else
@@ -3510,17 +3374,6 @@ find_mid_point(uint32_t* pVal)
     //
     // check the passing window side
     //
-// #### INTERNAL BEGIN ####
-//
-// HSP20-339: Try to locate and move the middle value found one bit further away from the failure window.
-// In our current tests, most of the time, we see the failure window is in the middle of 1-30 range.
-// Passing windows are likely to be on either end of the 1-30 range.
-// Therefore, adding comparison here, if we see the middle point is below 16, it is likely that we found
-// a passing window starting from 1 at the lower side, if it is true (setting 1 passed),
-// we further move the middle value to the lower side by 1.
-// And the same for the higher values.
-//
-// #### INTERNAL END ####
 
     if ( (pick_point < 16) && (val & 0x00000002) )
     {
@@ -3555,18 +3408,6 @@ find_mid_point(uint32_t* pVal)
 //
 const am_devices_mspi_atxp032_sdr_timing_config_t atxp032_sConfigArray[] =
 {
-// #### INTERNAL BEGIN ####
-//    {1 , 0, 1}, // Turnaround=1 , RXNEG=0, RXDQSDELAY=Dummy
-//    {1 , 1, 1}, // Turnaround=1 , RXNEG=1, RXDQSDELAY=Dummy
-//    {2 , 0, 1}, // Turnaround=2 , RXNEG=0, RXDQSDELAY=Dummy
-//    {2 , 1, 1}, // Turnaround=2 , RXNEG=1, RXDQSDELAY=Dummy
-//    {3 , 0, 1}, // Turnaround=3 , RXNEG=0, RXDQSDELAY=Dummy
-//    {3 , 1, 1}, // Turnaround=3 , RXNEG=1, RXDQSDELAY=Dummy
-//    {4 , 0, 1}, // Turnaround=4 , RXNEG=0, RXDQSDELAY=Dummy
-//    {4 , 1, 1}, // Turnaround=4 , RXNEG=1, RXDQSDELAY=Dummy
-//    {5 , 0, 1}, // Turnaround=5 , RXNEG=0, RXDQSDELAY=Dummy
-//    {5 , 1, 1}, // Turnaround=5 , RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
     {6 , 0, 1}, // Turnaround=6 , RXNEG=0, RXDQSDELAY=Dummy
     {6 , 1, 1}, // Turnaround=6 , RXNEG=1, RXDQSDELAY=Dummy
     {7 , 0, 1}, // Turnaround=7 , RXNEG=0, RXDQSDELAY=Dummy
@@ -3581,14 +3422,6 @@ const am_devices_mspi_atxp032_sdr_timing_config_t atxp032_sConfigArray[] =
     {11, 1, 1}, // Turnaround=11, RXNEG=1, RXDQSDELAY=Dummy
     {12, 0, 1}, // Turnaround=12, RXNEG=0, RXDQSDELAY=Dummy
     {12, 1, 1}, // Turnaround=12, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL BEGIN ####
-//    {13, 0, 1}, // Turnaround=13, RXNEG=0, RXDQSDELAY=Dummy
-//    {13, 1, 1}, // Turnaround=13, RXNEG=1, RXDQSDELAY=Dummy
-//    {14, 0, 1}, // Turnaround=14, RXNEG=0, RXDQSDELAY=Dummy
-//    {14, 1, 1}, // Turnaround=14, RXNEG=1, RXDQSDELAY=Dummy
-//    {15, 0, 1}, // Turnaround=15, RXNEG=0, RXDQSDELAY=Dummy
-//    {15, 1, 1}, // Turnaround=15, RXNEG=1, RXDQSDELAY=Dummy
-// #### INTERNAL END ####
 };
 
 //*****************************************************************************
@@ -4333,18 +4166,6 @@ am_devices_mspi_atxp032_apply_sdr_timing(void *pHandle,
     SDRTimingConfigStored.ui8TxDQSDelay     = pDevSdrCfg->ui8TxDQSDelay;
     SDRTimingConfigStored.ui8RxDQSDelay     = pDevSdrCfg->ui8RxDQSDelay;
     SDRTimingConfigStored.ui8Turnaround     = pDevSdrCfg->ui8Turnaround;
-
-// #### INTERNAL BEGIN ####
-#if 0
-    am_util_debug_printf("Following MSPI timing setting is applied after timing scan.\n");
-    am_util_debug_printf("TxNeg       = %d\n", applyCfg.bTxNeg);
-    am_util_debug_printf("RxNeg       = %d\n", applyCfg.bRxNeg);
-    am_util_debug_printf("RxCap       = %d\n", applyCfg.bRxCap);
-    am_util_debug_printf("Turnaround  = %d\n", applyCfg.ui8Turnaround);
-    am_util_debug_printf("TxDQSDelay  = %d\n", applyCfg.ui8TxDQSDelay);
-    am_util_debug_printf("RxDQSDelay  = %d\n\n", applyCfg.ui8RxDQSDelay);
-#endif
-// #### INTERNAL END ####
 
     return am_hal_mspi_control(pFlash->pMspiHandle, AM_HAL_MSPI_REQ_TIMING_SCAN, &applyCfg);
 }

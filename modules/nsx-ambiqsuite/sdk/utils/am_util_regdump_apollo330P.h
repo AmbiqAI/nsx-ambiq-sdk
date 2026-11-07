@@ -4,7 +4,7 @@
 //!
 //! @brief Functions to aid register dumping and debugging (AP330P specific)
 //!
-//! @addtogroup regdump_ap330P_utils Register Dump Functionality
+//! @addtogroup regdump_ap330P_utils Register Dump Functionality - Apollo330P
 //! @ingroup utils
 //! @{
 //
@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 

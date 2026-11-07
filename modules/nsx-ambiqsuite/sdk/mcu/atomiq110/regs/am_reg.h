@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_H
@@ -127,7 +127,7 @@
 //*****************************************************************************
 #define AM_REG_I3C_NUM_MODULES                       3
 #define AM_REG_I3Cn(n)   \
-        (I3C_BASE + 0x00003000 * n)
+        (I3C_BASE + 0x00002000 * n)
 
 //*****************************************************************************
 //
@@ -181,6 +181,26 @@
 
 //*****************************************************************************
 //
+//! @brief DBIDSIBRIDGE
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_DBIDSIBRIDGE_NUM_MODULES              1
+#define AM_REG_DBIDSIBRIDGEn(n)   \
+        (DBIDSIBRIDGE_BASE + 0x00000004 * n)
+
+//*****************************************************************************
+//
+//! @brief DPIGEARBOX
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_DPIGEARBOX_NUM_MODULES                1
+#define AM_REG_DPIGEARBOXn(n)   \
+        (DPIGEARBOX_BASE + 0x00000004 * n)
+
+//*****************************************************************************
+//
 //! @brief DMEA
 //! Instance finder. (1 instance(s) available)
 //
@@ -208,6 +228,16 @@
 #define AM_REG_IOSLAVEFD_NUM_MODULES                 2
 #define AM_REG_IOSLAVEFDn(n)   \
         (IOSLAVEFD0_BASE + 0x00000400 * n)
+
+//*****************************************************************************
+//
+//! @brief LAU
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_LAU_NUM_MODULES                       1
+#define AM_REG_LAUn(n)   \
+        (LAU_BASE + 0x00000000 * n)
 
 //*****************************************************************************
 //
@@ -248,6 +278,16 @@
 #define AM_REG_GPU_NUM_MODULES                       1
 #define AM_REG_GPUn(n)   \
         (GPU_BASE + 0x00000000 * n)
+
+//*****************************************************************************
+//
+//! @brief HBLRAM
+//! Instance finder. (1 instance(s) available)
+//
+//*****************************************************************************
+#define AM_REG_HBLRAM_NUM_MODULES                    1
+#define AM_REG_HBLRAMn(n)   \
+        (HBLRAM_BASE + 0x00000000 * n)
 
 //*****************************************************************************
 //
@@ -441,13 +481,13 @@
 
 //*****************************************************************************
 //
-//! @brief I2S
+//! @brief IPBI2S
 //! Instance finder. (1 instance(s) available)
 //
 //*****************************************************************************
-#define AM_REG_I2S_NUM_MODULES                       1
-#define AM_REG_I2Sn(n)   \
-        (I2S0_BASE + 0x00000000 * n)
+#define AM_REG_IPBI2S_NUM_MODULES                    1
+#define AM_REG_IPBI2Sn(n)   \
+        (IPBI2S_BASE + 0x00000400 * n)
 
 //*****************************************************************************
 //

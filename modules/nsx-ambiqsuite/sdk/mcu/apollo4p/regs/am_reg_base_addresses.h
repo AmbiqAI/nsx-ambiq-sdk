@@ -12,7 +12,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_REG_BASE_ADDRESSES_H
@@ -20,9 +20,6 @@
 
 #include "stdint.h"
 
-// #### INTERNAL BEGIN ####
-// Information about the memory map comes from FALC-349, obtained 6/4/21.
-// #### INTERNAL END ####
 // ****************************************************************************
 // RAM Memory Map:
 //  TCM:                             384KB      0x10000000 - 0x1005FFFF

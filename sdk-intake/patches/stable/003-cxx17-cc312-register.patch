@@ -1,0 +1,36 @@
+diff --git a/mcu/apollo330P/hal/mcu/am_hal_cc312.h b/mcu/apollo330P/hal/mcu/am_hal_cc312.h
+--- a/mcu/apollo330P/hal/mcu/am_hal_cc312.h
++++ b/mcu/apollo330P/hal/mcu/am_hal_cc312.h
+@@ -157,7 +157,7 @@
+ static inline void
+ am_hal_cc312_wait_crypto_busy(void)
+ {
+-    register uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
++    uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
+ 
+     //
+     // Wait for crypto engine to be ready
+diff --git a/mcu/apollo510/hal/mcu/am_hal_cc312.h b/mcu/apollo510/hal/mcu/am_hal_cc312.h
+--- a/mcu/apollo510/hal/mcu/am_hal_cc312.h
++++ b/mcu/apollo510/hal/mcu/am_hal_cc312.h
+@@ -157,7 +157,7 @@
+ static inline void
+ am_hal_cc312_wait_crypto_busy(void)
+ {
+-    register uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
++    uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
+ 
+     //
+     // Wait for crypto engine to be ready
+diff --git a/mcu/apollo510L/hal/mcu/am_hal_cc312.h b/mcu/apollo510L/hal/mcu/am_hal_cc312.h
+--- a/mcu/apollo510L/hal/mcu/am_hal_cc312.h
++++ b/mcu/apollo510L/hal/mcu/am_hal_cc312.h
+@@ -157,7 +157,7 @@
+ static inline void
+ am_hal_cc312_wait_crypto_busy(void)
+ {
+-    register uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
++    uint32_t timeout = AM_HAL_CC_HAL_WAIT_TIMEOUT;
+ 
+     //
+     // Wait for crypto engine to be ready

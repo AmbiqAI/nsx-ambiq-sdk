@@ -15,29 +15,12 @@
 //
 //*****************************************************************************
 
-// #### INTERNAL BEGIN ####
-//  Notes:
-//      - The QG9696TSWHG04 display requires an asserted low CS.  Since the
-//        Apollo IOM provides asserted LOW CEs, it can be used directly with
-//        this device.
-//      - Test points are provided on the MBRD board to allow serial wire debug
-//        connections, as follows:
-//        DL1: NRST
-//        DL2: GPIO20  (SWDCK)
-//        DL3: GPIO21  (SWDIO)
-//        DL4: GPIO41  (SWO)
-//        DL5: VCC_3V3
-//        Other points of interest:
-//        GPIO29 is DISPLAY_CS
-//        GPIO31 is DISPLAY_D_C
-// #### INTERNAL END ####
-
 //*****************************************************************************
 //
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -315,53 +298,6 @@ set_horz_mode(am_devices_display_qg9696tswhg04_t *psDisplayContext)
     am_hal_iom_poll_complete(psDisplayContext->ui32Module);
 }
 
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// set_vert_mode() - Set display for vertical access mode.
-//
-//  This function sets the display for vertical mode with autoincrement.  This
-//  mode reads or writes pixels by column.
-//
-//  @param
-//  psDisplayContext    Pointer to the displey device context structure.
-//
-//*****************************************************************************
-static void
-set_vert_mode(am_devices_display_qg9696tswhg04_t *psDisplayContext)
-{
-    //
-    // Remap to vertical mode.
-    //
-    send_cmd(QG9696TSWHG04_CMD2B_SET_REMAP, 0x57, 0, 2, psDisplayContext);
-
-    //
-    // Set row address.
-    // Start 0, end 95.
-    //
-    send_cmd(QG9696TSWHG04_CMD3B_SET_ROW_ADDR, 0,
-             AM_DISPLAY_QG9696TSWHG04_HEIGHT - 1, 3, psDisplayContext);
-
-    //
-    // Start from 8th column of driver IC, which is the 0th column for OLED.
-    // End at (8+(96/8)).  Each column has 8 pixels.
-    //
-    send_cmd(QG9696TSWHG04_CMD3B_SET_COL_ADDR, 8,
-             8 + (AM_DISPLAY_QG9696TSWHG04_WIDTH / 2) - 1, 3, psDisplayContext);
-
-    //
-    // Set the addressing mode state.
-    //
-    g_ui32AddressMode = ADDR_MODE_VERT;
-
-    //
-    // Make sure we're done
-    //
-    am_hal_iom_poll_complete(psDisplayContext->ui32Module);
-}
-#endif
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 //
@@ -761,28 +697,6 @@ am_devices_display_qg9696tswhg04_callbacks_config(am_hal_iom_callback_t pfnYield
     display_qg9696tswhg04_yield = pfnYield;
     display_qg9696tswhg04_callback = pfnCallback;
 }
-
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// swizzle() - Static helper function.
-//
-//*****************************************************************************
-static uint8_t
-swizzle(uint8_t value)
-{
-    int8_t i8tmp, tmpbyte;
-    tmpbyte = 0;
-    for (i8tmp=0; i8tmp<8; i8tmp++)
-    {
-        tmpbyte |= ((value & 0x01) << (7-i8tmp));
-        value >>= 1;
-    }
-    return tmpbyte;
-} // swizzle()
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

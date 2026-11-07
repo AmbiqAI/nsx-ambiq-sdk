@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_UART_H
@@ -32,28 +32,6 @@ extern "C"
 //
 //*****************************************************************************
 #define UARTn(n)    ((UART0_Type*)(UART0_BASE + (n * (UART1_BASE - UART0_BASE))))
-
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// UART clock speed defs
-//
-//*****************************************************************************
-typedef enum
-{
-    eUART_CLK_SPEED_DEFAULT = 0,
-    eUART_CLK_SPEED_NOCLK,
-    eUART_CLK_SPEED_3MHZ,
-    eUART_CLK_SPEED_6MHZ,
-    eUART_CLK_SPEED_12MHZ,
-    eUART_CLK_SPEED_24MHZ,
-    eUART_CLK_SPEED_X32 = 0x80000000,
-}
-am_hal_uart_clock_speed_e;
-#endif
-// #### INTERNAL END ####
-
 
 //*****************************************************************************
 //
@@ -111,14 +89,6 @@ typedef struct
     uint32_t ui32TxBufferSize;
     uint8_t *pui8RxBuffer;
     uint32_t ui32RxBufferSize;
-// #### INTERNAL BEGIN ####
-#if 0
-    //
-    // Clock speed setting
-    //
-    am_hal_uart_clock_speed_e e32ClockSpeed;
-#endif
-// #### INTERNAL END ###
 }
 am_hal_uart_config_t;
 

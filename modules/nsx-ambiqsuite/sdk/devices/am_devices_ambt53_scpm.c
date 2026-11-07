@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #include <string.h>
@@ -311,9 +311,6 @@ am_devices_scpm_init(uint32_t ui32Module,
         *ppIomHandle = gAmSCPM[ui32Index].pIomHandle = pIomHandle;
         *ppHandle = (void *)&gAmSCPM[ui32Index];
 
-        // #### INTERNAL BEGIN ####
-        //TODO/Need to switch to AHB clk for FPGA
-        // #### INTERNAL END ####
         //TODO update according to the latest scpm register definition
         // SCPM_REG32_WR(SCPM_SYS_CLK_SEL_ADDR, (SCPM_SYS_CLK_SEL_RESET | (SCPM_SYS_CLK_SEL_SCPM_CSR_AHB << SCPM_SYS_CLK_SEL_SCPM_CSR_Pos)));
         am_util_delay_ms(1);
@@ -473,14 +470,8 @@ am_devices_scpm_control(void *pHandle,
     switch ( eRequest )
     {
         case AM_DEVICES_SCPM_REQ_GET_SLEEP_STATE:
-            // #### INTERNAL BEGIN ####
-            //TODO
-            // #### INTERNAL END ####
             break;
         case AM_DEVICES_SCPM_REQ_WAKEUP:
-            // #### INTERNAL BEGIN ####
-            //TODO
-            // #### INTERNAL END ####
             break;
         case AM_DEVICES_SCPM_REQ_GET_IRQ_STATUS:
             if (!pArgs)
@@ -512,19 +503,10 @@ am_devices_scpm_control(void *pHandle,
             ui32Status = SCPM_REG32_WR(SCPM_SW_RST_CTRL_ADDR, *(uint32_t*)pArgs);
             break;
         case AM_DEVICES_SCPM_REQ_RET_SRAM:
-            // #### INTERNAL BEGIN ####
-            //TODO
-            // #### INTERNAL END ####
             break;
         case AM_DEVICES_SCPM_REQ_STARTUP:
-            // #### INTERNAL BEGIN ####
-            //TODO
-            // #### INTERNAL END ####
             break;
         case AM_DEVICES_SCPM_REQ_SHUTDOWN:
-            // #### INTERNAL BEGIN ####
-            //TODO
-            // #### INTERNAL END ####
             break;
         case AM_DEVICES_SCPM_REQ_EN_TRIMS_LOAD:
             {

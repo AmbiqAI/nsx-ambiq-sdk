@@ -11,28 +11,12 @@
 //
 //*****************************************************************************
 
-// #### INTERNAL BEGIN ####
-//  Notes:
-// 29  Lite - this is the PWM input for the backlight control.
-//      Connect to 3-5VDC to turn on the backlight. Connect to ground
-//      to turn it off. Or, you can PWM at any frequency.
-// 8  SCLK - this is the SPI clock input pin. Mode 0, Active High
-//10  MOSI - this is the SPI Master Out Slave In pin,
-//12  TFT_CS - this is the TFT SPI chip select pin
-//31  D/C - this is the TFT SPI data or command selector pin
-//nRST  RST - this is the TFT reset pin. Software resets screen, can NC.
-//      Optional connect to nRST.
-//  Vcc - this is the power pin, connect to 3-5VDC
-//  GND - this is the power and signal ground pin
-//
-// #### INTERNAL END ####
-
 //*****************************************************************************
 //
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -500,53 +484,6 @@ set_horz_mode(am_devices_display_st7735_t *psDisplayContext)
     am_hal_iom_poll_complete(psDisplayContext->ui32Module);
 }
 
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// set_vert_mode() - Set display for vertical access mode.
-//
-//  This function sets the display for vertical mode with autoincrement.  This
-//  mode reads or writes pixels by column.
-//
-//  @param
-//  psDisplayContext    Pointer to the displey device context structure.
-//
-//*****************************************************************************
-static void
-set_vert_mode(am_devices_display_st7735_t *psDisplayContext)
-{
-    //
-    // Remap to vertical mode.
-    //
-    send_cmd(ST7735_CMD2B_SET_REMAP, 0x57, 0, 2, psDisplayContext);
-
-    //
-    // Set row address.
-    // Start 0, end 95.
-    //
-    send_cmd(ST7735_CMD3B_SET_ROW_ADDR, 0,
-             AM_DISPLAY_ST7735_HEIGHT - 1, 3, psDisplayContext);
-
-    //
-    // Start from 8th column of driver IC, which is the 0th column for OLED.
-    // End at (8+(96/8)).  Each column has 8 pixels.
-    //
-    send_cmd(ST7735_CMD3B_SET_COL_ADDR, 8,
-             8 + (AM_DISPLAY_ST7735_WIDTH / 2) - 1, 3, psDisplayContext);
-
-    //
-    // Set the addressing mode state.
-    //
-    g_ui32AddressMode = ADDR_MODE_VERT;
-
-    //
-    // Make sure we're done
-    //
-    am_hal_iom_poll_complete(psDisplayContext->ui32Module);
-}
-#endif
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 //!  @briefThis function sets the row number.  All subsequently written data will
@@ -951,28 +888,6 @@ am_devices_display_st7735_callbacks_config(am_hal_iom_callback_t pfnYield,
     display_st7735_yield = pfnYield;
     display_st7735_callback = pfnCallback;
 }
-
-// #### INTERNAL BEGIN ####
-#if 0
-//*****************************************************************************
-//
-// swizzle() - Static helper function.
-//
-//*****************************************************************************
-static uint8_t
-swizzle(uint8_t value)
-{
-    int8_t i8tmp, tmpbyte;
-    tmpbyte = 0;
-    for (i8tmp=0; i8tmp<8; i8tmp++)
-    {
-        tmpbyte |= ((value & 0x01) << (7-i8tmp));
-        value >>= 1;
-    }
-    return tmpbyte;
-} // swizzle()
-#endif
-// #### INTERNAL END ####
 
 //*****************************************************************************
 //

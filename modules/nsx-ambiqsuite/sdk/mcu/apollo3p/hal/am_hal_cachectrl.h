@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 // ****************************************************************************
 #ifndef AM_HAL_CACHECTRL_H
@@ -185,29 +185,6 @@ typedef struct
     //
     bool bLRU;
 
-// #### INTERNAL BEGIN ####
-#if 0
-    //
-    //! Set to true to enable cache monitor statistics.
-    //
-    bool bEnableCacheMonitoring;
-
-    //
-    //! Set to true to enable clock gating of cache RAMs.
-    //
-    bool bEnableCacheClockGating;
-
-    //
-    //! Set to true to enable light sleep of cache RAMs.
-    //
-    bool bEnableLightSleep;
-
-    //
-    //! Set to true to enable clock gating of the entire data array.
-    //
-    bool bEnableDataClockGating;
-#endif
-// #### INTERNAL END ####
 } am_hal_cachectrl_config_t;
 
 extern const am_hal_cachectrl_config_t am_hal_cachectrl_defaults;

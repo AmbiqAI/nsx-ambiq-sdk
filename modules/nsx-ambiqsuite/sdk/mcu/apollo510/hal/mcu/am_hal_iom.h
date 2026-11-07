@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -301,9 +301,6 @@ typedef struct
     //!     AM_HAL_IOM_STATUS_XFER_COMPLETE
     //!     AM_HAL_IOM_STATUS_DMAERR
     //
-// #### INTERNAL BEGIN ####
-    // TODO FIXME - Does this make sense to keep if we are just using CQ for all DMA?
-// #### INTERNAL END ####
     uint32_t ui32DmaStat;
 
     uint32_t ui32MaxTransactions;

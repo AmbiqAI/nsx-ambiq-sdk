@@ -34,6 +34,7 @@ PAYLOAD = tuple(Requirement(f'tests/{name}.py') for name in (
 # Minimum counts deliberately describe the reviewed matrix, independently of
 # the test parametrization. Removing coverage must not silently weaken the gate.
 GCC = (
+    Requirement('tests/test_at110_peripheral_abi.py::test_at110_peripheral_runtime_link', compiler='gcc'),
     Requirement('tests/test_vendor_abi.py::test_vendor_layout_from_sdk_target', 6,
                 parameters=('language', 'selection'),
                 variants=tuple((language, selection) for language in ('C', 'CXX')

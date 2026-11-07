@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKGEN_H
@@ -176,20 +176,6 @@ typedef struct
     bool        bXtalFailure;
 } am_hal_clkgen_status_t;
 
-
-// #### INTERNAL BEGIN ####
-#if 0
-//
-// Clkgen status and returns.
-//
-typedef enum
-{
-    AM_HAL_CLKGEN_STATUS_SYSCLK,
-    AM_HAL_CLKGEN_STATUS_OSC_RTC,
-    AM_HAL_CLKGEN_STATUS_XTAL_FAILURE
-} am_hal_clkgen_status_e;
-#endif
-// #### INTERNAL END ####
 // ****************************************************************************
 //
 //! @brief Apply various specific commands/controls on the CLKGEN module.
@@ -255,17 +241,6 @@ extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
 //!      - AM_HAL_CLKGEN_CLKOUT_XTAL_0_015
 //!      - AM_HAL_CLKGEN_CLKOUT_XTAL_32768
 //!      - AM_HAL_CLKGEN_CLKOUT_CG_100
-// #### INTERNAL BEGIN ####
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_48M
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_12M
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_6M
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_3M
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_750K
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_375K
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_187K
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_93750
-//!      - AM_HAL_CLKGEN_CLKOUT_FLASHCLK
-// #### INTERNAL END ####
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_512
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_32
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRC_2
@@ -279,16 +254,8 @@ extern uint32_t am_hal_clkgen_status_get(am_hal_clkgen_status_t *psStatus);
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_1
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_0_25
 //!      - AM_HAL_CLKGEN_CLKOUT_ULFRC_0_0009
-// #### INTERNAL BEGIN ####
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_732
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRC_2
-// #### INTERNAL END ####
 //!      -AM_HAL_CLKGEN_CLKOUT_LFRC_0_0004
 //!      - ** The Following are Not Autoenabled ("NE")
-// #### INTERNAL BEGIN ####
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRCNE_48M
-//!      - AM_HAL_CLKGEN_CLKOUT_HFRCNE_6M
-// #### INTERNAL END ####
 //!      - AM_HAL_CLKGEN_CLKOUT_XTALNE_32768
 //!      - AM_HAL_CLKGEN_CLKOUT_XTALNE_2048
 //!      - AM_HAL_CLKGEN_CLKOUT_LFRCNE_32

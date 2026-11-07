@@ -16,7 +16,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision npu-drop-2026.07.09 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_CLKMGR_H
@@ -39,6 +39,34 @@ extern "C"
 //!       - AM_HAL_MCUCTRL_CONTROL_EXTCLK32K_DISABLE
 //
 // #define AM_HAL_CLKMGR_MANAGE_XTAL_LS
+
+//
+//! When non-zero (default), HFADJ uses the hardware's built-in XTAL_LS request
+//! and warmup behavior. CLKMGR does not request or release XTAL_LS on behalf
+//! of HFRC when HFADJ is enabled or disabled.
+//! Note: HFRC's use of XTAL_LS is not reflected on the XTAL_LS scoreboard in
+//! this mode.
+//! Set to 0 to have CLKMGR explicitly request and release XTAL_LS as an HFADJ
+//! dependency through the clock scoreboard.
+//
+#ifndef AM_HAL_CLKMGR_HFADJ_USE_HW_XTAL_LS_MGMT
+#define AM_HAL_CLKMGR_HFADJ_USE_HW_XTAL_LS_MGMT    1
+#endif
+
+//
+//! Use the PLLVCO / MEMPLL / SYS_CLK0..4 / XTAL_HS / XTAL_LS / EXTREF_CLK state-machine
+//! implementation for config, request, and release instead of the legacy
+//! scoreboarding path. When non-zero, am_hal_clkmgr_clock_{config,request,release}
+//! calls am_hal_clkmgr_sm_st_trigger_* directly; legacy
+//! am_hal_clkmgr_{config,request,release}_{PLLVCO,MEMPLL} and
+//! am_hal_clkmgr_{config,request,release}_SYS_CLK and
+//! am_hal_clkmgr_{request,release}_{XTAL_HS,XTAL_LS,EXTREF_CLK} are not compiled.
+//! Define to 0 in the build or before including this header to use the legacy
+//! path. When undefined, defaults to 1 (state machine).
+//
+#ifndef AM_HAL_CLKMGR_USE_STATE_MACHINE
+#define AM_HAL_CLKMGR_USE_STATE_MACHINE 1
+#endif
 
 //
 //! Default Clock Manager Configuration
@@ -94,8 +122,9 @@ typedef enum
     AM_HAL_CLKMGR_USER_ID_UART4,
     AM_HAL_CLKMGR_USER_ID_UART5,
     AM_HAL_CLKMGR_USER_ID_ADC,
-    AM_HAL_CLKMGR_USER_ID_XSPI0,
-    AM_HAL_CLKMGR_USER_ID_XSPI1,
+    AM_HAL_CLKMGR_USER_ID_XSPIMC0,
+    AM_HAL_CLKMGR_USER_ID_XSPIMC1,
+    AM_HAL_CLKMGR_USER_ID_XSPIMC2,
     AM_HAL_CLKMGR_USER_ID_XSPI_S0,
     AM_HAL_CLKMGR_USER_ID_GFX,
     AM_HAL_CLKMGR_USER_ID_DC,
@@ -146,7 +175,7 @@ typedef enum
     AM_HAL_CLKMGR_USER_ID_MCLK,
     AM_HAL_CLKMGR_USER_ID_HFRC,
     AM_HAL_CLKMGR_USER_ID_HFRC2,
-    AM_HAL_CLKMGR_USER_ID_MFRC,
+    AM_HAL_CLKMGR_USER_ID_MFRC_AUD,
     AM_HAL_CLKMGR_USER_ID_PLLVCO,
     AM_HAL_CLKMGR_USER_ID_SYS_CLK0,
     AM_HAL_CLKMGR_USER_ID_SYS_CLK1,
@@ -160,6 +189,14 @@ typedef enum
     AM_HAL_CLKMGR_USER_ID_NPU,
     AM_HAL_CLKMGR_USER_ID_PRESTART,
     AM_HAL_CLKMGR_USER_ID_RESV0,
+    AM_HAL_CLKMGR_USER_ID_PLLVCO_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_SYS_CLK0_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_SYS_CLK1_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_SYS_CLK2_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_SYS_CLK3_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_SYS_CLK4_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_MEMPLL_RELEASING, // CLKMGR-internal: async release handoff only
+    AM_HAL_CLKMGR_USER_ID_HFRC_RELEASING, // CLKMGR-internal: async release handoff only
     AM_HAL_CLKMGR_USER_ID_MAX
 } am_hal_clkmgr_user_id_e;
 
@@ -169,7 +206,7 @@ typedef enum
 typedef enum
 {
     AM_HAL_CLKMGR_CLK_ID_LFRC,
-    AM_HAL_CLKMGR_CLK_ID_MFRC,
+    AM_HAL_CLKMGR_CLK_ID_MFRC_AUD,
     AM_HAL_CLKMGR_CLK_ID_HFRC,
     AM_HAL_CLKMGR_CLK_ID_HFRC2,
     AM_HAL_CLKMGR_CLK_ID_XTAL_LS,
@@ -182,11 +219,7 @@ typedef enum
     AM_HAL_CLKMGR_CLK_ID_SYS_CLK3,
     AM_HAL_CLKMGR_CLK_ID_SYS_CLK4,
     AM_HAL_CLKMGR_CLK_ID_MEMPLL,
-    AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
-    AM_HAL_CLKMGR_CLK_ID_MAX = AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
-    // TODO: PLLPOSTDIV is to be removed
-    // after removal, AM_HAL_CLKMGR_CLK_ID_MAX shall be
-    // AM_HAL_CLKMGR_CLK_ID_MEMPLL + 1
+    AM_HAL_CLKMGR_CLK_ID_MAX = AM_HAL_CLKMGR_CLK_ID_MEMPLL + 1,
 } am_hal_clkmgr_clock_id_e;
 
 //
@@ -231,10 +264,6 @@ typedef enum
 //
 typedef enum
 {
-    // Configuration to disable HFADJ on full release (No more active users for
-    // the HFRC clock).
-    AM_HAL_CLKMGR_DISABLE_HFADJ_ON_FULL_RELEASE,
-
     // Set SYPLL FREF priority
     AM_HAL_CLKMGR_SYSPLL_FREF_PRIORITY_SET,
 
@@ -333,6 +362,49 @@ typedef union
     am_hal_syspll_frefsel_e prio[AM_HAL_CLKMGR_SYSPLL_FREF_PRIORITY_COUNT];
 }am_hal_clkmgr_syspll_fref_priority_t;
 
+// #### INTERNAL BEGIN ####
+#ifdef AM_HAL_BOOTROM_USE
+#define am_hal_clkmgr_initialize()                                                      \
+        (AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_config(eClockId, ui32RequestedClk, psClockConfig)           \
+        ((void)(eClockId), (void)(ui32RequestedClk), (void)(psClockConfig),             \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_config_get(eClockId, pui32RequestedClk, psClockConfig)      \
+        ((void)(eClockId), (void)(pui32RequestedClk), (void)(psClockConfig),            \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_request(eClockId, eUserId)                                  \
+        ((void)(eClockId), (void)(eUserId),                                             \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_release(eClockId, eUserId)                                  \
+        ((void)(eClockId), (void)(eUserId),                                             \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_release_all(eUserId)                                        \
+        ((void)(eUserId),                                                               \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_clock_status_get(eClockId, pui32UserCount)                        \
+        ((void)(eClockId), (void)(pui32UserCount),                                      \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_board_info_set(psBoardInfo)                                       \
+        ((void)(psBoardInfo),                                                           \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_board_info_get(psBoardInfo)                                       \
+        ((void)(psBoardInfo),                                                           \
+         AM_HAL_STATUS_SUCCESS)
+
+#define am_hal_clkmgr_control(eControl, pConfig)                                        \
+        ((void)(eControl), (void)(pConfig),                                             \
+         AM_HAL_STATUS_SUCCESS)
+#else
+// #### INTERNAL END ####
+
 
 //*****************************************************************************
 //
@@ -354,6 +426,12 @@ extern uint32_t am_hal_clkmgr_initialize(void);
 //! @param psClockConfig - [Optional] clock config structure to be used to
 //!                        configure the clock specified. set to NULL if
 //!                        auto-generation is desired.
+//!
+//! @note Only one execution context may configure a given clock at any time.
+//!       Concurrent calls to am_hal_clkmgr_clock_config() for the same
+//!       eClockId from multiple threads or ISRs results in undefined behavior.
+//!       The application must serialize all clock configuration for that
+//!       clock ID.
 //!
 //! @return status - Status for the operation, as defined in am_hal_status_e
 //
@@ -393,6 +471,10 @@ extern uint32_t am_hal_clkmgr_clock_config_get(am_hal_clkmgr_clock_id_e eClockId
 //! @param eUserID - am_hal_clkmgr_user_id_e value that indicates which user is
 //!                  requesting the clock
 //!
+//! @note Only one execution context may use a given clock-user combination at
+//!       any time. Concurrent request/release of the same (eClockId, eUserId)
+//!       from multiple threads or ISRs results in undefined behavior.
+//!
 //! @return status - Status for the operation, as defined in am_hal_status_e
 //
 //*****************************************************************************
@@ -406,6 +488,10 @@ extern uint32_t am_hal_clkmgr_clock_request(am_hal_clkmgr_clock_id_e eClockId, a
 //!                   the user is releasing
 //! @param eUserID - am_hal_clkmgr_user_id_e value that indicates which user is
 //!                  releasing the clock
+//!
+//! @note Only one execution context may use a given clock-user combination at
+//!       any time. Concurrent request/release of the same (eClockId, eUserId)
+//!       from multiple threads or ISRs results in undefined behavior.
 //!
 //! @return status - Status for the operation, as defined in am_hal_status_e
 //
@@ -486,6 +572,10 @@ extern uint32_t am_hal_clkmgr_board_info_get(am_hal_clkmgr_board_info_t *psClkMg
 //
 //*****************************************************************************
 extern uint32_t am_hal_clkmgr_control(am_hal_clkmgr_control_e eControl, const void *pConfig);
+
+// #### INTERNAL BEGIN ####
+#endif // AM_HAL_BOOTROM_USE
+// #### INTERNAL END ####
 
 #ifdef __cplusplus
 }

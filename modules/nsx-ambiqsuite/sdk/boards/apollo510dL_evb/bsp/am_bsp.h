@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -144,10 +144,17 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 
 //*****************************************************************************
 //
+// Click Board I2C interface definitions
+//
+//*****************************************************************************
+#define AM_BSP_I2C_CB_IOM_MODULE            2
+
+//*****************************************************************************
+//
 // MSPI PSRAM definitions.
 //
 //*****************************************************************************
-#define AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA
+#define AM_BSP_MSPI_PSRAM_DEVICE_APS25616N
 #define AM_BSP_MSPI_PSRAM_MODULE_OCTAL_DDR_CE   AM_HAL_MSPI_FLASH_OCTAL_DDR_CE0
 #define USE_APS51216BA
 
@@ -185,11 +192,6 @@ extern am_devices_led_t am_bsp_psLEDs[AM_BSP_NUM_LEDS];
 #define TEST_IOS_CNTLR_MODULE           0
 #define am_iomaster_isr                 am_iomaster0_isr
 #define IOMSTR_IQRn                     IOMSTR0_IRQn
-
-//
-// ios_fullduplex
-//
-#define IOM_DUPLEX_TEST_MODULE          1
 
 //
 // ios_device and ios_controller pins
@@ -750,19 +752,6 @@ extern void am_bsp_mspi_reset_pincfg_get(uint32_t ui32Module,
 //*****************************************************************************
 extern void am_bsp_ckerr(int32_t i32ErrorCount);
 
-// #### INTERNAL BEGIN ####
-#if 0 // Not needed for Apollo510 and later. CAYNSWS-1513
-//*****************************************************************************
-//
-//! @brief Checks if itm is busy and provides a delay to flush the fifo
-//!
-//! Return: true  = ITM not busy and no timeout occurred.
-//!         false = Timeout occurred.
-//
-//*****************************************************************************
-extern bool am_bsp_debug_itm_printf_flush(void);
-#endif
-// #### INTERNAL END ####
 #ifdef __cplusplus
 }
 #endif

@@ -2,7 +2,12 @@
 //
 //! @file am_devices_display_rm69330.h
 //!
-//! @brief RM69330 display driver interfaces( MIPI-DSI, xSPI).
+//! @brief RM69330 display driver (MIPI-DSI command mode, QSPI/DSPI/SPI4).
+//!
+//! On MIPI-DSI, panel register traffic can use either:
+//!   - DSI APB packet interface (no DC / DBIDSIBRIDGE), or
+//!   - DSI Tx/Rx packet path (DC DBI -> DBIDSIBRIDGE -> DSI).
+//! Frame pixels always use DC (and DBIDSIBRIDGE into DSI in command mode).
 //!
 //! @addtogroup display_rm69330 RM69330 Display Device Driver
 //! @ingroup devices
@@ -15,7 +20,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -24,6 +29,27 @@
 
 #include "stdint.h"
 #include "am_devices_display_types.h"
+
+#ifndef DSI_IN_HS_MODE
+//!
+//! DSI link mode for panel register packets (DSI interfaces only).
+//!   0 - Send commands in LP mode.
+//!   1 - Send commands in HS mode.
+//!
+#define DSI_IN_HS_MODE              0
+#endif
+
+#ifndef DSI_APB_PACKET_INTERFACE
+//!
+//! Selects how panel register write/read packets are sent on DSI.
+//!   0 - Tx/Rx packet path: DC DBI -> DBIDSIBRIDGE (DDB) -> DSI.
+//!   1 - APB packet path: DSI host APB packet interface only (no DC/DDB).
+//!
+//! Frame pixels (WRITE_MEMORY_START / CONTINUE) always go through DC and
+//! DBIDSIBRIDGE into DSI, regardless of this setting.
+//!
+#define DSI_APB_PACKET_INTERFACE    1
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -40,28 +66,35 @@ extern "C"
 //
 //! @brief Reset the display panel
 //!
-//! This function resets the display panel.
+//! This function resets the display panel. Please execute it before function
+//! am_devices_display_rm69330_init
 //!
-//! @param pHandle - Device handle (unused).
 //
 //*****************************************************************************
-extern void am_devices_display_rm69330_hardware_reset(void *pHandle);
+extern void am_devices_display_rm69330_hardware_reset(void);
 
 //*****************************************************************************
 //
-//! @brief Return default NemaDC xSPI configuration for RM69330.
+//! @brief Get default DC / DDB / DSI / panel configuration for RM69330.
 //!
-//! Populates interface type, RGB888 destination format, panel resolution,
-//! SPI mode, and target read/write clock rates from BSP settings.
+//! For DSI, fills DC DBI timing, DBIDSIBRIDGE defaults, and DSI host/PHY
+//! settings. For QSPI/DSPI/SPI4, fills the matching xSPI DC defaults.
+//! Panel fields in `pDevCfg` mirror resolution, TE, format, and lane count.
+//! Callers may override fields before HAL config and
+//! `am_devices_display_rm69330_init()`.
 //!
-//! @param pHandle - Device handle (unused).
-//! @param pDCCfg  - Pointer to receive the DC configuration.
+//! @param pDCCfg  - Optional; receives default DC configuration.
+//! @param pDDBCfg - Optional; receives default DBIDSIBRIDGE configuration (DSI).
+//! @param pDSICfg - Optional; receives default DSI configuration (DSI).
+//! @param pDevCfg - Optional; receives default panel configuration.
 //!
 //! @return `AM_DEVICES_DISPLAY_STATUS_SUCCESS`.
 //
 //*****************************************************************************
-extern uint32_t am_devices_display_rm69330_get_parameter(void *pHandle,
-                                                        am_hal_dc_config_t *pDCCfg);
+extern uint32_t am_devices_display_rm69330_get_default_config(am_hal_dc_config_t *pDCCfg,
+                                                              am_hal_ddb_config_t *pDDBCfg,
+                                                              am_hal_dsi_config_t *pDSICfg,
+                                                              am_devices_dc_config_t *pDevCfg);
 //*****************************************************************************
 //
 //! @brief Set the flip along with the x/y-axis or both the x and y-axis.
@@ -83,31 +116,37 @@ extern uint32_t am_devices_display_rm69330_get_parameter(void *pHandle,
 //! same way, the same is true for the y-axis. Please be careful some of the flips
 //! could cause the tear effect.
 //!
-//! @return None.
+//! @return 32-bit status: `AM_DEVICES_DISPLAY_STATUS_SUCCESS` on success,
+//!         otherwise an error status from the underlying DC transfer.
 //
 //*****************************************************************************
 extern uint32_t am_devices_display_rm69330_flip(void *pHandle, uint8_t ui8FlipXY);
 
 //*****************************************************************************
 //
-//! @brief Initialize Raydium panels (RM67162, RM69090, RM69330) using DC xSPI.
+//! @brief Initialize RM69330 (and compatible) for SPI4/DSPI/QSPI or MIPI-DSI.
 //!
-//! Configures the display controller and panel according to `pDevCfg`.
-//! Call after NemaDC is initialized and configured.
+//! Sends the panel bring-up command sequence. On DSI, register packets follow
+//! `DSI_APB_PACKET_INTERFACE` (APB packet vs DC+DBIDSIBRIDGE Tx/Rx path).
+//! Call after DC (and DSI/DDB when used) are powered and configured.
 //!
-//! @param ui32Module           - DC module number.
-//! @param pDevCfg              - Pointer to an `am_devices_dc_config_t`
-//!                               containing desired panel/DC configuration.
-//! @param ppHandle             - Out pointer that receives the device handle.
-//! @param pDCHandle            - Display controller handle.
+//! @param ui32Module   - Module instance (typically 0).
+//! @param ppHandle     - Out pointer that receives the device handle.
+//! @param pDCHandle    - Display controller handle.
+//! @param pDDBHandle   - DBIDSIBRIDGE handle (required for DSI Tx/Rx path and
+//!                       for DSI frame pixels; may be unused for APB-only cmds).
+//! @param pDSIHandle   - DSI handle (required when `g_sDispCfg` is DSI).
+//! @param pDevCfg      - Panel configuration (resolution, format, window).
 //!
-//! @return 32-bit status: `AM_DEVICES_DISPLAY_STATUS_SUCCESS` on success,
-//!         `AM_DEVICES_DISPLAY_STATUS_ERROR` on failure.
+//! @return `AM_DEVICES_DISPLAY_STATUS_SUCCESS` on success, otherwise an error.
 //
 //*****************************************************************************
 extern uint32_t am_devices_display_rm69330_init(uint32_t ui32Module,
-                                         am_devices_dc_config_t *pDevCfg,
-                                         void **ppHandle, void *pDCHandle);
+                                                void **ppHandle,
+                                                void *pDCHandle,
+                                                void *pDDBHandle,
+                                                void *pDSIHandle,
+                                                am_devices_dc_config_t *pDevCfg);
 
 //*****************************************************************************
 //

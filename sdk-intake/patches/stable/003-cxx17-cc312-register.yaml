@@ -1,0 +1,8 @@
+owner: apage224
+reason: >
+  The stable-2026.11.05 CC312 busy-wait inline helper declares its timeout
+  with the plain register storage class, which ATfE and ArmClang reject in
+  C++17. Remove only that optional hint; preserve the timeout and volatile
+  MMIO loop. No fixed-register assembly binding is involved. Retire when
+  upstream headers compile in C++17 without this correction.
+upstream_ref: AmbiqAI/nsx-ambiq-sdk#82

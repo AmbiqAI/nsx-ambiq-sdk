@@ -14,7 +14,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_MSPI_H
@@ -396,12 +396,6 @@ extern "C"
     //! Paired-Quad
     bool                        bQuadCmd;
 
-// #### INTERNAL BEGIN ####
-#if 0 // A3DS-25 Deprecate MSPI CONT
-    //! Continuation
-    bool                        bContinue;
-#endif // A3DS-25
-// #### INTERNAL END ####
     //! Buffer
     uint32_t                    *pui32Buffer;
 

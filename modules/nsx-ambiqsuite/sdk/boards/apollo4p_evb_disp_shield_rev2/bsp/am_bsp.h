@@ -17,7 +17,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 
@@ -44,12 +44,6 @@ extern "C"
 //*****************************************************************************
 #define DISPLAY_TE_PIN          AM_BSP_GPIO_DISP_DSI_TE
 
-// #### INTERNAL BEGIN ####
-//
-// Define MCU_VALIDATION for building tests for the validation group.
-//
-//#define MCU_VALIDATION  1
-// #### INTERNAL END ####
 //*****************************************************************************
 //
 // Print interface type

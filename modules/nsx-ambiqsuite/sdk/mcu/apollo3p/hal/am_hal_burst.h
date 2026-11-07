@@ -15,7 +15,7 @@
 // Copyright (c) 2026, Ambiq Micro, Inc.
 // All rights reserved.
 //
-// This is part of revision stable-2026.06.18 of the AmbiqSuite Development Package.
+// This is part of revision stable-2026.11.05 of the AmbiqSuite Development Package.
 //
 //*****************************************************************************
 #ifndef AM_HAL_BURST_H
@@ -38,10 +38,6 @@ extern "C"
 //!      1 = Burst LDO into Active mode and delay before enabling 96MHz CLK
 //!  Default: 1
 //
-// #### INTERNAL BEGIN ####
-// Corrects MSPI2 failure on first transaction after entering burst mode
-// AS-1284, HSP20-521, HSP20-856, HSP20-863, HSP20-871
-// #### INTERNAL END ####
 //*****************************************************************************
 #define AM_HAL_BURST_LDO_WORKAROUND         1
 
