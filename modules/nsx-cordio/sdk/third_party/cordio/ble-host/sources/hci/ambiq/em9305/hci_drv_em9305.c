@@ -60,7 +60,7 @@
 //*****************************************************************************
 #define NUM_HCI_WRITE_BUFFERS           8
 #define HCI_DRV_MAX_TX_PACKET           259       // Including 255 maximum HCI command + 4 HCI header
-#define HCI_DRV_MAX_RX_PACKET           256
+#define HCI_DRV_MAX_RX_PACKET           259
 
 //*****************************************************************************
 //
@@ -154,7 +154,7 @@ hci_drv_write_t g_psWriteBuffers[NUM_HCI_WRITE_BUFFERS];
 am_hal_queue_t g_sWriteQueue;
 
 // Buffers for HCI read data.
-uint32_t g_pui32ReadBuffer[HCI_DRV_MAX_RX_PACKET / 4];
+uint32_t g_pui32ReadBuffer[(HCI_DRV_MAX_RX_PACKET + 3) / 4];
 uint8_t *g_pui8ReadBuffer = (uint8_t *) g_pui32ReadBuffer;
 volatile bool bReadBufferInUse = false;
 
@@ -163,6 +163,7 @@ uint32_t g_consumed_bytes = 0;
 
 // Counters for tracking read data.
 volatile uint32_t g_ui32InterruptsSeen = 0;
+extern volatile uint32_t g_ui32InterruptsSeenCopy;
 
 void HciDrvEmptyWriteQueue(void);
 //*****************************************************************************
@@ -550,6 +551,7 @@ HciDrvIntService(void)
     // correctly.
     //
     g_ui32InterruptsSeen++;
+    g_ui32InterruptsSeenCopy = g_ui32InterruptsSeen;
     //
     // Send an event to get processed in the HCI handler.
     //
@@ -957,6 +959,16 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
                 g_consumed_bytes = 0;
 
                 read_hci_packet_count++;
+            }
+            else if (ui32ErrorStatus == AM_DEVICES_EM9305_NO_DATA_TX)
+            {
+                if (ui32NumHciTransactions >= HCI_DRV_MAX_HCI_TRANSACTIONS)
+                {
+                    // Yield at the retry limit without losing pending work.
+                    WsfSetEvent(g_HciDrvHandleID, BLE_TRANSFER_NEEDED_EVENT);
+                    return;
+                }
+                continue;
             }
             else
             {
