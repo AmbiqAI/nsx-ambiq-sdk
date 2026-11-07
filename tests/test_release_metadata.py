@@ -678,6 +678,13 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
     assert set(qualification["hardware_boards"]) <= set(qualification["scope"]["boards"])
     assert qualification["evidence_candidate"] == "3648b7c254ec711bef98747b204c023685b06b1d"
+    require_full_history(repo_root)
+    provider_path = "modules/nsx-ambiqsuite/sdk"
+    tested = git(repo_root, "rev-parse", f"{qualification['evidence_candidate']}:{provider_path}")
+    release_revision = release_content_revision(repo_root, release)
+    shipped = git(repo_root, "rev-parse", f"{release_revision}:{provider_path}")
+    assert tested.returncode == shipped.returncode == 0, (tested.stderr, shipped.stderr)
+    assert tested.stdout.strip() == shipped.stdout.strip(), "release provider differs from hardware-tested candidate"
     for train in qualification["toolchains"]:
         if train["artifact_manifest_key"] != "gcc":
             assert train["hardware_status"] == "not_newly_qualified"
