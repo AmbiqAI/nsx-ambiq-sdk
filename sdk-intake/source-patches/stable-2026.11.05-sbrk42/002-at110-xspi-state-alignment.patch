@@ -1,0 +1,22 @@
+--- a/mcu/atomiq110/hal/am_hal_xspimc.h
++++ b/mcu/atomiq110/hal/am_hal_xspimc.h
+@@ -2310,7 +2310,7 @@
+ 
+ #define AM_XSPI_HAL_HANDLE_DEFINE(ATTR, MODULE_NUM, CLKMGR)                                     \
+         ATTR const am_hal_xspimc_deps_t xspi ## MODULE_NUM ## Deps = { &(CLKMGR) };             \
+-        AM_HAL_HANDLE_DEFINE(ATTR, XSPI, MODULE_NUM,                                            \
++        AM_HAL_HANDLE_DEFINE(ATTR __ALIGNED(4), XSPI, MODULE_NUM,                                            \
+                              AM_HAL_XSPIMC_GLOBAL_RAM_SIZE,                                     \
+                              &sXSPIAPI, &xspi ## MODULE_NUM ## Deps);                           \
+         void EXPAND3(am_xspi, MODULE_NUM, _isr)(void)                                           \
+--- a/devices/am_devices_xspi_psram_w958d6nw.h
++++ b/devices/am_devices_xspi_psram_w958d6nw.h
+@@ -205,7 +205,7 @@
+ //
+ //*****************************************************************************
+ #define AM_DEVICE_XSPI_PSRAM_W958D6NW_HANDLE_DEFINE(ATTR, MODULE_NAME, CE_NUM, XSPI_HANDLE) \
+-        AM_DEVICE_XSPI_DEV_HANDLE_DEFINE(ATTR, MODULE_NAME, CE_NUM,                         \
++        AM_DEVICE_XSPI_DEV_HANDLE_DEFINE(ATTR __ALIGNED(4), MODULE_NAME, CE_NUM,                         \
+                                          AM_DEVICES_XSPI_PSRAM_W958D6NW_GLOBAL_RAM_SIZE,    \
+                                          apiW958D6NW, XSPI_HANDLE)
+ 
