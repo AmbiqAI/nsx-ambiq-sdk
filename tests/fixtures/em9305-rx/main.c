@@ -3,10 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hci_drv_em9305.c"
+#include "event_groups.h"
+#include "timers.h"
 extern volatile uint32_t g_ui32InterruptsSeenCopy;
 
 static bool device_mode, ready = true, hold_ready, inject_irq;
 static unsigned events, errors, last_error, reads, writes, resets, boots;
+static unsigned retry_starts, write_status, waits, other_timer_calls;
+static unsigned read_ceiling = 20000;
+static TickType_t ticks;
+void real_WsfSetEvent(wsfHandlerId_t, wsfEventMask_t);
+void real_WsfTimerStartMs(wsfTimer_t *, wsfTimerTicks_t);
+void real_WsfTimerStop(wsfTimer_t *);
 static unsigned mock_status, mock_length = 8, accept_limit = 1024;
 static unsigned empty_before_success;
 static bool drop_after_empty;
@@ -31,9 +39,27 @@ void NVIC_EnableIRQ(unsigned a) { (void)a; }
 void am_util_delay_us(uint32_t us) { (void)us; }
 void am_util_debug_printf(const char *s, ...) { (void)s; }
 void am_util_stdio_printf(const char *s, ...) { (void)s; }
-void WsfSetEvent(wsfHandlerId_t id, wsfEventMask_t e) { assert(id == 7 && e == BLE_TRANSFER_NEEDED_EVENT); events++; }
-void WsfTimerStartMs(wsfTimer_t *t, wsfTimerTicks_t ms) { (void)t; (void)ms; }
-void WsfTimerStop(wsfTimer_t *t) { (void)t; }
+void WsfSetEvent(wsfHandlerId_t id, wsfEventMask_t e) { assert(id == 7 && e == BLE_TRANSFER_NEEDED_EVENT); events++; real_WsfSetEvent(id,e); }
+void WsfTimerStartMs(wsfTimer_t *t, wsfTimerTicks_t ms) {
+    if(t == &g_RetryTimer) { assert(ms >= WSF_MS_PER_TICK); retry_starts++; }
+    real_WsfTimerStartMs(t,ms);
+}
+void WsfTimerStop(wsfTimer_t *t) { real_WsfTimerStop(t); }
+TickType_t xTaskGetTickCount(void) { return ticks; }
+BaseType_t xPortIsInsideInterrupt(void) { return pdFALSE; }
+TimerHandle_t xTimerCreate(const char *n, TickType_t t, int a, void *id, void (*cb)(TimerHandle_t)) {
+    (void)n;(void)t;(void)a;(void)id;(void)cb; return (void *)1;
+}
+int xTimerChangePeriod(TimerHandle_t h, TickType_t t, TickType_t wait) { (void)h;(void)t;(void)wait;return pdPASS; }
+EventGroupHandle_t xEventGroupCreate(void) { return (void *)1; }
+EventBits_t xEventGroupSetBits(EventGroupHandle_t h, EventBits_t b) { (void)h;return b; }
+BaseType_t xEventGroupSetBitsFromISR(EventGroupHandle_t h, EventBits_t b, BaseType_t *p) { (void)h;(void)b;(void)p;return pdPASS; }
+EventBits_t xEventGroupWaitBits(EventGroupHandle_t h, EventBits_t b, BaseType_t clear, BaseType_t all, TickType_t wait) {
+    (void)h;(void)b;(void)clear;(void)all;(void)wait;waits++;return 0;
+}
+void *WsfMsgDeq(wsfQueue_t *q, wsfHandlerId_t *id) { (void)q;(void)id;return NULL; }
+void WsfMsgFree(void *p) { (void)p;assert(0); }
+static void other_handler(wsfEventMask_t e, wsfMsgHdr_t *m) { (void)e;assert(m);other_timer_calls++; }
 void HciReadLocalVerInfoCmd(void) { assert(0); }
 void DmDevReset(void) { resets++; }
 uint16_t hciTrSerialRxIncoming(uint8_t *p, uint16_t n) {
@@ -55,7 +81,7 @@ void am_devices_em9305_request_counter_set(bool e) { (void)e; }
 uint32_t am_devices_em9305_request_counter_get(void) { return 0; }
 uint32_t am_devices_em9305_block_write(void *h, uint8_t *p, uint32_t n) {
     (void)h; assert(n == 9 && p[0] == 1); for(unsigned i=1;i<n;i++) assert(p[i]==0x42);
-    writes++; return 0;
+    writes++; assert(writes <= HCI_DRV_MAX_TX_RETRIES + HCI_DRV_MAX_HCI_TRANSACTIONS); return write_status;
 }
 uint32_t am_devices_em9305_bus_enable(void *h) { assert(h == &device); bus_enabled++; return 0; }
 uint32_t am_devices_em9305_bus_disable(void *h) { assert(h == &device); bus_disabled++; return 0; }
@@ -83,7 +109,7 @@ uint32_t am_hal_iom_blocking_transfer(void *h, am_hal_iom_transfer_t *t) {
 }
 uint32_t __real_am_devices_em9305_block_read(void *, uint32_t *, uint32_t *);
 uint32_t __wrap_am_devices_em9305_block_read(void *h, uint32_t *p, uint32_t *n) {
-    reads++;
+    reads++; assert(reads <= read_ceiling);
     if(device_mode) return __real_am_devices_em9305_block_read(h,p,n);
     if(reads <= empty_before_success) {
         if(drop_after_empty && reads==empty_before_success) ready=false;
@@ -102,6 +128,9 @@ static void handler(void) { HciDrvHandler(BLE_TRANSFER_NEEDED_EVENT,NULL); }
 
 int main(int argc, char **argv) {
     assert(argc == 2); const char *s=argv[1];
+    WsfOsInit(); WsfTimerInit();
+    for(unsigned i=0;i<7;i++) WsfOsSetNextHandler(other_handler);
+    assert(WsfOsSetNextHandler(HciDrvHandler)==7);
     HciDrvHandlerInit(7); HciDrvErrorHandlerSet(on_error); HciDrvEmptyWriteQueue(); g_IomDevHdl=&device;
     if(!strncmp(s,"rx",2)) {
         mock_length=(unsigned)atoi(s+2); assert(mock_length>=256 && mock_length<=259);
@@ -117,7 +146,7 @@ int main(int argc, char **argv) {
         assert(writes == (unsigned)!strcmp(s,"empty-tx"));
     } else if(!strcmp(s,"empty-budget")) {
         mock_status=AM_DEVICES_EM9305_NO_DATA_TX; hold_ready=true; enqueue();
-        handler(); assert(reads==HCI_DRV_MAX_HCI_TRANSACTIONS && events==1 && !errors && !writes);
+        handler(); assert(reads==HCI_DRV_MAX_HCI_TRANSACTIONS && !events && retry_starts==1 && !errors && !writes);
         ready=false; handler(); assert(writes==1 && am_hal_queue_empty(&g_sWriteQueue));
         ready=true; hold_ready=false; mock_status=0; handler(); check_bytes(8); assert(!errors && !resets);
     } else if(!strncmp(s,"budget-",7)) {
@@ -127,10 +156,43 @@ int main(int argc, char **argv) {
             accept_limit=4; handler(); assert(reads==1000 && events==1 && delivered_length==4);
             handler(); check_bytes(8); assert(reads==1000);
         } else {
-            enqueue(); handler(); assert(reads==1000 && events==1 && !writes);
+            enqueue(); handler(); assert(reads==1000 && !events && retry_starts==1 && !writes);
             check_bytes(8); handler(); assert(writes==1 && am_hal_queue_empty(&g_sWriteQueue));
         }
         assert(!errors && !resets);
+    } else if(!strcmp(s,"dispatcher-empty")) {
+        mock_status=AM_DEVICES_EM9305_NO_DATA_TX; hold_ready=true; read_ceiling=1000;
+        wsfTimer_t unrelated={0}; unrelated.handlerId=WsfOsSetNextHandler(other_handler);
+        WsfTimerStartMs(&unrelated, WSF_MS_PER_TICK);
+        WsfSetEvent(7,BLE_TRANSFER_NEEDED_EVENT); wsfOsDispatcher();
+        assert(reads==1000 && waits==1 && g_RetryTimer.isStarted && !other_timer_calls);
+        read_ceiling=2000; ticks+=WSF_MS_PER_TICK; wsfOsDispatcher();
+        assert(reads==2000 && waits==2 && other_timer_calls==1 && !errors);
+        mock_status=0; hold_ready=false; ticks+=WSF_MS_PER_TICK; read_ceiling=2001;
+        wsfOsDispatcher(); check_bytes(8); assert(reads==2001 && waits==3 && !g_RetryTimer.isStarted);
+    } else if(!strcmp(s,"dispatcher-tx")) {
+        ready=false; write_status=AM_DEVICES_EM9305_DATA_TRANSFER_ERROR; enqueue();
+        for(unsigned i=0;i<10;i++) { wsfOsDispatcher(); ticks+=WSF_MS_PER_TICK; }
+        assert(writes==10000 && errors==1 && resets==1 && last_error==write_status);
+        assert(waits==10 && !g_RetryTimer.isStarted && am_hal_queue_empty(&g_sWriteQueue));
+    } else if(!strcmp(s,"tx-persistent") || !strcmp(s,"tx-success-reset")) {
+        ready=false; write_status=AM_DEVICES_EM9305_DATA_TRANSFER_ERROR; enqueue();
+        if(!strcmp(s,"tx-success-reset")) {
+            handler(); assert(g_ui32TxRetries==1000);
+            write_status=0; handler(); assert(g_ui32TxRetries==0);
+            enqueue(); write_status=AM_DEVICES_EM9305_DATA_TRANSFER_ERROR;
+            handler(); assert(g_ui32TxRetries==1000 && !errors);
+        } else {
+            for(unsigned i=0;i<10;i++) handler();
+            assert(writes==10000 && errors==1 && resets==1 && last_error==write_status);
+            assert(!g_RetryTimer.isStarted && am_hal_queue_empty(&g_sWriteQueue));
+        }
+    } else if(!strcmp(s,"retry-lifecycle")) {
+        mock_status=AM_DEVICES_EM9305_NO_DATA_TX; hold_ready=true;
+        handler(); assert(g_RetryTimer.isStarted);
+        HciDrvRadioBoot(false); assert(!g_RetryTimer.isStarted && !g_ui32TxRetries);
+        handler(); assert(g_RetryTimer.isStarted);
+        HciDrvRadioShutdown(); assert(!g_RetryTimer.isStarted && !g_ui32TxRetries);
     } else if(!strcmp(s,"partial")) {
         mock_length=259; accept_limit=100; handler(); assert(delivered_length==100 && reads==1 && events==1);
         handler(); assert(delivered_length==200 && reads==1 && events==2);
@@ -143,7 +205,7 @@ int main(int argc, char **argv) {
             assert(reads==2 && transfers==2 && !errors && !resets);
         } else {
             chunks[0]=0; chunk_count=1;
-            handler(); assert(reads==1000 && headers==10000 && events==1 && !errors);
+            handler(); assert(reads==1000 && headers==10000 && retry_starts==1 && !events && !errors);
             chunks[0]=20; handler(); check_bytes(20); assert(reads==1001 && !errors);
         }
     } else if(!strncmp(s,"device-",7)) {
