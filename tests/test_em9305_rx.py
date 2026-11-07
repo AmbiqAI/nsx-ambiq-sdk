@@ -41,7 +41,7 @@ def em9305_binary(repo_root: Path, tmp_path_factory: pytest.TempPathFactory) -> 
 
 @pytest.mark.parametrize("scenario", [
     "rx256", "rx257", "rx258", "rx259", "irq", "wrap", "empty", "empty-tx",
-    "empty-budget", "partial", "not-ready", "transfer-error", "length-error",
+    "empty-budget", "budget-idle", "budget-partial", "budget-tx", "partial", "not-ready", "transfer-error", "length-error",
     "device-empty", "device-prior-empty", "device-full", "device-full-wrap",
     "device-full-no-irq", "device-command-error", "device-data-error",
     "device-not-ready", "device-259", "device-stale-counter", "integrated-full", "integrated-empty",

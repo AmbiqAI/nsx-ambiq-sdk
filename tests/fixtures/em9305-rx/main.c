@@ -8,6 +8,8 @@ extern volatile uint32_t g_ui32InterruptsSeenCopy;
 static bool device_mode, ready = true, hold_ready, inject_irq;
 static unsigned events, errors, last_error, reads, writes, resets, boots;
 static unsigned mock_status, mock_length = 8, accept_limit = 1024;
+static unsigned empty_before_success;
+static bool drop_after_empty;
 static uint8_t delivered[1024];
 static unsigned delivered_length;
 static unsigned chunks[3], chunk_count, chunk_index, payload_offset;
@@ -83,6 +85,10 @@ uint32_t __real_am_devices_em9305_block_read(void *, uint32_t *, uint32_t *);
 uint32_t __wrap_am_devices_em9305_block_read(void *h, uint32_t *p, uint32_t *n) {
     reads++;
     if(device_mode) return __real_am_devices_em9305_block_read(h,p,n);
+    if(reads <= empty_before_success) {
+        if(drop_after_empty && reads==empty_before_success) ready=false;
+        return AM_DEVICES_EM9305_NO_DATA_TX;
+    }
     if(mock_status == 0) {
         for(unsigned i=0;i<mock_length;i++) ((uint8_t *)p)[i]=(uint8_t)i;
         *n=mock_length;
@@ -114,6 +120,17 @@ int main(int argc, char **argv) {
         handler(); assert(reads==HCI_DRV_MAX_HCI_TRANSACTIONS && events==1 && !errors && !writes);
         ready=false; handler(); assert(writes==1 && am_hal_queue_empty(&g_sWriteQueue));
         ready=true; hold_ready=false; mock_status=0; handler(); check_bytes(8); assert(!errors && !resets);
+    } else if(!strncmp(s,"budget-",7)) {
+        empty_before_success=999; hold_ready=false;
+        if(!strcmp(s,"budget-idle")) { drop_after_empty=true; handler(); assert(reads==999 && !events); }
+        else if(!strcmp(s,"budget-partial")) {
+            accept_limit=4; handler(); assert(reads==1000 && events==1 && delivered_length==4);
+            handler(); check_bytes(8); assert(reads==1000);
+        } else {
+            enqueue(); handler(); assert(reads==1000 && events==1 && !writes);
+            check_bytes(8); handler(); assert(writes==1 && am_hal_queue_empty(&g_sWriteQueue));
+        }
+        assert(!errors && !resets);
     } else if(!strcmp(s,"partial")) {
         mock_length=259; accept_limit=100; handler(); assert(delivered_length==100 && reads==1 && events==1);
         handler(); assert(delivered_length==200 && reads==1 && events==2);

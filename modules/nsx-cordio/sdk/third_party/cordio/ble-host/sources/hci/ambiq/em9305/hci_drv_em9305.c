@@ -962,12 +962,6 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
             }
             else if (ui32ErrorStatus == AM_DEVICES_EM9305_NO_DATA_TX)
             {
-                if (ui32NumHciTransactions >= HCI_DRV_MAX_HCI_TRANSACTIONS)
-                {
-                    // Yield at the retry limit without losing pending work.
-                    WsfSetEvent(g_HciDrvHandleID, BLE_TRANSFER_NEEDED_EVENT);
-                    return;
-                }
                 continue;
             }
             else
@@ -1057,10 +1051,10 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
         }
     }
 
-    if (ui32NumHciTransactions == HCI_DRV_MAX_HCI_TRANSACTIONS)
+    // The post-increment exceeds the limit only on natural loop exhaustion.
+    if (ui32NumHciTransactions > HCI_DRV_MAX_HCI_TRANSACTIONS)
     {
-        CRITICAL_PRINT("ERROR: Maximum number of successive HCI transactions exceeded.\n");
-        ERROR_RECOVER(HCI_DRV_TOO_MANY_PACKETS);
+        WsfSetEvent(g_HciDrvHandleID, BLE_TRANSFER_NEEDED_EVENT);
     }
 }
 #endif
