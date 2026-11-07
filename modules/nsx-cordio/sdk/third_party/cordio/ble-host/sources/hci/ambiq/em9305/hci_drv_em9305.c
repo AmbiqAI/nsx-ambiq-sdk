@@ -331,7 +331,10 @@ HciDrvRadioBoot(bool bColdBoot)
     //
     // Reset the RX interrupt counter.
     //
+    AM_CRITICAL_BEGIN;
     g_ui32InterruptsSeen = 0;
+    g_ui32InterruptsSeenCopy = 0;
+    AM_CRITICAL_END;
 
     // When it's bColdBoot, it will use Apollo's Device ID to form Bluetooth address.
     if (bColdBoot)

@@ -31,6 +31,7 @@ uecc is an unmodified copy. cordio is unmodified except for these NSX edits
   RX capacity (259 bytes, word-rounded storage), interrupt-counter handoff,
   and NO_DATA_TX handling from AmbiqSuite
   3cfb7d50718e6fb016f1a0128121cb40598109d5. NSX additionally reschedules
-  repeated empty reads at the transaction limit to preserve forward progress.
+  work on natural transaction-budget exhaustion and resets the shared IRQ
+  counters together on radio boot.
   Requires the paired EM9305 device driver from that provider intake; other
   Cordio features and radio firmware are unchanged.

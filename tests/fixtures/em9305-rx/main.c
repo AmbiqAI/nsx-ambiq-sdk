@@ -150,10 +150,14 @@ int main(int argc, char **argv) {
         device_mode=true; chunks[0]=0; chunk_count=1;
         if(!strcmp(s,"device-prior-empty")) { chunks[0]=10; chunks[1]=0; chunk_count=2; }
         else if(!strcmp(s,"device-259")) { chunks[0]=255; chunks[1]=4; chunk_count=2; }
-        else if(!strncmp(s,"device-full",11) || !strcmp(s,"device-stale-counter")) {
+        else if(!strncmp(s,"device-full",11) || !strcmp(s,"device-stale-counter") || !strcmp(s,"device-reboot-irq")) {
             chunks[0]=250; chunks[1]=20; chunk_count=2;
             inject_irq=strcmp(s,"device-full-no-irq")!=0 && strcmp(s,"device-stale-counter")!=0;
-            if(!strcmp(s,"device-stale-counter")) { g_ui32InterruptsSeenCopy=99; HciDrvRadioBoot(false); assert(g_ui32InterruptsSeen==0); }
+            if(!strcmp(s,"device-stale-counter") || !strcmp(s,"device-reboot-irq")) {
+                g_ui32InterruptsSeen=g_ui32InterruptsSeenCopy=1;
+                HciDrvRadioBoot(false);
+                assert(g_ui32InterruptsSeen==0 && g_ui32InterruptsSeenCopy==0);
+            }
             if(!strcmp(s,"device-full-wrap")) g_ui32InterruptsSeen=g_ui32InterruptsSeenCopy=UINT32_MAX;
         } else if(!strcmp(s,"device-command-error")) command_error=1;
         else if(!strcmp(s,"device-data-error")) { data_error=1; chunks[0]=20; }
@@ -165,7 +169,7 @@ int main(int argc, char **argv) {
         if(!strcmp(s,"device-empty")) assert(status==AM_DEVICES_EM9305_NO_DATA_TX && n==0 && headers==10 && transfers==0);
         else if(!strcmp(s,"device-prior-empty")) assert(status==0 && n==10 && transfers==1 && headers==11);
         else if(!strcmp(s,"device-259")) assert(status==0 && n==259 && transfers==2);
-        else if(!strncmp(s,"device-full",11) || !strcmp(s,"device-stale-counter")) {
+        else if(!strncmp(s,"device-full",11) || !strcmp(s,"device-stale-counter") || !strcmp(s,"device-reboot-irq")) {
             assert(n==250 && transfers==1 && chunk_index==1);
             assert(status == ((!strcmp(s,"device-full-no-irq") || !strcmp(s,"device-stale-counter")) ? AM_DEVICES_EM9305_DATA_LENGTH_ERROR : 0));
             for(unsigned i=0;i<n;i++) assert(((uint8_t *)storage.data)[i]==(uint8_t)i);
