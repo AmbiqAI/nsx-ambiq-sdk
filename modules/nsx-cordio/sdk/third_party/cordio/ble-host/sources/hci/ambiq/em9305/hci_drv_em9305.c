@@ -60,7 +60,7 @@
 //*****************************************************************************
 #define NUM_HCI_WRITE_BUFFERS           8
 #define HCI_DRV_MAX_TX_PACKET           259       // Including 255 maximum HCI command + 4 HCI header
-#define HCI_DRV_MAX_RX_PACKET           256
+#define HCI_DRV_MAX_RX_PACKET           259
 
 //*****************************************************************************
 //
@@ -148,13 +148,15 @@ uint8_t g_BLEMacAddress[6] = {0};
 wsfHandlerId_t g_HciDrvHandleID = 0;
 wsfTimer_t g_HeartBeatTimer;
 wsfTimer_t g_WakeTimer;
+static wsfTimer_t g_RetryTimer;
+static uint32_t g_ui32TxRetries;
 
 // Buffers for HCI write data.
 hci_drv_write_t g_psWriteBuffers[NUM_HCI_WRITE_BUFFERS];
 am_hal_queue_t g_sWriteQueue;
 
 // Buffers for HCI read data.
-uint32_t g_pui32ReadBuffer[HCI_DRV_MAX_RX_PACKET / 4];
+uint32_t g_pui32ReadBuffer[(HCI_DRV_MAX_RX_PACKET + 3) / 4];
 uint8_t *g_pui8ReadBuffer = (uint8_t *) g_pui32ReadBuffer;
 volatile bool bReadBufferInUse = false;
 
@@ -163,6 +165,7 @@ uint32_t g_consumed_bytes = 0;
 
 // Counters for tracking read data.
 volatile uint32_t g_ui32InterruptsSeen = 0;
+extern volatile uint32_t g_ui32InterruptsSeenCopy;
 
 void HciDrvEmptyWriteQueue(void);
 //*****************************************************************************
@@ -183,6 +186,7 @@ void hciDrvReadCallback(uint8_t *pui8Data, uint32_t ui32Length, void *pvContext)
 #define BLE_TRANSFER_NEEDED_EVENT                   0x01
 #define BLE_HEARTBEAT_EVENT                         0x02
 #define BLE_SET_WAKEUP                              0x03
+#define BLE_TRANSFER_RETRY_EVENT                    0x04
 
 //*****************************************************************************
 //
@@ -309,6 +313,12 @@ HciDrvRadioBoot(bool bColdBoot)
 {
     uint32_t ui32Status = AM_HAL_STATUS_FAIL;
 
+    if (g_RetryTimer.isStarted)
+    {
+        WsfTimerStop(&g_RetryTimer);
+    }
+    g_ui32TxRetries = 0;
+
     //
     // Setup SPI interface for EM9305
     //
@@ -330,7 +340,10 @@ HciDrvRadioBoot(bool bColdBoot)
     //
     // Reset the RX interrupt counter.
     //
+    AM_CRITICAL_BEGIN;
     g_ui32InterruptsSeen = 0;
+    g_ui32InterruptsSeenCopy = 0;
+    AM_CRITICAL_END;
 
     // When it's bColdBoot, it will use Apollo's Device ID to form Bluetooth address.
     if (bColdBoot)
@@ -384,6 +397,8 @@ HciDrvRadioShutdown(void)
         return;
     }
 
+    WsfTimerStop(&g_RetryTimer);
+    g_ui32TxRetries = 0;
     am_devices_em9305_disable_interrupt();
     am_devices_em9305_hsclk_req(false);//disable the EM9305 12M clock output
     am_devices_em9305_disable();
@@ -529,6 +544,9 @@ HciDrvHandlerInit(wsfHandlerId_t handlerId)
 
     g_WakeTimer.handlerId = handlerId;
     g_WakeTimer.msg.event = BLE_SET_WAKEUP;
+
+    g_RetryTimer.handlerId = handlerId;
+    g_RetryTimer.msg.event = BLE_TRANSFER_RETRY_EVENT;
 }
 
 //*****************************************************************************
@@ -550,6 +568,7 @@ HciDrvIntService(void)
     // correctly.
     //
     g_ui32InterruptsSeen++;
+    g_ui32InterruptsSeenCopy = g_ui32InterruptsSeen;
     //
     // Send an event to get processed in the HCI handler.
     //
@@ -836,7 +855,7 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
 void
 HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
 {
-    uint32_t ui32ErrorStatus, ui32TxRetries = 0;
+    uint32_t ui32ErrorStatus;
     uint32_t ui32NumHciTransactions = 0;
     uint32_t read_hci_packet_count = 0;
 
@@ -857,6 +876,8 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
             return;
         }
     }
+
+    WsfTimerStop(&g_RetryTimer);
 
     //
     // Check to see if we read any bytes over the HCI interface that we haven't
@@ -958,6 +979,10 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
 
                 read_hci_packet_count++;
             }
+            else if (ui32ErrorStatus == AM_DEVICES_EM9305_NO_DATA_TX)
+            {
+                continue;
+            }
             else
             {
                 //
@@ -1021,7 +1046,7 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
 
                     am_hal_queue_item_get(&g_sWriteQueue, 0, 1);
 
-                    ui32TxRetries = 0;
+                    g_ui32TxRetries = 0;
                     // Resetting the cumulative count
                     ui32NumHciTransactions = 0;
                 }
@@ -1031,13 +1056,11 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
                     // If we fail too many times in a row, we should throw an
                     // error to avoid a lock-up.
                     //
-                    ui32TxRetries++;
+                    g_ui32TxRetries++;
 
-                    if (ui32TxRetries > HCI_DRV_MAX_TX_RETRIES)
+                    if (g_ui32TxRetries >= HCI_DRV_MAX_TX_RETRIES)
                     {
-                        // we need to come back again later.
-                        WsfSetEvent(g_HciDrvHandleID, BLE_TRANSFER_NEEDED_EVENT);
-                        break;
+                        ERROR_RECOVER(ui32ErrorStatus);
                     }
                 }
 
@@ -1045,10 +1068,11 @@ HciDrvHandler(wsfEventMask_t event, wsfMsgHdr_t *pMsg)
         }
     }
 
-    if (ui32NumHciTransactions == HCI_DRV_MAX_HCI_TRANSACTIONS)
+    // The post-increment exceeds the limit only on natural loop exhaustion.
+    if (ui32NumHciTransactions > HCI_DRV_MAX_HCI_TRANSACTIONS)
     {
-        CRITICAL_PRINT("ERROR: Maximum number of successive HCI transactions exceeded.\n");
-        ERROR_RECOVER(HCI_DRV_TOO_MANY_PACKETS);
+        // A positive WSF tick lets the dispatcher exit before another batch.
+        WsfTimerStartMs(&g_RetryTimer, WSF_MS_PER_TICK);
     }
 }
 #endif
@@ -1259,5 +1283,6 @@ HciDrvBleSleepSet(bool enable)
 void
 HciDrvEmptyWriteQueue(void)
 {
+    g_ui32TxRetries = 0;
     am_hal_queue_from_array(&g_sWriteQueue, g_psWriteBuffers);
 }

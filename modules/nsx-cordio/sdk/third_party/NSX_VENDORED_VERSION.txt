@@ -5,9 +5,8 @@ commit caaf5af86087881647f56c70646c748d40c86e23 (snapshot stable-2026.06.18)
 - cordio/{ble-host,ble-profiles,wsf}
 - uecc (micro-ECC, used by ble-host/sources/sec)
 
-This is the AmbiqSuite drop the non-atomiq110 provider headers and archives
-come from, so the stack matches the HAL/BSP and device drivers it links
-against on the BLE-capable parts. It was not re-vendored when the provider
+This identifies the base Cordio/uecc snapshot, not the current provider.
+It was not re-vendored when the provider
 identity moved to stable-2026.09.01 (3062036c4f) in 5.2.25; nsx-ambiq-sdk
 5.2.25 recorded this label as stable-2026.09.01 (3062036c4f) in error, and
 5.2.26 corrects it (see the nsx-cordio-vendored-revision-label known deviation
@@ -27,3 +26,13 @@ uecc is an unmodified copy. cordio is unmodified except for these NSX edits
 - ble-profiles/sources/services/svc_dis.c: Ambiq/NSX Device Information
   Service defaults; DIS_DEFAULT_FW_REV tracks the distribution version and is
   bumped at every release.
+
+- ble-host/sources/hci/ambiq/em9305/hci_drv_em9305.c: selectively import
+  RX capacity (259 bytes, word-rounded storage), interrupt-counter handoff,
+  and NO_DATA_TX handling from AmbiqSuite
+  3cfb7d50718e6fb016f1a0128121cb40598109d5. NSX additionally reschedules
+  work after a positive WSF timer tick on transaction-budget exhaustion,
+  preserves bounded TX failure counts across retries, and resets the shared
+  IRQ counters together on radio boot.
+  Requires the paired EM9305 device driver from that provider intake; other
+  Cordio features and radio firmware are unchanged.
