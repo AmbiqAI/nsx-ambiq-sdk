@@ -133,8 +133,6 @@ ADAPTER_REGRESSIONS = (
                 ('apollo4p_blue_kxr_evb', 'apollo330mP_evb', 'apollo510_evb', 'apollo510b_evb')),
 )
 CORE_BUILDS = (
-    Requirement('tests/test_sbrk_link.py::test_newlib_constructor_uses_bounded_sbrk', 2,
-                parameters=('soc',), variants=(('apollo330P',), ('apollo510',)), compiler='gcc'),
     Requirement('tests/test_power_link.py::test_power_module_links_real_sdk', 8,
                 ('apollo3_evb', 'apollo3p_evb', 'apollo4p_evb',
                  'apollo4p_blue_kbr_evb', 'apollo4p_blue_kxr_evb',
@@ -148,6 +146,8 @@ CORE_BUILDS = (
                 parameters=('soc', 'crt_overrides'),
                 variants=tuple((soc, override) for soc in ('apollo2', 'apollo3', 'apollo3p')
                                for override in (False, True)), compiler='gcc'),
+    Requirement('tests/test_sbrk_link.py::test_newlib_constructor_uses_bounded_sbrk', 2,
+                parameters=('soc',), variants=(('apollo330P',), ('apollo510',)), compiler='gcc'),
 )
 POWER_STARTUP = (
     Requirement('tests/test_apollo5_power_errors.py::test_apollo5_first_error', 80,
