@@ -82,7 +82,7 @@
 typedef struct
 {
     uint32_t ui32Length;
-    uint32_t pui32Data[HCI_DRV_MAX_TX_PACKET / 4];
+    uint32_t pui32Data[(HCI_DRV_MAX_TX_PACKET + 3) / 4];
 }
 hci_drv_write_t;
 

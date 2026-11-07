@@ -21,6 +21,9 @@ static unsigned empty_before_success;
 static bool drop_after_empty;
 static uint8_t delivered[1024];
 static unsigned delivered_length;
+static bool tx_capacity_mode;
+static uint8_t expected_tx[32][259];
+static unsigned expected_lengths[32], tx_queued, tx_delivered;
 static unsigned chunks[3], chunk_count, chunk_index, payload_offset;
 static unsigned headers, transfers, bus_enabled, bus_disabled;
 static unsigned command_error, data_error, status_byte = 0xc0;
@@ -81,7 +84,13 @@ void am_devices_em9305_disable(void) {}
 void am_devices_em9305_request_counter_set(bool e) { (void)e; }
 uint32_t am_devices_em9305_request_counter_get(void) { return 0; }
 uint32_t am_devices_em9305_block_write(void *h, uint8_t *p, uint32_t n) {
-    (void)h; assert(n == 9 && p[0] == 1); for(unsigned i=1;i<n;i++) assert(p[i]==0x42);
+    (void)h;
+    if (tx_capacity_mode) {
+        assert(tx_delivered < tx_queued && n == expected_lengths[tx_delivered]);
+        assert(memcmp(p, expected_tx[tx_delivered], n) == 0);
+        tx_delivered++; writes++; return 0;
+    }
+    assert(n == 9 && p[0] == 1); for(unsigned i=1;i<n;i++) assert(p[i]==0x42);
     writes++; assert(writes <= HCI_DRV_MAX_TX_RETRIES + HCI_DRV_MAX_HCI_TRANSACTIONS); return write_status;
 }
 uint32_t am_devices_em9305_bus_enable(void *h) { assert(h == &device); bus_enabled++; return 0; }
@@ -127,6 +136,24 @@ static void enqueue(void) { uint8_t p[8]; memset(p,0x42,sizeof(p)); assert(hciDr
 static void check_bytes(unsigned n) { assert(delivered_length==n); for(unsigned i=0;i<n;i++) assert(delivered[i]==(uint8_t)i); }
 static void handler(void) { HciDrvHandler(BLE_TRANSFER_NEEDED_EVENT,NULL); }
 
+/* Snapshot every other slot: ASan alone cannot detect an intra-array overwrite. */
+static void enqueue_capacity(unsigned total) {
+    hci_drv_write_t snapshot[NUM_HCI_WRITE_BUFFERS];
+    memcpy(snapshot, g_psWriteBuffers, sizeof(snapshot));
+    hci_drv_write_t *slot = am_hal_queue_next_slot(&g_sWriteQueue);
+    unsigned index = (unsigned)(slot - g_psWriteBuffers);
+    assert(tx_queued < 32 && total <= 259);
+    uint8_t *expected = expected_tx[tx_queued];
+    expected_lengths[tx_queued] = total;
+    for (unsigned i = 0; i < total; i++) expected[i] = (uint8_t)(i + tx_queued * 19);
+    assert(hciDrvWrite(expected[0], total - 1, expected + 1) == total - 1);
+    assert(slot->ui32Length == total);
+    assert(memcmp(slot->pui32Data, expected, total) == 0);
+    for (unsigned i = 0; i < NUM_HCI_WRITE_BUFFERS; i++)
+        if (i != index) assert(memcmp(&snapshot[i], &g_psWriteBuffers[i], sizeof(snapshot[i])) == 0);
+    tx_queued++;
+}
+
 int main(int argc, char **argv) {
     assert(argc == 2); const char *s=argv[1];
     if(!strcmp(s,"boot-before-wsf")) {
@@ -137,7 +164,45 @@ int main(int argc, char **argv) {
     for(unsigned i=0;i<7;i++) WsfOsSetNextHandler(other_handler);
     assert(WsfOsSetNextHandler(HciDrvHandler)==7);
     HciDrvHandlerInit(7); HciDrvErrorHandlerSet(on_error); HciDrvEmptyWriteQueue(); g_IomDevHdl=&device;
-    if(!strncmp(s,"rx",2)) {
+    if(!strncmp(s,"capacity-",9)) {
+        tx_capacity_mode=true; ready=false;
+        if (!strcmp(s,"capacity-last")) {
+            g_sWriteQueue.head=NUM_HCI_WRITE_BUFFERS-1;
+            enqueue_capacity(259); handler();
+            assert(tx_delivered==1 && am_hal_queue_empty(&g_sWriteQueue) && !errors);
+        } else if (!strcmp(s,"capacity-oversize")) {
+            enqueue_capacity(259);
+            hci_drv_write_t snapshot[NUM_HCI_WRITE_BUFFERS];
+            memcpy(snapshot,g_psWriteBuffers,sizeof(snapshot));
+            unsigned old_events=events, old_count=g_sWriteQueue.count;
+            uint8_t payload[259]={0};
+            assert(hciDrvWrite(1,sizeof(payload),payload)==0);
+            assert(errors==1 && last_error==HCI_DRV_TX_PACKET_TOO_LARGE);
+            assert(g_sWriteQueue.count==old_count && events==old_events);
+            assert(memcmp(snapshot,g_psWriteBuffers,sizeof(snapshot))==0);
+            handler(); assert(tx_delivered==1 && am_hal_queue_empty(&g_sWriteQueue));
+        } else {
+            unsigned total=(unsigned)atoi(s+9);
+            bool mixed=!strcmp(s,"capacity-wrap");
+            assert(mixed || (total>=256 && total<=259));
+            /* Nonzero starting index makes later full batches wrap through slot zero. */
+            if(mixed) { enqueue_capacity(259); handler(); }
+            for(unsigned round=0;round<3;round++) {
+                for(unsigned i=0;i<NUM_HCI_WRITE_BUFFERS;i++)
+                    enqueue_capacity(mixed ? 256+(tx_queued%4) : total);
+                assert(am_hal_queue_full(&g_sWriteQueue));
+                hci_drv_write_t snapshot[NUM_HCI_WRITE_BUFFERS];
+                memcpy(snapshot,g_psWriteBuffers,sizeof(snapshot));
+                unsigned old_events=events, old_errors=errors;
+                uint8_t payload=0;
+                assert(hciDrvWrite(1,1,&payload)==0);
+                assert(errors==old_errors+1 && last_error==HCI_DRV_TRANSMIT_QUEUE_FULL);
+                assert(events==old_events && memcmp(snapshot,g_psWriteBuffers,sizeof(snapshot))==0);
+                handler(); assert(tx_delivered==tx_queued && am_hal_queue_empty(&g_sWriteQueue));
+            }
+            assert(!resets && writes==tx_queued);
+        }
+    } else if(!strncmp(s,"rx",2)) {
         mock_length=(unsigned)atoi(s+2); assert(mock_length>=256 && mock_length<=259);
         handler(); check_bytes(mock_length); assert(reads==1 && !errors && !events);
     } else if(!strcmp(s,"irq") || !strcmp(s,"wrap")) {

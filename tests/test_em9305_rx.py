@@ -65,3 +65,13 @@ def test_em9305_receive_contract(em9305_binary: Path, scenario: str) -> None:
     result = subprocess.run([str(em9305_binary), scenario], capture_output=True,
                             text=True, timeout=5)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("scenario", [
+    "capacity-256", "capacity-257", "capacity-258", "capacity-259",
+    "capacity-wrap", "capacity-oversize", "capacity-last",
+])
+def test_em9305_transmit_capacity(em9305_binary: Path, scenario: str) -> None:
+    result = subprocess.run([str(em9305_binary), scenario], capture_output=True,
+                            text=True, timeout=5)
+    assert result.returncode == 0, result.stdout + result.stderr
