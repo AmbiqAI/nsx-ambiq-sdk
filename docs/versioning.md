@@ -25,7 +25,8 @@ NSX edits; the new provider identity does not imply a full Cordio refresh.
 
 `5.2.30` replaces the 73 archives with a cumulative build that also removes
 the invalid vendor `_sbrk` stub. The reviewed nonarchive provider payload
-remains byte-identical to 5.2.29; full re-staging cleanup is tracked in #200.
+remains byte-identical to 5.2.29 except for the artifact manifest, which records
+the new archive provenance. Full re-staging cleanup is tracked in #200.
 The manifest distinguishes the new prepared archive source from retained
 source/header provenance.
 
