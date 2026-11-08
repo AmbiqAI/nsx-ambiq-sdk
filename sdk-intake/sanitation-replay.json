@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "source_commit": "83bd69c37edf8d94cf77021140d707c3fe886242",
+  "files": {
+    "mcu/apollo330P/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "b037cb68f2645e5c29a27b5306261c6337096e53fe0b840a85b0662e22b247e3",
+      "output_sha256": "f0d8709a12a25010b44fc6df709b55317f64f7acdb6a3a4529a80694b3d8de0b"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "ca19f406562b8a8335f2fc714c70aff953dca2bf9673d17bed9a7fd003048f09",
+      "output_sha256": "25dac7b40361d01c4423e4c67e9d021a008f468489af397303a2b77d07aa269a"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "47f3c1fe90a975c2ca333d98b7518cfa9300e16d3bc9d3a87a2bb4259b4c0861",
+      "output_sha256": "cb6f2eb405a82aa4743eb544d2fb7051e122f30446d3fc2b664ab19ed0183763"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "73b4b5ff614184334d1918e9bf8bec67f05bb42f541a4d7e2256e94578071790",
+      "output_sha256": "e48c292eee561f5dacda7b55c92b33302c50ded1031179cbca7cae07f9bea212"
+    }
+  }
+}

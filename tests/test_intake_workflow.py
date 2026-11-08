@@ -47,6 +47,12 @@ def fake_repo(tmp_path: Path, helper, monkeypatch):
     monkeypatch.setattr(helper, "repo_root", lambda: fake_root)
     monkeypatch.setattr(helper.bas, "repo_root", lambda: fake_root)
 
+    intake_dir = fake_root / "sdk-intake"
+    intake_dir.mkdir()
+    (intake_dir / "sanitation-replay.json").write_text(
+        '{"schema_version": 1, "source_commit": "' + "0" * 40 + '", "files": {}}\n'
+    )
+
     ownership_dir = fake_root / "release"
     ownership_dir.mkdir(parents=True)
     ownership = {
@@ -529,6 +535,33 @@ def test_stage_provider_payload_targets_staging_not_provider_root(staging_env, f
     assert result.staged_root != provider_root
     assert not provider_root.exists()
     assert result.hash_verification.ok
+
+
+def test_stage_sanitizes_after_patches_and_before_marker_gate(staging_env, helper, monkeypatch):
+    monkeypatch.setattr(helper.bas, "promote_provider_payload", _stub_promote_provider_payload())
+    sample = "// #### INTERNAL BEGIN ####\n// patched private note\n// #### INTERNAL END ####\nint public_api(void);\n"
+
+    def patch_payload(root, patches_dir):
+        (root / "sample.h").write_text(sample)
+        return ()
+
+    monkeypatch.setattr(helper, "apply_patch_queue", patch_payload)
+    result = helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"))
+    assert (result.staged_root / "sample.h").read_text() == "int public_api(void);\n"
+    assert result.sanitation.changed_files == ("sample.h",)
+    assert result.hash_verification.ok
+
+
+def test_stage_keeps_marker_gate_after_sanitation(staging_env, helper, monkeypatch):
+    def export(t, v, sdk_root, *, destination_root):
+        _stub_promote_provider_payload()(t, v, sdk_root, destination_root=destination_root)
+        (destination_root / "new.h").write_text(
+            "// #### INTERNAL BEGIN ####\nint live_api(void);\n// #### INTERNAL END ####\n"
+        )
+
+    monkeypatch.setattr(helper.bas, "promote_provider_payload", export)
+    with pytest.raises(helper.IntakeVerificationError, match="beyond the recorded baseline"):
+        helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"))
 
 
 def test_stage_provider_payload_refuses_incomplete_artifact_set(fake_repo, helper, monkeypatch) -> None:

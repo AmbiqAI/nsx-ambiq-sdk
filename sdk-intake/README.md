@@ -146,18 +146,23 @@ python sdk-intake/intake_workflow.py promote --train stable \
   --staged-dir sdk-intake/local/staging/stable/stable-2026.06.18/sdk --yes
 ```
 
-Staging also sanitizes the payload: `internal_markers.py` scans it for vendor
-`#### INTERNAL ####` engineering content and fails the stage when a file carries
-more than `sdk-intake/internal-marker-baseline.yaml` records for it. Scrub a raw
-engineering drop while it is still staged — never after its prebuilt archives
-have shipped:
+Staging sanitizes source content after applying consumer patches, then checks
+retained `#### INTERNAL ####` markers against the existing baseline and verifies
+archive hashes. Live declarations and their markers remain in place.
 
-```bash
-python sdk-intake/internal_markers.py scrub --root <staged tree>   # dry run
-python sdk-intake/internal_markers.py scrub --root <staged tree> --write
-python sdk-intake/internal_markers.py update-baseline
-python sdk-intake/intake_workflow.py verify-internal-markers
-```
+Malformed fences are preserved only when their complete file matches the
+reviewed provider (apart from the generated revision banner). Four historical
+commented-enum residues additionally require the prepared source commit and
+whole-input/whole-output hashes recorded in `sanitation-replay.json`. That
+receipt is reviewed evidence, not a cache: staging never refreshes it. The
+generic scrubber's standalone-semicolon limitation is tracked in issue #203;
+do not use a blanket scrub or baseline refresh to bypass a staging refusal.
+
+Sanitation plans all removals before writing. A new malformed file, changed
+reviewed exception, or unapproved semicolon removal stops sanitation without
+applying any planned removals. Export and patch application have already happened;
+this does not make the entire staging operation transactional. Review a new
+intake's refused content explicitly before updating any receipt or baseline.
 
 See [`docs/intake-hardening.md`](../docs/intake-hardening.md) for the full
 workflow, security boundaries, and the golden-baseline hash verification path
