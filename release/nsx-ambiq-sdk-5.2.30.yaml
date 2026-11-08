@@ -441,10 +441,10 @@ release_evidence:
 - tests/test_release_metadata.py
 - release/source-ownership.yaml
 external_evidence:
-  intake: artifacts/nsx/intake-qualification-20261107
-  release: artifacts/nsx/release-529-20261107
-  note: Local evidence retained outside git; detailed identities and limitations are in the qualification
-    report.
+  intake: artifacts/nsx/sbrk42-20261107
+  release: artifacts/nsx/release-530-20261108
+  note: Current local evidence retained outside git. Previous-release evidence is historical and remains
+    described by its immutable release record.
 known_deviations:
 - id: prepared-source-xspi-abi
   description: Reserve sufficient opaque XSPI state for native ATfE enum ABI and align the two allocation
