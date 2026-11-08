@@ -97,3 +97,18 @@ def test_newlib_constructor_uses_bounded_sbrk(
         entry = re.search(r"<_start>:\n(.*?)(?=\n\n)", assembly, re.S)
         assert entry is not None
         assert entry[1].index("<__libc_init_array>") < entry[1].index("<main>")
+
+
+def test_shipped_hal_archives_do_not_define_sbrk(repo_root: Path) -> None:
+    """The retained force-link mitigation must not hide a returned vendor stub."""
+    gcc = compiler_for_test("gcc")
+    root = repo_root / "modules/nsx-ambiqsuite/sdk/lib"
+    archives = sorted(root.glob("*/*/libam_hal.a"))
+    assert archives, "no shipped HAL archives found"
+    for archive in archives:
+        symbols = subprocess.check_output(
+            [str(gcc.parent / "arm-none-eabi-nm"), "--defined-only", "-P", str(archive)],
+            text=True,
+        )
+        assert not any(line.split() and line.split()[0] == "_sbrk"
+                       for line in symbols.splitlines()), str(archive)
