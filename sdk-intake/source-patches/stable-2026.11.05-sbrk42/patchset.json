@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "upstream_commit": "3cfb7d50718e6fb016f1a0128121cb40598109d5",
+  "owner": "apage224",
+  "issue": "https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/42",
+  "reason": "Retain the reviewed XSPI capacity/alignment corrections (#190); remove the invalid weak newlib _sbrk placeholder from shipped HAL source families (#42). Preparation only until matching rebuilt archives are promoted. NSX bounded _sbrk force-link protection remains required.",
+  "patches": [
+    {
+      "path": "001-at110-xspi-state-capacity.patch",
+      "sha256": "37bce090b83923502178f78c319676370dc767b84b4c1e4dae0a1fc5d0469ff5"
+    },
+    {
+      "path": "002-at110-xspi-state-alignment.patch",
+      "sha256": "1c12fb3918202d9f20680d451f07d3699de95c7e4bde0352b7380cd4500de08e"
+    },
+    {
+      "path": "003-remove-vendor-sbrk.patch",
+      "sha256": "aceab505e2fda1621802b1cb9252b51d85297f2f8147dbc65f503b25a432a168"
+    }
+  ],
+  "files": [
+    {
+      "path": "mcu/atomiq110/hal/am_hal_xspimc.h",
+      "before_sha256": "1f6d7f2e0dbb4b4e0e4c7cb3039978b7b7acfce504bc4277706eeb3ba7ab8993",
+      "after_sha256": "ce4cf0f535432300b483f9403dc2914032aa40ad9ee67364312925db1f45884b"
+    },
+    {
+      "path": "devices/am_devices_xspi_psram_w958d6nw.h",
+      "before_sha256": "4e5e08560269bbfe10ef56d46267eb5a545300763f067a3ada30da8dd7ff05e7",
+      "after_sha256": "3bb80f513139cf77a34593d3b1d6b138213584f26949ab438c4f5995b48c291b"
+    },
+    {
+      "path": "mcu/apollo330P_510L/hal/am_hal_global.c",
+      "before_sha256": "c71e7124234e188054b925c0761dafc637d3113aa923387b159666a158855b28",
+      "after_sha256": "1a705d08bc88befc4d056af2242d52eac9bec9e2b1a2cc4aff077891f8ec1524"
+    },
+    {
+      "path": "mcu/apollo4l/hal/am_hal_global.c",
+      "before_sha256": "d6e28b4a126c206954a9875692d8625ade9c120bbbbfeb84f00452437ce63586",
+      "after_sha256": "9f52c8ee3bd69882885c1d8d2cd3b6b21f6236b08eaef6b275593738e56b3618"
+    },
+    {
+      "path": "mcu/apollo4p/hal/am_hal_global.c",
+      "before_sha256": "c4a31c9821e5088dc63b66bb001143449ae0804b86498aec18d97e47a20473cc",
+      "after_sha256": "2b94ddd72e334c53c5ea1af5c5da853c11999897a553b2e8c005a679dc63f8a2"
+    },
+    {
+      "path": "mcu/apollo510/hal/am_hal_global.c",
+      "before_sha256": "5dde48dc0f439cfa7cb5fa411fd5a8ba97f0bcc92a886a6d8967b5bb74b12353",
+      "after_sha256": "a8b18e78a3c71e7b5df24430793a06692b77a46f52e9f4c681baa7c62f59b8b5"
+    },
+    {
+      "path": "mcu/atomiq110/hal/am_hal_global.c",
+      "before_sha256": "240b546268716ea832ea3afc5acac3bf1f2f86281e0d1a01fdaf2e13acc98919",
+      "after_sha256": "40d17f527a695d0696ac7ffaa709b530abccd00fc58e79efe21b2f6a00fd2f6e"
+    }
+  ]
+}

@@ -257,3 +257,20 @@ require their matching source marker even for direct `--promote-only` operations
 The marker is published atomically without replacement, so patched and unpatched
 sources cannot claim the same version directory concurrently. Use separate
 source worktrees for parallel builds; sharing one mutable build tree is unsupported.
+
+
+### Prepared heap-stub correction (#42)
+
+`source-patches/stable-2026.11.05-sbrk42/patchset.json` is a candidate
+cumulative patchset for the same upstream revision. It retains both XSPI fixes
+and removes only the invalid weak `_sbrk` declaration and body from the HAL
+source paths used by shipped affected parts. Apollo330P and Apollo510L share
+one source path. Unshipped Apollo340/Apollo4B are outside this patchset.
+
+This patchset does not change the committed provider or published v5.2.29.
+Use it explicitly with `prepare_source.py --patchset`, then rebuild and review
+the complete matching artifact set before a separate payload promotion. Keep
+the existing NSX bounded `_sbrk` and force-link option: removing a vendor stub
+is not a guarantee that every static-library ordering selects the application's
+heap implementation. Retire this source patch only after a pinned upstream
+intake removes the affected stubs and the allocation/link regression passes.

@@ -347,3 +347,39 @@ def test_legacy_directory_identity(repo_root, tmp_path, monkeypatch, recorded_ro
     else:
         builder.bind_source_artifacts(artifacts, sdk_root, None)
         assert json.loads((artifacts / "source-patches.json").read_text())["source_root"] == str(sdk_root)
+
+
+def test_sbrk_patchset_preserves_released_xspi_inputs(repo_root):
+    """A later source preparation must not silently drop an earlier ABI fix."""
+    root = repo_root / "sdk-intake/source-patches"
+    released = root / "stable-2026.11.05"
+    candidate = root / "stable-2026.11.05-sbrk42"
+    old = json.loads((released / "patchset.json").read_text())
+    new = json.loads((candidate / "patchset.json").read_text())
+    assert new["upstream_commit"] == old["upstream_commit"]
+    assert new["patches"][:len(old["patches"])] == old["patches"]
+    for patch in old["patches"]:
+        assert (candidate / patch["path"]).read_bytes() == (released / patch["path"]).read_bytes()
+    for source in old["files"]:
+        assert source in new["files"]
+    for patch in new["patches"]:
+        assert hashlib.sha256((candidate / patch["path"]).read_bytes()).hexdigest() == patch["sha256"]
+    assert new["issue"].endswith("/issues/42")
+
+
+def test_sbrk_patch_only_removes_invalid_heap_stubs(repo_root):
+    """Other syscall behavior and unshipped source families are out of scope."""
+    root = repo_root / "sdk-intake/source-patches/stable-2026.11.05-sbrk42"
+    metadata = json.loads((root / "patchset.json").read_text())
+    patch = (root / "003-remove-vendor-sbrk.patch").read_text().splitlines()
+    families = {"apollo330P_510L", "apollo4l", "apollo4p", "apollo510", "atomiq110"}
+    paths = {f"mcu/{family}/hal/am_hal_global.c" for family in families}
+    assert {line.removeprefix("--- a/") for line in patch if line.startswith("--- a/")} == paths
+    assert {line.removeprefix("+++ b/") for line in patch if line.startswith("+++ b/")} == paths
+    assert not [line for line in patch if line.startswith("+") and not line.startswith("+++")]
+    removals = [line[1:] for line in patch if line.startswith("-") and not line.startswith("---")]
+    assert len(removals) == 2 * len(paths)
+    assert all("_sbrk(void)" in line for line in removals)
+    assert sum("return ENOSYS;" in line for line in removals) == len(paths)
+    assert sum("__attribute ((weak))" in line for line in removals) == len(paths)
+    assert {f["path"] for f in metadata["files"] if f["path"].endswith(".c")} == paths
