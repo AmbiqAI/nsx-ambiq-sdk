@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,7 +40,10 @@ def env(tmp_path: Path, markers):
     baseline.write_text(markers.render_baseline({}, [f"{PREFIX}/z.h"]))
     receipt = tmp_path / "replay.json"
     receipt.write_text(json.dumps({"schema_version": 1, "source_commit": COMMIT, "files": {}}))
-    return root, reference, baseline, receipt
+    environment = (root, reference, baseline, receipt)
+    record(markers, environment, DEAD, b"", name="a.h")
+    reference.joinpath("a.h").write_bytes(b"")
+    return environment
 
 
 def run(markers, env, *, source_commit=COMMIT):
@@ -47,11 +52,13 @@ def run(markers, env, *, source_commit=COMMIT):
                                       source_commit=source_commit, replay_path=receipt, baseline=baseline)
 
 
-def record(markers, env, before=NULL_STATEMENT, after=NULL_OUTPUT):
-    digest = lambda data: hashlib.sha256(markers.normalize_reviewed_banner(data)).hexdigest()
-    env[3].write_text(json.dumps({"schema_version": 1, "source_commit": COMMIT, "files": {
-        "z.h": {"input_sha256": digest(before), "output_sha256": digest(after)},
-    }}))
+def record(markers, env, before=NULL_STATEMENT, after=NULL_OUTPUT, *, name="z.h"):
+    def digest(data):
+        return hashlib.sha256(markers.normalize_reviewed_banner(data)).hexdigest()
+
+    receipt = json.loads(env[3].read_text())
+    receipt["files"][name] = {"input_sha256": digest(before), "output_sha256": digest(after)}
+    env[3].write_text(json.dumps(receipt))
 
 
 def banner(version: str) -> bytes:
@@ -155,21 +162,70 @@ def test_semicolon_replay_guards_fail_before_any_write(markers, env, guard):
     elif guard == "output":
         record(markers, env, after=b"different output\n")
     elif guard == "missing_entry":
-        env[3].write_text(json.dumps({"schema_version": 1, "source_commit": COMMIT, "files": {}}))
+        receipt = json.loads(env[3].read_text())
+        del receipt["files"]["z.h"]
+        env[3].write_text(json.dumps(receipt))
     env[0].joinpath("z.h").write_bytes(before)
     env[1].joinpath("z.h").write_bytes(b"different provider\n" if guard == "provider" else NULL_OUTPUT)
-    with pytest.raises(markers.InternalMarkerError, match="semicolon"):
+    with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation|sanitation replay output"):
         run(markers, env, source_commit="b" * 40 if guard == "source" else COMMIT)
     assert env[0].joinpath("a.h").read_bytes() == DEAD
     assert env[0].joinpath("z.h").read_bytes() == before
 
 
-def test_semicolon_in_preprocessor_dead_region_needs_no_receipt(markers, env):
-    env[0].joinpath("z.h").write_bytes(BEGIN + b"#if 0\n;\n#endif\n" + END)
+def test_preprocessor_dead_semicolon_still_requires_receipt(markers, env):
+    before = BEGIN + b"#if 0\n;\n#endif\n" + END
+    env[0].joinpath("z.h").write_bytes(before)
+    with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation"):
+        run(markers, env)
+    assert env[0].joinpath("z.h").read_bytes() == before
+
+
+def test_normal_comment_removal_requires_receipt(markers, env):
+    env[0].joinpath("z.h").write_bytes(DEAD)
+    env[1].joinpath("z.h").write_bytes(b"")
+    with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation"):
+        run(markers, env)
+    assert env[0].joinpath("z.h").read_bytes() == DEAD
+
+
+def test_receipted_normal_comment_removal_is_idempotent(markers, env):
+    record(markers, env, DEAD, b"")
+    env[0].joinpath("z.h").write_bytes(DEAD)
+    env[1].joinpath("z.h").write_bytes(b"")
     result = run(markers, env)
     assert result.changed_files == ("z.h",)
-    assert not result.replayed_files
+    assert result.replayed_files == (f"{PREFIX}/z.h",)
     assert env[0].joinpath("z.h").read_bytes() == b""
+    assert not run(markers, env).changed_files
+
+
+SPLICED_ELSE = BEGIN + b"#if 0\nint dead;\n#\\\nelse\nint live;\n#endif\n" + END
+SPLICED_COMMENT = (BEGIN + b"#if 0\n// continued comment \\\n#endif\nint inactive;\n"
+                   + END + b"#endif\nint public_api;\n")
+
+
+@pytest.mark.parametrize("before", [SPLICED_ELSE, SPLICED_COMMENT])
+def test_unreviewed_line_splicing_is_refused_before_any_write(markers, env, before):
+    env[0].joinpath("a.h").write_bytes(DEAD)
+    env[0].joinpath("z.h").write_bytes(before)
+    with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation"):
+        run(markers, env)
+    assert env[0].joinpath("a.h").read_bytes() == DEAD
+    assert env[0].joinpath("z.h").read_bytes() == before
+
+
+@pytest.mark.parametrize("before,live", [(SPLICED_ELSE, b"int live;"),
+                                         (SPLICED_COMMENT, b"int public_api;")])
+def test_splicing_fixtures_are_valid_c_with_live_declarations(before, live):
+    compiler = shutil.which("cc")
+    if compiler is None:
+        pytest.skip("C compiler unavailable")
+    result = subprocess.run([compiler, "-E", "-P", "-x", "c", "-"], input=before,
+                            capture_output=True, check=True)
+    assert live in result.stdout
+    assert b"int dead;" not in result.stdout
+    assert b"int inactive;" not in result.stdout
 
 
 @pytest.mark.parametrize("newline", [b"\n", b"\r\n", b""])

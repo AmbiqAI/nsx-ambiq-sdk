@@ -151,15 +151,21 @@ retained `#### INTERNAL ####` markers against the existing baseline and verifies
 archive hashes. Live declarations and their markers remain in place.
 
 Malformed fences are preserved only when their complete file matches the
-reviewed provider (apart from the generated revision banner). Four historical
-commented-enum residues additionally require the prepared source commit and
-whole-input/whole-output hashes recorded in `sanitation-replay.json`. That
-receipt is reviewed evidence, not a cache: staging never refreshes it. The
-generic scrubber's standalone-semicolon limitation is tracked in issue #203;
-do not use a blanket scrub or baseline refresh to bypass a staging refusal.
+reviewed provider (apart from the generated revision banner). Every removal
+requires the prepared source commit and whole-input/whole-output hashes recorded
+in `sanitation-replay.json`, plus equality with the reviewed provider output.
+The receipt covers 238 files from the reviewed intake. It is reviewed evidence,
+not a cache: staging never refreshes it. A future intake that changes those files,
+or introduces new removable content, requires explicit review and a receipt
+update, even when the proposed removal appears to be comments only.
+
+The generic scrubber does not fully parse C (including null statements and line
+continuations; see #203). Do not use a blanket scrub or baseline refresh to
+bypass a staging refusal. Review the original input as well as the proposed
+output before approving receipt changes.
 
 Sanitation plans all removals before writing. A new malformed file, changed
-reviewed exception, or unapproved semicolon removal stops sanitation without
+reviewed exception, or unapproved removal stops sanitation without
 applying any planned removals. Export and patch application have already happened;
 this does not make the entire staging operation transactional. Review a new
 intake's refused content explicitly before updating any receipt or baseline.

@@ -685,9 +685,9 @@ def scrub_reviewed_tree(
 ) -> ReviewedScrubResult:
     """Plan provider sanitation before writes; retain only reviewed refusals.
 
-    Existing malformed files remain untouched. Historical semicolon removals
-    require whole-input and whole-output receipts, not a C syntax heuristic
-    (the generic scrubber's null-statement limitation is tracked in #203).
+    Existing malformed files remain untouched. All removals require
+    whole-input and whole-output receipts: the generic scrubber does not fully
+    parse C, so new input must receive explicit review before automatic replay.
     Export and patch application precede this operation; this is not an atomic
     staging transaction or a rollback mechanism for filesystem write failures.
     """
@@ -714,22 +714,15 @@ def scrub_reviewed_tree(
             preserved.append(PreservedFenceFile(key, hashlib.sha256(before.encode()).hexdigest(), str(error)))
             continue
 
-        _raw, lines = split_lines_keepends(before)
-        code = code_only_lines(lines)
-        removed_semicolon = any(
-            code[number - 1].strip() == ";"
-            and not any(start <= number <= stop for start, stop in result.removed_if_zero)
-            for number, _line in result.removed
-        )
-        if removed_semicolon:
+        if result.changed:
             evidence = replay.files.get(relative.as_posix())
             before_hash = hashlib.sha256(normalize_reviewed_banner(before.encode())).hexdigest()
             after_hash = hashlib.sha256(normalize_reviewed_banner(result.text.encode())).hexdigest()
             if source_commit != replay.source_commit or evidence != ReplayHashes(before_hash, after_hash):
-                raise InternalMarkerError(f"{key}: unreviewed semicolon removal; input/output replay receipt required (#203)")
+                raise InternalMarkerError(f"{key}: unreviewed sanitation; input/output replay receipt required")
             reference = _reviewed_file_bytes(reviewed_root, relative)
             if normalize_reviewed_banner(result.text.encode()) != normalize_reviewed_banner(reference):
-                raise InternalMarkerError(f"{key}: semicolon replay output differs from reviewed reference")
+                raise InternalMarkerError(f"{key}: sanitation replay output differs from reviewed reference")
             replayed.append(key)
         if result.changed:
             planned.append((path, result))

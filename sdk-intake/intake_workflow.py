@@ -1410,7 +1410,7 @@ def stage_provider_payload(
 
     _assert_no_symlinks(dest, label="staged payload")
     # Archive/ZIP inputs have no Git identity; they cannot replay the narrow
-    # historical semicolon exceptions, but ordinary sanitation still works.
+    # reviewed sanitation removals, but ordinary sanitation still works.
     identity = subprocess.run(
         ["git", "-C", str(sdk_root), "rev-parse", "HEAD"],
         capture_output=True, text=True, check=False,
@@ -1542,7 +1542,7 @@ def _cmd_stage(args: argparse.Namespace) -> int:
         print(f"    preserved reviewed malformed file: {preserved.path} sha256={preserved.sha256}")
         print(f"      {preserved.reason}")
     for path in result.sanitation.replayed_files:
-        print(f"    verified historical semicolon replay: {path}")
+        print(f"    verified reviewed sanitation replay: {path}")
     if result.patch_applications:
         print(f"    patches applied ({len(result.patch_applications)}):")
         for application in result.patch_applications:

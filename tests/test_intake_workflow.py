@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import subprocess
 import sys
 from dataclasses import replace
@@ -537,7 +538,7 @@ def test_stage_provider_payload_targets_staging_not_provider_root(staging_env, f
     assert result.hash_verification.ok
 
 
-def test_stage_sanitizes_after_patches_and_before_marker_gate(staging_env, helper, monkeypatch):
+def test_stage_sanitizes_after_patches_and_before_marker_gate(staging_env, fake_repo, helper, monkeypatch):
     monkeypatch.setattr(helper.bas, "promote_provider_payload", _stub_promote_provider_payload())
     sample = "// #### INTERNAL BEGIN ####\n// patched private note\n// #### INTERNAL END ####\nint public_api(void);\n"
 
@@ -546,7 +547,19 @@ def test_stage_sanitizes_after_patches_and_before_marker_gate(staging_env, helpe
         return ()
 
     monkeypatch.setattr(helper, "apply_patch_queue", patch_payload)
-    result = helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"))
+    _make_committed_git_repo(fake_repo)
+    source_commit = subprocess.check_output(["git", "-C", str(fake_repo), "rev-parse", "HEAD"], text=True).strip()
+    provider = helper.bas.provider_sdk_root(staging_env)
+    provider.mkdir(parents=True)
+    output = "int public_api(void);\n"
+    (provider / "sample.h").write_text(output)
+    (fake_repo / "sdk-intake" / "sanitation-replay.json").write_text(json.dumps({
+        "schema_version": 1, "source_commit": source_commit, "files": {
+            "sample.h": {"input_sha256": _sha256_bytes(sample.encode()),
+                         "output_sha256": _sha256_bytes(output.encode())},
+        },
+    }))
+    result = helper.stage_provider_payload(staging_env, "test-version", fake_repo, patches_dir=None)
     assert (result.staged_root / "sample.h").read_text() == "int public_api(void);\n"
     assert result.sanitation.changed_files == ("sample.h",)
     assert result.hash_verification.ok
@@ -561,7 +574,7 @@ def test_stage_keeps_marker_gate_after_sanitation(staging_env, helper, monkeypat
 
     monkeypatch.setattr(helper.bas, "promote_provider_payload", export)
     with pytest.raises(helper.IntakeVerificationError, match="beyond the recorded baseline"):
-        helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"))
+        helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"), patches_dir=None)
 
 
 def test_stage_provider_payload_refuses_incomplete_artifact_set(fake_repo, helper, monkeypatch) -> None:
