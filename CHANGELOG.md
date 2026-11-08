@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.2.30
+
+- Remove the invalid weak vendor `_sbrk` stub from the rebuilt HAL archives;
+  retain NSX's bounded allocator and force-link protection (#42, #199, #201).
+- Preserve the reviewed provider headers, driver fixes and XSPI corrections.
+- Add pre-main C++ allocation link controls and a shipped-archive symbol check.
+- Verify GCC startup/runtime on AP330, AP510B and AP4 KXR (21 cases).
+
+
 All notable distribution changes are recorded here.
 
 ## 5.2.29 - Unreleased

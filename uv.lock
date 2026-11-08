@@ -79,7 +79,7 @@ wheels = [
 
 [[package]]
 name = "nsx-ambiq-sdk"
-version = "5.2.29"
+version = "5.2.30"
 source = { virtual = "." }
 
 [package.dev-dependencies]

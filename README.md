@@ -8,19 +8,20 @@ It is not a full AmbiqSuite mirror. Optional middleware and examples such as Fre
 
 ## Current Coverage
 
-The `5.2.29` release candidate contains the `stable-2026.11.05` intake from
+The `5.2.30` release candidate contains the `stable-2026.11.05` intake from
 upstream commit `3cfb7d50718e6fb016f1a0128121cb40598109d5`.
 
 All 73 HAL/BSP archives were rebuilt from prepared source commit
-`6a2a0c08af553e33716f2e251cb74aa370e2ae0f`, which adds the reviewed AT110 XSPI
-capacity/alignment patches. The artifact manifest records both identities.
-Four payload patches preserve C++ compatibility and correct EM9305 receive
-scratch capacity; the matching NSX transport fixes are included. Cordio retains
-its separately recorded base snapshot and selected NSX changes.
+`83bd69c37edf8d94cf77021140d707c3fe886242`, which adds the reviewed AT110 XSPI
+capacity/alignment patches and removes the invalid vendor heap stub.
+Provider sources retain 5.2.29 bytes; NSX retains bounded allocation and force-link
+protection. The manifest records the archive source and retained source identities.
+Four payload patches preserve C++ compatibility and EM9305 receive scratch capacity.
+Cordio retains its separately recorded base snapshot and selected NSX changes.
 This is not an official numbered AmbiqSuite release.
 
-Five-board GCC startup/runtime and selected power/timer integration checks,
-AP510 USB traffic and AP510B BLE traffic passed against the previous SDK.
+GCC startup/runtime checks passed on AP330, AP510B and AP4 KXR (21 cases).
+This release does not claim new USB/BLE traffic or cold-boot qualification.
 See the qualification report for exact tested revisions and coverage limits.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
@@ -33,8 +34,8 @@ are selected by the public `armclang` toolchain family.
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 Release-candidate provenance and qualification are recorded in
-[`release/nsx-ambiq-sdk-5.2.29.yaml`](release/nsx-ambiq-sdk-5.2.29.yaml) and
-[`release/qualification-5.2.29.md`](release/qualification-5.2.29.md).
+[`release/nsx-ambiq-sdk-5.2.30.yaml`](release/nsx-ambiq-sdk-5.2.30.yaml) and
+[`release/qualification-5.2.30.md`](release/qualification-5.2.30.md).
 The records of earlier versions are kept alongside them.
 
 ## Using The Modules

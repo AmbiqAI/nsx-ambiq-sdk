@@ -1,0 +1,511 @@
+schema_version: 1
+distribution:
+  name: nsx-ambiq-sdk
+  version: 5.2.30
+  tag: v5.2.30
+  title: "nsx-ambiq-sdk 5.2.30 \u2014 bounded heap-stub correction"
+  git:
+    commit: null
+    commit_resolution:
+      source: immutable_tag_target
+      command: git rev-list -n 1 v5.2.30
+      publication_requirement: Tag v5.2.30 must point to the approved release commit.
+  supersedes:
+    version: 5.2.29
+    tag: v5.2.29
+    commit: 5585350def5fdced39d42bba150042f92f23cf18
+    relationship: content_update
+    reason: Promote the reviewed cumulative heap-stub correction while preserving nonarchive provider
+      content.
+  immutability_note: All earlier tags, releases and commits are preserved. Corrections are published as
+    new distribution versions.
+consumer_upgrade:
+- from_version: 5.2.29
+  from_tag: v5.2.29
+  from_commit: 5585350def5fdced39d42bba150042f92f23cf18
+  github_release_published: true
+  consumers: Consumers pinned to 5.2.29.
+  changed_archive_parts:
+  - apollo2
+  - apollo3
+  - apollo330P
+  - apollo3p
+  - apollo4l
+  - apollo4p
+  - apollo510
+  - apollo510L
+  - atomiq110
+  changed_archive_count: 54
+  unchanged_archive_count: 19
+  rebuilt_archive_count: 73
+  provider_content_unchanged: false
+  changes:
+  - id: provider-archive-refresh
+    summary: Cumulative provider changes from the named baseline; 5.2.29 nonarchive files remain unchanged
+      except manifest. Upgrades from5.2.28 also include the prior full intake.
+    path_scope: tree
+    path_scope_reason: Provider payload is the coordinated generated unit; archive counts and nonarchive
+      preservation are checked separately.
+    paths:
+    - modules/nsx-ambiqsuite/sdk
+  - id: integration-release-records
+    summary: Heap regression coverage and coordinated release metadata; prior integration changes included
+      for5.2.28 consumers.
+    paths:
+    - .github/workflows/ci.yml
+    - CHANGELOG.md
+    - README.md
+    - docs/versioning.md
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-ambiq-usb/nsx-module.yaml
+    - modules/nsx-ambiqsuite/README.md
+    - modules/nsx-ambiqsuite/nsx-module.yaml
+    - modules/nsx-audio/nsx-module.yaml
+    - modules/nsx-ble/nsx-module.yaml
+    - modules/nsx-ble/src/ns_ble.c
+    - modules/nsx-cmsis-core/nsx-module.yaml
+    - modules/nsx-cmsis-startup/nsx-module.yaml
+    - modules/nsx-cordio/nsx-module.yaml
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-emmc/nsx-module.yaml
+    - modules/nsx-freertos/nsx-module.yaml
+    - modules/nsx-gpio/nsx-module.yaml
+    - modules/nsx-i2c/nsx-module.yaml
+    - modules/nsx-interrupt/nsx-module.yaml
+    - modules/nsx-npu/nsx-module.yaml
+    - modules/nsx-perf/nsx-module.yaml
+    - modules/nsx-power/nsx-module.yaml
+    - modules/nsx-psram/nsx-module.yaml
+    - modules/nsx-soc-hal/nsx-module.yaml
+    - modules/nsx-spi/nsx-module.yaml
+    - modules/nsx-timer/nsx-module.yaml
+    - modules/nsx-uart/nsx-module.yaml
+    - modules/nsx-usb/nsx-module.yaml
+    - pyproject.toml
+    - release/nsx-ambiq-sdk-5.2.30.yaml
+    - release/qualification-5.2.30.md
+    - sdk-intake/README.md
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/001-at110-xspi-state-capacity.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/002-at110-xspi-state-alignment.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/003-remove-vendor-sbrk.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/patchset.json
+    - tests/fixtures/sbrk-link/link.ld
+    - tests/fixtures/sbrk-link/probe.cpp
+    - tests/test_manifests.py
+    - tests/test_release_metadata.py
+    - tests/test_repo_shape.py
+    - tests/test_sbrk_link.py
+    - tests/test_source_patches.py
+    - tools/sdk_compatibility.py
+    - uv.lock
+    removed_paths: []
+- from_version: 5.2.28
+  from_tag: v5.2.28
+  from_commit: e528eba6f43a45b97e08072ab46340f1ac3fdb16
+  github_release_published: true
+  consumers: Consumers pinned to 5.2.28.
+  changed_archive_parts:
+  - apollo2
+  - apollo3
+  - apollo330P
+  - apollo3p
+  - apollo4l
+  - apollo4p
+  - apollo510
+  - apollo510L
+  - atomiq110
+  changed_archive_count: 60
+  unchanged_archive_count: 13
+  rebuilt_archive_count: 73
+  provider_content_unchanged: false
+  changes:
+  - id: provider-archive-refresh
+    summary: Cumulative provider changes from the named baseline; 5.2.29 nonarchive files remain unchanged
+      except manifest. Upgrades from5.2.28 also include the prior full intake.
+    path_scope: tree
+    path_scope_reason: Provider payload is the coordinated generated unit; archive counts and nonarchive
+      preservation are checked separately.
+    paths:
+    - modules/nsx-ambiqsuite/sdk
+  - id: integration-release-records
+    summary: Heap regression coverage and coordinated release metadata; prior integration changes included
+      for5.2.28 consumers.
+    paths:
+    - .github/workflows/ci.yml
+    - .github/workflows/container-validation.yml
+    - .pre-commit-config.yaml
+    - CHANGELOG.md
+    - README.md
+    - docs/versioning.md
+    - modules/nsx-ambiq-bsp/nsx-module.yaml
+    - modules/nsx-ambiq-hal/CMakeLists.txt
+    - modules/nsx-ambiq-hal/nsx-module.yaml
+    - modules/nsx-ambiq-usb/nsx-module.yaml
+    - modules/nsx-ambiqsuite/README.md
+    - modules/nsx-ambiqsuite/nsx-module.yaml
+    - modules/nsx-audio/nsx-module.yaml
+    - modules/nsx-ble/nsx-module.yaml
+    - modules/nsx-ble/src/ns_ble.c
+    - modules/nsx-cmsis-core/nsx-module.yaml
+    - modules/nsx-cmsis-startup/nsx-module.yaml
+    - modules/nsx-cordio/nsx-module.yaml
+    - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/em9305/hci_drv_em9305.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
+    - modules/nsx-core/nsx-module.yaml
+    - modules/nsx-emmc/nsx-module.yaml
+    - modules/nsx-freertos/nsx-module.yaml
+    - modules/nsx-gpio/nsx-module.yaml
+    - modules/nsx-i2c/nsx-module.yaml
+    - modules/nsx-interrupt/nsx-module.yaml
+    - modules/nsx-npu/README.md
+    - modules/nsx-npu/nsx-module.yaml
+    - modules/nsx-npu/src/atomiq110/nsx_npu_timebase.c
+    - modules/nsx-perf/nsx-module.yaml
+    - modules/nsx-power/nsx-module.yaml
+    - modules/nsx-psram/nsx-module.yaml
+    - modules/nsx-soc-hal/nsx-module.yaml
+    - modules/nsx-spi/nsx-module.yaml
+    - modules/nsx-timer/nsx-module.yaml
+    - modules/nsx-uart/nsx-module.yaml
+    - modules/nsx-usb/nsx-module.yaml
+    - pyproject.toml
+    - release/nsx-ambiq-sdk-5.2.29.yaml
+    - release/nsx-ambiq-sdk-5.2.30.yaml
+    - release/qualification-5.2.29.md
+    - release/qualification-5.2.30.md
+    - sdk-intake/README.md
+    - sdk-intake/build_ambiqsuite.py
+    - sdk-intake/intake_workflow.py
+    - sdk-intake/internal-marker-baseline.yaml
+    - sdk-intake/patches/README.md
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+    - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+    - sdk-intake/patches/stable/003-cxx17-cc312-register.patch
+    - sdk-intake/patches/stable/003-cxx17-cc312-register.yaml
+    - sdk-intake/patches/stable/004-em9305-tx-receive-scratch.patch
+    - sdk-intake/patches/stable/004-em9305-tx-receive-scratch.yaml
+    - sdk-intake/prepare_source.py
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/001-at110-xspi-state-capacity.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/002-at110-xspi-state-alignment.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/003-remove-vendor-sbrk.patch
+    - sdk-intake/source-patches/stable-2026.11.05-sbrk42/patchset.json
+    - sdk-intake/source-patches/stable-2026.11.05/001-at110-xspi-state-capacity.patch
+    - sdk-intake/source-patches/stable-2026.11.05/002-at110-xspi-state-alignment.patch
+    - sdk-intake/source-patches/stable-2026.11.05/patchset.json
+    - tests/fixtures/em9305-rx/FreeRTOS.h
+    - tests/fixtures/em9305-rx/am_bsp.h
+    - tests/fixtures/em9305-rx/am_mcu_apollo.h
+    - tests/fixtures/em9305-rx/am_util.h
+    - tests/fixtures/em9305-rx/am_util_debug.h
+    - tests/fixtures/em9305-rx/am_util_delay.h
+    - tests/fixtures/em9305-rx/am_util_stdio.h
+    - tests/fixtures/em9305-rx/device_tx.c
+    - tests/fixtures/em9305-rx/event_groups.h
+    - tests/fixtures/em9305-rx/main.c
+    - tests/fixtures/em9305-rx/timers.h
+    - tests/fixtures/sbrk-link/link.ld
+    - tests/fixtures/sbrk-link/probe.cpp
+    - tests/test_at110_peripheral_abi.py
+    - tests/test_em9305_device_tx.py
+    - tests/test_em9305_rx.py
+    - tests/test_intake_patches_byte_for_byte.py
+    - tests/test_internal_markers.py
+    - tests/test_manifests.py
+    - tests/test_release_metadata.py
+    - tests/test_repo_shape.py
+    - tests/test_sbrk_link.py
+    - tests/test_sdk_compatibility_gate.py
+    - tests/test_sdk_intake.py
+    - tests/test_sdk_intake_review.py
+    - tests/test_source_patches.py
+    - tests/test_vendor_abi.py
+    - tools/nsx_npu_compile_check.py
+    - tools/sdk_compatibility.py
+    - tools/sdk_intake_review.py
+    - uv.lock
+    removed_paths: []
+upstream:
+  provider: ambiqsuite
+  source_kind: git_ref
+  source_ref: 83bd69c37edf8d94cf77021140d707c3fe886242
+  source_commit: 83bd69c37edf8d94cf77021140d707c3fe886242
+  raw_source_committed: false
+  snapshot_identity: stable-2026.11.05-sbrk42
+  vendor_source_commit: 3cfb7d50718e6fb016f1a0128121cb40598109d5
+  artifact_manifest: modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml
+  official_numbered_release_claimed: false
+  identity_scope: source_commit identifies the prepared archive source; vendor_source_commit identifies
+    its upstream base. Consumer headers/sources retain v5.2.29 export and staged corrections, recorded
+    under retained_nonarchive.
+payload_provenance:
+  summary: 'Archive-only cumulative refresh. All73 archives rebuilt from the prepared source; the nonarchive
+    provider payload except its manifest remains identical to v5.2.29. Raw regeneration limitation tracked
+    in #200.'
+  artifact_manifest_generated_at: 2026-11-07
+  source_patchset: sdk-intake/source-patches/stable-2026.11.05-sbrk42/patchset.json
+  source_patch_provenance:
+    files:
+    - after_sha256: ce4cf0f535432300b483f9403dc2914032aa40ad9ee67364312925db1f45884b
+      before_sha256: 1f6d7f2e0dbb4b4e0e4c7cb3039978b7b7acfce504bc4277706eeb3ba7ab8993
+      path: mcu/atomiq110/hal/am_hal_xspimc.h
+    - after_sha256: 3bb80f513139cf77a34593d3b1d6b138213584f26949ab438c4f5995b48c291b
+      before_sha256: 4e5e08560269bbfe10ef56d46267eb5a545300763f067a3ada30da8dd7ff05e7
+      path: devices/am_devices_xspi_psram_w958d6nw.h
+    - after_sha256: 1a705d08bc88befc4d056af2242d52eac9bec9e2b1a2cc4aff077891f8ec1524
+      before_sha256: c71e7124234e188054b925c0761dafc637d3113aa923387b159666a158855b28
+      path: mcu/apollo330P_510L/hal/am_hal_global.c
+    - after_sha256: 9f52c8ee3bd69882885c1d8d2cd3b6b21f6236b08eaef6b275593738e56b3618
+      before_sha256: d6e28b4a126c206954a9875692d8625ade9c120bbbbfeb84f00452437ce63586
+      path: mcu/apollo4l/hal/am_hal_global.c
+    - after_sha256: 2b94ddd72e334c53c5ea1af5c5da853c11999897a553b2e8c005a679dc63f8a2
+      before_sha256: c4a31c9821e5088dc63b66bb001143449ae0804b86498aec18d97e47a20473cc
+      path: mcu/apollo4p/hal/am_hal_global.c
+    - after_sha256: a8b18e78a3c71e7b5df24430793a06692b77a46f52e9f4c681baa7c62f59b8b5
+      before_sha256: 5dde48dc0f439cfa7cb5fa411fd5a8ba97f0bcc92a886a6d8967b5bb74b12353
+      path: mcu/apollo510/hal/am_hal_global.c
+    - after_sha256: 40d17f527a695d0696ac7ffaa709b530abccd00fc58e79efe21b2f6a00fd2f6e
+      before_sha256: 240b546268716ea832ea3afc5acac3bf1f2f86281e0d1a01fdaf2e13acc98919
+      path: mcu/atomiq110/hal/am_hal_global.c
+    issue: https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/42
+    owner: apage224
+    patches:
+    - path: 001-at110-xspi-state-capacity.patch
+      sha256: 37bce090b83923502178f78c319676370dc767b84b4c1e4dae0a1fc5d0469ff5
+    - path: 002-at110-xspi-state-alignment.patch
+      sha256: 1c12fb3918202d9f20680d451f07d3699de95c7e4bde0352b7380cd4500de08e
+    - path: 003-remove-vendor-sbrk.patch
+      sha256: aceab505e2fda1621802b1cb9252b51d85297f2f8147dbc65f503b25a432a168
+    reason: Retain the reviewed XSPI capacity/alignment corrections (#190); remove the invalid weak newlib
+      _sbrk placeholder from shipped HAL source families (#42). Preparation only until matching rebuilt
+      archives are promoted. NSX bounded _sbrk force-link protection remains required.
+    schema_version: 1
+    upstream_commit: 3cfb7d50718e6fb016f1a0128121cb40598109d5
+  staging_patches:
+  - path: sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+    metadata: sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+    sha256: aaff31ed1ea548f3a2e933e4ec250028cc22925b94ac2f68be142fa077340d13
+    owner: apage224
+    reason: 'AmbiqSuite selects its GNU code path with defined(__GNUC_STDC_INLINE__), which describes
+      inline semantics rather than the compiler. gcc defines it in C and C++, but clang defines it only
+      for C (C++ gets __GNUC_GNU_INLINE__), so any C++ translation unit built with ATfE clang++ that includes
+      am_hal_global.h, atomiq110 am_reg_macros.h, apollo2 am_reg_macros_asm.h, or the MSPI PSRAM device
+      headers falls through to "#error Compiler is unknown". The patch tests defined(__GNUC__) instead;
+      armclang is still matched first by __ARMCC_VERSION. It also adds the space missing in the AM_DEVICE_RPMB_DEBUG
+      string paste ("..."fmt), which C++11 lexes as a user-defined literal suffix and clang rejects. Every
+      configuration that compiled before (C99 and later with gcc or clang, C++ with gcc, armclang) selects
+      the same branch as before, so the prebuilt HAL/BSP archives are unaffected; older modes (C89/gnu89,
+      C++98) that used to hit the #error now take the GNU path. Fixes AmbiqAI/nsx-ambiq-sdk#81. Retire
+      once the fix lands upstream in AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
+
+      '
+  - path: sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+    metadata: sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+    sha256: e73ae0c0f61ade5f827ba030c6b0fa49e38fd143a203372d45011d498f3338b5
+    owner: apage224
+    reason: 'The USB register headers for apollo4p, apollo510, apollo510L and apollo330P declare unnamed
+      padding bit-fields as `__IM uint32_t : N;`. __IM expands to `volatile const`, and C++ does not allow
+      qualifiers on an unnamed bit-field, so clang++ rejects any C++ translation unit that includes these
+      headers ("anonymous bit-field cannot have qualifiers"); g++ accepts it. An unnamed bit-field cannot
+      be accessed, so dropping the qualifier changes neither layout nor behavior (sizeof of every register
+      struct is unchanged with arm-none-eabi-gcc). Companion to patch 001 for AmbiqAI/nsx-ambiq-sdk#81.
+      Retire once the fix lands upstream in AmbiqSuite (tracked in AmbiqAI/nsx-ambiq-sdk#82).
+
+      '
+  - path: sdk-intake/patches/stable/003-cxx17-cc312-register.patch
+    metadata: sdk-intake/patches/stable/003-cxx17-cc312-register.yaml
+    sha256: c0fe8f8b8b3a7f191feea5354f039ae8da79479c6d5892f57fbe8254f358f337
+    owner: apage224
+    reason: 'The stable-2026.11.05 CC312 busy-wait inline helper declares its timeout with the plain register
+      storage class, which ATfE and ArmClang reject in C++17. Remove only that optional hint; preserve
+      the timeout and volatile MMIO loop. No fixed-register assembly binding is involved. Retire when
+      upstream headers compile in C++17 without this correction.
+
+      '
+  - path: sdk-intake/patches/stable/004-em9305-tx-receive-scratch.patch
+    metadata: sdk-intake/patches/stable/004-em9305-tx-receive-scratch.yaml
+    sha256: 82ad0a78233e5931455c84bdadbd1d3b1be6ae97d0885031d4af7037c5f27920
+    owner: apage224
+    reason: 'The EM9305 blocking writer supplies only 16 bytes of receive scratch to full-duplex transfers
+      that can contain up to 255 bytes per controller credit. Size that scratch to the existing maximum
+      transport packet, preserving word alignment, packet limits and SPI transaction behavior. This consumer-compiled
+      device source is not part of the prebuilt HAL/BSP archives. Retire when upstream sizes the receive
+      scratch for every accepted transfer. Local tracking: AmbiqAI/nsx-ambiq-sdk#195; no upstream submission
+      has been made.
+
+      '
+  toolchain_trains:
+  - manifest_key: gcc
+    cmake_family: gcc
+    archive_count: 25
+    built_from_source_commit: 83bd69c37edf8d94cf77021140d707c3fe886242
+    archives_introduced_in:
+    - 1e88777afebabbb8c918b9ef215f2563bb3edc42
+  - manifest_key: atfe
+    cmake_family: atfe
+    archive_count: 25
+    built_from_source_commit: 83bd69c37edf8d94cf77021140d707c3fe886242
+    archives_introduced_in:
+    - 1e88777afebabbb8c918b9ef215f2563bb3edc42
+    - 33b9795d9eb022410abbab1226541c921fd21c4e
+    - 56a72f08b34e9315f8c58a9defb784329e789678
+  - manifest_key: acfe
+    cmake_family: armclang
+    archive_count: 23
+    built_from_source_commit: 83bd69c37edf8d94cf77021140d707c3fe886242
+    archives_introduced_in:
+    - 1e88777afebabbb8c918b9ef215f2563bb3edc42
+    abi_cflags: -fshort-wchar -fshort-enums
+  retained_nonarchive:
+    tag: v5.2.29
+    commit: 5585350def5fdced39d42bba150042f92f23cf18
+    banner_identity: stable-2026.11.05
+    except_paths:
+    - artifact-manifest.yaml
+qualification:
+  status: bounded_gcc_integration
+  report: release/qualification-5.2.30.md
+  scope:
+    socs:
+    - apollo2
+    - apollo3
+    - apollo3p
+    - apollo4l
+    - apollo4p
+    - apollo330P
+    - apollo510
+    - apollo510b
+    - apollo510L
+    boards:
+    - apollo2_evb
+    - apollo3_evb
+    - apollo3_evb_cygnus
+    - apollo3p_evb
+    - apollo3p_evb_cygnus
+    - apollo4l_evb
+    - apollo4l_blue_evb
+    - apollo4p_evb
+    - apollo4p_blue_kbr_evb
+    - apollo4p_blue_kxr_evb
+    - apollo4p_evb_disp_shield_rev2
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+  scope_note: scope lists supported nonexperimental descriptors with built provider artifacts, not hardware-qualified
+    boards. No earlier compiler/hardware qualification is inherited by this new payload.
+  toolchains:
+  - cmake_family: gcc
+    artifact_manifest_key: gcc
+    artifact_status: built
+    hardware_status: bounded_integration
+  - cmake_family: atfe
+    artifact_manifest_key: atfe
+    artifact_status: built
+    hardware_status: not_newly_qualified
+  - cmake_family: armclang
+    artifact_manifest_key: acfe
+    artifact_status: built
+    hardware_status: not_newly_qualified
+  hardware_status: bounded_debugger_reset_gcc_only
+  hardware_boards:
+  - apollo330mP_evb
+  - apollo510b_evb
+  - apollo4p_blue_kxr_evb
+  evidence_candidate: fa61571630bb0c7ebebb703fbca67b86334b5386
+  unity_case_executions: 21
+  limitations:
+  - Debugger-controlled GCC starts, not cold power-on.
+  - No new ATfE/ACfE physical qualification.
+  - No fresh USB/BLE traffic, microphone, sleep/resume or performance qualification.
+  - No physical AP510L or AT110 qualification; AT110 remains experimental.
+  harness_revision: fa61571630bb0c7ebebb703fbca67b86334b5386
+  firmware_runs: 6
+exclusions:
+  descriptor_only:
+    socs:
+    - apollo5b
+    boards:
+    - apollo5b_evb
+  experimental:
+    socs:
+    - atomiq110
+    boards:
+    - atomiq110_fpga_turbo
+release_evidence:
+- release/qualification-5.2.30.md
+- tests/test_sbrk_link.py
+- tests/test_source_patches.py
+- tests/test_release_metadata.py
+- release/source-ownership.yaml
+external_evidence:
+  intake: artifacts/nsx/intake-qualification-20261107
+  release: artifacts/nsx/release-529-20261107
+  note: Local evidence retained outside git; detailed identities and limitations are in the qualification
+    report.
+known_deviations:
+- id: prepared-source-xspi-abi
+  description: Reserve sufficient opaque XSPI state for native ATfE enum ABI and align the two allocation
+    wrappers. Temporary local correction; upstream follow-up pending.
+  owner: apage224
+  issue: https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/190
+  paths:
+  - sdk-intake/source-patches/stable-2026.11.05/patchset.json
+- id: clang-cxx-header-compat
+  description: 'Retain the reviewed clang C++ payload corrections from v5.2.29; source/headers are unchanged
+    by this archive refresh. Upstream follow-up remains #82.'
+  paths:
+  - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.patch
+  - sdk-intake/patches/stable/001-clang-cxx-compiler-detection.yaml
+  - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.patch
+  - sdk-intake/patches/stable/002-clang-cxx-unnamed-bitfield-qualifiers.yaml
+- id: cxx17-cc312-register
+  description: 'The stable-2026.11.05 CC312 busy-wait inline helper declares its timeout with the plain
+    register storage class, which ATfE and ArmClang reject in C++17. Remove only that optional hint; preserve
+    the timeout and volatile MMIO loop. No fixed-register assembly binding is involved. Retire when upstream
+    headers compile in C++17 without this correction.
+
+    '
+  owner: apage224
+  paths:
+  - sdk-intake/patches/stable/003-cxx17-cc312-register.patch
+  - sdk-intake/patches/stable/003-cxx17-cc312-register.yaml
+- id: em9305-tx-receive-scratch
+  description: 'The EM9305 blocking writer supplies only 16 bytes of receive scratch to full-duplex transfers
+    that can contain up to 255 bytes per controller credit. Size that scratch to the existing maximum
+    transport packet, preserving word alignment, packet limits and SPI transaction behavior. This consumer-compiled
+    device source is not part of the prebuilt HAL/BSP archives. Retire when upstream sizes the receive
+    scratch for every accepted transfer. Local tracking: AmbiqAI/nsx-ambiq-sdk#195; no upstream submission
+    has been made.
+
+    '
+  owner: apage224
+  paths:
+  - sdk-intake/patches/stable/004-em9305-tx-receive-scratch.patch
+  - sdk-intake/patches/stable/004-em9305-tx-receive-scratch.yaml
+- id: atomiq110-internal-marker-sanitation
+  description: 'Retain reviewed source/header sanitation from v5.2.29 byte-for-byte. The archive-only
+    refresh passes the unchanged marker baseline; full raw regeneration remains blocked as recorded in
+    #200.'
+  paths:
+  - release/source-ownership.yaml
+  - sdk-intake/internal_markers.py
+- id: nsx-cordio-vendored-revision-label
+  status: corrected_in_5_2_26
+  description: Cordio/uECC remain based on stable-2026.06.18 (caaf5af860), with documented NSX edits including
+    the EM9305 receive fix and distribution firmware string. They were not re-vendored with the provider
+    snapshot; see NSX_VENDORED_VERSION.txt.
+  paths:
+  - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+  - modules/nsx-cordio/nsx-module.yaml
+  - modules/nsx-cordio/README.md
+- id: vendor-heap-stub
+  description: 'Cumulative source patch removes invalid vendor weak _sbrk before native builds. Keep bounded
+    NSX allocator and force-link mitigation. Retire only after pinned upstream removes the stub. Issue
+    #42.'
+  owner: apage224
+  paths:
+  - sdk-intake/source-patches/stable-2026.11.05-sbrk42/patchset.json
+  - sdk-intake/source-patches/stable-2026.11.05-sbrk42/003-remove-vendor-sbrk.patch

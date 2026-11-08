@@ -2,7 +2,7 @@
 
 ## Distribution Version
 
-`5.2.29` is the proposed `nsx-ambiq-sdk` distribution release version. The
+`5.2.30` is the proposed `nsx-ambiq-sdk` distribution release version. The
 root package and every manifest under `modules/` use this version because the
 repository is released as one coordinated distribution.
 
@@ -22,6 +22,12 @@ upstream `3cfb7d50718e6fb016f1a0128121cb40598109d5` plus two reviewed AT110
 XSPI source patches. Four separate payload patches apply after staging.
 Cordio/uecc remains a separately versioned vendored snapshot with documented
 NSX edits; the new provider identity does not imply a full Cordio refresh.
+
+`5.2.30` replaces the 73 archives with a cumulative build that also removes
+the invalid vendor `_sbrk` stub. The reviewed nonarchive provider payload
+remains byte-identical to 5.2.29; full re-staging cleanup is tracked in #200.
+The manifest distinguishes the new prepared archive source from retained
+source/header provenance.
 
 The distribution version does not assert an official numbered AmbiqSuite
 release. The source identity in the release manifest and promoted artifact
