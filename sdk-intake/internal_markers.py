@@ -24,11 +24,10 @@ This module is the intake-time sanitizer for that class of leak:
                    regions inside INTERNAL blocks.
   update-baseline  regenerate the ratchet baseline from a tree.
 
-Scrub safety contract (why this never breaks a prebuilt `libam_hal.a`):
+Intended scrub behavior (not a complete C parser):
 a shipped drop's headers were compiled into the archives that ship alongside
 them, so removing a *live* declaration -- even one fenced inside an INTERNAL
-block -- silently desynchronizes headers from the prebuilt binary. The scrub
-therefore only ever deletes
+block -- silently desynchronizes headers from the prebuilt binary. The generic scrubber attempts to delete only
 
   1. the marker lines of a block it removes entirely (always pure comments),
   2. lines inside an INTERNAL block whose body has no live tokens,
@@ -46,7 +45,10 @@ idempotent (a second run over a scrubbed tree is a no-op).
 
 A line counts as live unless the only code left on it after comment-stripping
 is a lone `;` (e.g. the stray semicolon trailing a fully commented-out
-`/*typedef enum {...}*/;`), which carries no symbol. A bare `,` is *not*
+`/*typedef enum {...}*/;`), which carries no symbol. This also misclassifies live null statements; C line
+splicing can invalidate the physical-line parser too (issue #203). Automatic
+staging therefore uses `scrub_reviewed_tree` and requires reviewed whole-input
+and whole-output receipts for every removal. A bare `,` is *not*
 treated as dead: it is an enum/initializer separator whose removal would
 change live code.
 """
