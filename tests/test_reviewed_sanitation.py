@@ -205,7 +205,10 @@ SPLICED_COMMENT = (BEGIN + b"#if 0\n// continued comment \\\n#endif\nint inactiv
                    + END + b"#endif\nint public_api;\n")
 
 
-@pytest.mark.parametrize("before", [SPLICED_ELSE, SPLICED_COMMENT])
+SPLICED_MACRO = b'#define FLAG \\\n' + DEAD + b"int public_api(void);\n"
+
+
+@pytest.mark.parametrize("before", [SPLICED_ELSE, SPLICED_COMMENT, SPLICED_MACRO])
 def test_unreviewed_line_splicing_is_refused_before_any_write(markers, env, before):
     env[0].joinpath("a.h").write_bytes(DEAD)
     env[0].joinpath("z.h").write_bytes(before)
@@ -216,7 +219,8 @@ def test_unreviewed_line_splicing_is_refused_before_any_write(markers, env, befo
 
 
 @pytest.mark.parametrize("before,live", [(SPLICED_ELSE, b"int live;"),
-                                         (SPLICED_COMMENT, b"int public_api;")])
+                                         (SPLICED_COMMENT, b"int public_api;"),
+                                         (SPLICED_MACRO, b"int public_api(void);")])
 def test_splicing_fixtures_are_valid_c_with_live_declarations(before, live):
     compiler = shutil.which("cc")
     if compiler is None:
