@@ -18,10 +18,9 @@ The curated payload carries four patches under `sdk-intake/patches/stable/`:
 compiler detection, unnamed-bitfield qualifiers, C++17 CC312 compatibility,
 and EM9305 full-duplex receive scratch capacity.
 
-The last published coordinated distribution version is `5.2.29`.
-This archive refresh is not yet released.
-The matching EM9305 transport fixes and bounded GCC hardware qualification
-are recorded in `release/qualification-5.2.29.md` at the repository root.
+The proposed coordinated distribution version is `5.2.30`.
+Bounded GCC startup/runtime qualification is recorded in
+`release/qualification-5.2.30.md` at the repository root.
 This is not an official numbered AmbiqSuite release.
 
 ## Package Contents
