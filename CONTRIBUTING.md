@@ -88,3 +88,43 @@ and use `uv run --group ci pre-commit clean` before recreating hook environments
 Coordinate cache cleanup with other running work. Review other installed Python
 tools against the notice; this repository change does not update host-wide tools,
 existing containers, or deployed images. Never disable certificate verification.
+
+## AT110 Board Ownership and Compatibility
+
+`neuralspotx` owns the default NSX registry binding and app-facing integration
+for `nsx-board-atomiq110-fpga-turbo`. This SDK owns its standalone board
+integration and concrete HAL/BSP implementation. Both manifests are intentional;
+SDK directories are not additional implicit candidates for NSX resolution.
+
+The first cross-repository check covers AT110 only:
+
+```sh
+uv run --group ci python tools/check_at110_board_compatibility.py
+uv run --group ci python tools/check_at110_board_compatibility.py \
+  --nsx-repo /explicit/neuralspotx/checkout --revision FULL_NSX_COMMIT_SHA
+```
+
+The default uses `tests/fixtures/board-compatibility/at110-nsx.json` without
+network access. The explicit command reads Git objects at the full commit SHA,
+not dirty working-tree content, and never fetches. The repository label records
+intended provenance, not authentication of a supplied checkout. The maintainer
+must obtain that commit from the trusted upstream. Add `--refresh` to the explicit
+command to update the fixture **after** compatibility passes; review its provenance
+and contents in the PR. An incompatible refresh leaves the fixture untouched.
+
+The checked fields are module identity/type, integration support, CMake package
+and declared targets, required dependencies (including constraints), SDK provider,
+and board/SoC/toolchain sets. For this AT110 pair the sets must be equal; ordering
+is immaterial. Module release versions and optional dependencies are independent.
+Missing/malformed shared fields fail. This is a manifest contract, not proof of
+CMake equivalence, linked firmware behavior, or hardware qualification; retain the
+existing board configure/contract tests on both sides.
+
+Before SDK or NSX promotion changes shared AT110 metadata, the changing maintainer
+runs the explicit check against the exact counterpart commit being adopted and
+prepares any fixture update. The promotion reviewer verifies this evidence. A
+local snapshot does not detect subsequent counterpart changes automatically.
+The checker lives here; NSX adds registry/descriptor guards rather than a second
+copy of this checker. Other boards have identity/support differences requiring
+classification before expansion. Shared-fact authorship remains under the joint
+NSX #154/#152 design; this adds no helia-platforms dependency.
