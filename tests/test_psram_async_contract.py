@@ -66,6 +66,8 @@ def test_async_model_rejects_mutants(repo_root: Path, tmp_path: Path) -> None:
         ("if (nsx_psram_client_pending(client) == 0u)", "if (true)", 'clients'),
         ("++client->issued;", "/* missing publication */", 'depth'),
         ("slot->queued = false;\n    ++client->completed;", "/* leaked slot */\n    ++client->completed;", 'depth'),
+        ("!g_blocking_active && g_async_issued == g_async_completed;",
+         "!g_blocking_active && g_async_issued <= g_async_completed;", 'wrap'),
         ("status = nsx_psram_platform_read_async(offset, buffer, length, slot, previously_pending);",
          "nsx_psram_platform_irq_restore(irq);\n"
          "status = nsx_psram_platform_read_async(offset, buffer, length, slot, previously_pending);\n"

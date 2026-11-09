@@ -195,6 +195,16 @@ uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length)
         g_nsx_psram_device_handle, buffer, offset, length, true);
 }
 
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
+    (void)length;
+    (void)write;
+    if ((NSX_PSRAM_DEVICE_CONFIG == AM_HAL_MSPI_FLASH_HEX_DDR_CE0 ||
+         NSX_PSRAM_DEVICE_CONFIG == AM_HAL_MSPI_FLASH_HEX_DDR_CE1) && (offset & 3u)) {
+        return NSX_PSRAM_STATUS_ALIGNMENT;
+    }
+    return NSX_STATUS_SUCCESS;
+}
+
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length) {
     return am_devices_mspi_psram_aps25616n_ddr_write(

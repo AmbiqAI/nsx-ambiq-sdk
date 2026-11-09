@@ -130,10 +130,8 @@ static uint32_t nsx_psram_blocking(uint32_t offset, void *read_buffer,
     NSX_PSRAM_TEST_POINT();
     uint32_t irq = nsx_psram_platform_irq_save();
     uint32_t status = nsx_psram_validate_transfer(offset, buffer, length);
-    if (status == NSX_STATUS_SUCCESS && length != 0u &&
-        (g_nsx_psram_info.capabilities & NSX_PSRAM_CAP_ASYNC_READ) &&
-        ((offset & 3u) || (write && (length & 3u)))) {
-        status = NSX_PSRAM_STATUS_ALIGNMENT;
+    if (status == NSX_STATUS_SUCCESS && length != 0u) {
+        status = nsx_psram_platform_validate_blocking(offset, length, write);
     }
     if (status == NSX_STATUS_SUCCESS && length != 0u &&
         (g_blocking_active || g_async_issued != g_async_completed)) {

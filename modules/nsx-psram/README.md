@@ -22,8 +22,8 @@ works on this hardware:
 |---|---|---|
 | `apollo510b_evb` | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") | 64 MB (hardware-validated) |
 | `apollo510_evb` (regular, non-Blue) | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") | 64 MB (hardware-validated) |
-| `apollo330mP_evb` | Explicit `NSX_PSRAM_USE_BA_DRIVER=0/1` required; staged BSP advertises N; no fitted PSRAM validated | 32 MB conservative default |
-| `apollo510dL_evb` | Not defaulted -- set `-DNSX_PSRAM_USE_BA_DRIVER=0/1` explicitly until validated. |
+| `apollo330mP_evb` | Explicit `NSX_PSRAM_USE_BA_DRIVER=0` required for the staged N BSP; no fitted PSRAM validated | 32 MB conservative default |
+| `apollo510dL_evb` | Explicit `NSX_PSRAM_USE_BA_DRIVER=0` required for the staged N BSP; no fitted PSRAM validated. |
 
 **The physical part marking does NOT tell you which driver to use.** The
 `apollo510b_evb` Quick Start Guide names the populated part as AP Memory
@@ -146,11 +146,25 @@ before teardown. This prevents calibration data from surviving into application
 loads; it does not replace caller-managed coherence for later XIP accesses.
 Apollo3/Apollo4 retain their existing device-driver paths.
 
-The XIP aperture is a separate cacheable alias. A DMA write updates PSRAM but
-does not evict an already-cached XIP copy; invalidate the corresponding XIP
-range before observing a DMA write through XIP. Likewise, direct XIP writes
-must use device-supported access widths and the platform bus-write flush before
-mixing them with DMA reads.
+The XIP aperture is a separate cacheable alias. On Apollo5, reserve each
+XIP/DMA arena on 32-byte cache-line boundaries and pad its reserved extent to
+whole lines, so maintenance cannot touch unrelated objects. Use this order:
+
+1. Before a DMA write, clean and invalidate the corresponding XIP range if it
+   has ever been written through XIP; assume dirty if its history is unknown.
+   Otherwise a later dirty-line eviction can overwrite the DMA's new bytes.
+2. Keep the XIP alias untouched during the transfer. The caller owns this
+   exclusion; the transfer API does not enforce alias access or clean its cache.
+3. After completion, invalidate the now-clean XIP lines before observing DMA
+   data through XIP. Cleaning stale dirty data after the DMA write is too late.
+
+For ranges that may be dirty, Apollo5
+`am_hal_cachectrl_dcache_invalidate(&range, true)` cleans and invalidates.
+`am_hal_cachectrl_dcache_invalidate(NULL, true)` does so for the whole D-cache;
+Apollo5's `am_hal_sysctrl_bus_write_flush()` calls that whole-cache operation,
+so it includes a clean, not just a bus barrier. Direct XIP writes must also use
+device-supported widths and complete this clean/invalidate before DMA reads.
+Do not discard dirty lines with invalidate-only maintenance.
 
 ### Apollo510B API validation
 
@@ -183,7 +197,8 @@ PSRAM offsets and write lengths must be multiples of four. Caller buffers and
 read lengths need not be word-aligned. Unsupported write lengths are rejected
 before submitting any chunk; the adapter does not read/modify/write neighbors.
 Concurrent blocking calls and blocking/async contention return
-`NSX_PSRAM_STATUS_BUSY`. Apollo5 offset/write-length validation returns
+`NSX_PSRAM_STATUS_BUSY`. Apollo4 HEX DDR offset validation and Apollo5
+offset/write-length validation return
 `NSX_PSRAM_STATUS_ALIGNMENT`; actual HAL refusal statuses are preserved.
 
 A transfer error quarantines the retained DMA state and sets `FAILED` until reset.
@@ -191,8 +206,9 @@ Caller buffers can be reused after return, but the module's DTCM must remain
 powered. Prevent deep sleep during transfers and after `FAILED`; an idle-looking
 software queue is not proof that timed-out DMA stopped. A failed multi-chunk
 transfer may have completed a prefix. Apollo5 performs no whole-cache
-maintenance on completion; callers still invalidate cacheable XIP aliases before
-reading a range written through the transfer API.
+maintenance on completion. Use the XIP/DMA cache-ownership sequence above:
+clean/invalidate dirty aliases before DMA, exclude alias accesses during it,
+and invalidate the clean alias before reading the result.
 
 ## Asynchronous reads (API 1.1)
 
@@ -205,7 +221,7 @@ initialization and the exact board's PSRAM support before submitting requests.
 Initialize each caller-owned `nsx_psram_client_t` to zero and use it from one
 thread at a time. Offset, destination and length must be multiples of four.
 The whole destination must fit canonical DTCM and one 4096-byte DTCM window
-(ADR 0011 and Apollo510/510B ERR014/ERR018). Cacheable aliases and SSRAM are
+(Apollo510/510B datasheet errata ERR014/ERR018). Cacheable aliases and SSRAM are
 rejected. The queue has `NSX_PSRAM_ASYNC_DEPTH` slots (CMake cache setting,
 default 8, range 1–32); contention or exhaustion returns `BUSY`.
 
@@ -226,11 +242,12 @@ interrupts/callbacks; task notification must respect its RTOS IRQ-priority rules
 Initialization is a startup operation and must not overlap other API calls.
 
 `client_pending()` reports unsigned issued-minus-completed for that client;
-`pending()` reports all accepted outstanding async requests. Counters may wrap.
+`pending()` reports all accepted outstanding async requests. Counters may wrap;
+do not edit the counters while requests are pending.
 `nsx_psram_dma_in_progress(bool *)` separately samples hardware DMATIP on
 Apollo5; check its returned status before using the Boolean sample. It does
 not expose vendor handles or replace completion/sleep ownership rules.
-Do not edit them while requests are pending. `client_pending(NULL)` returns
+`client_pending(NULL)` returns
 `UINT32_MAX`, and `client_drain(NULL, ...)` returns `INVALID_HANDLE`.
 `client_drain(client, timeout_us)` checks immediately, then polls every
 microsecond up to its budget. A zero timeout performs one check. Drain success
@@ -238,11 +255,17 @@ means completion, **not** successful data; latch errors in the callback before
 consuming the destination. Timeout never cancels DMA: client, callback context
 and destination remain alive and unavailable to the caller until completion.
 Async reads do not use the blocking bounce buffer or add copies/cache work.
-XIP is still a separate alias: invalidate its corresponding range before
-observing DMA writes; direct XIP writes require a bus-write flush before DMA reads.
+The XIP/DMA cache-ownership sequence above also applies here. Clean and
+invalidate dirty XIP ranges before DMA; keep shared arenas aligned and padded to
+32-byte lines and keep their aliases untouched during transfer. Apollo5's
+`am_hal_sysctrl_bus_write_flush()` is whole-D-cache clean/invalidate, equivalent
+to `am_hal_cachectrl_dcache_invalidate(NULL, true)`.
 
-Blocking reads/writes and async reads exclude each other. A blocking platform
-error marks the module FAILED until reset on every family; this does not cancel
+Blocking reads/writes and async reads exclude each other. Known alignment
+constraints are validated before driver submission: Apollo4 HEX DDR and Apollo5
+require word-aligned PSRAM offsets; only Apollo5 also restricts write lengths.
+Validation refusals leave READY intact. An error from a blocking platform
+operation marks the module FAILED until reset on every family; this does not cancel
 DMA or repair Apollo3/Apollo4's existing timeout buffer-lifetime limitations.
 Retained Apollo5 blocking storage must remain powered after failure.
 
@@ -252,6 +275,20 @@ after FAILED. Use it when deciding both deep-sleep entry and DTCM bank power-dow
 under application scheduling/interrupt exclusion extending through that decision.
 Keep DMA storage powered throughout active transfers. The snapshot is not a
 persistent power lock, and says nothing about unrelated peripherals.
+
+Status values retain three namespaces:
+
+| Namespace | Values | Meaning |
+| --- | --- | --- |
+| `NSX_STATUS_*` | Core codes, including 1 (handle), 2 (version), 3 (config) | Common validation |
+| `NSX_PSRAM_STATUS_*` | `0x1200`–`0x1209` | PSRAM validation, lifecycle and completion |
+| `AM_HAL_STATUS_*` | Raw HAL codes, including overlapping small integers | Actual HAL refusal/diagnostic |
+
+Zero means success. Small core and HAL values overlap; do not infer their origin
+from the number alone or remap them by number. Use operation context and preserve
+the raw diagnostic. API 1.0 init requests remain accepted but do not restore old
+blocking refusal codes: the 1.1 shim returns BUSY/ALIGNMENT for its own checks.
+The prerequisite blocking fixes and API 1.1 ship in one SDK release.
 
 Local board validation is opt-in:
 

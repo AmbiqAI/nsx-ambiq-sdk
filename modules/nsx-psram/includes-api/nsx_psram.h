@@ -31,7 +31,7 @@ typedef enum {
 #define NSX_PSRAM_CAP_TIMING_SCAN   (1u << 2)
 #define NSX_PSRAM_CAP_ASYNC_READ    (1u << 3)
 
-/* ADR 0011; Apollo510/510B ERR014/ERR018: no DTCM DMA across a 4 KiB window. */
+/* Apollo510/510B datasheet ERR014/ERR018: no DTCM DMA across a 4 KiB window. */
 #define NSX_PSRAM_DTCM_DMA_BOUNDARY 4096u
 
 extern const nsx_core_api_t nsx_psram_V1_0_0;
@@ -93,10 +93,13 @@ uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
  * Other families retain their device-driver alignment, cache and error-lifetime
  * requirements; timeout does not guarantee DMA has stopped using their buffers.
  *
- * Apollo5 transfer errors enter FAILED until reset. Retained DMA storage must
- * remain powered: do not enter deep sleep or power down DTCM after FAILED.
+ * A blocking platform error enters FAILED until reset on every family. Known
+ * validation refusals return before the platform operation and leave READY.
+ * Retained Apollo5 DMA storage must remain powered after FAILED: do not enter
+ * deep sleep or power down DTCM. Other families retain their lifetime limits.
  * Concurrent blocking calls and blocking/async contention return BUSY.
- * Apollo5 offset/write-length validation returns ALIGNMENT. Actual HAL
+ * Apollo4 HEX DDR and Apollo5 offsets must be word aligned; Apollo5 write
+ * lengths must also be word sized. Validation returns ALIGNMENT. Actual HAL
  * submission errors retain their original status.
  */
 uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
@@ -113,9 +116,13 @@ uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
  * error; its retained storage is quarantined until reset.
  *
  * The caller must keep DTCM powered and prevent deep sleep during transfers.
- * Invalidate the corresponding XIP cache range before observing a DMA write
- * through XIP. Apollo5 does not flush the whole
- * D-cache as a transfer side effect.
+ * For Apollo5 cacheable XIP/DMA arenas, align and pad storage to 32-byte cache
+ * lines. Before DMA writes, clean and invalidate any XIP range ever dirtied by
+ * CPU writes (assume dirty if its history is unknown). Keep that alias untouched
+ * until completion; invalidate its now-clean lines before reading DMA data via
+ * XIP. Cleaning stale dirty lines after DMA could overwrite the new data.
+ * Apollo5 am_hal_cachectrl_dcache_invalidate(NULL, true) performs whole-cache
+ * clean/invalidate, as does its bus-write flush. The transfer API does neither.
  */
 uint32_t nsx_psram_write(uint32_t offset, const void *buffer, uint32_t length);
 

@@ -37,6 +37,8 @@ typedef struct {
 uint32_t nsx_psram_platform_init(
     const nsx_psram_config_t *cfg, nsx_psram_platform_info_t *info);
 uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length);
+/* Validate known transfer constraints without enqueueing or changing state. */
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write);
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length);
 /* Called with interrupts masked after a platform transfer loses safe reuse. */

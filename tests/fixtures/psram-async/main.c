@@ -17,6 +17,13 @@ static unsigned count;
 static uint32_t callback_status;
 static bool hardware_active;
 static uint32_t hardware_error;
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
+#ifdef WITHOUT_ASYNC
+    (void)offset; (void)length; (void)write; return NSX_STATUS_SUCCESS;
+#else
+    return ((offset & 3u) || (write && (length & 3u))) ? NSX_PSRAM_STATUS_ALIGNMENT : 0;
+#endif
+}
 uint32_t nsx_psram_platform_dma_in_progress(bool *value) {
     assert(irq);
     if (!hardware_error) *value=hardware_active;
@@ -213,7 +220,11 @@ int main(int argc, char **argv) {
         g_async_issued=UINT32_MAX; g_async_completed=UINT32_MAX;
         assert(submit(&a)==0 && a.issued==0 && a.completed==UINT32_MAX);
         assert(nsx_psram_client_pending(&a)==1 && nsx_psram_pending()==1);
+        assert(!nsx_psram_can_sleep());
+        assert(nsx_psram_read(0,PTR(BASE),4)==NSX_PSRAM_STATUS_BUSY);
+        assert(nsx_psram_write(0,PTR(BASE),4)==NSX_PSRAM_STATUS_BUSY);
         complete_one(); assert(a.completed==0 && nsx_psram_client_pending(&a)==0);
+        assert(nsx_psram_can_sleep());
         assert(submit(&a)==0); complete_one();
     } else if (!strcmp(argv[1], "early-completion")) {
         complete_on_restore=true;
