@@ -5,6 +5,7 @@
 
 static unsigned irq, requests, releases, submitted, poisoned, barriers;
 static uint32_t clock_status, submit_status, completion_status;
+static unsigned error_at, hold_at;
 static bool hold, nested;
 static uint8_t psram[16384];
 static am_hal_mspi_dma_transfer_t queued;
@@ -51,7 +52,7 @@ static void complete(void) {
     }
     am_hal_mspi_callback_t done = callback;
     callback = NULL;
-    done(callback_ctx, completion_status);
+    done(callback_ctx, error_at == submitted ? 123u : completion_status);
 }
 void am_hal_delay_us(uint32_t us) {
     assert(us == 1);
@@ -61,7 +62,7 @@ void am_hal_delay_us(uint32_t us) {
         assert(nsx_psram_dma_read(0, data, sizeof(data)) == AM_HAL_STATUS_IN_USE);
         assert(nsx_psram_dma_write(0, data, sizeof(data)) == AM_HAL_STATUS_IN_USE);
     }
-    if (!hold && !irq && callback) { complete(); }
+    if (!hold && hold_at != submitted && !irq && callback) { complete(); }
 }
 
 int main(int argc, char **argv) {
@@ -116,6 +117,35 @@ int main(int argc, char **argv) {
         nsx_psram_dma_configure(psram, 250000000u);
         assert(nsx_psram_dma_submit(&transfer, false, NULL, NULL) == 77);
         assert(releases == 2);
+        return 0;
+    }
+    if (!strcmp(argv[1], "later-read-error") || !strcmp(argv[1], "later-write-error")) {
+        error_at = 2;
+        bool write = !strcmp(argv[1], "later-write-error");
+        uint32_t status = write ? nsx_psram_dma_write(0, data, 8195)
+                                : nsx_psram_dma_read(0, data, 8195);
+        assert(status == 123 && submitted == 2 && poisoned == 1);
+        if (!write) {
+            assert(!memcmp(data, psram, 4096));
+            for (unsigned i = 4096; i < sizeof(data); ++i) { assert(data[i] == 0x5a); }
+        } else {
+            for (unsigned i = 0; i < 4096; ++i) { assert(psram[i] == 0x5a); }
+            /* The failed chunk may have reached PSRAM; the third never did. */
+            assert(psram[8192] == (uint8_t)(8192 * 17 + 9));
+        }
+        assert(nsx_psram_dma_read(0, data, 4) == NSX_PSRAM_STATUS_FAILED_STATE);
+        return 0;
+    }
+    if (!strcmp(argv[1], "later-timeout")) {
+        hold_at = 2;
+        assert(nsx_psram_dma_read(0, data, 8195) == AM_HAL_STATUS_TIMEOUT);
+        assert(!memcmp(data, psram, 4096));
+        for (unsigned i = 4096; i < sizeof(data); ++i) { assert(data[i] == 0x5a); }
+        memset(data, 0xee, sizeof(data));
+        complete();
+        for (unsigned i = 0; i < sizeof(data); ++i) { assert(data[i] == 0xee); }
+        assert(poisoned == 1 && submitted == 2);
+        assert(nsx_psram_dma_write(0, data, 4) == NSX_PSRAM_STATUS_FAILED_STATE);
         return 0;
     }
     if (!strcmp(argv[1], "error")) {

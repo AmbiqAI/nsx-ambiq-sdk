@@ -183,6 +183,6 @@ A transfer error quarantines the retained DMA state and sets `FAILED` until rese
 Caller buffers can be reused after return, but the module's DTCM must remain
 powered. Prevent deep sleep during transfers and after `FAILED`; an idle-looking
 software queue is not proof that timed-out DMA stopped. A failed multi-chunk
-transfer may have completed a prefix. Apollo5 no longer performs whole-cache
+transfer may have completed a prefix. Apollo5 performs no whole-cache
 maintenance on completion; callers still invalidate cacheable XIP aliases before
 reading a range written through the transfer API.

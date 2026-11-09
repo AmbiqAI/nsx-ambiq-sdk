@@ -30,6 +30,7 @@ def _compile(repo_root: Path, binary: Path, *defines: str) -> None:
 @pytest.mark.parametrize("scenario", [
     "placement", "success", "alignment", "clocks", "error",
     "timeout-read", "timeout-write", "masked",
+    "later-read-error", "later-write-error", "later-timeout",
 ])
 def test_psram_dma_faults(psram_dma_binary: Path, scenario: str) -> None:
     subprocess.run([str(psram_dma_binary), scenario], check=True, timeout=10)
