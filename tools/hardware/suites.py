@@ -174,8 +174,8 @@ PSRAM_BOARDS = ('apollo510_evb', 'apollo510b_evb')
 
 def psram_options(repo: Path, output: Path, board: str, fault: str,
                   sdk_root: Path | None = None) -> list[str]:
-    if board not in PSRAM_BOARDS or fault != 'none':
-        raise ValueError('Blocking PSRAM smoke requires AP510/AP510B without fault injection')
+    if board not in PSRAM_BOARDS or fault not in ('none', 'psram-transfer-flush'):
+        raise ValueError('Blocking PSRAM smoke requires AP510/AP510B and a supported fault mode')
     return []
 
 

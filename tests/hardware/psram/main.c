@@ -15,6 +15,20 @@ static uint8_t source[MAX_BYTES + 17u], destination[MAX_BYTES + 17u];
 static uint32_t scan_source[SCAN_COVER_BYTES / sizeof(uint32_t)];
 static uint32_t init_xip_mismatches, init_xip_first_bad;
 static bool ready;
+static volatile uint32_t whole_cache_operations;
+uint32_t __real_am_hal_cachectrl_dcache_invalidate(am_hal_cachectrl_range_t *range, bool clean);
+uint32_t __wrap_am_hal_cachectrl_dcache_invalidate(am_hal_cachectrl_range_t *range, bool clean) {
+    if (range == NULL) ++whole_cache_operations;
+    return __real_am_hal_cachectrl_dcache_invalidate(range, clean);
+}
+#ifdef NSX_TEST_TRANSFER_FLUSH
+uint32_t __real_nsx_psram_write(uint32_t offset, const void *buffer, uint32_t length);
+uint32_t __wrap_nsx_psram_write(uint32_t offset, const void *buffer, uint32_t length) {
+    uint32_t status=__real_nsx_psram_write(offset, buffer, length);
+    am_hal_cachectrl_dcache_invalidate(NULL, true);
+    return status;
+}
+#endif
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -36,7 +50,10 @@ static void initialize(void) {
     TEST_ASSERT_EQUAL_UINT32(48000000u, info.configured_clock_hz);
     TEST_ASSERT_TRUE(info.size_bytes > OFFSET + sizeof(source));
     /* No XIP read or caller cache maintenance between calibration and DMA. */
+    uint32_t maintenance_before=whole_cache_operations;
+    TEST_ASSERT_TRUE(maintenance_before > 0u); /* Verify the linker hook is active. */
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(0, scan_source, sizeof(scan_source)));
+    TEST_ASSERT_EQUAL_UINT32(maintenance_before, whole_cache_operations);
     const volatile uint32_t *xip=(const volatile uint32_t *)(uintptr_t)info.base_address;
     for (unsigned i=0; i<sizeof(scan_source)/sizeof(scan_source[0]); ++i) {
         if (xip[i] != scan_source[i]) {
@@ -108,7 +125,9 @@ static void caller_xip_sync(void) {
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(OFFSET, &value, sizeof(value)));
     TEST_ASSERT_EQUAL_UINT32(value, *xip); /* Populate a caller-owned clean alias. */
     value=0x55667788u;
+    uint32_t maintenance_before=whole_cache_operations;
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(OFFSET, &value, sizeof(value)));
+    TEST_ASSERT_EQUAL_UINT32(maintenance_before, whole_cache_operations);
     TEST_ASSERT_EQUAL_UINT32(0, nsx_cache_sync_shared_data());
     TEST_ASSERT_EQUAL_UINT32(value, *xip);
 }
