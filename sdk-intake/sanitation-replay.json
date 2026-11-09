@@ -1,0 +1,958 @@
+{
+  "schema_version": 1,
+  "source_commit": "83bd69c37edf8d94cf77021140d707c3fe886242",
+  "files": {
+    "CMSIS/AmbiqMicro/Include/apollo1.h": {
+      "input_sha256": "3b18d9b0c2fb9b8b029ef85ced6f328e669b1be5cb50f8ae6644a08abd32ec5c",
+      "output_sha256": "48707b9a1bc2d476dcbe6380c0d95341f9db76c52c290fedfe9db9b907b7ec2f"
+    },
+    "CMSIS/AmbiqMicro/Include/apollo2.h": {
+      "input_sha256": "36cc0fea630dd43b982286deb4783ebac0cca18eec266f35adb30399650c41e3",
+      "output_sha256": "bdbbfc12ef454548ba87ccda2d7d753f883c621e6c4040cef115d6fba20c7532"
+    },
+    "boards/apollo330mP_evb/bsp/am_bsp.h": {
+      "input_sha256": "50d0b5cf13e5875d94ddcc0b7ec77ca28ac0f6b6909599d0e6cd6f968ac41b4f",
+      "output_sha256": "37c66cc4f691e2aa69849fb924dff6222e3409957f4d4b4c06ee2220afd72b08"
+    },
+    "boards/apollo4l_blue_evb/bsp/am_bsp.h": {
+      "input_sha256": "479e974ab7f4c7891360c916c7e2d8e5f2f1e1d6843f156b9a0d5060b21b4407",
+      "output_sha256": "c0224d1a49c6225bdd92a0f05c3f37a59238078a725f978a877bee432dab814c"
+    },
+    "boards/apollo4l_evb/bsp/am_bsp.h": {
+      "input_sha256": "2d54fac73b38e0d503ddb4f3b77b31d5068ca1715e26c454a753e7d61572c7e7",
+      "output_sha256": "b868b9ff90aa7818ed729f69c38efb5b997f8b30525e59e4e8ba1a6e79c1a712"
+    },
+    "boards/apollo4p_blue_kbr_evb/bsp/am_bsp.h": {
+      "input_sha256": "7a8df757359486ebbaa5afaffa02f2174b2573c92a488481d99d98b6cb405685",
+      "output_sha256": "7dc4a7d7d2ec243a5ba7ce9da441fb162da2a50ce54ae39cb580b0c300d34574"
+    },
+    "boards/apollo4p_blue_kxr_evb/bsp/am_bsp.h": {
+      "input_sha256": "215c20b4e0371169f9210f65a1a906a2e0e667c2ed500dcbd74891ad988fc17c",
+      "output_sha256": "b5ab949444a90f4a9a6a8fc95ec7ceaaab1a7134c744d9d075733d1b91d9d334"
+    },
+    "boards/apollo4p_evb/bsp/am_bsp.h": {
+      "input_sha256": "9ca93f6f936e35005963dbf824fb253c6e2b5d69d2dd692af3dad850c4c8e13c",
+      "output_sha256": "e257d0fcdfe02e8b8831c39e25882b10298976b8b33fdb16c498a13d39798715"
+    },
+    "boards/apollo4p_evb_disp_shield_rev2/bsp/am_bsp.h": {
+      "input_sha256": "adc9b6166a1e0f32b5ff9e894525ea1a60f7ff62a3368e4d4a6c1ff2ac0e9d43",
+      "output_sha256": "896e7e89396f5b878c3decfe9e33efabfaf9ea7df08c8aac4891ca070e5d0584"
+    },
+    "boards/apollo510dL_evb/bsp/am_bsp.h": {
+      "input_sha256": "31d1698f1e69f29c55a8521cdc2a9c9db530e435e69d388ea72c1bb0849cb879",
+      "output_sha256": "01c4e0e988420dda4681ef02f42209276c418e392f7d21f5b6956cb05e8449dd"
+    },
+    "devices/am_devices_adxl364.c": {
+      "input_sha256": "09972fa5cfbbcbec86b0bbbbe1aaf1fe1e517502855da39a69deeef172579823",
+      "output_sha256": "d05ab22b9451291f6f1ef7ee8675414e8696af308332d27476b1806a151c2c71"
+    },
+    "devices/am_devices_ambt53.h": {
+      "input_sha256": "7060e0dff1094c522aff9f2b21f74750c3598ad1eedd4eddfa59cd1174c6053f",
+      "output_sha256": "5fc8c421e29300fdbfb1b812b606c4fabb4c8a0228d8062be248b5b90c709a73"
+    },
+    "devices/am_devices_ambt53_mspi.c": {
+      "input_sha256": "966c4651fe1359a36b00e9eab97dff6bbce9f21cabcc6a92ef933ca6ea9508a6",
+      "output_sha256": "39b0df278698139e7464c8b030feab45e3757572f138a33c7fb2342f3bc23b53"
+    },
+    "devices/am_devices_ambt53_scpm.c": {
+      "input_sha256": "d544b9593f754f87f0e43a8e234ac13b37eeb5b4e6170a36189633b3203d261d",
+      "output_sha256": "917d5dd81a4d2e9e5e9a84e726081f9a722d4454765bc440ae7506e0e541c5f5"
+    },
+    "devices/am_devices_cooper.c": {
+      "input_sha256": "ae32482186ba5e6046703d6dda99d90f6a1a3fb6322215f92754bb645ecf43ae",
+      "output_sha256": "cf83c74af39ba958396fdbe88bc198c786683c3aa1f58f9c38959e5c0bedab13"
+    },
+    "devices/am_devices_display_fl7703ni.c": {
+      "input_sha256": "9feaddaeeefa1a0672f98c386e4b97d4d0a76f2b6b79f57f0af974232efe014d",
+      "output_sha256": "a2e91db9496aa73a753a6bc405deeee328ed57f4698d02f120848805eb53bac5"
+    },
+    "devices/am_devices_display_ls013b4dn04.c": {
+      "input_sha256": "df6f312a8244b1b7bee2b4b550ba18a180ac5ed5bdc535ce9751a26d2a1a0d19",
+      "output_sha256": "75ddacbeb77770015cf13a91eb4d32860feebd9964bcb6f123c5eb10cc705980"
+    },
+    "devices/am_devices_display_qg9696tswhg04.c": {
+      "input_sha256": "982aaa77617d2c1cfffda371fea288ea0e4d216d4018538637c40c22e18bb595",
+      "output_sha256": "33b3157fc0d3b8ac1e93fbb61c81dac27161809c44940823aeaa392025e3fec5"
+    },
+    "devices/am_devices_display_rm69330.c": {
+      "input_sha256": "07b537ecec982ed0c6f8357849eb9c3174f0af868dc7e9e9fddd4ce9e35f0a86",
+      "output_sha256": "0d62957b4bdf73050580b61e450635cf2a2e57189779df6186862019112e880a"
+    },
+    "devices/am_devices_display_st7735.c": {
+      "input_sha256": "f2d50e3e00c661b1dc81ba923d418440d592f762ad9bc28134095be3013e0aa9",
+      "output_sha256": "0123dd9272327b732280ef3fa23a8fdad8a7f29c4597bc605c17b9f1baaa6aaa"
+    },
+    "devices/am_devices_em9305.h": {
+      "input_sha256": "66dda75fba4fb2843a1887ecfc96ea752888b8b688fb2f27b276275f7e0908c3",
+      "output_sha256": "12c46341b0c32dcabbf7e13ece388aed97b55f2db7da6e6a3f21d03c800f0122"
+    },
+    "devices/am_devices_i2cioshc.c": {
+      "input_sha256": "70911120be666261f9215ecf6beef12ca07a7056228512a3e91b41dcff5b6f32",
+      "output_sha256": "afba292251d1ff4c718fed99782d6aaa428238b23c6615949a6b887d572b23c1"
+    },
+    "devices/am_devices_i3c_icm42688p.c": {
+      "input_sha256": "19e3a424677cf0c71c575894aa56fde08ec362dae6b9a7ccdd973f10185c9368",
+      "output_sha256": "f45cb854f7b2c758cfc8d3dce67163aac984735c5a31c4f953ee3c71f60729db"
+    },
+    "devices/am_devices_i3c_lsm6dso.h": {
+      "input_sha256": "164de47b268623ccf6c24f3875eaa167edc67ee755da7df5c6750602d28f3284",
+      "output_sha256": "f3aae6a8738d9abb44d8e9855dc1eb9fb47854c80e8d031ebe14b07b2ab37730"
+    },
+    "devices/am_devices_mb85rc256v.c": {
+      "input_sha256": "fb93f454e40c16d2bc6dcf4cd924f301911355a0f6a411bd580d014f11a0a2d4",
+      "output_sha256": "de60df00b1dcdbf99c34d6020de5d5dfe4c893394c1b50fbfad9d4ff87e0645f"
+    },
+    "devices/am_devices_mb85rs1mt.c": {
+      "input_sha256": "dc3aaad74ebd36d16fb2cc1e66035c0ad25a847ae75a34c0d595848e408180ba",
+      "output_sha256": "62357019337fface64ab2894161d682f59c465436b36c6c04b15efac2670b1c5"
+    },
+    "devices/am_devices_mb85rs64v.c": {
+      "input_sha256": "ff95af6a29436110153b625186ec31f71a767657944d738b339650be9a62aa94",
+      "output_sha256": "9de51e60ee8130e44d9e5c595c08917b83131a72ce321210a7f564a322b33572"
+    },
+    "devices/am_devices_mb85rs64v_mspi.c": {
+      "input_sha256": "c85ae757a0c8ff81c1c640982bce2bb6398661750f7ad0b01f43d6eaf155db65",
+      "output_sha256": "cdaa8f1dd5e56e3c933df4422793b1a010578f518ade974bc3e936577ffa8032"
+    },
+    "devices/am_devices_mspi_atxp032.c": {
+      "input_sha256": "806992d39f3fd92a2d3557f7dcd44fdda86140aa75438de3add18b2dd2a2d097",
+      "output_sha256": "dc356018fa11f1919033f19edc1d4e68ddd3cac91f3fbdd9899da4cf5326cd34"
+    },
+    "devices/am_devices_mspi_atxp128.c": {
+      "input_sha256": "584eb06143b0f1817984e8e5afcd19c51358d130051ce22946104ab1351aa55f",
+      "output_sha256": "112cc1c96bb549f48ef0f74dd25d3e552aeadac8a5adf29968c38f51ef7c7703"
+    },
+    "devices/am_devices_mspi_ds35x1ga.c": {
+      "input_sha256": "8c9466e600bf65156761b7c776a9d3b1636b932b659241d355fc7f560cb2cd58",
+      "output_sha256": "4f4e00795be499bb7f41314339ece2fa40e0daefe0a629637f274b7b01050fa9"
+    },
+    "devices/am_devices_mspi_flash.c": {
+      "input_sha256": "8ba7934e5bc645b2b32185c2d43b0f329772236818195c07620f2cc03b94ccb6",
+      "output_sha256": "e334c226e9b2e03d7edc8839502edfa2115d51f91e7ef995cce617b93c61a479"
+    },
+    "devices/am_devices_mspi_gd25lb.c": {
+      "input_sha256": "bdd53d04345ccef5ea3f74e219098078298abbd6f94eef9d6656185a0c54b134",
+      "output_sha256": "addcdf6c2d059eedabb4ba3122a36d044f9075c3a0f5b433994a2b5a5de6e5ae"
+    },
+    "devices/am_devices_mspi_is25wx064.c": {
+      "input_sha256": "6fbf16fb87be06c8dd72725b0ae509c45622e5a6880889619ad83644e90797eb",
+      "output_sha256": "73892b8bff5c2f525cf9867a88dbcebec1197c39899628116cab2de43603938c"
+    },
+    "devices/am_devices_mspi_mx25um51245g.c": {
+      "input_sha256": "651d31fde6b2d77068d1faa171a1278687a37d9f42afa8f9a2ed4a322d59e346",
+      "output_sha256": "9f909bb4a31831b9e553a5d16410207456daa025465baf634843d9c060bf44b1"
+    },
+    "devices/am_devices_mspi_psram_aps12804o.c": {
+      "input_sha256": "c3d70c62f540cceba50414a3022fe464976b074c98740c942eedd012e8e88ca5",
+      "output_sha256": "b7adae54eb158411bdb616dc48ca4977883fee6ee8d7e4a030814587a0911c32"
+    },
+    "devices/am_devices_mspi_psram_aps12808l.c": {
+      "input_sha256": "9dd83a6506e53ccbf3d8edb775df2fdbdf1553a685a3c30bb6c8472a8e377e83",
+      "output_sha256": "f0f08e29b395ca06c0a80c0940fb190de9f89021333d7d9023dca3490756baff"
+    },
+    "devices/am_devices_mspi_psram_aps25616ba_1p2v.c": {
+      "input_sha256": "3d8107b0cf7d00d3384811a011fe48daa2b0af80c95b3e4bdbe63afd00c656ea",
+      "output_sha256": "e26770e09a27af3939215f47b9117c2d1016bf3de585ea9ac7bc67dfe0d99688"
+    },
+    "devices/am_devices_mspi_psram_aps25616n.c": {
+      "input_sha256": "d6814e063f0c66a6b8c59ec6a0dc93233d921237ffd6f8d8f3d775c7d3ef28b9",
+      "output_sha256": "0f0974ecd6a3a4aa0e6227d7590a66b633253bf25de1bc46c995a5805dc4b270"
+    },
+    "devices/am_devices_mspi_psram_aps6404l.c": {
+      "input_sha256": "8e5fa33e70860e25ed87e99b2b235e27b5a45460b061f0595de10438750a442e",
+      "output_sha256": "a8bd8ec6b27bbe3804ab649141e34c0c161a9db0041220a64bb53caeacd12d90"
+    },
+    "devices/am_devices_mspi_psram_aps6408l.c": {
+      "input_sha256": "d7198d84d979a4f23da18f1b120534fb7178608d871d99758178f27ca30105e4",
+      "output_sha256": "fbd0e7811655f8c9d58dee91a15aa9aa074086154279dbdb7d5feba433fdae4c"
+    },
+    "devices/am_devices_mspi_psram_is66wvx.c": {
+      "input_sha256": "1b2eff2f3d62b193abe447b2b33cc8939f1ed76c4d01fa1a6235655e15f2b737",
+      "output_sha256": "2b1cf7897fb56f9c28bafd0dde6af4baf12414f64d0ce032047a19d5332919e1"
+    },
+    "devices/am_devices_mspi_psram_w958d6nw.c": {
+      "input_sha256": "a93ef6f0cd0cabb21bc55ba7def61435f2bf5aeddf6c5ea60df62ec4081ea244",
+      "output_sha256": "b253a2048c1eda86715bd40a2fa540275e43e6be94de59e7c27ba88fd104c6b6"
+    },
+    "devices/am_devices_mspi_raydium.c": {
+      "input_sha256": "5d4f5039085d282b1d46d2e6c3831ed592d3292e375fddc3835c68591113743e",
+      "output_sha256": "67a71ef1eba9b42463d52180e9095e0fdf1019e36c8a09fb411389799a44458a"
+    },
+    "devices/am_devices_mspi_rm69330.c": {
+      "input_sha256": "2fc0fda4c56c1e2daad569ae114d8700a4a0a46d6b3c6baeaee2b018fb9cb844",
+      "output_sha256": "e808133c22862bc2585ca01b7450103cfc0e5fda06de97793361e104ba34994c"
+    },
+    "devices/am_devices_mspi_tc58cyg0.c": {
+      "input_sha256": "4ef897e6b7b5967a93adbfccf6d7aa6af08424b604f022e81884afec23467f8f",
+      "output_sha256": "aaf856386669493a226aa5b2d9c5a162390c2cfb2b7e3df37c50075f16ee5173"
+    },
+    "devices/am_devices_mspi_w25n02kw.c": {
+      "input_sha256": "28f1f8bf2cb36d967b58e24acaa224703a73e55098512ce76f628c90072422b7",
+      "output_sha256": "007369643238d447ffde13776d70e1316646b5f267e56e839cfb666b28b79d56"
+    },
+    "devices/am_devices_nationz.c": {
+      "input_sha256": "9a5b83d7facd75ccda8ec2ec684bfc6e3cf9d8e88934cd002fdbe918257dbec7",
+      "output_sha256": "4b74437ffdd7a89014707069bb5ca29d4e55ef10a4ab7a5ac62b068402cf4618"
+    },
+    "devices/am_devices_tma525.c": {
+      "input_sha256": "ce84213bbfebe88e2860e127129d47a67b5acc7f9a7da78ce92130d8277d573d",
+      "output_sha256": "6b000737df92d812ec8e7d510e8a92b71b9d568796ec61718afd731800af8fea"
+    },
+    "mcu/am_sdk_version.h": {
+      "input_sha256": "42b17d9fc4ef0e214627614911f3fa9650eff70bd682b357715574f6e708c981",
+      "output_sha256": "c79ebe026e223b75c02976de13ff8db9cc95cc3b916f356925391d7ca5d2f452"
+    },
+    "mcu/apollo2/hal/am_hal_flash.h": {
+      "input_sha256": "87f4582ce8f574bc7f5390556bb4a37358adefe74aa70cad9ae47e4daeecf687",
+      "output_sha256": "a70e6b5be94bf4cc7f1ab6e2bc0a69c09b0fcc4b6043aad8a8f43fe43594777c"
+    },
+    "mcu/apollo2/regs/am_reg_macros.h": {
+      "input_sha256": "0832b55a6cf2b8e1da6a45f775706bd9cb0ec9019ed91841f0b1acf10b087ecf",
+      "output_sha256": "7e7b875a8f6535016a3a6efa43580b779ab585c39016e32f57b62bdcdbae2d09"
+    },
+    "mcu/apollo3/am_mcu_apollo.h": {
+      "input_sha256": "3ad2bd089733429a98f96543c34e8901364c78e5b9b1b2e6e15f8ebc54c6980a",
+      "output_sha256": "f347da429311d5dc94f2b7f4dae050de5a081cc9bee9627f389e05fa6b55c0c2"
+    },
+    "mcu/apollo3/hal/am_hal_adc.h": {
+      "input_sha256": "6b037fc24ce131aa9c55c7270f28dcc50935e4cb0f8cc8d5a880cd9beab7990e",
+      "output_sha256": "f434b37ef173c69e7ad18cb2e7b37f53dde9aa8596606273122207fe01327ee6"
+    },
+    "mcu/apollo3/hal/am_hal_ble.h": {
+      "input_sha256": "9f0f2a168a7138b8b26ef158e9ebc4b97382cec8c9076d0fec331a71bf942bdc",
+      "output_sha256": "68a6744f0fd04eca5554ab459bb758f1ee2085cd9531c4bf3e420ba6f7355fc3"
+    },
+    "mcu/apollo3/hal/am_hal_cachectrl.h": {
+      "input_sha256": "38f28b1e1f7c2d04f826138cae55acff7bdd5e05ae9021612c05e71167b60cc1",
+      "output_sha256": "bd05b1fc239a8bfec46d2378a43bdac12ea0d44296e11e6aa1852011e2f6445f"
+    },
+    "mcu/apollo3/hal/am_hal_clkgen.h": {
+      "input_sha256": "88ffd719a218bfa76179482456af05a358410ccfeb5f9ce97294abccca66203e",
+      "output_sha256": "1dd58b12672bfb1387da5cb92d43d473d97a99c77a1a796dfce5cb036ff81f54"
+    },
+    "mcu/apollo3/hal/am_hal_ctimer.h": {
+      "input_sha256": "c048850d8aec454ce7b37d42d6307a84ed1bb70764bb9000df43fd4f8829d838",
+      "output_sha256": "0d0c362b1dc312862e574dfceaa410a550a85b835c8317e61b99b9f232ff4bcc"
+    },
+    "mcu/apollo3/hal/am_hal_flash.h": {
+      "input_sha256": "0031e22f1f3ea492b49b819d1509c0d3b59934cbd5f297a64c726c678cd745ec",
+      "output_sha256": "8be1282af1c0e2b854e99509dbef84deb8cc3387f6a14cf82dd04936bf79254a"
+    },
+    "mcu/apollo3/hal/am_hal_mspi.h": {
+      "input_sha256": "92ca2be385097630aaa9f4dfe9c2d4afb61dd0fda5f5baa3ad56ca4b03e62202",
+      "output_sha256": "73450bb97d396752ccc53754c3fe6ba37a37ed89a6ce6b8acb6e2ddb769f8d6b"
+    },
+    "mcu/apollo3/hal/am_hal_rtc.h": {
+      "input_sha256": "ca08a69b30c9851746300b64eb0604221adfdc62d47822b3aa501cbdcc0c7a8c",
+      "output_sha256": "3dace1238fae52297de2cb3752971b5fe74314d4975d19e34577fe3ce0058294"
+    },
+    "mcu/apollo3/hal/am_hal_uart.h": {
+      "input_sha256": "eeecd1230a30cfde2afa7a3ec14c47f7176acdc05c165db6853f4408469fa96c",
+      "output_sha256": "9236ad8d71153b09f14e6cb14459d2aa7f373c6ab81e606c750e03ee03aa4027"
+    },
+    "mcu/apollo3/regs/am_mcu_apollo3_info0.h": {
+      "input_sha256": "5330e842175ae514b4c2552af4426e274a6f5292aa5c94532f26954aed669587",
+      "output_sha256": "deea9aa06e9c46cef9a8d3c073e4b3ec4090526db148de1aee82c79b75aa79a2"
+    },
+    "mcu/apollo3/regs/am_reg_macros.h": {
+      "input_sha256": "a27e57fc98b70cfdadb45bdcc2ac35404aea141bab5edd3523d6bd825ab5b1d1",
+      "output_sha256": "27f80e8cc4d43ac1ff1e64562eb76af5fcb24dfcc1bcbdcb14134edfc867502d"
+    },
+    "mcu/apollo330P/am_mcu_apollo.h": {
+      "input_sha256": "54d4a08a2db65d1082edba7492d6274678f045efa3e15de5460fd6831c83ad62",
+      "output_sha256": "bc38861a7806429256fdc4282bf2884bd67705d16a54482d6edaa8c62d5c8fc0"
+    },
+    "mcu/apollo330P/hal/am_hal_adc.h": {
+      "input_sha256": "192fe47596917f0b8cf6eab6b73d922cde43c1b8f9d6f976352a5c4a0a1e03a0",
+      "output_sha256": "4c754a43bd816697162fb80057c92750e9f0d16b6b6d9e8a1c7964dc3fc5ee18"
+    },
+    "mcu/apollo330P/hal/am_hal_clkmgr.h": {
+      "input_sha256": "b19c46b7a04f595d632bb0fb80ad1cac99262a02c95fba789d6b99d99f429482",
+      "output_sha256": "41cd4c15a5527f5e32e6a9269c7bd006e70f7c661c5f91f0ea1aa36e3f7c3c0e"
+    },
+    "mcu/apollo330P/hal/am_hal_global.h": {
+      "input_sha256": "7833f50780ff21cc0fc60645ac5b174ff6d39f716959d1d3d3ccc034b36e4ea3",
+      "output_sha256": "25917b1b2f8030b375c1050aa720b99ebafbcb1ae4c33f2898e3a975a726b85e"
+    },
+    "mcu/apollo330P/hal/am_hal_gpio.h": {
+      "input_sha256": "ee0dead82429e0f209edff4fafcd726f683dcde42ae9430fbaf01e25a39cb0fb",
+      "output_sha256": "10a4eaebdf090a9d4badd6b255492699f0a5f4d474d5edd45d5bd5ad68917fb7"
+    },
+    "mcu/apollo330P/hal/am_hal_pin.h": {
+      "input_sha256": "cfe6ee30eabbe515646d14f29d1517cfbdc9d3f14f45901deb2a8ad47a06a1a8",
+      "output_sha256": "a4499b2685c5bc76a443632c33de40413e55528c698be6999c59af19536dc4f7"
+    },
+    "mcu/apollo330P/hal/am_hal_pwrctrl.h": {
+      "input_sha256": "567fc5c70f6063bb3dfc04958d8273c909e2d1aca5e4a8e0c671ab54e422c5b7",
+      "output_sha256": "2e59e53ebb56d8d2269c47132a11bcede09f25eacfc8dc1410d6abae3b02f7bd"
+    },
+    "mcu/apollo330P/hal/am_hal_spotmgr_trimver_1.h": {
+      "input_sha256": "6b0f7effbc639fe16a43ee328db3a6934077c514329d91bfc203bdee7545ff1f",
+      "output_sha256": "31531cd2e4dd82bce88e9b7c713d5e900fa4a0ed6d162b4f8c6e7181b2a1fbde"
+    },
+    "mcu/apollo330P/hal/am_hal_stimer.h": {
+      "input_sha256": "dbcb0c309f36fb4cee87bcdfac89dcd2ff2d095788d1a6518deb089a8c15040e",
+      "output_sha256": "ea6eb2cc4143637b4c9b5f6b3d9340f0c06e4091b09c0b123386559c4254857c"
+    },
+    "mcu/apollo330P/hal/am_hal_timer.h": {
+      "input_sha256": "b31b04199cc961bc2be9f477300480b4e00cf40a536cdda6362d7f3be7a4bc30",
+      "output_sha256": "1ee2d2703c393a9ae5ebbea794f23a9cbae0312720ba0728ddba6718dfdf5754"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_bootrom_helper.h": {
+      "input_sha256": "ac50e91a3028d4c7263c34fd0bdf54631c34d41b1a72b4453a87f13fcec159b1",
+      "output_sha256": "07032198d3c77027fb519158fc3c96b61a20724a8fa7f123462876a29e462d37"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_card.h": {
+      "input_sha256": "d33dd5cca9d466a5a4267720fb937548ef6e0448c31b8d3bb6225c1438550187",
+      "output_sha256": "8a260080c31a6e8c002aeac89ad21081585e1f45b8d50eff24482192487cb5f4"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "b037cb68f2645e5c29a27b5306261c6337096e53fe0b840a85b0662e22b247e3",
+      "output_sha256": "f0d8709a12a25010b44fc6df709b55317f64f7acdb6a3a4529a80694b3d8de0b"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "02ac067d6a16118f402bda7af771e270042326f886b740f161a051e264e27086",
+      "output_sha256": "49406d5347167c32d8a2455cdf8fda4c9bbe771bdaeec6b0b49332444c464008"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_ios.h": {
+      "input_sha256": "71aba041bb4cb478f48a3a4cc00e5eaa5ba958082fb7b87ef85d71c00e460cce",
+      "output_sha256": "8a5c8372df4753c88ae9c8068af901b09471acf64085ae7a5b9493184868dfec"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_mcuctrl.h": {
+      "input_sha256": "6846bb01cde5c6ba67c1b39c9840186bb6a2300efdb6978b96a176edf6ca123e",
+      "output_sha256": "cc0dc6cd03bd7ae06beb2397581722614880abdbc863ee061dcff2e917dc0714"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_mspi.h": {
+      "input_sha256": "294d0eed78f80f6557d9379a160b71c297d926fb015c9291a7256595d24f9d5d",
+      "output_sha256": "4857b705d903509d4345e49f13ca8ea5d7944e0db26a383c1c7c849309db1759"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "cd3d0a0d57795de2c17d03688f8eeed4bbab6f94ceb3e419985e8872f7af40f8",
+      "output_sha256": "5641e7155eaf9fa2b4f770c2bde30949c15ab5f32ae572b6526a2552d7dd692f"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "6800f292d0946cfd66c0ee6642e228019b3f1579a5d989a6b999e77c7c55ad72",
+      "output_sha256": "85fc0f9cd00fe531b58c72b950601f80e1ea5ace2b33e5a19347fa98f104bf26"
+    },
+    "mcu/apollo330P/hal/mcu/am_hal_syspll.h": {
+      "input_sha256": "bce9bd78e49ff00a6c09e1a1ffa1f857a77cc8dc8077d5728324bc041c67d160",
+      "output_sha256": "7d9c5a09c6f8f8cc43cecf423c99ed097589cc8aee2b492e6792c9e7066eecb5"
+    },
+    "mcu/apollo330P/regs/am_mcu_apollo330P_mraminfo0.h": {
+      "input_sha256": "969d54049f58a46c8f4a6001e86d9fb1f47c1c797f5cb6127ded1bde1c38e965",
+      "output_sha256": "fa91ded35aed2f9b14576f195546dfb6e77f0b20107f5351e2383454cc18f67f"
+    },
+    "mcu/apollo330P/regs/am_mcu_apollo330P_mraminfo1.h": {
+      "input_sha256": "7e5b73b4e17c4b69c57daa10bddc63e7c0a2537fceb701cd2c5aa5b8cc9dbb61",
+      "output_sha256": "fcf7503da8105c0b2def4f9903a75df9cb1dad7063113c41da58c892c765a3aa"
+    },
+    "mcu/apollo330P/regs/am_mcu_apollo330P_otpinfo0.h": {
+      "input_sha256": "0203d53ff1cdb40afa0fe25e3e34321cdb8ae669902434b2d1ba5cc70e018b91",
+      "output_sha256": "ecf03a01fd53416e7c9314e30749d4b1e90bbd0061084f83b4280dfbbbfc0267"
+    },
+    "mcu/apollo330P/regs/am_mcu_apollo330P_otpinfo1.h": {
+      "input_sha256": "8f6a904851922a61c8d9a07ae55e31529d1b2e419a6df377d11bdb7b547b4e30",
+      "output_sha256": "6618773e3008f048586445f34a67c906d49196b983b30f0c04c17ceaf1ddb647"
+    },
+    "mcu/apollo330P/regs/am_mcu_apollo330P_otpinfoc.h": {
+      "input_sha256": "6afaf1df2a756db7d6197df561340f07e8e7ca8900c0b1430a1eb478fbeab325",
+      "output_sha256": "65ca6df7c79c6cbcf0d8aa68281a5f5ae829417f1d6d48b5e867399c10041c46"
+    },
+    "mcu/apollo330P/regs/am_reg_base_addresses.h": {
+      "input_sha256": "99d65d293dbbc13a7d08f20e20565c232a50a37140d6e6fb90f2b8bcf54f41e3",
+      "output_sha256": "5b09b304ee4cab66d29db4c1476d0a0ac8e392e1b621349eb731450ab635c329"
+    },
+    "mcu/apollo330P/regs/am_reg_jedec.h": {
+      "input_sha256": "edffd0282309d18509bdc1268f8097514848cd097cb07060e9de2df49e702276",
+      "output_sha256": "ce6e8b334ebb10c391b949aceb79e47e37dea9cacb7109034eccca79dbcf72e9"
+    },
+    "mcu/apollo330P/regs/am_reg_macros.h": {
+      "input_sha256": "651f35a6f937c8280a90a5e53a601dd9f6b7fdb87d5c3c20de997c64248cff68",
+      "output_sha256": "13f90a41188fb1badd45c2be0b7ac768936df9cbb1c9a5c55b567d7524b1d4c3"
+    },
+    "mcu/apollo3p/am_mcu_apollo.h": {
+      "input_sha256": "f1a31c6548f441672cccdaa870bc47509274ff04ce542dc2a34e55e2fcd0155e",
+      "output_sha256": "870a927641b483dd8a59d1298ed20baaf7bb0c9e02069834c84ef4b03b73fbec"
+    },
+    "mcu/apollo3p/hal/am_hal_adc.h": {
+      "input_sha256": "de04c57e889a002d7f03936d828d9f6a4c44e365cdbcd2ba43db36d2d7b08294",
+      "output_sha256": "3f9e01aea57ca538853b45505a05d5dea031d314df571ca39fd83853869869ac"
+    },
+    "mcu/apollo3p/hal/am_hal_ble.h": {
+      "input_sha256": "535587072b9919334e7ccf0fc58978229524ffcf4465374200f35ffb114c5133",
+      "output_sha256": "cdc78caf0345b63450b04f530fa31e2854082fa85c3cc6155ddb5506241db594"
+    },
+    "mcu/apollo3p/hal/am_hal_burst.h": {
+      "input_sha256": "ca0202b1acd1a56ee3602b10dd3e482dbce69f80477f1be9e39cd07162bed9fa",
+      "output_sha256": "ca89a8d6580387f6fb1e4c3112cb15c6dc5451e5e0fe6e255bf775197b37b70b"
+    },
+    "mcu/apollo3p/hal/am_hal_cachectrl.h": {
+      "input_sha256": "5256975522d5e9669935456bd5ec561c789fcde446441bc55ebf52c5e1e4d4e3",
+      "output_sha256": "50bc5457702bdda291234c1125c4e65dd05994c3621dd680a40a5cd1856024a8"
+    },
+    "mcu/apollo3p/hal/am_hal_clkgen.h": {
+      "input_sha256": "421694b2a529f100d8e24ea55d0a445a1ac20786a724cf6e7856e0966bd1eb99",
+      "output_sha256": "89625d0b3bef2dbdf9f1c07a9c7456a97cb841dce5436f0f68a1d6bc9d3c213a"
+    },
+    "mcu/apollo3p/hal/am_hal_ctimer.h": {
+      "input_sha256": "67a25f45942714b5b559d903735b5fdec49650404a260529db24a34ea60c9228",
+      "output_sha256": "20ff44eda59a0adfde1c0d0166d206b6ad331fd9bee32ef1086885eacde3c626"
+    },
+    "mcu/apollo3p/hal/am_hal_flash.h": {
+      "input_sha256": "a03dd125b9498518caadd69b75fae62ab03b02a06664eedd837ef80164f0677e",
+      "output_sha256": "c91260b0a941faa4cde28105cfb8831c7ea102d07c18fd1aadbca648886b2945"
+    },
+    "mcu/apollo3p/hal/am_hal_pwrctrl.h": {
+      "input_sha256": "84b3516195202b8d7677468463ecfdcdd45827e5eaa369c83f51b8bae9c0b828",
+      "output_sha256": "a580053cde407a16cf6ba99e985d3dc78d9566226e73b9f1e88ad232a691637a"
+    },
+    "mcu/apollo3p/hal/am_hal_rtc.h": {
+      "input_sha256": "68ff5f82b6897d95475e578bf9d504e3ffaec0f40f3189cdfc1dc8c5e9271079",
+      "output_sha256": "528559020e85202fbdd9d7fae1b203920804020067c0903197a1121be523dbf3"
+    },
+    "mcu/apollo3p/hal/am_hal_sysctrl.h": {
+      "input_sha256": "27351506e7e68bcf6cec0e5e49933cb5c88f61490c3bd97199b2e41ed0fb0001",
+      "output_sha256": "e010210705a5c09a41fcc4af2af19a916f341f5ef791dcdb6c5d9312c3635d0d"
+    },
+    "mcu/apollo3p/hal/am_hal_uart.h": {
+      "input_sha256": "e48594715c302df0732e13369ffa5a0c61ba4ddda555994b115c46a3930fc4b5",
+      "output_sha256": "3774b834f6811b2e94ea5d7c4e6b4d7abbe6d163701a85ea8a17d3e0f7121333"
+    },
+    "mcu/apollo3p/regs/am_mcu_apollo3p_info0.h": {
+      "input_sha256": "082866600f301e58e5adfbe50e025f3c0c5b91bf447c165f8e1987d8ad8ba16e",
+      "output_sha256": "8564a94c01107736bae276883beca481d7b3adff15d32c2126c25f19f925fba1"
+    },
+    "mcu/apollo3p/regs/am_reg_macros.h": {
+      "input_sha256": "53e65c01fe155b41530b469d6361b0666097152a3eba26dafef5a383990f26cf",
+      "output_sha256": "cec384cab710e1662aa492c7d16c52b418e1acdb925d7a15c51250658c587cea"
+    },
+    "mcu/apollo4l/am_mcu_apollo.h": {
+      "input_sha256": "5c428eae8ca4c0d51b0ea6dfcb4db1cab0615140c15601d19d9490b84ce0ff89",
+      "output_sha256": "f20f2f5f0b8fb89eedce71c8944cd333bca24edaf5bd18cbb650835bc28e740c"
+    },
+    "mcu/apollo4l/hal/am_hal_adc.h": {
+      "input_sha256": "bebec2eb3a2a763c80420df23377f530ce1140a673412ea0cc507c88cad9c592",
+      "output_sha256": "ad474f7f221596dc3a846d419793cddaf85fb471f0f41135ee298b7f1fe58e1a"
+    },
+    "mcu/apollo4l/hal/am_hal_global.h": {
+      "input_sha256": "662941f9c7b22e0efcd1269112102c25cb64d36b01bb359f5a5940c60f72a582",
+      "output_sha256": "1d733a26a4c0f9f8e69b4a90068a2609e81220f9b27cf681712d25d8547dd9d0"
+    },
+    "mcu/apollo4l/hal/am_hal_gpio.h": {
+      "input_sha256": "f0d5c6b7feb774348713ea36699eb746ecca6a75e26ffa96ab500d0e3910f8b5",
+      "output_sha256": "72ab34e6c4ac3125786fcfc23f958bdb09510c5b76249d78110866c743e0dd23"
+    },
+    "mcu/apollo4l/hal/am_hal_pin.h": {
+      "input_sha256": "5a76f247ae15de74fe298dd95f5ead2adc185c7b2ccaa44782677db84bdfe837",
+      "output_sha256": "3c602ae3c433c74c0f2f67df3c347ce8e56b8f597f083e2c22641e61b07d4916"
+    },
+    "mcu/apollo4l/hal/am_hal_stimer.h": {
+      "input_sha256": "6920d0cd3cb61d5f1cfaaf0f4934e8339ac8005b478292c7a19284603992c5c8",
+      "output_sha256": "4ce44019df7e3076c6a19fc5e329656f8299c2808aeafae9712eced537fbc9a7"
+    },
+    "mcu/apollo4l/hal/am_hal_system.h": {
+      "input_sha256": "7a6f3a18c448e9e5fd972ca2471551a798b5af717d604a96d544ec0472a14d1f",
+      "output_sha256": "d473059e486113fedb3ea3311cc3762d8f454ff6f2edb8f266d562b3737e6a18"
+    },
+    "mcu/apollo4l/hal/am_hal_timer.h": {
+      "input_sha256": "91888e05035f73b307e28b9542d53ed3c48c830060d78b7dd8357be60dfcd61a",
+      "output_sha256": "b3e95a0eae3258f66442c1f4fdf1305d77ae7b7c4ca895609cf9d76e3544f597"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_card.h": {
+      "input_sha256": "e2fa54420964a18540855b08d4ad4f62c72913b44ba2f13781efefb1b71ee5a2",
+      "output_sha256": "c37636dd63ba9cf26cd249942222e542136f7444e7d883aa3f012d774a141237"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "ca19f406562b8a8335f2fc714c70aff953dca2bf9673d17bed9a7fd003048f09",
+      "output_sha256": "25dac7b40361d01c4423e4c67e9d021a008f468489af397303a2b77d07aa269a"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "56dab2ad4f688d74d5e5c0a7f7f6b1c17713b56a0fd83689accf21e1e0aa39cf",
+      "output_sha256": "ed975bb526cec17ddf6c4d662057972bca9c8d6b96c8908922e35a755911af03"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_mcuctrl.h": {
+      "input_sha256": "9a63422204ce5d21795723cdf089ace7b64bd4fb1d314cd56face937c668ae63",
+      "output_sha256": "31be8c05e44e86b2a71fe16bca14afd099ca331ed5d6289ae7a9ef4367833dba"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_mspi.h": {
+      "input_sha256": "134c678f323f544b3b55dde05f3823905eb817b303f685a753dc83078afb79ec",
+      "output_sha256": "5529d8951ec5009b397e5a3d74af1fc2d162a9f1e55fbbd70a9e563e0cf8abe2"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_reset.h": {
+      "input_sha256": "27af97a8fb192bb38d1d076a429848eceee5ea819c410ebff1eec4f6638caf9b",
+      "output_sha256": "fac976b852c9b46e7699d902a38888a1c6ced3480a52cb9c3533e5f95529787d"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "67d6944aa26c1864389787f467440448516922655497dcf47499212957ba17e6",
+      "output_sha256": "86dc752771b0f30e0658417deed70b2b22f47de6d4d9b1da9b42dd54464a89fa"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "06dad563ad451251b23549f214b419fadd542bbe08525a26a8bc3bc4762d61d4",
+      "output_sha256": "0ff6841c668bf4b94f005975ac75553a60d52242d8ea58d4d4de8e6a46b3d151"
+    },
+    "mcu/apollo4l/hal/mcu/am_hal_tpiu.h": {
+      "input_sha256": "3582dafd33b86ff86e4c3011b7d920a3ac7a5bbc01919b3ffe92b2971d312531",
+      "output_sha256": "3c92c5d6236d371e74510bce9c5aa252462fdb566ee5e01a84ffcdcefdba0b43"
+    },
+    "mcu/apollo4l/regs/am_mcu_apollo4l_info0.h": {
+      "input_sha256": "4a08499c3c4397f786513a8ae9575f517c2f1fdabf995671a475e5fd5cf75771",
+      "output_sha256": "7ce6a7ebda80e38c2e6610dbb758b88d9022a6c13028e8d7503ec9d8dff8d1b3"
+    },
+    "mcu/apollo4l/regs/am_mcu_apollo4l_info1.h": {
+      "input_sha256": "55ed4625333b395b9c4dfd63fc0506c7346477df989f23450bccce663813eafb",
+      "output_sha256": "bb46749d9e10d3e9da130914e7242cccf874cdb6776658cfb0c3b5963ab531bc"
+    },
+    "mcu/apollo4l/regs/am_mcu_apollo4l_otp.h": {
+      "input_sha256": "42cc14b814644b3299b304ba022a02747debfb2b08e42349a369eb5ceef8c81c",
+      "output_sha256": "f58a6191ae9cfbec9774fc3c234227c34b8ffe2bc8ccb606934215919b486057"
+    },
+    "mcu/apollo4l/regs/am_reg_base_addresses.h": {
+      "input_sha256": "050a5ee7f57b32a7bfd01c40a93d6f6168af6893e4c71fdd8f29905e5994c37f",
+      "output_sha256": "059b94cc14dd9746a701e2b58f3a7daad5b584f942243b608f28c1eab1b3d951"
+    },
+    "mcu/apollo4l/regs/am_reg_macros.h": {
+      "input_sha256": "91786f8f1eac60a9d7e3e238f5cd937f25a2569c525e8462560c1037a5d6ce83",
+      "output_sha256": "9d6de57f30508d7156c65217c0eac2915bbf09a31955a2db063db0412ad11c17"
+    },
+    "mcu/apollo4p/am_mcu_apollo.h": {
+      "input_sha256": "db5a423b50cd80d733298a12bdaf036c897514487e273a63df087a1e5e4b3b27",
+      "output_sha256": "34a5f11d9eabf1e6968f1d028f1b3f66c070ceb13f0acc3445dd0449e078e8b7"
+    },
+    "mcu/apollo4p/hal/am_hal_adc.h": {
+      "input_sha256": "a9c7de7155e111de05280876f86bdd5a8eb657d49e3508945010d8790696c369",
+      "output_sha256": "220689926c5ad64d3ecb4764259cebdf3c8038708beb13fd19af8a6160385aeb"
+    },
+    "mcu/apollo4p/hal/am_hal_audadc.h": {
+      "input_sha256": "c844972248f185632b5880f418c77e78cb88ae6a0e1105dd70c159fefc686111",
+      "output_sha256": "72d24d1b4c0b5a4233cb683177b459419a17a40be763ab630b934d564d7d59d9"
+    },
+    "mcu/apollo4p/hal/am_hal_global.h": {
+      "input_sha256": "2b91a1d93b9b19bf2bff8630af53e0403382b171a025217d39eba45a1efb045e",
+      "output_sha256": "2297d59307b23017d06a1ffe217166d483b1459f2978799d6fc1b593e53ab874"
+    },
+    "mcu/apollo4p/hal/am_hal_gpio.h": {
+      "input_sha256": "3a9f0b790552b81f5da813a599ea14183c464dce88ed192e8fe2d6971d8b20b0",
+      "output_sha256": "2e317b22f5cae8c5568a97e5ac3fc34cdd37e928e56bffb7b527f484fd9265e9"
+    },
+    "mcu/apollo4p/hal/am_hal_pin.h": {
+      "input_sha256": "2cd239d4c254a8e74188c6a5a62f053b912426cd83dae366739ebf21bd052e00",
+      "output_sha256": "5931f06184a334e60e7676bb0fd3b2e20f5b54b43db75166110436dddd386591"
+    },
+    "mcu/apollo4p/hal/am_hal_pwrctrl.h": {
+      "input_sha256": "8145d598087044da5d518f9b814248d390888d1591478dc1a8ab88906aef5e50",
+      "output_sha256": "c1d9879b752b4051a1115bd8dcaf192ccd7623e239291c5a89909dd12a36c661"
+    },
+    "mcu/apollo4p/hal/am_hal_stimer.h": {
+      "input_sha256": "69ce9ebc59bd94196b6bb0ad353c14e7a060b74a62ef194fadf3c613bb234a12",
+      "output_sha256": "93695c9a061e868f599cdd7251326c94bf059607820e35624eb31a7dbbbc1bfa"
+    },
+    "mcu/apollo4p/hal/am_hal_system.h": {
+      "input_sha256": "a378dbbfc30ec2c08ae05b836c56a0ac90f87fb4ca4bd2744f5be96c75b7c504",
+      "output_sha256": "ad4860a0bdc6639af2351dfff52781625f368c59e547d6dac7255b4afb169e4d"
+    },
+    "mcu/apollo4p/hal/am_hal_timer.h": {
+      "input_sha256": "496a6c76951730f830b15b494302fd6c5738060d0e810a5e6562ddaa682520f0",
+      "output_sha256": "ea15d862bac123a6813e1fcc286703edf68a3dde0c076f6f043fab84e611b2c9"
+    },
+    "mcu/apollo4p/hal/dsp/am_hal_dsp_common.h": {
+      "input_sha256": "e2fb516f7d05febaa360d48b2b7809517b7b8deacf468eefd146c94d71b2f154",
+      "output_sha256": "50973b2ab33e435c86d04e80f53917c1c3e55d56d46ea057dc310cd340528330"
+    },
+    "mcu/apollo4p/hal/dsp/am_hal_dsp_sysctrl.h": {
+      "input_sha256": "2c0c3de54ffc373c73556f6444d4a240f46f2c31c32fa9d0abe05f0ecd6398e1",
+      "output_sha256": "0d749c7d1bc184e5b6a848b6f773ef786db742fc762448277ff8b705d8afa068"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_card.h": {
+      "input_sha256": "b4b3de58e8d3c246ae145a9a1f88a8a518249a7b6bf39af22fdb780883bae606",
+      "output_sha256": "7c2a7886fac0c7331d29b31d9ae3fe1f857fc06183bde538ba54faf4c3647d7e"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "47f3c1fe90a975c2ca333d98b7518cfa9300e16d3bc9d3a87a2bb4259b4c0861",
+      "output_sha256": "cb6f2eb405a82aa4743eb544d2fb7051e122f30446d3fc2b664ab19ed0183763"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "27939a954b0d5a875a52a733aef0839b5c22b7e59ecb9b6812534acdae3b3165",
+      "output_sha256": "7eeeb01c345a3c2004ec51c0b49e68b6cda2b09ae8cddbb14cf76f37d8ba8a87"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_mcuctrl.h": {
+      "input_sha256": "5cbe58c3ffde1a60f74e94c19192fadffc0a94f73f0abdce84788ad322aefb53",
+      "output_sha256": "e13f602fc3e41b7c52d10527a374c474edf8376910cfcd300e2a7fa5ef351f0d"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_mspi.h": {
+      "input_sha256": "b7736db511e098fd5ae1285192d4707c01101d5e3850d3fad5e931e7e003af2f",
+      "output_sha256": "923a8f28d917f90238f91e14a407f1e1d99779837c883bf91a8cef228664c32d"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_reset.h": {
+      "input_sha256": "fde8cdaaf250488d39773929a2e64c9e31f683e28cbdbc08c543b231c8e7c233",
+      "output_sha256": "39cadf8490455aeff315aefbe5befcbb1457c598a7237e1ef759503c5d0d93b9"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "92650fcd96c1699c274809b7ba289796dc7cbe3b640900af284879dea74dfbea",
+      "output_sha256": "25a7d09258e751329d00a188238b3ae78c443965527a50055b50a4c2c39ffbf8"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "a42de58b86c27e7b4ae3a5654a15c427d24ef0482fbbaa85b8fa66d223b42748",
+      "output_sha256": "ac07b1176f5a2614d26038a9b571e3d616f1d67f339d26129e6cfa89ed0662ed"
+    },
+    "mcu/apollo4p/hal/mcu/am_hal_tpiu.h": {
+      "input_sha256": "6b6a06116af96556d1eafb423e326909e207581ae1625436e0f8b900ae43f309",
+      "output_sha256": "8c063ec3996b241dec14ea7969eaa37efd07d298332a9a70db47b607b7611041"
+    },
+    "mcu/apollo4p/regs/am_mcu_apollo4p_info0.h": {
+      "input_sha256": "cbbc9d540f017caae006458dabaa26edf20931323876ec4c28fa8b1797419281",
+      "output_sha256": "dd814b42449e3482c4f72505ca090339da7102a37196517fb95836c3da4bcd88"
+    },
+    "mcu/apollo4p/regs/am_mcu_apollo4p_info1.h": {
+      "input_sha256": "32fe0a7ebb1a7ef8e97cff68e8458a980cfe15afb272bc32d4547dcccf190ccb",
+      "output_sha256": "7a6613afb7d50687d90e0e1981f8abaebd8c9868d9fc1e6a8ec89b599e502ee0"
+    },
+    "mcu/apollo4p/regs/am_mcu_apollo4p_otp.h": {
+      "input_sha256": "6e133f892851e7d9b9f1ad37be360fb8d3967622a30638a141949888be3d9f6c",
+      "output_sha256": "af0a685c5df23f6f7e05eb23dcaea143f09c00cdeb31a0107f4bd1b1968aea88"
+    },
+    "mcu/apollo4p/regs/am_reg_base_addresses.h": {
+      "input_sha256": "f8ff1f230c5a0484c239a9277d8350795686476025b32960d2161128ebb903c4",
+      "output_sha256": "07d92f48e9874332fb9359f1904be91e2b6acf3027a078fc5a5b071ebfc572a2"
+    },
+    "mcu/apollo4p/regs/am_reg_macros.h": {
+      "input_sha256": "91786f8f1eac60a9d7e3e238f5cd937f25a2569c525e8462560c1037a5d6ce83",
+      "output_sha256": "9d6de57f30508d7156c65217c0eac2915bbf09a31955a2db063db0412ad11c17"
+    },
+    "mcu/apollo510/am_mcu_apollo.h": {
+      "input_sha256": "365d0a40ef677aebe9f2940d3caf9e6a0bc1000de55a33001ec3e7421188bdc7",
+      "output_sha256": "454e05a4a1a4262e4f1fcae6b49aaac6aa241cd660ef6a59afd7367afdb1b416"
+    },
+    "mcu/apollo510/hal/am_hal_adc.h": {
+      "input_sha256": "4326f105a571307eb3b6d3a3ab043d9f527508d7cceb8b6818a100ad02b73816",
+      "output_sha256": "57359402230aaee0eb7afa9ec63754bf77e7020c024cef61bce074239b7e0685"
+    },
+    "mcu/apollo510/hal/am_hal_audadc.h": {
+      "input_sha256": "d923156868404ec9de72bf915bf9a29ea6800e8422bd6d4b7e37d347b4657d93",
+      "output_sha256": "306bdc55a7c1106748c3906d4da3a5dcfba2a222ab1d8b6eaebf8bc9e6db0672"
+    },
+    "mcu/apollo510/hal/am_hal_global.h": {
+      "input_sha256": "e85e6d0d011881e6a9a9c66635865359b018637ba9156d9d995cba7068e3202a",
+      "output_sha256": "2d80fb1566065a5726bd673b89b3af560c2f41195854193bcc5d1d79af74bdce"
+    },
+    "mcu/apollo510/hal/am_hal_gpio.h": {
+      "input_sha256": "652800537aeb7671290dc343a6b1d39ae9ef0d3bf0e0156d9a8964aa5ecc9f62",
+      "output_sha256": "ac80770ae0af11da7d1b1fc87f3f79167783fc62b4487f4503668868eee65710"
+    },
+    "mcu/apollo510/hal/am_hal_pin.h": {
+      "input_sha256": "c2df71758f8f5097f8730ee99d4d15c6f5b5cf98ac7b7b57b926d7fc76692b22",
+      "output_sha256": "8fa5a10b7adc10e6ef96ff13ac0e2ec649ee58fdfd8ab8b809507596f36d10c1"
+    },
+    "mcu/apollo510/hal/am_hal_spotmgr.h": {
+      "input_sha256": "ebb948c21c1a2771dea475ba230b876efbae465e1ac28efc6138547e35e31d36",
+      "output_sha256": "a0151efeacac834af3aa2c7e63d864d41394a8d7200d5780ae1fa57aec59afe7"
+    },
+    "mcu/apollo510/hal/am_hal_stimer.h": {
+      "input_sha256": "f8e49b64084fb5089961eb7818e535c2045edcf2edd465fedf9b0734b0913111",
+      "output_sha256": "1066ae9e565d9bf6be6fad926fd3f462231e520eb9c896d82812df0a548d1778"
+    },
+    "mcu/apollo510/hal/am_hal_timer.h": {
+      "input_sha256": "6f7093c50d46faf56d34c020eae5676b5b07a82c086746a5b70c0be26cd32510",
+      "output_sha256": "d54043409721ed5557e60fced473f5e81a4dd6d07815481432328237e5a3a295"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_bootrom_helper.h": {
+      "input_sha256": "6ba660eb428779f63bb61a037cc450fe9d322661abef9695d88025171316a9e2",
+      "output_sha256": "1c6d4ca5dde90e6c6420e3faa4a41dc3579a1a4c97785e97aa686286f06a708f"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_card.h": {
+      "input_sha256": "e4413ef4b999272cd9a0ebfd9f71c0c71c72e56532262fc96b041faef7880aba",
+      "output_sha256": "eba734005e110d257533fd536ebbea46790a3980417b988e3c582fa9a92808a8"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "556e268927ed78cd11c652c5cb539a63a47b566ae25e0923b9fb7f5f950fb6c8",
+      "output_sha256": "227ed3f424163280ce17d0756c8d64f05d57d1e515a2cf5a0c4075ab9bcc1cd4"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "960b4100ae9038aa8b541d0279f13a5a366a01754ba29c97262f9ec54738764e",
+      "output_sha256": "02b2d93a282d65af4d630bfca32fe967971eee878d8dd87e663dd9bf89b93402"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_mcuctrl.h": {
+      "input_sha256": "2d3b94f94c4c36f06f609a68bff4eea040ddd48dec6435e35ad551f621058837",
+      "output_sha256": "2f564c4341f107a0baa65098e2e0a8631ac36de50f0f4cb278b848ffcd37dbf7"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_mspi.h": {
+      "input_sha256": "1559f5a2b22fed6154dcddefc94cf242244844dc2e1f2456fe018038e5ecd8c7",
+      "output_sha256": "aa82e12e26ea4038a44d934fb0172f18de364196d7ba5e313a7d1000ebe48b69"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_reset.h": {
+      "input_sha256": "a69ee0eb3dd99bc58d572359b13a05c93c8ebee834b57fa1fbe6f6e4447f9e09",
+      "output_sha256": "ad5eeaa384deb341fa9c2634081ce1ee28031146dc9a35273734f5a352998a8f"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "9926d3cad41c963f4707181b6da7cce9d1467aa51576f682c0c35c8ee7d7113a",
+      "output_sha256": "9493e347f617ad54071bb28f7f002f863fed1e475f476be1cbb3908f4ec66e39"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "6e2514ee2f4f4a31995cdcb2c7428491db08fc4e06560b5056a78f6ff6072bd7",
+      "output_sha256": "681ad78ba0c33d8fdbae284120caa1bb782275bbac13c087fe10a2b3961290e2"
+    },
+    "mcu/apollo510/hal/mcu/am_hal_syspll.h": {
+      "input_sha256": "14a98aa245e9b84a1b336fd612a2b7dc311b9d007fd0f84ecc67d8b1e995c350",
+      "output_sha256": "5b216dd91fe5ca2b7fb1ef0800e2775aad5cd919d6eb93fb97b03b5de8804976"
+    },
+    "mcu/apollo510/regs/am_mcu_apollo510_mraminfo0.h": {
+      "input_sha256": "e03521353b6ef354dccbbe64ba5ea549f226349ea3857584c5953f0f191268ab",
+      "output_sha256": "b29c6c9d7ced2450b9211b389303b663618145e417ff951ca3e1de1153e52a7e"
+    },
+    "mcu/apollo510/regs/am_mcu_apollo510_mraminfo1.h": {
+      "input_sha256": "c19b60cbe497f62794cb0b90be316c9e142ac9a83012b944f97eea7339f88097",
+      "output_sha256": "c768ae9baccf0d37008349df16eefed34bb208171100d7dea211f952d2cd9eff"
+    },
+    "mcu/apollo510/regs/am_mcu_apollo510_otpinfo0.h": {
+      "input_sha256": "b77029d1b1deee4b3eb90fa981b8d57430801e9a5d358eca97fb52bd3e6f1e12",
+      "output_sha256": "ab998697c98d7ad2602bf7a111cc5d8223aece57204b18c8b1ed19349789bff4"
+    },
+    "mcu/apollo510/regs/am_mcu_apollo510_otpinfo1.h": {
+      "input_sha256": "40dfd6587c79ae1fb6f8e479b0951e9326611c47df06f89e6f6a7851d5ec5aec",
+      "output_sha256": "6822715c49a0a1c842abe0bc5f48f26ad1572aa102debfa19165fbc16f1da546"
+    },
+    "mcu/apollo510/regs/am_mcu_apollo510_otpinfoc.h": {
+      "input_sha256": "7a61255893315f3cd6f3c728cc6535b539dac072006a0faa2d9018a0b2049d27",
+      "output_sha256": "34fa43564d6d3f45e3890497c6879c4f346c24a74da62f514a662ea980cc402c"
+    },
+    "mcu/apollo510/regs/am_reg_base_addresses.h": {
+      "input_sha256": "a00fa6639182288ea62eda194efe3e414a9a74242dcc035b07a5579968b52c56",
+      "output_sha256": "a399486214928327406c2fc70c0241402e8f16e00f0689d257faf754b08db3de"
+    },
+    "mcu/apollo510/regs/am_reg_jedec.h": {
+      "input_sha256": "edffd0282309d18509bdc1268f8097514848cd097cb07060e9de2df49e702276",
+      "output_sha256": "ce6e8b334ebb10c391b949aceb79e47e37dea9cacb7109034eccca79dbcf72e9"
+    },
+    "mcu/apollo510/regs/am_reg_macros.h": {
+      "input_sha256": "651f35a6f937c8280a90a5e53a601dd9f6b7fdb87d5c3c20de997c64248cff68",
+      "output_sha256": "13f90a41188fb1badd45c2be0b7ac768936df9cbb1c9a5c55b567d7524b1d4c3"
+    },
+    "mcu/apollo510L/am_mcu_apollo.h": {
+      "input_sha256": "40707561d7367df68b133c0a5b90b77eae44275431d7781e9da8b6d03c816e79",
+      "output_sha256": "cb7b76277384aa706a13f5b95132a5061a038d2f6254c4cd4f2270f66fade18c"
+    },
+    "mcu/apollo510L/hal/am_hal_adc.h": {
+      "input_sha256": "2c24aae0d4ca600a41d5d1ae537586a75300ad55f7614e501aa2915691138561",
+      "output_sha256": "d9e39145240d118ad7e72363edbdffcf7ba6c4a593355d1d24282652679ee9d2"
+    },
+    "mcu/apollo510L/hal/am_hal_clkmgr.h": {
+      "input_sha256": "6589fe63750b3d519d83ee1062d292d7e39d1422b57f4cf890c05075b4e28d43",
+      "output_sha256": "3e40203d7dd825ec2a9c3b973a546b6af35ba2472587bd71ab5395f118648c57"
+    },
+    "mcu/apollo510L/hal/am_hal_global.h": {
+      "input_sha256": "19340245f562367959b243fa5634545e5b8502afcda830b26b5fa5ec296f873e",
+      "output_sha256": "2124c79513e8ecfda551a2dd9150ad9559a4ab572bd3d2abc35a6e5b43a44e04"
+    },
+    "mcu/apollo510L/hal/am_hal_gpio.h": {
+      "input_sha256": "12c1aaf02bc352ccb9512139459c9acaf6f21fea4d9a34ff9f766c73456bf66d",
+      "output_sha256": "848600ff937e1f1c2faaf9c5adf4b3b1f88bdc4655f714f60ace160a9c512b77"
+    },
+    "mcu/apollo510L/hal/am_hal_pin.h": {
+      "input_sha256": "bc604a36410426b5584892e3ebdf6f0895dbd86da907fa4a8bfef78499d684f7",
+      "output_sha256": "d2eeec012a2c2889d0a9fc76049e944185249e0ef851e462973f65573302d49c"
+    },
+    "mcu/apollo510L/hal/am_hal_pwrctrl.h": {
+      "input_sha256": "337d0e2a72bb5953b0ddb39a7ef600a177f9bba08419195d0034d35cd08281b5",
+      "output_sha256": "d144ad193268fbcb01d814f734aec2488258c91ccee9954db1c65dcd8b431e5b"
+    },
+    "mcu/apollo510L/hal/am_hal_spotmgr_trimver_1.h": {
+      "input_sha256": "e9ad9017d0d4e00b7765dcea5cc53c1ce5fb8c0ada249e89d538fff9ec20ddd9",
+      "output_sha256": "b8435687bd1d5cc5f1aeb75a401e60f7b079d404838972e5c47877ddf6de8f13"
+    },
+    "mcu/apollo510L/hal/am_hal_stimer.h": {
+      "input_sha256": "23d6323d4b49f72878c0f00bc8d9303d92f9dc58b66978582bb7e3a1d0b81bbb",
+      "output_sha256": "40a812c7fa9629414a85a4423d65147262b0d8190637bfa84f6c53a00d929d13"
+    },
+    "mcu/apollo510L/hal/am_hal_timer.h": {
+      "input_sha256": "544164501be82602b977bcd52352e7cd3705fe2128959e1bf4439dda88f56acd",
+      "output_sha256": "db4bbdeb5499904fc56f6b7ab0ca35632ebfd6579f437ff41dc98c92517478b4"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_bootrom_helper.h": {
+      "input_sha256": "683c5141b2de865a52e136845f3c8752b756a9f3244f46fd1e133101370c6884",
+      "output_sha256": "4cd883d3ad3e7236b17d50f07bb3c6d611bfb4fb93436e93811c49542fd89781"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_card.h": {
+      "input_sha256": "b0d160b467a49ff26a4cb8c1266df3523451c1de72999293dadc8b98fb91e03d",
+      "output_sha256": "f33ef7f9c5001a26f94b839135d2643b6598c516999282896a01f1a94125637d"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "73b4b5ff614184334d1918e9bf8bec67f05bb42f541a4d7e2256e94578071790",
+      "output_sha256": "e48c292eee561f5dacda7b55c92b33302c50ded1031179cbca7cae07f9bea212"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "3b953b6bf5be8560e2bf9728cda26e1a6c910e0a5554b465d71918a8ddeac3ab",
+      "output_sha256": "76be272f18bf0df5ff36ee0fbe043acbaef67c0431655b664952dd2f66742ab7"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_ios.h": {
+      "input_sha256": "9fb43643a4d3c1a4b9d339c46520f2f292f5a96ae650331853e050b5015b7650",
+      "output_sha256": "80d511fd5380b5f9014f3a949bacc02df668188631bba921027a538385c04dd9"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_mcuctrl.h": {
+      "input_sha256": "827eedbf655ca759ef84bd573fec0179fcf9e41be2daf80fe1932cfd206f0443",
+      "output_sha256": "294167e9456abc99ce4488a0dfae94315252ac8fce61509a7b7523040baa7c99"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_mspi.h": {
+      "input_sha256": "6fb2953e1c7914b9e549c3273d3669b73a6f4e9682c99b21589f5e8f73b8cc2f",
+      "output_sha256": "c63fb5d68b266c681b20ba3eee4065d554e38649debce3089cd4a7e6e26664f7"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "d120e155cc02ccdeaf8008e746fecd64c8c3c77ad5b3f6afb43f70afc40dac36",
+      "output_sha256": "8e0d99243e21e486b32e715322f060cd9b9da1e6e23f57fb34edc0b068eb1713"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "dddedb52990eec886b32e2b5d0d85c6315d55de0cc0c127170de7dcf3f0c48d1",
+      "output_sha256": "fe4e7e5227fe45ef504c26e343d585236ab5403208099a2ee7753157bd8e8379"
+    },
+    "mcu/apollo510L/hal/mcu/am_hal_syspll.h": {
+      "input_sha256": "a829a72cb0e8e03fcd6b6e5debe2521a77dca0fdb830b5fe749edddbd28179c3",
+      "output_sha256": "6701d0d0e742f081ec266bb8b3005aca9381272e3459f980b75b5120b3732ca5"
+    },
+    "mcu/apollo510L/regs/am_mcu_apollo510L_mraminfo0.h": {
+      "input_sha256": "49821aaa10e854ad1c103088628f294d432e9f17f90c59436b2d58b27d8390ee",
+      "output_sha256": "8a657000db17e7e47b95fc7a8ad74e0e921365773788d66038c09f570c3efd3d"
+    },
+    "mcu/apollo510L/regs/am_mcu_apollo510L_mraminfo1.h": {
+      "input_sha256": "3669d888b4753448bc940a0feb19f4c4155aa7fea57b8b65be4f315e49149014",
+      "output_sha256": "cfe0581637344c5749a055f16b7c0511c18c8ab98da1ad1fc2b8a7bfb69341c9"
+    },
+    "mcu/apollo510L/regs/am_mcu_apollo510L_otpinfo0.h": {
+      "input_sha256": "97ef9044da3aff40f388506ec019b3fb98dc7bac7f4e573e630cb2a310e24375",
+      "output_sha256": "88364cd10df1694befcaa381a47dbc1cb36ba9e001c038d4bd7b25a19f5c3878"
+    },
+    "mcu/apollo510L/regs/am_mcu_apollo510L_otpinfo1.h": {
+      "input_sha256": "8f1a9895d857252a5567f59ab8a95efd6226d2b4d3e596704c1d75c98b136471",
+      "output_sha256": "73a4eba7927c4c13b749404c88788404a8d344cc75e0a0b41e026040dabefdaa"
+    },
+    "mcu/apollo510L/regs/am_mcu_apollo510L_otpinfoc.h": {
+      "input_sha256": "1d0c343575dd90284d0e8c8f44208f68b627d747bc8ddd77808d49d334a989a6",
+      "output_sha256": "9d70ce6e0250a9936c0803cfc0d20a662a69da43cfa04f6b74a49e3bd5d0c00d"
+    },
+    "mcu/apollo510L/regs/am_reg_base_addresses.h": {
+      "input_sha256": "f2289fbc7b5880025911c85ae15ae999aed5b2945140fe3133aac4b518fc20d9",
+      "output_sha256": "88b9e09634606eb4add7d71bd1b6e03f3d3b9ab91885f9702df6b46da52c2e48"
+    },
+    "mcu/apollo510L/regs/am_reg_jedec.h": {
+      "input_sha256": "edffd0282309d18509bdc1268f8097514848cd097cb07060e9de2df49e702276",
+      "output_sha256": "ce6e8b334ebb10c391b949aceb79e47e37dea9cacb7109034eccca79dbcf72e9"
+    },
+    "mcu/apollo510L/regs/am_reg_macros.h": {
+      "input_sha256": "651f35a6f937c8280a90a5e53a601dd9f6b7fdb87d5c3c20de997c64248cff68",
+      "output_sha256": "13f90a41188fb1badd45c2be0b7ac768936df9cbb1c9a5c55b567d7524b1d4c3"
+    },
+    "mcu/atomiq110/am_mcu_apollo.h": {
+      "input_sha256": "27dbea09d0116b94c3dd426c077ea38751e5236177fe6a89a54647d3d2ca2fd3",
+      "output_sha256": "37c885ac4bbe5a54ee4c6dd272e2a4e5901589c6fad4a0cbecdbdc64a3c05f69"
+    },
+    "mcu/atomiq110/hal/am_hal_crm_private.h": {
+      "input_sha256": "9599cae6be5eb1e95236fb2618142707d319f5821ea9ae7fd70f18a3c5a52ab9",
+      "output_sha256": "9efa399c7699535439add673c9b509bd9068387da1c774f47a26aaaef469a237"
+    },
+    "mcu/atomiq110/hal/am_hal_global.h": {
+      "input_sha256": "0728745f135f3615125d2fd7f727755526e4a6111c54369ac92b5b0e85d723f5",
+      "output_sha256": "48f5813418558a113fe127980256096a2c72de62e3349c051597ea80aff37bba"
+    },
+    "mcu/atomiq110/hal/am_hal_gpio.h": {
+      "input_sha256": "c5305484fc3fecf72ad3909659148a84c64f31af49ef80a11fe8468c53f04e0d",
+      "output_sha256": "d2a5f8de35d63464814eaf51dad852a5dafe349140625c6d100128b77e8f799f"
+    },
+    "mcu/atomiq110/hal/am_hal_mmu.h": {
+      "input_sha256": "57bb5ef80eb53862146098b611612d6b6160aa1a4d9f6309ddcd40fbccded585",
+      "output_sha256": "f4376ddd67ed12eef4d2ce8520a4563a665407196b360d830c0f2e34ea426138"
+    },
+    "mcu/atomiq110/hal/am_hal_pin.h": {
+      "input_sha256": "a2f4e34f08acc2240c6ae20ddb2009706340b6c89cb303819f2aab1854854ce9",
+      "output_sha256": "cb18dd7cff231509026121b6741d4e91f9ff40f14d2dfea45a54c96849c0a05a"
+    },
+    "mcu/atomiq110/hal/am_hal_pwrctrl.h": {
+      "input_sha256": "4864a503fb39b78266abe97386e661476fbc23de6b51dd5e1d2c98982acdca4b",
+      "output_sha256": "e04d9ba3a9d13e9398a317ef3cf5f76d4de75fa600ab3042e1f32710700fcdbc"
+    },
+    "mcu/atomiq110/hal/am_hal_stimer.h": {
+      "input_sha256": "d99713e92b2f09735ca85251e02eb15e24d355e45e398e545170b6eede984f72",
+      "output_sha256": "79dc14390f6cc17e2cd995acdd1f7f61197eda27eb07c838596f7b6999bf1317"
+    },
+    "mcu/atomiq110/hal/am_hal_timer.h": {
+      "input_sha256": "a79ac392060f75c3a1c7f5703e14a522155fa508903740df2839eefba4269767",
+      "output_sha256": "2897d64602d30bcf481c4cc902a86bce6bac03e14e6a0dbea177aa9db2c5d338"
+    },
+    "mcu/atomiq110/hal/am_hal_usb.h": {
+      "input_sha256": "a4c4c9bfacd467f948bb9708a9a93fc77690a75287b234c7e818096b89c77567",
+      "output_sha256": "4118421a7656393638c1504825338672988b460725864b4b33c92f722614eab6"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_bootrom_helper.h": {
+      "input_sha256": "85d4cc129c2eb322399f64a4cf7cc900051909e5fbb9763aafd17ca4cfa8e5e3",
+      "output_sha256": "fef488d520f4a96cf4170ba734973251435c085b3f8177e504bcd915117a0eb0"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_card.h": {
+      "input_sha256": "0380c289ee93481b8087fe4c20495699abb6a7c452e8b0cd2c6ee2b0200ef9b4",
+      "output_sha256": "75b51cab41fd4ca0325493fb19c22a1d0d5de39c93fdb00e2293e0c35af84961"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_clkgen.h": {
+      "input_sha256": "2a3e4252f4cd8f9963d322d69872fefede0e59049ca4b0d11a7c13b4723d6f6d",
+      "output_sha256": "bb064166d345b817bca41979fa6333f6333dc2f15995e51c563ea3a6558515e1"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_iom.h": {
+      "input_sha256": "cd04f78302cb937ba1f9fcef8335cdbf00a002b70f4ec2048dbeb89974d129ea",
+      "output_sha256": "ba481d905c1fe049378d181986bc6d72cce55bb6eead7b95697263b81d3904e7"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_reset.h": {
+      "input_sha256": "41c492218f24ad9330074bf623a672699a622ea3b16a623bf6faae89b35f4f96",
+      "output_sha256": "79ebe0854478507758edf4da59631e4dbf8a46ae4a617f0940d30543470f550b"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_rtc.h": {
+      "input_sha256": "501c0b3b3c7657ff1ae2407e5546cc9d8f3346af85309efb481d94a1dfc87fe5",
+      "output_sha256": "d6a7444de80b40bf95c726c05844c268a5a02d3f3c800e64b71cb3db0aa52fe5"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_secure_ota.h": {
+      "input_sha256": "8ab3feb438a15533088e02d7180b29fd76c5881e82e5fbe2f96ab8c278850d51",
+      "output_sha256": "49e353ede8448116d042d4a8787a74af68a2fed989bcd05d62ab7e54363822e2"
+    },
+    "mcu/atomiq110/hal/mcu/am_hal_syspll.h": {
+      "input_sha256": "ada606eb4b85d50530af04c636e51b1b9cc877708a1ab1041936780df90c5eb7",
+      "output_sha256": "45651ff1f5c412c754105cb95d50aac759f08eb0af03ba767d560c53298bd977"
+    },
+    "mcu/atomiq110/regs/am_mcu_atomiq110_otpinfo0.h": {
+      "input_sha256": "492cb3d72241be73b16a75c8b2ab1392a93377e1f59ed8be90a4bfc6063cc41f",
+      "output_sha256": "103c5a962a580452eec952343611df6ab8a9817279e1a3af34856df7da6f63ec"
+    },
+    "mcu/atomiq110/regs/am_mcu_atomiq110_otpinfo1.h": {
+      "input_sha256": "a1dcd2e9298abd83d6d1410b8f0e84981ce500c7342b4d664bce85a14371b47b",
+      "output_sha256": "b5dd67c8f70c2ccec94060e3b50567f36d9d832e4cd55c6515ab43488b37881e"
+    },
+    "mcu/atomiq110/regs/am_mcu_atomiq110_otpinfoc.h": {
+      "input_sha256": "21d9b2fc3ce1e5184690f66492e2f7cc9760f4852ec1b2871dae68df1279d744",
+      "output_sha256": "c4e5ae9fba93389cdf55ef554fe1f80d88387ee7e3dada28850de9fbb1c737e4"
+    },
+    "mcu/atomiq110/regs/am_mcu_atomiq110_rraminfo0.h": {
+      "input_sha256": "cea09da2d1879479cf88fb9f77b839c285661d70ad3138b9cca8b64df5028246",
+      "output_sha256": "7b70557cba36633a8e7cb5a1300c02d064e9be310ca7583953626e3ab0907e75"
+    },
+    "mcu/atomiq110/regs/am_mcu_atomiq110_rraminfo1.h": {
+      "input_sha256": "2e231295a80d022c27004c2720e663a87c63cc1c3d5719c0b1f394b69e60d34c",
+      "output_sha256": "d19d6f052929b6c6a576401adcfca7ee07f410ad4212a29c2158eb3012e0e664"
+    },
+    "mcu/atomiq110/regs/am_reg_base_addresses.h": {
+      "input_sha256": "e056463f061e986d2b1bb290b8d81f58251e0fc08f0524fc10806d24fbc2e2d1",
+      "output_sha256": "b79306d95e87c1ab50406c13b162a144e399abb8b784e26c34e8d418d82669b5"
+    },
+    "mcu/atomiq110/regs/am_reg_jedec.h": {
+      "input_sha256": "ae76ad1d86fd81fec7eb92bd615031d5f328f7f482aca77ccd0966187ccb183a",
+      "output_sha256": "c54f4ae205ef635984b875b2532b0880c34a0c1476f1d34cae9d0004d38493dd"
+    },
+    "mcu/atomiq110/regs/am_reg_macros.h": {
+      "input_sha256": "5bdb39c3987dca1b3169ce3fb70a2d1c40ad6425aaa3a3d918626f54ecb9fe38",
+      "output_sha256": "35ebe1cb0d588b752eb4840939fd06defdd827753cef02bb905d216d76c924db"
+    },
+    "src/am_util_stdio.c": {
+      "input_sha256": "df7c732f5cbbd93d1a85e87fdcacec8854860f414bc50836b29259fc25b1ddc5",
+      "output_sha256": "ef3979e6f7fc9f52fa2ac4ce6bbdc19e6d006820b874f10f823b05f18e0e8290"
+    },
+    "utils/am_util_fat.h": {
+      "input_sha256": "9f6aeb09536a4690923cc989a2c4665042775240fcfc389b5c9096dc8779e114",
+      "output_sha256": "3602c231a0c8f1e5edc2bf1df74d53164e30b00553d66762b1f5f0afb6c9fb1e"
+    },
+    "utils/am_util_stopwatch.h": {
+      "input_sha256": "767c5a58837ae258b25a63bdd6ad8c3acc24e80d869c86c49f7a1d1ba3c63c56",
+      "output_sha256": "b9bc8d051776ac99c97bffd8d286b25afe415c10f05dc134a7f3b45577438eda"
+    }
+  }
+}

@@ -196,6 +196,7 @@ class StageResult:
     staged_root: Path
     patch_applications: tuple[PatchApplication, ...] = field(default_factory=tuple)
     hash_verification: HashVerificationResult = field(default_factory=HashVerificationResult)
+    sanitation: internal_markers.ReviewedScrubResult = field(default_factory=internal_markers.ReviewedScrubResult)
 
 
 # --------------------------------------------------------------------------
@@ -1359,8 +1360,8 @@ def assert_no_new_internal_markers(staged_sdk_root: Path, *, path_prefix: str, b
         raise IntakeVerificationError(
             "staged payload adds INTERNAL engineering content beyond the recorded baseline "
             f"({internal_markers.BASELINE_RELATIVE.as_posix()}):\n  {comparison.render()}\n  {locations}\n"
-            "Scrub the staged tree before promoting: "
-            f"python sdk-intake/internal_markers.py scrub --root {staged_sdk_root} --write"
+            "Review the retained live content and sanitation diagnostics before promoting; "
+            "do not automatically expand the marker baseline."
         )
     return len(hits)
 
@@ -1408,6 +1409,23 @@ def stage_provider_payload(
     patch_applications = apply_patch_queue(dest, resolved_patches_dir)
 
     _assert_no_symlinks(dest, label="staged payload")
+    # Archive/ZIP inputs have no Git identity; they cannot replay the narrow
+    # reviewed sanitation removals, but ordinary sanitation still works.
+    identity = subprocess.run(
+        ["git", "-C", str(sdk_root), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=False,
+    )
+    source_commit = identity.stdout.strip() if identity.returncode == 0 else None
+    try:
+        sanitation = internal_markers.scrub_reviewed_tree(
+            dest,
+            reviewed_root=bas.provider_sdk_root(train),
+            path_prefix=provider_sdk_relative(train),
+            source_commit=source_commit,
+            replay_path=repo_root() / "sdk-intake" / "sanitation-replay.json",
+        )
+    except (internal_markers.InternalMarkerError, OSError) as error:
+        raise IntakeVerificationError(f"provider sanitation failed: {error}") from error
     assert_no_new_internal_markers(dest, path_prefix=provider_sdk_relative(train))
     verification = verify_artifact_hashes(dest, dest / "artifact-manifest.yaml")
     verification.raise_if_not_ok(label=f"staged artifact hashes for {train.train_id} {version}")
@@ -1418,6 +1436,7 @@ def stage_provider_payload(
         staged_root=dest,
         patch_applications=patch_applications,
         hash_verification=verification,
+        sanitation=sanitation,
     )
 
 
@@ -1518,6 +1537,12 @@ def _cmd_stage(args: argparse.Namespace) -> int:
     result = stage_provider_payload(train, args.version, sdk_root, patches_dir=patches_dir)
     print(f"==> Staged {result.train_id} {result.version} at {bas.display_path(result.staged_root)}")
     print(f"    artifact hashes verified: {len(result.hash_verification.verified)}")
+    print(f"    sanitation: {len(result.sanitation.changed_files)} file(s), {result.sanitation.removed_lines} removed line(s)")
+    for preserved in result.sanitation.preserved_files:
+        print(f"    preserved reviewed malformed file: {preserved.path} sha256={preserved.sha256}")
+        print(f"      {preserved.reason}")
+    for path in result.sanitation.replayed_files:
+        print(f"    verified reviewed sanitation replay: {path}")
     if result.patch_applications:
         print(f"    patches applied ({len(result.patch_applications)}):")
         for application in result.patch_applications:

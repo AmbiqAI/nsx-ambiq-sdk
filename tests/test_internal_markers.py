@@ -543,7 +543,7 @@ def test_staging_gate_rejects_new_internal_content(tmp_path: Path, workflow) -> 
         workflow.assert_no_new_internal_markers(staged, path_prefix="modules/nsx-ambiqsuite/sdk")
     message = str(excinfo.value)
     assert "mcu/atomiq110/am_hal_new.h" in message
-    assert "scrub" in message
+    assert "sanitation diagnostics" in message
 
 
 def test_staging_gate_accepts_the_promoted_tree(repo_root: Path, workflow) -> None:

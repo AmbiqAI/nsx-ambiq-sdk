@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import subprocess
 import sys
 from dataclasses import replace
@@ -46,6 +47,12 @@ def fake_repo(tmp_path: Path, helper, monkeypatch):
     fake_root.mkdir()
     monkeypatch.setattr(helper, "repo_root", lambda: fake_root)
     monkeypatch.setattr(helper.bas, "repo_root", lambda: fake_root)
+
+    intake_dir = fake_root / "sdk-intake"
+    intake_dir.mkdir()
+    (intake_dir / "sanitation-replay.json").write_text(
+        '{"schema_version": 1, "source_commit": "' + "0" * 40 + '", "files": {}}\n'
+    )
 
     ownership_dir = fake_root / "release"
     ownership_dir.mkdir(parents=True)
@@ -529,6 +536,45 @@ def test_stage_provider_payload_targets_staging_not_provider_root(staging_env, f
     assert result.staged_root != provider_root
     assert not provider_root.exists()
     assert result.hash_verification.ok
+
+
+def test_stage_sanitizes_after_patches_and_before_marker_gate(staging_env, fake_repo, helper, monkeypatch):
+    monkeypatch.setattr(helper.bas, "promote_provider_payload", _stub_promote_provider_payload())
+    sample = "// #### INTERNAL BEGIN ####\n// patched private note\n// #### INTERNAL END ####\nint public_api(void);\n"
+
+    def patch_payload(root, patches_dir):
+        (root / "sample.h").write_text(sample)
+        return ()
+
+    monkeypatch.setattr(helper, "apply_patch_queue", patch_payload)
+    _make_committed_git_repo(fake_repo)
+    source_commit = subprocess.check_output(["git", "-C", str(fake_repo), "rev-parse", "HEAD"], text=True).strip()
+    provider = helper.bas.provider_sdk_root(staging_env)
+    provider.mkdir(parents=True)
+    output = "int public_api(void);\n"
+    (provider / "sample.h").write_text(output)
+    (fake_repo / "sdk-intake" / "sanitation-replay.json").write_text(json.dumps({
+        "schema_version": 1, "source_commit": source_commit, "files": {
+            "sample.h": {"input_sha256": _sha256_bytes(sample.encode()),
+                         "output_sha256": _sha256_bytes(output.encode())},
+        },
+    }))
+    result = helper.stage_provider_payload(staging_env, "test-version", fake_repo, patches_dir=None)
+    assert (result.staged_root / "sample.h").read_text() == "int public_api(void);\n"
+    assert result.sanitation.changed_files == ("sample.h",)
+    assert result.hash_verification.ok
+
+
+def test_stage_keeps_marker_gate_after_sanitation(staging_env, helper, monkeypatch):
+    def export(t, v, sdk_root, *, destination_root):
+        _stub_promote_provider_payload()(t, v, sdk_root, destination_root=destination_root)
+        (destination_root / "new.h").write_text(
+            "// #### INTERNAL BEGIN ####\nint live_api(void);\n// #### INTERNAL END ####\n"
+        )
+
+    monkeypatch.setattr(helper.bas, "promote_provider_payload", export)
+    with pytest.raises(helper.IntakeVerificationError, match="beyond the recorded baseline"):
+        helper.stage_provider_payload(staging_env, "test-version", Path("/fake/sdk-root"), patches_dir=None)
 
 
 def test_stage_provider_payload_refuses_incomplete_artifact_set(fake_repo, helper, monkeypatch) -> None:

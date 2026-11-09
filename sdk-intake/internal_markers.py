@@ -24,11 +24,10 @@ This module is the intake-time sanitizer for that class of leak:
                    regions inside INTERNAL blocks.
   update-baseline  regenerate the ratchet baseline from a tree.
 
-Scrub safety contract (why this never breaks a prebuilt `libam_hal.a`):
+Intended scrub behavior (not a complete C parser):
 a shipped drop's headers were compiled into the archives that ship alongside
 them, so removing a *live* declaration -- even one fenced inside an INTERNAL
-block -- silently desynchronizes headers from the prebuilt binary. The scrub
-therefore only ever deletes
+block -- silently desynchronizes headers from the prebuilt binary. The generic scrubber attempts to delete only
 
   1. the marker lines of a block it removes entirely (always pure comments),
   2. lines inside an INTERNAL block whose body has no live tokens,
@@ -46,17 +45,22 @@ idempotent (a second run over a scrubbed tree is a no-op).
 
 A line counts as live unless the only code left on it after comment-stripping
 is a lone `;` (e.g. the stray semicolon trailing a fully commented-out
-`/*typedef enum {...}*/;`), which carries no symbol. A bare `,` is *not*
+`/*typedef enum {...}*/;`), which carries no symbol. This also misclassifies live null statements; C line
+splicing can invalidate the physical-line parser too (issue #203). Automatic
+staging therefore uses `scrub_reviewed_tree` and requires reviewed whole-input
+and whole-output receipts for every removal. A bare `,` is *not*
 treated as dead: it is an enum/initializer separator whose removal would
 change live code.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable, Iterator
 
 import yaml
@@ -584,6 +588,155 @@ def scrub_tree(root: Path, *, write: bool, **kwargs) -> dict[str, ScrubResult]:
         for path, _relative, result in planned:
             path.write_bytes(result.text.encode("utf-8"))
     return {relative: result for _path, relative, result in planned}
+
+
+# Only the generated, standalone banner may differ from reviewed evidence.
+_REVISION_BANNER_RE = re.compile(
+    rb"(?m)^(// This is part of revision )[A-Za-z0-9_.+-]+"
+    rb"( of the AmbiqSuite Development Package\.)(?=\r?$)"
+)
+
+
+def normalize_reviewed_banner(data: bytes) -> bytes:
+    return _REVISION_BANNER_RE.sub(rb"\1<revision>\2", data)
+
+
+@dataclass(frozen=True)
+class ReplayHashes:
+    input_sha256: str
+    output_sha256: str
+
+
+@dataclass(frozen=True)
+class SanitationReplay:
+    source_commit: str
+    files: dict[str, ReplayHashes]
+
+
+def load_sanitation_replay(path: Path) -> SanitationReplay:
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate key {key!r}")
+            result[key] = value
+        return result
+
+    try:
+        data = json.loads(read_source(path), object_pairs_hook=unique_object)
+        if not isinstance(data, dict) or set(data) != {"schema_version", "source_commit", "files"}:
+            raise ValueError("expected schema_version, source_commit and files")
+        if type(data["schema_version"]) is not int or data["schema_version"] != 1:
+            raise ValueError("unsupported schema_version")
+        if not isinstance(data["source_commit"], str) or not re.fullmatch(r"[0-9a-f]{40}", data["source_commit"]):
+            raise ValueError("source_commit must be a full SHA")
+        if not isinstance(data["files"], dict):
+            raise ValueError("files must be a mapping")
+        files = {}
+        for relative, entry in data["files"].items():
+            parsed = PurePosixPath(relative)
+            if parsed.is_absolute() or ".." in parsed.parts or "\\" in relative or parsed.as_posix() != relative or not parsed.parts:
+                raise ValueError(f"invalid replay path {relative!r}")
+            if not isinstance(entry, dict) or set(entry) != {"input_sha256", "output_sha256"}:
+                raise ValueError(f"invalid hashes for {relative}")
+            if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in entry.values()):
+                raise ValueError(f"invalid SHA256 for {relative}")
+            files[relative] = ReplayHashes(**entry)
+        return SanitationReplay(data["source_commit"], files)
+    except (OSError, ValueError) as error:
+        raise InternalMarkerError(f"invalid sanitation replay receipt {path}: {error}") from error
+
+
+@dataclass(frozen=True)
+class PreservedFenceFile:
+    path: str
+    sha256: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ReviewedScrubResult:
+    changed_files: tuple[str, ...] = ()
+    removed_lines: int = 0
+    preserved_files: tuple[PreservedFenceFile, ...] = ()
+    replayed_files: tuple[str, ...] = ()
+
+
+def _reviewed_file_bytes(root: Path, relative: Path) -> bytes:
+    if any(parent.is_symlink() for parent in root.parents):
+        raise InternalMarkerError(f"reviewed reference has a symlinked ancestor: {root}")
+    path = root
+    for part in (None, *relative.parts):
+        if part is not None:
+            path = path / part
+        if path.is_symlink():
+            raise InternalMarkerError(f"reviewed reference is a symlink: {path}")
+    if not path.is_file():
+        raise InternalMarkerError(f"reviewed reference is missing: {path}")
+    return read_source(path).encode("utf-8")
+
+
+def scrub_reviewed_tree(
+    root: Path,
+    *,
+    reviewed_root: Path,
+    path_prefix: str,
+    source_commit: str | None,
+    replay_path: Path,
+    baseline: Path | None = None,
+) -> ReviewedScrubResult:
+    """Plan provider sanitation before writes; retain only reviewed refusals.
+
+    Existing malformed files remain untouched. All removals require
+    whole-input and whole-output receipts: the generic scrubber does not fully
+    parse C, so new input must receive explicit review before automatic replay.
+    Export and patch application precede this operation; this is not an atomic
+    staging transaction or a rollback mechanism for filesystem write failures.
+    """
+    if root.is_symlink() or any(path.is_symlink() for path in root.rglob("*")):
+        raise InternalMarkerError(f"sanitation root contains a symlink: {root}")
+    replay = load_sanitation_replay(replay_path)
+    exempt = load_fence_exemptions(baseline)
+    planned: list[tuple[Path, ScrubResult]] = []
+    preserved: list[PreservedFenceFile] = []
+    replayed: list[str] = []
+    for path in iter_scannable_files(root):
+        relative = path.relative_to(root)
+        key = f"{path_prefix.strip('/')}/{relative.as_posix()}"
+        # Decode before exception handling: invalid UTF-8 cannot be exempted.
+        before = read_source(path)
+        try:
+            result = scrub_text(before, label=key)
+        except InternalMarkerError as error:
+            if key not in exempt:
+                raise
+            reference = _reviewed_file_bytes(reviewed_root, relative)
+            if normalize_reviewed_banner(before.encode()) != normalize_reviewed_banner(reference):
+                raise InternalMarkerError(f"{key}: malformed content differs from reviewed reference; review required") from error
+            preserved.append(PreservedFenceFile(key, hashlib.sha256(before.encode()).hexdigest(), str(error)))
+            continue
+
+        if result.changed:
+            evidence = replay.files.get(relative.as_posix())
+            before_hash = hashlib.sha256(normalize_reviewed_banner(before.encode())).hexdigest()
+            after_hash = hashlib.sha256(normalize_reviewed_banner(result.text.encode())).hexdigest()
+            if source_commit != replay.source_commit or evidence != ReplayHashes(before_hash, after_hash):
+                raise InternalMarkerError(f"{key}: unreviewed sanitation; input/output replay receipt required")
+            reference = _reviewed_file_bytes(reviewed_root, relative)
+            if normalize_reviewed_banner(result.text.encode()) != normalize_reviewed_banner(reference):
+                raise InternalMarkerError(f"{key}: sanitation replay output differs from reviewed reference")
+            replayed.append(key)
+        if result.changed:
+            planned.append((path, result))
+
+    for path, result in planned:
+        path.write_bytes(result.text.encode("utf-8"))
+    return ReviewedScrubResult(
+        changed_files=tuple(path.relative_to(root).as_posix() for path, _result in planned),
+        removed_lines=sum(len(result.removed) for _path, result in planned),
+        preserved_files=tuple(preserved),
+        replayed_files=tuple(replayed),
+    )
 
 
 def find_unparseable_fences(root: Path, *, path_prefix: str = "", **kwargs) -> list[tuple[str, str]]:

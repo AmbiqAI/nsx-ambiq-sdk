@@ -144,64 +144,31 @@ python sdk-intake/internal_markers.py scan --root modules/nsx-ambiqsuite/sdk \
   --path-prefix modules/nsx-ambiqsuite/sdk
 ```
 
-Sanitize a drop *at intake*, while it is still staged:
+`stage` replays reviewed sanitation after consumer patches and before the
+marker and archive gates. Every proposed removal requires a matching prepared
+source commit, whole-input/output hashes in
+[`sanitation-replay.json`](../sdk-intake/sanitation-replay.json), and equality
+with the reviewed provider output. Only the generated revision-banner comment
+may vary. The receipt currently covers 238 files from the reviewed intake;
+staging never regenerates it.
 
-```sh
-python sdk-intake/internal_markers.py scrub --root <staged tree>          # dry run
-python sdk-intake/internal_markers.py scrub --root <staged tree> --write
-python sdk-intake/internal_markers.py update-baseline                     # after the scrub lands
-```
+The generic `internal_markers.py scrub` command is a review aid, not a complete C
+parser. Null statements and backslash-newline continuations can invalidate its
+assumptions (#203). New or changed inputs require explicit inspection of both
+the original content and proposed output before a receipt is updated. Do not
+use a blanket scrub or automatic baseline refresh to bypass a staging refusal.
 
-The scrub only ever deletes marker lines, INTERNAL blocks whose body has no live
-tokens, `#if 0 … #endif` regions inside an INTERNAL block, and blank lines left
-at a deletion seam. An INTERNAL block that still holds live declarations keeps
-its body verbatim and loses only its fence — a live declaration fenced inside an
-INTERNAL block is part of the ABI the drop's prebuilt archives were compiled
-against, so removing it post-hoc would desynchronize headers from `libam_hal.a`.
-That is why this is an intake-time gate rather than a cleanup pass on a shipped
-payload.
+A retained block keeps its body and its `BEGIN`/`END` fences, so live content
+remains visible to future reviews. The five known malformed files are preserved
+whole only when they match the reviewed provider; a new or changed malformed
+file fails sanitation. Counting marker lines alone cannot detect malformed
+fence shapes, so the existing `unparseable_fences` baseline gate remains too.
 
-A kept block keeps its `BEGIN`/`END` fence as well as its body. Dropping the
-fence would be worse than cosmetic: the retained content is still
-vendor-internal, and an unfenced remnant is invisible to `scan`, so the ratchet
-would lose sight of it permanently. Keeping the fence means the retained lines
-stay counted in the baseline, stay reviewable at the next intake, and make the
-scrub idempotent — running it again over a scrubbed tree changes nothing, which
-is what `tests/test_internal_markers.py` asserts against the promoted tree.
-
-Because counting marker lines cannot see fence *shape* — deleting half of a
-`BEGIN`/`END` pair makes the count go *down*, which a ratchet reads as an
-improvement — the baseline carries a second list, `unparseable_fences`. It
-records files whose fences the block parser refuses (orphan or nested markers, a
-marker sharing a line with live code, a non-UTF-8 payload). A newly unparseable
-file fails the stage even when its marker count is within budget.
-
-### Scope Boundary: Board BSPs Are Not In This Scrub
-
-The scrub landed for `modules/nsx-ambiqsuite/sdk/mcu/atomiq110` only. Board BSP
-headers — notably
-`modules/nsx-ambiqsuite/sdk/boards/atomiq110_fpga_turbo/bsp/am_bsp.h` — keep
-their markers and are **baselined, not scrubbed**. That is deliberate rather
-than an oversight: BSP headers are the interface every board example compiles
-against, the BSP sources and their prebuilt `libam_bsp.a` were built from the
-drop as shipped, and BSP internal blocks in practice fence pin tables and
-peripheral instance maps whose "dead" lines are far more often live than in the
-HAL headers. Scrubbing them is a separate change with its own build-and-link
-verification, and it happens at the board tree's *next* intake.
-
-### The Legacy Baseline Is A Collapse-Over-Time Plan
-
-The baseline records roughly 2.3k marker lines across ~330 files. That is not a
-target to be driven to zero in one pass, and it is not an accepted permanent
-state: it is a snapshot of what already shipped. Every one of those files landed
-alongside prebuilt archives compiled from it, so a post-hoc scrub of any of them
-risks exactly the header/binary desynchronization this gate exists to prevent.
-The plan is therefore incremental and mechanical: **each tree is scrubbed at its
-own next intake**, while the drop is still staged and before its archives are
-promoted, and the baseline is regenerated as part of that intake. The number
-collapses tree by tree as SoC payloads are refreshed. What the ratchet
-guarantees in the meantime is the direction of travel — the count can only go
-down.
+All sanitation changes are planned before any are written. Export and consumer
+patches have already run, so a failed stage may leave an intermediate tree. This
+is not a whole-stage transaction. Promote only a successfully staged and reviewed
+candidate. No provider source, archive, or marker baseline is automatically
+updated by the replay mechanism.
 
 ### The Baseline Is Review-Gated, Not Tool-Gated
 
