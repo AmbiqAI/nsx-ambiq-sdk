@@ -53,6 +53,17 @@ permissions:
   contents: read
 
 jobs:
+  python-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild Python tooling with current system certificates
+        run: docker build --pull --no-cache --target tooling -f docker/dev-ci.Dockerfile -t nsx-python-tooling:local .
+      - name: Validate package installation and fresh hook environments
+        run: >-
+          docker run --rm -v "$PWD:/workspace:ro" -w /workspace
+          nsx-python-tooling:local bash tools/validate_python_tooling.sh
+
   container-validation:
     if: ${{ inputs.run_smoke == 'true' || inputs.run_sdk_build == 'true' }}
     runs-on: ubuntu-latest
@@ -62,7 +73,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build dev/CI container
-        run: docker build -f docker/dev-ci.Dockerfile -t nsx-dev-ci:local .
+        run: docker build --pull --no-cache -f docker/dev-ci.Dockerfile -t nsx-dev-ci:local .
 
       - name: Show toolchain versions
         run: |

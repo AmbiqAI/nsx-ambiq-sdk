@@ -1,7 +1,7 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04 AS tooling
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG UV_VERSION=0.7.12
+ARG UV_VERSION=0.13.6
 ARG ARM_GNU_VERSION=14.3.rel1
 ARG ATFE_VERSION=22.1.0
 ARG ATFE_RELEASE_TAG=release-22.1.0-ATfE
@@ -25,9 +25,15 @@ RUN apt-get update \
         xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | UV_INSTALL_DIR=/usr/local/bin sh
+RUN curl -fLsS "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv-install.sh \
+    && UV_INSTALL_DIR=/usr/local/bin sh /tmp/uv-install.sh \
+    && test "$(uv --version | cut -d ' ' -f 2)" = "${UV_VERSION}" \
+    && rm /tmp/uv-install.sh
 
 ENV UV_CACHE_DIR=/tmp/uv-cache
+# The lightweight target exercises the same Python tooling used by the full image.
+FROM tooling AS dev-ci
+
 ENV GCC_ROOT=/opt/toolchains/gcc
 ENV ACFE_ROOT=/opt/toolchains/acfe
 ENV ATFE_ROOT=/opt/toolchains/atfe

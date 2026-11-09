@@ -57,3 +57,34 @@ Prefer concise user-facing docs. Put rationale, survey notes, and future work in
 See [local hardware tests](docs/local-hardware-tests.md) for the opt-in
 pytest/Unity startup harness, local commands, hardware ownership requirements,
 and evidence limitations. No GitHub runner is required.
+
+## Refresh Python tooling and container trust
+
+The dev/CI image pins uv 0.13.6; the CI dependency group requires virtualenv
+21.14.12 or newer so fresh pre-commit environments seed a corrected pip trust
+bundle. See the [Python maintainer notice](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576/1)
+for the emSign incident and current recommendations.
+
+Rebuild existing images with fresh base/system certificate layers:
+
+```sh
+docker build --pull --no-cache -f docker/dev-ci.Dockerfile -t nsx-dev-ci:local .
+```
+
+For a smaller package-tooling check using the same base as the full image:
+
+```sh
+docker build --pull --no-cache --target tooling -f docker/dev-ci.Dockerfile -t nsx-python-tooling:local .
+docker run --rm -v "$PWD:/workspace:ro" -w /workspace nsx-python-tooling:local bash tools/validate_python_tooling.sh
+```
+
+The manual Container Validation workflow always runs this tooling check; full
+compiler/image validation remains opt-in. The check installs locked dependencies
+and validates a fresh virtualenv's pip/certifi versions and TLS-enabled download.
+
+Rebuilding an image does not repair retained virtual environments or pre-commit
+caches. Recreate affected project environments, run `uv sync --locked --group ci`,
+and use `uv run --group ci pre-commit clean` before recreating hook environments.
+Coordinate cache cleanup with other running work. Review other installed Python
+tools against the notice; this repository change does not update host-wide tools,
+existing containers, or deployed images. Never disable certificate verification.
