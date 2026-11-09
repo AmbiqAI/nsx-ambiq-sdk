@@ -1521,12 +1521,20 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
         if snapshot.policy != _stage_policy_hashes():
             raise IntakeVerificationError("staging policies changed; run stage again")
         stage_snapshot.verify(staged_sdk_root, snapshot)
-        # Exclusive creation protects a prior attempt's scratch contents.
-        tmp.mkdir(parents=False)
+        if tmp.exists():
+            raise IntakeVerificationError(f"existing promotion scratch {tmp}; inspect and remove it before retrying")
     except (OSError, stage_snapshot.SnapshotError) as error:
         raise IntakeVerificationError(f"promotion refused: {error}") from error
 
+    # Claim cleanup before mkdir: a signal can arrive after creation returns.
+    # An exclusive-create collision never authorizes deleting someone else's tree.
+    scratch_owned = True
     try:
+        try:
+            tmp.mkdir(parents=False)
+        except FileExistsError:
+            scratch_owned = False
+            raise
         shutil.copytree(staged_sdk_root, tmp, symlinks=True, dirs_exist_ok=True)
         stage_snapshot.verify(tmp, snapshot)
         assert_no_new_internal_markers(tmp, path_prefix=destination)
@@ -1553,7 +1561,7 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
     except (OSError, stage_snapshot.SnapshotError) as error:
         raise IntakeVerificationError(f"promotion failed: {error}") from error
     finally:
-        if tmp.exists():
+        if scratch_owned and tmp.exists():
             shutil.rmtree(tmp)
 
 

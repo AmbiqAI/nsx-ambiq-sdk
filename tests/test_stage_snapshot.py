@@ -337,3 +337,40 @@ def test_interruption_after_install_restores_previous_state(flow, monkeypatch, e
         assert not flow.provider.exists()
         assert not tmp.exists()
         assert not flow.provider.with_name("sdk.promote-backup").exists()
+
+
+@pytest.mark.parametrize("interruption", [KeyboardInterrupt, SystemExit])
+def test_interrupted_scratch_creation_cleans_owned_directory(flow, monkeypatch, interruption):
+    staged = flow.stage()
+    tmp = flow.provider.with_name("sdk.promote-tmp")
+    original = Path.mkdir
+
+    def interrupted_mkdir(self, *args, **kwargs):
+        result = original(self, *args, **kwargs)
+        if self == tmp:
+            raise interruption()
+        return result
+
+    monkeypatch.setattr(Path, "mkdir", interrupted_mkdir)
+    with pytest.raises(interruption):
+        flow.helper.promote_from_staging(staged, flow.provider, confirm=True)
+    assert_untouched(flow)
+
+
+def test_exclusive_scratch_collision_preserves_other_directory(flow, monkeypatch):
+    staged = flow.stage()
+    tmp = flow.provider.with_name("sdk.promote-tmp")
+    original = Path.mkdir
+
+    def collision(self, *args, **kwargs):
+        if self == tmp:
+            original(self)
+            (self / "other-attempt.txt").write_text("preserve")
+            raise FileExistsError("scratch appeared before exclusive creation")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", collision)
+    with pytest.raises(flow.helper.IntakeError):
+        flow.helper.promote_from_staging(staged, flow.provider, confirm=True)
+    assert (tmp / "other-attempt.txt").read_text() == "preserve"
+    assert (flow.provider / "original.txt").read_text() == "original"
