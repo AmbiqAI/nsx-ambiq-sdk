@@ -9,6 +9,8 @@ ci = [
     "pytest>=8",
     "PyYAML>=6",
     "pre-commit>=3.7",
+    # pre-commit hook environments must seed pip with the corrected trust bundle.
+    "virtualenv>=21.14.12",
     "tomli>=2; python_version < '3.11'",
 ]
 
