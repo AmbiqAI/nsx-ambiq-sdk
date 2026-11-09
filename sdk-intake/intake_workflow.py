@@ -76,6 +76,8 @@ def _load_build_ambiqsuite():
 bas = _load_build_ambiqsuite()
 internal_markers = _load_sibling_module("internal_markers.py", "nsx_intake_internal_markers")
 
+stage_snapshot = _load_sibling_module("stage_snapshot.py", "nsx_intake_stage_snapshot")
+
 TEXT_DIFF_SUFFIXES = (".h", ".hpp", ".inc", ".c", ".md", ".yaml", ".yml", ".txt", ".cmake")
 OWNERSHIP_MANIFEST_RELATIVE = Path("release") / "source-ownership.yaml"
 GENERATED_PROVIDER_ENTRY_ID = "generated-ambiqsuite-provider"
@@ -1366,6 +1368,24 @@ def assert_no_new_internal_markers(staged_sdk_root: Path, *, path_prefix: str, b
     return len(hits)
 
 
+def _stage_policy_hashes() -> dict[str, str]:
+    return {
+        "sanitation-replay.json": stage_snapshot.file_hash(repo_root() / "sdk-intake" / "sanitation-replay.json"),
+        "internal-marker-baseline.yaml": stage_snapshot.file_hash(internal_markers.default_baseline_path()),
+    }
+
+
+def _invalidate_stage(train_id: str, version: str) -> Path:
+    dest = staging_sdk_root(train_id, version)
+    assert_within_repo(dest, label="staging destination")
+    try:
+        stage_snapshot.assert_plain_path(dest)
+        stage_snapshot.invalidate(dest)
+    except (OSError, stage_snapshot.SnapshotError) as error:
+        raise IntakeVerificationError(f"cannot invalidate stage receipt: {error}") from error
+    return dest
+
+
 def stage_provider_payload(
     train: "bas.TrainSpec",
     version: str,
@@ -1373,6 +1393,7 @@ def stage_provider_payload(
     *,
     patches_dir: Path | None,
 ) -> StageResult:
+    dest = _invalidate_stage(train.train_id, version)
     verify_generated_boundary(train)
 
     manifest_path = bas.artifact_root(train, version) / "manifest.yaml"
@@ -1399,8 +1420,6 @@ def stage_provider_payload(
             "run build_ambiqsuite.py to build the full train for this version before staging"
         )
 
-    dest = staging_sdk_root(train.train_id, version)
-    assert_within_repo(dest, label="staging destination")
     bas.promote_provider_payload(train, version, sdk_root, destination_root=dest)
 
     resolved_patches_dir = patches_dir if patches_dir is not None else default_patches_dir(train.train_id)
@@ -1417,6 +1436,7 @@ def stage_provider_payload(
     )
     source_commit = identity.stdout.strip() if identity.returncode == 0 else None
     try:
+        policy = _stage_policy_hashes()
         sanitation = internal_markers.scrub_reviewed_tree(
             dest,
             reviewed_root=bas.provider_sdk_root(train),
@@ -1424,11 +1444,20 @@ def stage_provider_payload(
             source_commit=source_commit,
             replay_path=repo_root() / "sdk-intake" / "sanitation-replay.json",
         )
-    except (internal_markers.InternalMarkerError, OSError) as error:
-        raise IntakeVerificationError(f"provider sanitation failed: {error}") from error
-    assert_no_new_internal_markers(dest, path_prefix=provider_sdk_relative(train))
-    verification = verify_artifact_hashes(dest, dest / "artifact-manifest.yaml")
-    verification.raise_if_not_ok(label=f"staged artifact hashes for {train.train_id} {version}")
+        files = stage_snapshot.capture_files(dest)
+        assert_no_new_internal_markers(dest, path_prefix=provider_sdk_relative(train))
+        verification = verify_artifact_hashes(dest, dest / "artifact-manifest.yaml")
+        verification.raise_if_not_ok(label=f"staged artifact hashes for {train.train_id} {version}")
+        snapshot = stage_snapshot.StageSnapshot(
+            provider_path=provider_sdk_relative(train), train=train.train_id, version=version,
+            source_commit=source_commit, policy=policy, files=files,
+        )
+        stage_snapshot.verify(dest, snapshot)
+        if _stage_policy_hashes() != policy:
+            raise IntakeVerificationError("staging policies changed during validation; run stage again")
+        stage_snapshot.write(dest, snapshot)
+    except (internal_markers.InternalMarkerError, stage_snapshot.SnapshotError, OSError) as error:
+        raise IntakeVerificationError(f"stage validation failed: {error}") from error
 
     return StageResult(
         train_id=train.train_id,
@@ -1478,30 +1507,47 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
             "before retrying."
         )
 
-    verification = verify_artifact_hashes(staged_sdk_root, staged_sdk_root / "artifact-manifest.yaml")
-    verification.raise_if_not_ok(label=f"staged payload at {staged_sdk_root}")
-
-    if tmp.exists():
-        shutil.rmtree(tmp)
-
-    # symlinks=True: defense in depth alongside the `_assert_no_symlinks`
-    # check above -- never silently dereference a symlink into a regular
-    # file/directory containing arbitrary host content.
-    shutil.copytree(staged_sdk_root, tmp, symlinks=True)
     try:
-        if provider_root.exists():
-            provider_root.rename(backup)
-        tmp.rename(provider_root)
-    except BaseException:
-        # Roll back to the pre-promotion state on ANY interruption -- not just
-        # OSError, but also KeyboardInterrupt/SystemExit -- so a maintainer
-        # hitting Ctrl-C mid-swap can never leave the provider tree missing.
-        if not provider_root.exists() and backup.exists():
-            backup.rename(provider_root)
-        raise
-    else:
-        if backup.exists():
-            shutil.rmtree(backup)
+        for path in (staged_sdk_root, provider_root, tmp, backup):
+            stage_snapshot.assert_plain_path(path)
+        paths = [path.resolve() for path in (staged_sdk_root, provider_root, tmp, backup)]
+        if any(a == b or a in b.parents or b in a.parents
+               for index, a in enumerate(paths) for b in paths[index + 1:]):
+            raise IntakeVerificationError("staging, provider, scratch and backup paths must not overlap")
+        snapshot = stage_snapshot.load(staged_sdk_root)
+        destination = provider_root.resolve().relative_to(repo_root().resolve()).as_posix()
+        if snapshot.provider_path != destination:
+            raise IntakeVerificationError("stage receipt is for a different provider destination; run stage again")
+        if snapshot.policy != _stage_policy_hashes():
+            raise IntakeVerificationError("staging policies changed; run stage again")
+        stage_snapshot.verify(staged_sdk_root, snapshot)
+        # Exclusive creation protects a prior attempt's scratch contents.
+        tmp.mkdir(parents=False)
+    except (OSError, stage_snapshot.SnapshotError) as error:
+        raise IntakeVerificationError(f"promotion refused: {error}") from error
+
+    try:
+        shutil.copytree(staged_sdk_root, tmp, symlinks=True, dirs_exist_ok=True)
+        stage_snapshot.verify(tmp, snapshot)
+        assert_no_new_internal_markers(tmp, path_prefix=destination)
+        verification = verify_artifact_hashes(tmp, tmp / "artifact-manifest.yaml")
+        verification.raise_if_not_ok(label=f"promotion candidate at {tmp}")
+        stage_snapshot.verify(tmp, snapshot)
+        if snapshot.policy != _stage_policy_hashes():
+            raise IntakeVerificationError("staging policies changed during promotion; run stage again")
+        try:
+            if provider_root.exists():
+                provider_root.rename(backup)
+            tmp.rename(provider_root)
+        except BaseException:
+            if not provider_root.exists() and backup.exists():
+                backup.rename(provider_root)
+            raise
+        else:
+            if backup.exists():
+                shutil.rmtree(backup)
+    except (OSError, stage_snapshot.SnapshotError) as error:
+        raise IntakeVerificationError(f"promotion failed: {error}") from error
     finally:
         if tmp.exists():
             shutil.rmtree(tmp)
@@ -1529,6 +1575,7 @@ def _resolve_train(train_id: str) -> "bas.TrainSpec":
 
 def _cmd_stage(args: argparse.Namespace) -> int:
     train = _resolve_train(args.train)
+    _invalidate_stage(train.train_id, args.version)
     try:
         sdk_root, _kind, _ref, _commit = bas.resolve_source_root(args)
     except (ValueError, FileNotFoundError) as error:
@@ -1536,6 +1583,7 @@ def _cmd_stage(args: argparse.Namespace) -> int:
     patches_dir = args.patches_dir
     result = stage_provider_payload(train, args.version, sdk_root, patches_dir=patches_dir)
     print(f"==> Staged {result.train_id} {result.version} at {bas.display_path(result.staged_root)}")
+    print(f"    success receipt: {bas.display_path(stage_snapshot.receipt_path(result.staged_root))}")
     print(f"    artifact hashes verified: {len(result.hash_verification.verified)}")
     print(f"    sanitation: {len(result.sanitation.changed_files)} file(s), {result.sanitation.removed_lines} removed line(s)")
     for preserved in result.sanitation.preserved_files:
