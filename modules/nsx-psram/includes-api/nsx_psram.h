@@ -70,29 +70,32 @@ uint32_t nsx_psram_init(const nsx_psram_config_t *cfg);
 uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
 
 /**
- * Blocking PSRAM-to-SRAM transfer.
+ * Blocking PSRAM-to-SRAM transfer. Caller buffers may be reused after return.
  *
- * Arbitrary buffer alignment and byte lengths are supported. On cache-bearing
- * targets NSX performs buffer-range cache maintenance needed for DMA, including
- * a post-transfer range invalidation so the result is CPU-visible. The current
- * AmbiqSuite Apollo5 blocking callback additionally cleans and invalidates the
- * entire D-cache on every transfer; this adds transfer latency and evicts
- * unrelated cache lines. The caller must not access the destination, or
- * concurrently modify data sharing its cache lines, until the call returns.
+ * Apollo5 requires word-aligned PSRAM offsets; caller buffers and final lengths
+ * need not be word-aligned. Transfers use a private 4 KiB DTCM buffer, with CPU
+ * copies to the caller only after successful DMA completion. A failure may leave
+ * an already copied prefix; the remainder is not valid transferred data.
+ * Other families retain their device-driver alignment and cache requirements.
+ *
+ * Apollo5 transfer errors enter FAILED until reset. Retained DMA storage must
+ * remain powered: do not enter deep sleep or power down DTCM after FAILED.
+ * Concurrent Apollo5 blocking calls return the HAL IN_USE status.
  */
 uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
 
 /**
- * Blocking SRAM-to-PSRAM transfer.
+ * Blocking SRAM-to-PSRAM transfer. Source buffers may be reused after return.
  *
- * Arbitrary buffer alignment and byte lengths are supported. Dirty source
- * cache lines are cleaned by range before DMA. The current AmbiqSuite Apollo5
- * blocking callback additionally cleans and invalidates the entire D-cache on
- * every transfer; this adds transfer latency and evicts unrelated cache lines.
- * The caller must not modify the source, or data sharing its cache lines, until
- * the call returns. If the same PSRAM range was previously read through a
- * cacheable XIP aperture, the caller must invalidate that XIP cache range
- * before observing this write through XIP.
+ * Apollo5 copies through the same private DTCM storage and has the read API's
+ * alignment, concurrency and FAILED-state restrictions. Errors may leave a
+ * partially written PSRAM range. Neither operation cancels outstanding DMA on
+ * error; its retained storage is quarantined until reset.
+ *
+ * The caller must keep DTCM powered and prevent deep sleep during transfers.
+ * If PSRAM was read through a cacheable XIP aperture, invalidate that XIP cache
+ * range before observing a write through XIP. Apollo5 does not flush the whole
+ * D-cache as a transfer side effect.
  */
 uint32_t nsx_psram_write(uint32_t offset, const void *buffer, uint32_t length);
 

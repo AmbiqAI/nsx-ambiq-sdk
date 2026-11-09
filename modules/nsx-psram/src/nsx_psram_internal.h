@@ -18,5 +18,7 @@ uint32_t nsx_psram_platform_init(
 uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length);
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length);
+/* Called with interrupts masked after a platform transfer loses safe reuse. */
+void nsx_psram_mark_failed(void);
 
 #endif

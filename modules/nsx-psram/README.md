@@ -186,3 +186,20 @@ Hex x16 DDR mode, and timing scan:
 
 The probe reports a 64 KiB, 32-byte-line D-cache. The benchmark's 256 KiB
 pre-invalidated working set is therefore four times D-cache capacity.
+
+## Apollo5 blocking transfer ownership
+
+Blocking reads and writes use a private 4096-byte, 4096-aligned DTCM buffer.
+This adds CPU copies and up to 4095 bytes of linker alignment padding; it keeps
+late DMA completion away from caller buffers after a timeout. The module checks
+placement before hardware initialization, including with custom linker scripts.
+PSRAM offsets must be word-aligned; caller buffers and final lengths need not be.
+Concurrent blocking calls return HAL `IN_USE`.
+
+A transfer error quarantines the retained DMA state and sets `FAILED` until reset.
+Caller buffers can be reused after return, but the module's DTCM must remain
+powered. Prevent deep sleep during transfers and after `FAILED`; an idle-looking
+software queue is not proof that timed-out DMA stopped. A failed multi-chunk
+transfer may have completed a prefix. Apollo5 no longer performs whole-cache
+maintenance on completion; callers still invalidate cacheable XIP aliases before
+reading a range written through the transfer API.
