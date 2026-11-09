@@ -220,6 +220,9 @@ Initialization is a startup operation and must not overlap other API calls.
 
 `client_pending()` reports unsigned issued-minus-completed for that client;
 `pending()` reports all accepted outstanding async requests. Counters may wrap.
+`nsx_psram_dma_in_progress(bool *)` separately samples hardware DMATIP on
+Apollo5; check its returned status before using the Boolean sample. It does
+not expose vendor handles or replace completion/sleep ownership rules.
 Do not edit them while requests are pending. `client_pending(NULL)` returns
 `UINT32_MAX`, and `client_drain(NULL, ...)` returns `INVALID_HANDLE`.
 `client_drain(client, timeout_us)` checks immediately, then polls every

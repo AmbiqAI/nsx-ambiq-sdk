@@ -253,6 +253,19 @@ uint32_t nsx_psram_pending(void) {
     return pending;
 }
 
+uint32_t nsx_psram_dma_in_progress(bool *in_progress) {
+    if (in_progress == NULL) return NSX_STATUS_INVALID_HANDLE;
+    uint32_t irq = nsx_psram_platform_irq_save();
+    uint32_t status = nsx_psram_validate_transfer(0u, NULL, 0u);
+    if (status == NSX_STATUS_SUCCESS) {
+        status = (g_nsx_psram_info.capabilities & NSX_PSRAM_CAP_ASYNC_READ)
+            ? nsx_psram_platform_dma_in_progress(in_progress)
+            : NSX_PSRAM_STATUS_UNSUPPORTED;
+    }
+    nsx_psram_platform_irq_restore(irq);
+    return status;
+}
+
 bool nsx_psram_can_sleep(void) {
     uint32_t irq = nsx_psram_platform_irq_save();
     bool result = g_nsx_psram_info.state == NSX_PSRAM_STATE_READY &&

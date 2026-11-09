@@ -159,6 +159,13 @@ uint32_t nsx_psram_client_pending(const nsx_psram_client_t *client);
  */
 uint32_t nsx_psram_client_drain(const nsx_psram_client_t *client, uint32_t timeout_us);
 uint32_t nsx_psram_pending(void);
+/** Read Apollo5 hardware DMATIP, independently of software completion counts.
+ * On success, writes a momentary activity sample. Check the returned status:
+ * unsupported/uninitialized/failed state or a HAL error supplies no sample and
+ * leaves *in_progress unchanged. NULL returns INVALID_HANDLE. Thread-only.
+ * A false sample does not release pending buffers or authorize sleep/power-down.
+ */
+uint32_t nsx_psram_dma_in_progress(bool *in_progress);
 /** Conservative snapshot: READY, no blocking transfer, no async requests.
  * False before/during initialization and after FAILED. Combine this check and
  * sleep entry/DTCM-bank power-down under application scheduling/IRQ exclusion.

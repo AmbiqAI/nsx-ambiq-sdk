@@ -43,6 +43,9 @@ static unsigned writes;
 uint32_t nsx_psram_platform_irq_save(void) { return 0u; }
 void nsx_psram_platform_irq_restore(uint32_t state) { (void)state; }
 void nsx_psram_platform_delay_us(uint32_t us) { (void)us; }
+uint32_t nsx_psram_platform_dma_in_progress(bool *value) {
+    (void)value; return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
 uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t length) {
     (void)buffer; (void)length; return NSX_PSRAM_STATUS_UNSUPPORTED;
 }

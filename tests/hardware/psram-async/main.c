@@ -13,20 +13,10 @@ static uint32_t buffers[(NSX_TEST_ASYNC_DEPTH+2)*WORDS] __attribute__((aligned(4
 #define SLOT(i) (buffers+(i)*WORDS)
 static nsx_psram_info_t info;
 static bool ready;
-static void *mspi_handle;
 static volatile uint32_t callback_sequence;
 typedef struct { volatile uint32_t count, status, ipsr, order; } completion_t;
 static completion_t records[NSX_TEST_ASYNC_DEPTH+1];
 
-/* Test instrumentation captures the already initialized controller; it does not
- * add a production vendor-handle accessor. bTIP reads the hardware DMATIP bit. */
-uint32_t __real_am_hal_mspi_nonblocking_transfer(void *, void *, am_hal_mspi_trans_e,
-                                               am_hal_mspi_callback_t, void *);
-uint32_t __wrap_am_hal_mspi_nonblocking_transfer(void *h, void *t, am_hal_mspi_trans_e mode,
-                                               am_hal_mspi_callback_t done, void *ctx) {
-    mspi_handle=h;
-    return __real_am_hal_mspi_nonblocking_transfer(h,t,mode,done,ctx);
-}
 #ifdef NSX_TEST_DONE_EARLY
 uint32_t __real_nsx_psram_read_async(nsx_psram_client_t *,uint32_t,void *,uint32_t,nsx_psram_done_fn,void *);
 uint32_t __wrap_nsx_psram_read_async(nsx_psram_client_t *c,uint32_t o,void *b,uint32_t n,nsx_psram_done_fn f,void *x) {
@@ -144,23 +134,23 @@ static void xip_during_dma(void) {
         uint32_t status=0;
         for(unsigned i=0;i<info.async_depth && status==0;++i)
             status=nsx_psram_read_async(&client,SOURCE_OFFSET,SLOT(i+1),4096,done,&records[i]);
-        am_hal_mspi_status_t before={0},after={0};
-        uint32_t start_status=am_hal_mspi_status_get(mspi_handle,&before);
+        bool before=false,after=false;
+        uint32_t start_status=nsx_psram_dma_in_progress(&before);
         /* CQ startup is asynchronous too: wait a bounded number of samples for
          * actual DMA activity before starting the measured XIP pass. */
-        for(unsigned sample=0;sample<10000 && start_status==0 && !before.bTIP;++sample)
-            start_status=am_hal_mspi_status_get(mspi_handle,&before);
+        for(unsigned sample=0;sample<10000 && start_status==0 && !before;++sample)
+            start_status=nsx_psram_dma_in_progress(&before);
         unsigned bad=0;
         for(unsigned i=0;i<16;++i) if(xip[i]!=xip_source[i]) ++bad;
-        uint32_t end_status=am_hal_mspi_status_get(mspi_handle,&after);
+        uint32_t end_status=nsx_psram_dma_in_progress(&after);
         __enable_irq();
         TEST_ASSERT_EQUAL_UINT32(0,status);
         TEST_ASSERT_EQUAL_UINT32(0,start_status);
         TEST_ASSERT_EQUAL_UINT32(0,end_status);
         TEST_ASSERT_EQUAL_UINT32(0,bad);
-        if(before.bTIP) ++starts;
-        if(after.bTIP) ++ends;
-        if(before.bTIP && after.bTIP) ++overlap;
+        if(before) ++starts;
+        if(after) ++ends;
+        if(before && after) ++overlap;
         TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
         for(unsigned i=0;i<info.async_depth;++i) {
             TEST_ASSERT_EQUAL_UINT32(pass+1,records[i].count);

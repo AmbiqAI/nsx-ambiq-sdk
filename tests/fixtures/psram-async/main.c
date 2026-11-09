@@ -15,6 +15,13 @@ static nsx_psram_client_t a, b;
 static nsx_psram_async_slot_t *queue[NSX_PSRAM_ASYNC_DEPTH];
 static unsigned count;
 static uint32_t callback_status;
+static bool hardware_active;
+static uint32_t hardware_error;
+uint32_t nsx_psram_platform_dma_in_progress(bool *value) {
+    assert(irq);
+    if (!hardware_error) *value=hardware_active;
+    return hardware_error;
+}
 
 static void complete_one(void) {
     assert(!irq && count);
@@ -106,6 +113,9 @@ int main(int argc, char **argv) {
     assert(argc>=2);
     nsx_psram_config_t cfg;
     nsx_psram_info_t info;
+    bool active=true;
+    assert(nsx_psram_dma_in_progress(NULL)==NSX_STATUS_INVALID_HANDLE);
+    assert(nsx_psram_dma_in_progress(&active)==NSX_PSRAM_STATUS_NOT_INITIALIZED && active);
     assert(!nsx_psram_can_sleep());
     assert(nsx_psram_client_pending(NULL)==UINT32_MAX);
     assert(nsx_psram_client_drain(NULL, 1)==NSX_STATUS_INVALID_HANDLE);
@@ -121,12 +131,19 @@ int main(int argc, char **argv) {
     (void)b;
     assert(info.async_depth==0 && !(info.capabilities&NSX_PSRAM_CAP_ASYNC_READ));
     assert(submit(&a)==NSX_PSRAM_STATUS_UNSUPPORTED);
+    assert(nsx_psram_dma_in_progress(&active)==NSX_PSRAM_STATUS_UNSUPPORTED && active);
     assert(nsx_psram_read_async(&a, 0, NULL, 0, done, &calls)==0);
     assert(!submissions && !count && !calls);
     return 0;
 #else
     assert(info.async_depth==NSX_PSRAM_ASYNC_DEPTH && info.capabilities==15u);
     assert(!info.last_transfer_status && nsx_psram_can_sleep());
+    assert(nsx_psram_dma_in_progress(&active)==0 && !active);
+    hardware_active=true;
+    assert(nsx_psram_dma_in_progress(&active)==0 && active);
+    hardware_error=77;active=false;
+    assert(nsx_psram_dma_in_progress(&active)==77 && !active);
+    hardware_error=0;hardware_active=false;
     if (!strcmp(argv[1], "checks")) {
         assert(nsx_psram_read_async(&a, 0, PTR(BASE), 4, NULL, &calls)==NSX_STATUS_INVALID_HANDLE);
         assert(nsx_psram_read_async(&a, UINT32_MAX, NULL, 0, done, &calls)==0);

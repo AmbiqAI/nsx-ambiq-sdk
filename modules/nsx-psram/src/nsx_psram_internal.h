@@ -48,5 +48,6 @@ uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t lengt
 uint32_t nsx_psram_platform_read_async(uint32_t offset, void *buffer, uint32_t length,
                                      nsx_psram_async_slot_t *slot, bool previously_pending);
 void nsx_psram_async_complete(nsx_psram_async_slot_t *slot, uint32_t status);
+uint32_t nsx_psram_platform_dma_in_progress(bool *in_progress);
 
 #endif

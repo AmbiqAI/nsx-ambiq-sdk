@@ -338,6 +338,13 @@ uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t lengt
     return nsx_psram_dma_check_destination(buffer, length);
 }
 
+uint32_t nsx_psram_platform_dma_in_progress(bool *in_progress) {
+    am_hal_mspi_status_t hardware = {0};
+    uint32_t status = am_hal_mspi_status_get(g_nsx_psram_mspi_handle, &hardware);
+    if (status == AM_HAL_STATUS_SUCCESS) *in_progress = hardware.bTIP;
+    return status;
+}
+
 static void nsx_psram_async_hal_done(void *ctx, uint32_t status) {
     __DMB();
     nsx_psram_async_complete(ctx, status);

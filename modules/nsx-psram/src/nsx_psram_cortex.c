@@ -13,5 +13,5 @@ void nsx_psram_platform_irq_restore(uint32_t state) {
 }
 
 void nsx_psram_platform_delay_us(uint32_t us) {
-    am_hal_delay_us(us);
+    nsx_delay_us(us);
 }
