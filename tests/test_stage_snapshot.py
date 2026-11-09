@@ -312,3 +312,28 @@ def test_overlapping_stage_and_scratch_is_not_removed(flow):
         flow.helper.promote_from_staging(scratch, flow.provider, confirm=True)
     assert (scratch / "ordinary.h").read_text() == "#define ORDINARY 1\n"
     assert (flow.provider / "original.txt").read_text() == "original"
+
+
+@pytest.mark.parametrize("existing_provider", [True, False])
+def test_interruption_after_install_restores_previous_state(flow, monkeypatch, existing_provider):
+    staged = flow.stage()
+    if not existing_provider:
+        shutil.rmtree(flow.provider)
+    tmp = flow.provider.with_name("sdk.promote-tmp")
+    original = Path.rename
+
+    def interrupted_rename(self, target):
+        result = original(self, target)
+        if self == tmp and Path(target) == flow.provider:
+            raise KeyboardInterrupt()
+        return result
+
+    monkeypatch.setattr(Path, "rename", interrupted_rename)
+    with pytest.raises(KeyboardInterrupt):
+        flow.helper.promote_from_staging(staged, flow.provider, confirm=True)
+    if existing_provider:
+        assert_untouched(flow)
+    else:
+        assert not flow.provider.exists()
+        assert not tmp.exists()
+        assert not flow.provider.with_name("sdk.promote-backup").exists()

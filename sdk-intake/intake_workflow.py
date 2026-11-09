@@ -1540,6 +1540,10 @@ def promote_from_staging(staged_sdk_root: Path, provider_root: Path, *, confirm:
                 provider_root.rename(backup)
             tmp.rename(provider_root)
         except BaseException:
+            # An interruption may arrive after rename installed the new tree.
+            # Move it back to our scratch path before restoring the old state.
+            if not tmp.exists() and provider_root.exists():
+                provider_root.rename(tmp)
             if not provider_root.exists() and backup.exists():
                 backup.rename(provider_root)
             raise
