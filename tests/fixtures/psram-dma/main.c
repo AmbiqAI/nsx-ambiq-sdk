@@ -85,17 +85,20 @@ int main(int argc, char **argv) {
         assert(!memcmp(data + 1, psram + 4, 8195));
         assert(data[0] == 0x5a && data[8196] == 0x5a);
         assert(submitted == 3 && !irq && !poisoned);
-        memset(data + 1, 0xa7, 8195);
-        assert(nsx_psram_dma_write(4, data + 1, 8195) == 0);
-        assert(!memcmp(data + 1, psram + 4, 8195));
+        memset(data + 1, 0xa7, 8196);
+        assert(nsx_psram_dma_write(4, data + 1, 8196) == 0);
+        assert(!memcmp(data + 1, psram + 4, 8196));
         assert(psram[3] == (uint8_t)(3 * 17 + 9));
-        assert(psram[8199] == (uint8_t)(8199 * 17 + 9));
+        assert(psram[8200] == (uint8_t)(8200 * 17 + 9));
         assert(submitted == 6 && barriers >= 18);
         return 0;
     }
     if (!strcmp(argv[1], "alignment")) {
         assert(nsx_psram_dma_read(1, data, 4) == AM_HAL_STATUS_INVALID_OPERATION);
         assert(nsx_psram_dma_write(3, data, 4) == AM_HAL_STATUS_INVALID_OPERATION);
+        const unsigned invalid_lengths[] = {1, 2, 3, 45, 4095, 4097, 8195};
+        for (unsigned i=0; i<sizeof(invalid_lengths)/sizeof(invalid_lengths[0]); ++i)
+            assert(nsx_psram_dma_write(0, data, invalid_lengths[i]) == AM_HAL_STATUS_INVALID_OPERATION);
         assert(!submitted && !requests && !poisoned && !irq);
         assert(nsx_psram_dma_read(0, data, 3) == 0);
         return 0;
@@ -122,7 +125,7 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "later-read-error") || !strcmp(argv[1], "later-write-error")) {
         error_at = 2;
         bool write = !strcmp(argv[1], "later-write-error");
-        uint32_t status = write ? nsx_psram_dma_write(0, data, 8195)
+        uint32_t status = write ? nsx_psram_dma_write(0, data, 8196)
                                 : nsx_psram_dma_read(0, data, 8195);
         assert(status == 123 && submitted == 2 && poisoned == 1);
         if (!write) {

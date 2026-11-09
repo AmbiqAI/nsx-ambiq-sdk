@@ -136,7 +136,8 @@ blocking offset transfers remain available.
 ### DMA and cache coherency
 
 On Apollo5, the synchronous API accepts arbitrary caller-buffer alignment and
-byte lengths with word-aligned PSRAM offsets. DMA uses retained, noncacheable
+read lengths with word-aligned PSRAM offsets. Write lengths must be multiples
+of four; partial-word DMA writes can overwrite adjacent PSRAM bytes. DMA uses retained, noncacheable
 DTCM storage; CPU copies move data between that storage and the caller. Neither
 caller-buffer cache maintenance nor whole-cache invalidation is needed for this
 path. The caller must not concurrently access its buffer until the call returns.
@@ -176,7 +177,9 @@ Blocking reads and writes use a private 4096-byte, 4096-aligned DTCM buffer.
 This adds CPU copies and up to 4095 bytes of linker alignment padding; it keeps
 late DMA completion away from caller buffers after a timeout. The module checks
 placement before hardware initialization, including with custom linker scripts.
-PSRAM offsets must be word-aligned; caller buffers and final lengths need not be.
+PSRAM offsets and write lengths must be multiples of four. Caller buffers and
+read lengths need not be word-aligned. Unsupported write lengths are rejected
+before submitting any chunk; the adapter does not read/modify/write neighbors.
 Concurrent blocking calls return HAL `IN_USE`.
 
 A transfer error quarantines the retained DMA state and sets `FAILED` until reset.

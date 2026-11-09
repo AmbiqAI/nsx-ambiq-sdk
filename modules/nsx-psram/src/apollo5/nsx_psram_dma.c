@@ -76,7 +76,7 @@ static uint32_t nsx_psram_dma_transfer(
         am_hal_interrupt_master_set(irq);
         return AM_HAL_STATUS_IN_USE;
     }
-    if ((offset & 3u) != 0u) {
+    if ((offset & 3u) != 0u || (write && (length & 3u) != 0u)) {
         am_hal_interrupt_master_set(irq);
         return AM_HAL_STATUS_INVALID_OPERATION;
     }

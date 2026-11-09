@@ -70,13 +70,15 @@ uint32_t nsx_psram_init(const nsx_psram_config_t *cfg);
 uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
 
 /**
- * Blocking PSRAM-to-SRAM transfer. Caller buffers may be reused after return.
+ * Blocking PSRAM-to-SRAM transfer.
+ * Apollo5 caller buffers may be reused after return, including on error.
  *
  * Apollo5 requires word-aligned PSRAM offsets; caller buffers and final lengths
  * need not be word-aligned. Transfers use a private 4 KiB DTCM buffer, with CPU
  * copies to the caller only after successful DMA completion. A failure may leave
  * an already copied prefix; the remainder is not valid transferred data.
- * Other families retain their device-driver alignment and cache requirements.
+ * Other families retain their device-driver alignment, cache and error-lifetime
+ * requirements; timeout does not guarantee DMA has stopped using their buffers.
  *
  * Apollo5 transfer errors enter FAILED until reset. Retained DMA storage must
  * remain powered: do not enter deep sleep or power down DTCM after FAILED.
@@ -85,10 +87,13 @@ uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
 uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
 
 /**
- * Blocking SRAM-to-PSRAM transfer. Source buffers may be reused after return.
+ * Blocking SRAM-to-PSRAM transfer.
+ * Apollo5 source buffers may be reused after return, including on error.
  *
  * Apollo5 copies through the same private DTCM storage and has the read API's
- * alignment, concurrency and FAILED-state restrictions. Errors may leave a
+ * offset alignment, concurrency and FAILED-state restrictions. Apollo5 write
+ * lengths must also be multiples of four: partial-word DMA writes can change
+ * adjacent PSRAM bytes. Invalid lengths fail before submission. Errors may leave a
  * partially written PSRAM range. Neither operation cancels outstanding DMA on
  * error; its retained storage is quarantined until reset.
  *
