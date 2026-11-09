@@ -16,6 +16,7 @@ capabilities:
   - external-memory
   - xip
   - synchronous-transfer
+  - asynchronous-transfer
   - timing-diagnostics
 
 use_cases:

@@ -1,5 +1,9 @@
 nsx_require_target(nsx::soc_hal nsx-psram)
 nsx_require_target(nsx::board_flags nsx-psram)
+set(NSX_PSRAM_ASYNC_DEPTH 8 CACHE STRING "Maximum outstanding PSRAM reads (1-32)")
+if(NOT NSX_PSRAM_ASYNC_DEPTH MATCHES "^([1-9]|[12][0-9]|3[0-2])$")
+    message(FATAL_ERROR "NSX_PSRAM_ASYNC_DEPTH must be an integer in [1, 32].")
+endif()
 if(NOT DEFINED NSX_SOC_FAMILY)
     message(FATAL_ERROR "NSX_SOC_FAMILY must be defined before nsx-psram is added.")
 endif()
@@ -57,7 +61,7 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
             message(FATAL_ERROR "nsx-psram does not yet have an MSPI mapping for NSX_AMBIQ_BOARD_NAME='${NSX_AMBIQ_BOARD_NAME}'.")
         endif()
     endif()
-    # All Apollo5-class EVBs staged here share the same
+    # The Apollo510 and Apollo510B EVBs share the
     # AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA BSP presence macro and are populated
     # with an AP Memory APS512-class Hex (x16) DDR PSRAM on MSPI0. The correct
     # AmbiqSuite driver family for these parts is the "BA" (1.2V) family
@@ -109,17 +113,9 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
     # confirmed the populated APS512XXB is 512 Mbit = 64 MB (+32 MB holds
     # distinct data; +64 MB falls off the MSPI aperture).
     #
-    # apollo330mP_evb has NOT been hardware-validated, but per product-team
-    # guidance it is very similar to apollo510b_evb, so it tracks apollo510b_evb
-    # and is assigned the "BA" driver (previously "N", on the same similarity
-    # rationale, before apollo510b_evb itself was validated as BA). apollo510dL_evb
-    # has no hardware validation: the rev 2 EVB does not populate its PSRAM
-    # footprint (board datasheet), and on such a board firmware built with
-    # either driver reports psram_init_failed. It is deliberately NOT
-    # defaulted either way: NSX_PSRAM_USE_BA_DRIVER must be set explicitly by the
-    # caller (e.g. via -DNSX_PSRAM_USE_BA_DRIVER=0/1) until it is validated one way
-    # or the other, at which point it should move into one of the explicit branches
-    # below like apollo330mP_evb did.
+    # Apollo330P/510L are unvalidated and their staged BSPs advertise N, not BA.
+    # Rev 2 boards do not populate PSRAM. Require an explicit driver selection;
+    # compilation is not evidence that a board has a compatible fitted device.
     if(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510_evb"
        OR NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510b_evb")
         # Both 510 EVBs: BA driver + 64 MB, hardware-validated (see notes above;
@@ -129,17 +125,10 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
         if(NOT DEFINED NSX_PSRAM_DEVICE_SIZE_BYTES)
             set(NSX_PSRAM_DEVICE_SIZE_BYTES 67108864u)
         endif()
-    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo330mP_evb")
-        # apollo330mP_evb: driver family inferred from apollo510b_evb
-        # similarity, NOT hardware-validated. Size deliberately stays at the
-        # conservative 32 MB default until proven on hardware — advertising
-        # 64 MB without validation would let callers place data in an upper
-        # half that may alias or fault.
-        set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
-        set(NSX_PSRAM_USE_BA_DRIVER 1)
-    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510dL_evb")
+    elseif(NSX_AMBIQ_BOARD_NAME STREQUAL "apollo330mP_evb"
+           OR NSX_AMBIQ_BOARD_NAME STREQUAL "apollo510dL_evb")
         if(NOT DEFINED NSX_PSRAM_USE_BA_DRIVER)
-            message(FATAL_ERROR "nsx-psram has no validated PSRAM driver choice for apollo510dL_evb yet. Pass -DNSX_PSRAM_USE_BA_DRIVER=0 (N driver) or =1 (BA driver) explicitly once this has been confirmed on real hardware, then update this CMakeLists.txt to add an explicit branch for it.")
+            message(FATAL_ERROR "nsx-psram has no validated PSRAM driver choice for ${NSX_AMBIQ_BOARD_NAME}. Select -DNSX_PSRAM_USE_BA_DRIVER=0 (N) or =1 (BA) explicitly to match the BSP and fitted device; compile-only validation does not establish hardware support.")
         endif()
         if(NSX_PSRAM_USE_BA_DRIVER)
             set(NSX_PSRAM_DEVICE_SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/devices/am_devices_mspi_psram_aps25616ba_1p2v.c)
@@ -170,7 +159,7 @@ elseif(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
         NSX_PSRAM_DEVICE_SIZE_BYTES=${NSX_PSRAM_DEVICE_SIZE_BYTES}
         NSX_PSRAM_USE_BA_DRIVER=${NSX_PSRAM_USE_BA_DRIVER}
         NSX_PSRAM_RUN_DDR_TIMING_SCAN=${NSX_PSRAM_RUN_DDR_TIMING_SCAN}
-        NSX_PSRAM_PLATFORM_CAPABILITIES=7u
+        NSX_PSRAM_PLATFORM_CAPABILITIES=15u
     )
 else()
     set(NSX_PSRAM_EXTRA_COMPILE_DEFINITIONS
@@ -183,6 +172,7 @@ endif()
 
 add_library(nsx_psram STATIC
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_psram.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_psram_cortex.c
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_PSRAM_ARCH_DIR}/nsx_psram.c
     ${NSX_PSRAM_DEVICE_SOURCE}
 )
@@ -200,6 +190,7 @@ target_link_libraries(nsx_psram PUBLIC
 )
 
 target_compile_definitions(nsx_psram PRIVATE ${NSX_PSRAM_EXTRA_COMPILE_DEFINITIONS})
+target_compile_definitions(nsx_psram PRIVATE NSX_PSRAM_ASYNC_DEPTH=${NSX_PSRAM_ASYNC_DEPTH})
 
 target_include_directories(nsx_psram PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-api>

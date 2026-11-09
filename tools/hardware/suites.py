@@ -174,8 +174,20 @@ PSRAM_BOARDS = ('apollo510_evb', 'apollo510b_evb')
 
 def psram_options(repo: Path, output: Path, board: str, fault: str,
                   sdk_root: Path | None = None) -> list[str]:
-    if board not in PSRAM_BOARDS or fault not in ('none', 'psram-transfer-flush'):
+    if board not in PSRAM_BOARDS or fault not in ('none', 'psram-transfer-flush', 'psram-no-calibration-flush'):
         raise ValueError('Blocking PSRAM smoke requires AP510/AP510B and a supported fault mode')
+    if fault == 'psram-no-calibration-flush':
+        device = 'am_devices_mspi_psram_aps25616ba_1p2v.c'
+        source = (sdk_root or repo) / 'modules/nsx-psram/src/apollo5/devices' / device
+        text = source.read_text()
+        needle = ('/* Clear calibration readback while XIP is still usable, before teardown. */\n'
+                  '    am_hal_cachectrl_dcache_invalidate(NULL, true);')
+        if text.count(needle) != 1:
+            raise ValueError('Calibration fault requires exactly one reviewed cleanup wrapper')
+        output.mkdir(parents=True, exist_ok=True)
+        mutant = output / device
+        mutant.write_text(text.replace(needle, '/* test build: omit calibration cleanup */'))
+        return [f'-DNSX_TEST_PSRAM_DEVICE_OVERRIDE={mutant}']
     return []
 
 
@@ -184,4 +196,18 @@ PSRAM_BLOCKING = Suite('psram-blocking', 'tests/hardware/test_psram.py::test_psr
                        'tests/hardware/psram', 'psram_blocking.elf', configure=psram_options)
 
 
-SUITES = (PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+def psram_async_options(repo: Path, output: Path, board: str, fault: str,
+                        sdk_root: Path | None = None) -> list[str]:
+    if board not in PSRAM_BOARDS or fault not in (
+            'none', 'async-done-early', 'async-global-drain', 'async-drain-early'):
+        raise ValueError('Async PSRAM requires AP510/AP510B and a supported fault mode')
+    return []
+
+
+PSRAM_ASYNC = Suite('psram-async', 'tests/hardware/test_psram_async.py::test_psram_async',
+                    ('initialize', 'dtcm_sizes_and_edges', 'queue_depth', 'xip_during_dma',
+                     'two_clients', 'refusals', 'blocking_exclusion', 'normal_sleep_wait'),
+                    'tests/hardware/psram-async', 'psram_async.elf', configure=psram_async_options)
+
+
+SUITES = (PSRAM_ASYNC, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

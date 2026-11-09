@@ -8,8 +8,9 @@ extern "C" {
 #endif
 
 #define NSX_PSRAM_V1_0_0 { .major = 1, .minor = 0, .revision = 0 }
+#define NSX_PSRAM_V1_1_0 { .major = 1, .minor = 1, .revision = 0 }
 #define NSX_PSRAM_OLDEST_SUPPORTED_VERSION NSX_PSRAM_V1_0_0
-#define NSX_PSRAM_CURRENT_VERSION NSX_PSRAM_V1_0_0
+#define NSX_PSRAM_CURRENT_VERSION NSX_PSRAM_V1_1_0
 #define NSX_PSRAM_API_ID 0xCA0012
 
 typedef enum {
@@ -18,13 +19,23 @@ typedef enum {
     NSX_PSRAM_STATUS_UNSUPPORTED,
     NSX_PSRAM_STATUS_ALREADY_INITIALIZED,
     NSX_PSRAM_STATUS_FAILED_STATE,
+    NSX_PSRAM_STATUS_BUSY,
+    NSX_PSRAM_STATUS_TIMEOUT,
+    NSX_PSRAM_STATUS_DESTINATION,
+    NSX_PSRAM_STATUS_ALIGNMENT,
+    NSX_PSRAM_STATUS_TRANSFER_FAILED,
 } nsx_psram_status_t;
 
 #define NSX_PSRAM_CAP_SYNC_TRANSFER (1u << 0)
 #define NSX_PSRAM_CAP_XIP           (1u << 1)
 #define NSX_PSRAM_CAP_TIMING_SCAN   (1u << 2)
+#define NSX_PSRAM_CAP_ASYNC_READ    (1u << 3)
+
+/* ADR 0011; Apollo510/510B ERR014/ERR018: no DTCM DMA across a 4 KiB window. */
+#define NSX_PSRAM_DTCM_DMA_BOUNDARY 4096u
 
 extern const nsx_core_api_t nsx_psram_V1_0_0;
+extern const nsx_core_api_t nsx_psram_V1_1_0;
 extern const nsx_core_api_t nsx_psram_oldest_supported_version;
 extern const nsx_core_api_t nsx_psram_current_version;
 
@@ -56,6 +67,8 @@ typedef struct {
     bool xip_enabled;
     nsx_psram_timing_status_t timing_status;
     uint8_t rxdqs_delay;
+    uint32_t async_depth;
+    uint32_t last_transfer_status;
 } nsx_psram_info_t;
 
 typedef struct {
@@ -82,7 +95,9 @@ uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
  *
  * Apollo5 transfer errors enter FAILED until reset. Retained DMA storage must
  * remain powered: do not enter deep sleep or power down DTCM after FAILED.
- * Concurrent Apollo5 blocking calls return the HAL IN_USE status.
+ * Concurrent blocking calls and blocking/async contention return BUSY.
+ * Apollo5 offset/write-length validation returns ALIGNMENT. Actual HAL
+ * submission errors retain their original status.
  */
 uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
 
@@ -98,11 +113,59 @@ uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
  * error; its retained storage is quarantined until reset.
  *
  * The caller must keep DTCM powered and prevent deep sleep during transfers.
- * If PSRAM was read through a cacheable XIP aperture, invalidate that XIP cache
- * range before observing a write through XIP. Apollo5 does not flush the whole
+ * Invalidate the corresponding XIP cache range before observing a DMA write
+ * through XIP. Apollo5 does not flush the whole
  * D-cache as a transfer side effect.
  */
 uint32_t nsx_psram_write(uint32_t offset, const void *buffer, uint32_t length);
+
+/** Caller-owned, zero-initialized; use each client from one thread at a time.
+ * Counters wrap modulo 2^32. Do not edit them or reuse the client while pending.
+ */
+typedef struct {
+    volatile uint32_t issued;
+    volatile uint32_t completed;
+} nsx_psram_client_t;
+
+/** Runs once per accepted request in the MSPI IRQ: SUCCESS or TRANSFER_FAILED.
+ * No PSRAM API re-entry (including queries) or blocking calls from this callback.
+ * A refused/zero-length request has no callback. Callback may precede submit's
+ * return: prepare application completion state before calling read_async.
+ */
+typedef void (*nsx_psram_done_fn)(void *ctx, uint32_t status);
+
+/** Queue a direct PSRAM-to-DTCM DMA read (Apollo5 only).
+ * Offset, buffer and length must be word aligned. The destination must be wholly
+ * in canonical DTCM and one 4 KiB window. No copy or cache maintenance is added.
+ * Client, destination and callback context remain alive and exclusive until
+ * completion; a drain timeout does not cancel DMA or release that ownership.
+ * Keep destination DTCM powered and prohibit deep sleep while active.
+ *
+ * Checks: client/done, state, zero length, buffer, PSRAM bounds, capability,
+ * alignment, destination, contention/depth, then HAL submission. Refusals leave
+ * counters/queue unchanged. Actual HAL refusal statuses are preserved.
+ * ISR/task notification is legal only at an appropriate configured IRQ priority.
+ */
+uint32_t nsx_psram_read_async(nsx_psram_client_t *client, uint32_t offset,
+                            void *buffer, uint32_t length,
+                            nsx_psram_done_fn done, void *ctx);
+/** Outstanding requests for one client, unsigned issued - completed.
+ * NULL returns UINT32_MAX; it does not represent an idle client.
+ */
+uint32_t nsx_psram_client_pending(const nsx_psram_client_t *client);
+/** Poll every microsecond; timeout_us==0 performs one check. Success means no
+ * requests pending for this client, not successful data. Latch callback errors.
+ * NULL returns INVALID_HANDLE. Timeout leaves requests and buffer ownership live.
+ */
+uint32_t nsx_psram_client_drain(const nsx_psram_client_t *client, uint32_t timeout_us);
+uint32_t nsx_psram_pending(void);
+/** Conservative snapshot: READY, no blocking transfer, no async requests.
+ * False before/during initialization and after FAILED. Combine this check and
+ * sleep entry/DTCM-bank power-down under application scheduling/IRQ exclusion.
+ * This is not a persistent power lock or authorization for other peripherals.
+ * All async entry points and queries are thread-only, including can_sleep.
+ */
+bool nsx_psram_can_sleep(void);
 
 #ifdef __cplusplus
 }

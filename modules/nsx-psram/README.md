@@ -22,7 +22,7 @@ works on this hardware:
 |---|---|---|
 | `apollo510b_evb` | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") | 64 MB (hardware-validated) |
 | `apollo510_evb` (regular, non-Blue) | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA") | 64 MB (hardware-validated) |
-| `apollo330mP_evb` | `am_devices_mspi_psram_aps25616ba_1p2v` ("BA", **unvalidated**; tracks `apollo510b_evb` per product-team guidance) | 32 MB conservative default |
+| `apollo330mP_evb` | Explicit `NSX_PSRAM_USE_BA_DRIVER=0/1` required; staged BSP advertises N; no fitted PSRAM validated | 32 MB conservative default |
 | `apollo510dL_evb` | Not defaulted -- set `-DNSX_PSRAM_USE_BA_DRIVER=0/1` explicitly until validated. |
 
 **The physical part marking does NOT tell you which driver to use.** The
@@ -31,8 +31,7 @@ works on this hardware:
 `bsp_pins.src` also carries a part-name comment. Neither is a reliable guide
 to the AmbiqSuite driver family: despite the "N" part marking, this board's
 DDR read/write data path is only correct with the **"BA"** driver. Only real
-hardware validation (or explicit product-team confirmation, as used for
-`apollo330mP_evb`) should decide a board's driver requirement.
+hardware validation (with a matching BSP) should decide a board's driver requirement.
 
 `CMakeLists.txt` selects `NSX_PSRAM_DEVICE_SOURCE` (and the
 `NSX_PSRAM_USE_BA_DRIVER` compile definition consumed by
@@ -183,7 +182,9 @@ placement before hardware initialization, including with custom linker scripts.
 PSRAM offsets and write lengths must be multiples of four. Caller buffers and
 read lengths need not be word-aligned. Unsupported write lengths are rejected
 before submitting any chunk; the adapter does not read/modify/write neighbors.
-Concurrent blocking calls return HAL `IN_USE`.
+Concurrent blocking calls and blocking/async contention return
+`NSX_PSRAM_STATUS_BUSY`. Apollo5 offset/write-length validation returns
+`NSX_PSRAM_STATUS_ALIGNMENT`; actual HAL refusal statuses are preserved.
 
 A transfer error quarantines the retained DMA state and sets `FAILED` until reset.
 Caller buffers can be reused after return, but the module's DTCM must remain
@@ -192,3 +193,66 @@ software queue is not proof that timed-out DMA stopped. A failed multi-chunk
 transfer may have completed a prefix. Apollo5 performs no whole-cache
 maintenance on completion; callers still invalidate cacheable XIP aliases before
 reading a range written through the transfer API.
+
+## Asynchronous reads (API 1.1)
+
+`nsx_psram_read_async()` queues one direct PSRAM-to-DTCM DMA read on Apollo5.
+API 1.0 configurations remain accepted. Apollo3/Apollo4 report `UNSUPPORTED`
+for nonempty async reads; their capability bit is clear and `async_depth` is zero.
+The capability describes the compiled platform, not fitted hardware: check
+initialization and the exact board's PSRAM support before submitting requests.
+
+Initialize each caller-owned `nsx_psram_client_t` to zero and use it from one
+thread at a time. Offset, destination and length must be multiples of four.
+The whole destination must fit canonical DTCM and one 4096-byte DTCM window
+(ADR 0011 and Apollo510/510B ERR014/ERR018). Cacheable aliases and SSRAM are
+rejected. The queue has `NSX_PSRAM_ASYNC_DEPTH` slots (CMake cache setting,
+default 8, range 1–32); contention or exhaustion returns `BUSY`.
+
+An accepted request calls `done(ctx, status)` once from the MSPI interrupt,
+with success or `TRANSFER_FAILED`. The latter records the original HAL status
+in `get_info().last_transfer_status`, a diagnostic rather than a per-client
+success channel. Prepare application completion state **before** submitting:
+completion can run before `read_async()` returns. A refused or zero-length
+request has no callback. No PSRAM API, including queries, may be called from
+interrupts/callbacks; task notification must respect its RTOS IRQ-priority rules.
+Initialization is a startup operation and must not overlap other API calls.
+
+`client_pending()` reports unsigned issued-minus-completed for that client;
+`pending()` reports all accepted outstanding async requests. Counters may wrap.
+Do not edit them while requests are pending. `client_pending(NULL)` returns
+`UINT32_MAX`, and `client_drain(NULL, ...)` returns `INVALID_HANDLE`.
+`client_drain(client, timeout_us)` checks immediately, then polls every
+microsecond up to its budget. A zero timeout performs one check. Drain success
+means completion, **not** successful data; latch errors in the callback before
+consuming the destination. Timeout never cancels DMA: client, callback context
+and destination remain alive and unavailable to the caller until completion.
+Async reads do not use the blocking bounce buffer or add copies/cache work.
+XIP is still a separate alias: invalidate its corresponding range before
+observing DMA writes; direct XIP writes require a bus-write flush before DMA reads.
+
+Blocking reads/writes and async reads exclude each other. A blocking platform
+error marks the module FAILED until reset on every family; this does not cancel
+DMA or repair Apollo3/Apollo4's existing timeout buffer-lifetime limitations.
+Retained Apollo5 blocking storage must remain powered after failure.
+
+`nsx_psram_can_sleep()` is a conservative snapshot: READY, no blocking operation,
+and no pending async requests. It returns false before/during initialization and
+after FAILED. Use it when deciding both deep-sleep entry and DTCM bank power-down,
+under application scheduling/interrupt exclusion extending through that decision.
+Keep DMA storage powered throughout active transfers. The snapshot is not a
+persistent power lock, and says nothing about unrelated peripherals.
+
+Local board validation is opt-in:
+
+```sh
+uv run --group hardware pytest tests/hardware/test_psram_async.py --hardware \
+  --board apollo510_evb --probe PROBE_SERIAL --gcc-root /path/to/gcc
+```
+
+The suite checks DTCM sizes/edges, actual queue capacity, per-client completion,
+refusals, blocking exclusion, ordinary WFI sleep, and XIP/DMA coexistence. Each
+XIP pass invalidates its own range and samples hardware DMATIP at both ends;
+at least one pass must observe active DMA at both endpoints. Deliberately wrong
+callback/drain builds exercise the suite's failure detection. This is not a
+cold-boot, deep-sleep or high-clock qualification.

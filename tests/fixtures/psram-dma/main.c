@@ -71,6 +71,21 @@ int main(int argc, char **argv) {
     memset(data, 0x5a, sizeof(data));
     for (unsigned i = 0; i < sizeof(psram); ++i) { psram[i] = (uint8_t)(i * 17 + 9); }
     nsx_psram_dma_configure(psram, 48000000u);
+    if (!strcmp(argv[1], "destination")) {
+        uintptr_t base = DTCM_BASEADDR;
+        uintptr_t end = base + DTCM_MAX_SIZE;
+        const uintptr_t good[] = {base, base + 4096, end - 4096};
+        for (unsigned i=0;i<sizeof(good)/sizeof(good[0]);++i) {
+            assert(nsx_psram_dma_check_destination((void *)good[i],4096)==0);
+            assert(nsx_psram_dma_check_destination((void *)(good[i]+4092),4)==0);
+        }
+        const uintptr_t bad[] = {base-4,base+4092,end-4,end,0x30000000u,UINTPTR_MAX-3};
+        for (unsigned i=0;i<sizeof(bad)/sizeof(bad[0]);++i)
+            assert(nsx_psram_dma_check_destination((void *)bad[i],8)==NSX_PSRAM_STATUS_DESTINATION);
+        assert(nsx_psram_dma_check_destination((void *)base,4100)==NSX_PSRAM_STATUS_DESTINATION);
+        assert(nsx_psram_dma_check_destination((void *)base,UINT32_MAX)==NSX_PSRAM_STATUS_DESTINATION);
+        return 0;
+    }
     if (!strcmp(argv[1], "placement")) {
 #ifdef EXPECT_BAD_PLACEMENT
         assert(nsx_psram_dma_validate_storage() == AM_HAL_STATUS_INVALID_ARG);

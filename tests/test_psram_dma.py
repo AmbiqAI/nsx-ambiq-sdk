@@ -40,3 +40,10 @@ def test_psram_dma_rejects_bad_placement(repo_root: Path, tmp_path: Path) -> Non
     binary = tmp_path / "bad-placement"
     _compile(repo_root, binary, "-DDTCM_BASEADDR=0x20000000u", "-DEXPECT_BAD_PLACEMENT")
     subprocess.run([str(binary), "placement"], check=True, timeout=10)
+
+
+@pytest.mark.parametrize('dtcm_bytes', [256 * 1024, 512 * 1024])
+def test_psram_dma_destination_windows(repo_root: Path, tmp_path: Path, dtcm_bytes: int) -> None:
+    binary = tmp_path / 'destination'
+    _compile(repo_root, binary, '-DDTCM_BASEADDR=0x20000000u', f'-DDTCM_MAX_SIZE={dtcm_bytes}u')
+    subprocess.run([str(binary), 'destination'], check=True, timeout=10)

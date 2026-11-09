@@ -200,3 +200,14 @@ uint32_t nsx_psram_platform_write(
     return am_devices_mspi_psram_aps25616n_ddr_write(
         g_nsx_psram_device_handle, (uint8_t *)buffer, offset, length, true);
 }
+
+uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t length) {
+    (void)buffer; (void)length;
+    return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
+
+uint32_t nsx_psram_platform_read_async(uint32_t offset, void *buffer, uint32_t length,
+                                     nsx_psram_async_slot_t *slot, bool previously_pending) {
+    (void)offset; (void)buffer; (void)length; (void)slot; (void)previously_pending;
+    return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
