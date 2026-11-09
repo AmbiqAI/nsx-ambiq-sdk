@@ -135,30 +135,13 @@ blocking offset transfers remain available.
 
 ### DMA and cache coherency
 
-The synchronous API accepts arbitrary SRAM buffer alignment and byte lengths.
-On Apollo5, NSX `nsx_psram_read()` clean-invalidates every cache line
-overlapping the destination before starting DMA, then robustly invalidates the
-same range after DMA completes, including when the transfer reports an error.
-The pre-clean preserves dirty bytes outside an unaligned destination that share
-its first or last cache line; the post-invalidate makes DMA-written bytes
-visible to the CPU. NSX `nsx_psram_write()` cleans every source cache line
-before DMA. Both calls return only after the blocking device transfer and
-required caller-buffer range maintenance complete.
-
-The current vendored AmbiqSuite Apollo5 blocking-transfer callback also invokes
-`am_hal_cachectrl_dcache_invalidate(NULL, true)` when each DMA completes. That
-operation cleans and invalidates the *entire* D-cache in addition to NSX's
-targeted range operations. It can dominate short-transfer latency, write back
-unrelated dirty data, and evict unrelated working sets, so repeated small
-blocking transfers can have a substantial whole-cache performance cost. This
-is an AmbiqSuite Apollo5 driver behavior, not an NSX API guarantee; NSX retains
-its explicit post-transfer range invalidation for correctness if the vendor
-callback changes or is replaced.
-
-The caller must not access the DMA buffer, or concurrently modify other data
-sharing its cache lines, until the synchronous call returns. This is the usual
-exclusive-ownership requirement for cache-maintained DMA. No buffer or length
-alignment is otherwise required.
+On Apollo5, the synchronous API accepts arbitrary caller-buffer alignment and
+byte lengths with word-aligned PSRAM offsets. DMA uses retained, noncacheable
+DTCM storage; CPU copies move data between that storage and the caller. Neither
+caller-buffer cache maintenance nor whole-cache invalidation is needed for this
+path. The caller must not concurrently access its buffer until the call returns.
+See the blocking-transfer ownership rules below for timeout and power behavior.
+Apollo3/Apollo4 retain their existing device-driver paths.
 
 The XIP aperture is a separate cacheable alias. A DMA write updates PSRAM but
 does not evict an already-cached XIP copy; invalidate the corresponding XIP
