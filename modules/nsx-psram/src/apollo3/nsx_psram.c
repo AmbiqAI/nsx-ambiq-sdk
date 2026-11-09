@@ -169,9 +169,11 @@ uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length)
         g_nsx_psram_device_handle, buffer, offset, length, true);
 }
 
-uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
     (void)offset; (void)length; (void)write;
-    return NSX_STATUS_SUCCESS;
+    uintptr_t address = (uintptr_t)buffer;
+    return address >= AM_HAL_FLASH_DTCM_START && address <= AM_HAL_FLASH_DTCM_END
+        ? NSX_PSRAM_STATUS_DESTINATION : NSX_STATUS_SUCCESS;
 }
 
 uint32_t nsx_psram_platform_write(

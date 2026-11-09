@@ -18,23 +18,37 @@ uint32_t nsx_psram_platform_read_async(uint32_t offset,void *buffer,uint32_t len
     assert(0);return NSX_PSRAM_STATUS_UNSUPPORTED;
 }
 uint32_t nsx_psram_platform_init(const nsx_psram_config_t *cfg,nsx_psram_platform_info_t *info) {
-    info->clock_hz=cfg->clock_hz;info->size_bytes=64;info->safe_to_retry=true;
+    info->clock_hz=cfg->clock_hz;
+#ifdef TEST_AP3_TCM
+    info->size_bytes=8u*1024u*1024u;
+#else
+    info->size_bytes=32u*1024u*1024u;
+#endif
+    info->safe_to_retry=true;
     return 0;
 }
-static uint32_t hal_transfer(uint32_t offset) {
+static uint32_t hal_transfer(uint32_t offset,const void *buffer,uint32_t length) {
+    (void)buffer;
+#ifdef TEST_AP3_TCM
+    uintptr_t address=(uintptr_t)buffer;
+    if (address>=AM_HAL_FLASH_DTCM_START && address<=AM_HAL_FLASH_DTCM_END) {
+        ++hal_refusals;return 1u;
+    }
+#endif
     /* Pinned Apollo4p HAL refuses unaligned HEX DDR addresses before CQ post.
      * The device wrapper collapses this INVALID_OPERATION to device ERROR. */
     if ((NSX_PSRAM_DEVICE_CONFIG==AM_HAL_MSPI_FLASH_HEX_DDR_CE0 ||
          NSX_PSRAM_DEVICE_CONFIG==AM_HAL_MSPI_FLASH_HEX_DDR_CE1) && (offset & 3u)) {
         ++hal_refusals;return 1u;
     }
+    if (length > AM_HAL_MSPI_MAX_TRANS_SIZE) { ++hal_refusals;return 1u; }
     return transfer_error;
 }
 uint32_t nsx_psram_platform_read(uint32_t offset,void *buffer,uint32_t length) {
-    (void)buffer;(void)length;++reads;return hal_transfer(offset);
+    ++reads;return hal_transfer(offset,buffer,length);
 }
 uint32_t nsx_psram_platform_write(uint32_t offset,const void *buffer,uint32_t length) {
-    (void)buffer;(void)length;++writes;return hal_transfer(offset);
+    ++writes;return hal_transfer(offset,buffer,length);
 }
 int main(void) {
     nsx_psram_config_t cfg;
@@ -58,11 +72,31 @@ int main(void) {
     assert(nsx_psram_write(3,&buffer,1)==(hex ? NSX_PSRAM_STATUS_ALIGNMENT : 0u));
     if (hex) assert(!reads && !writes);
     assert(!hal_refusals);
+#ifdef TEST_AP3_TCM
+    unsigned previous_reads=reads,previous_writes=writes;
+    const uintptr_t invalid[]={AM_HAL_FLASH_DTCM_START,AM_HAL_FLASH_DTCM_END-3u};
+    for(unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);++i) {
+        assert(nsx_psram_read(0,(void *)invalid[i],4)==NSX_PSRAM_STATUS_DESTINATION);
+        assert(nsx_psram_write(0,(void *)invalid[i],4)==NSX_PSRAM_STATUS_DESTINATION);
+    }
+    assert(reads==previous_reads && writes==previous_writes && !hal_refusals);
+    assert(nsx_psram_get_info(&info)==0 && info.state==NSX_PSRAM_STATE_READY);
+    assert(nsx_psram_read(0,(void *)(AM_HAL_FLASH_DTCM_END+1u),4)==0);
+    assert(nsx_psram_write(0,(void *)(AM_HAL_FLASH_DTCM_END+1u),4)==0);
+#endif
     /* A permitted short write and unaligned SRAM pointer are not new failures. */
     assert(nsx_psram_read(4,(uint8_t *)&buffer+1,1)==0);
     assert(nsx_psram_write(4,(uint8_t *)&buffer+1,1)==0);
     assert(nsx_psram_read(1,NULL,0)==0);
     assert(nsx_psram_write(1,NULL,0)==0);
+#ifndef TEST_AP3_TCM
+    unsigned before_reads=reads,before_writes=writes;
+    assert(nsx_psram_read(0,&buffer,AM_HAL_MSPI_MAX_TRANS_SIZE+1u)==NSX_PSRAM_STATUS_OUT_OF_RANGE);
+    assert(nsx_psram_write(0,&buffer,AM_HAL_MSPI_MAX_TRANS_SIZE+1u)==NSX_PSRAM_STATUS_OUT_OF_RANGE);
+    assert(reads==before_reads && writes==before_writes && !hal_refusals);
+    /* Fake HAL checks the count boundary, not a physical 16 MiB SRAM buffer. */
+    assert(nsx_psram_read(0,&buffer,AM_HAL_MSPI_MAX_TRANS_SIZE)==0);
+#endif
     assert(nsx_psram_get_info(&info)==0 && info.state==NSX_PSRAM_STATE_READY);
     assert(nsx_psram_init(&cfg)==NSX_PSRAM_STATUS_ALREADY_INITIALIZED);
     transfer_error=99;

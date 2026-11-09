@@ -131,7 +131,7 @@ static uint32_t nsx_psram_blocking(uint32_t offset, void *read_buffer,
     uint32_t irq = nsx_psram_platform_irq_save();
     uint32_t status = nsx_psram_validate_transfer(offset, buffer, length);
     if (status == NSX_STATUS_SUCCESS && length != 0u) {
-        status = nsx_psram_platform_validate_blocking(offset, length, write);
+        status = nsx_psram_platform_validate_blocking(offset, buffer, length, write);
     }
     if (status == NSX_STATUS_SUCCESS && length != 0u &&
         (g_blocking_active || g_async_issued != g_async_completed)) {

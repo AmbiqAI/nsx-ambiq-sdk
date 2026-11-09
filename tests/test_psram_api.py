@@ -40,8 +40,8 @@ static uint32_t init_status;
 static bool safe_to_retry;
 static unsigned reads;
 static unsigned writes;
-uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
-    (void)offset; (void)length; (void)write; return NSX_STATUS_SUCCESS;
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)offset; (void)buffer; (void)length; (void)write; return NSX_STATUS_SUCCESS;
 }
 uint32_t nsx_psram_platform_irq_save(void) { return 0u; }
 void nsx_psram_platform_irq_restore(uint32_t state) { (void)state; }

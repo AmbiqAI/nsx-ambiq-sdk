@@ -101,6 +101,10 @@ uint32_t nsx_psram_get_info(nsx_psram_info_t *info);
  * Apollo4 HEX DDR and Apollo5 offsets must be word aligned; Apollo5 write
  * lengths must also be word sized. Validation returns ALIGNMENT. Actual HAL
  * submission errors retain their original status.
+ * Apollo4 lengths above the HAL's 24-bit count (16 MiB - 1) return OUT_OF_RANGE;
+ * split larger operations. No source/destination allocation size is inferred.
+ * Apollo3 fast-TCM buffers are not MSPI-DMA-capable; they return DESTINATION
+ * before driver entry and leave READY. Use DMA-capable SRAM for these buffers.
  */
 uint32_t nsx_psram_read(uint32_t offset, void *buffer, uint32_t length);
 

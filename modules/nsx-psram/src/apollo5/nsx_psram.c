@@ -329,7 +329,8 @@ uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length)
     return nsx_psram_dma_read(offset, buffer, length);
 }
 
-uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)buffer;
     return ((offset & 3u) || (write && (length & 3u)))
         ? NSX_PSRAM_STATUS_ALIGNMENT : NSX_STATUS_SUCCESS;
 }

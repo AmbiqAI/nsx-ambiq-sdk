@@ -264,10 +264,18 @@ to `am_hal_cachectrl_dcache_invalidate(NULL, true)`.
 Blocking reads/writes and async reads exclude each other. Known alignment
 constraints are validated before driver submission: Apollo4 HEX DDR and Apollo5
 require word-aligned PSRAM offsets; only Apollo5 also restricts write lengths.
-Validation refusals leave READY intact. An error from a blocking platform
+Validation refusals leave READY intact. Apollo4 also validates its 24-bit HAL
+transfer-count limit (16 MiB - 1) before invoking the driver and returns
+`OUT_OF_RANGE` for larger operations; split them into bounded calls.
+An error from a blocking platform
 operation marks the module FAILED until reset on every family; this does not cancel
 DMA or repair Apollo3/Apollo4's existing timeout buffer-lifetime limitations.
 Retained Apollo5 blocking storage must remain powered after failure.
+
+Apollo3's MSPI HAL cannot DMA to/from its fast TCM region. Buffers beginning in
+that region (including `NSX_MEM_FAST_BSS` objects) return `DESTINATION` before
+driver entry and leave READY intact; use DMA-capable SRAM instead. This check
+does not infer the caller's allocation size or remove other device restrictions.
 
 `nsx_psram_can_sleep()` is a conservative snapshot: READY, no blocking operation,
 and no pending async requests. It returns false before/during initialization and

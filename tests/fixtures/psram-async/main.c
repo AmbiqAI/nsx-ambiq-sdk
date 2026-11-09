@@ -17,7 +17,8 @@ static unsigned count;
 static uint32_t callback_status;
 static bool hardware_active;
 static uint32_t hardware_error;
-uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, uint32_t length, bool write) {
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)buffer;
 #ifdef WITHOUT_ASYNC
     (void)offset; (void)length; (void)write; return NSX_STATUS_SUCCESS;
 #else
