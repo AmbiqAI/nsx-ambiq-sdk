@@ -209,6 +209,13 @@ The whole destination must fit canonical DTCM and one 4096-byte DTCM window
 rejected. The queue has `NSX_PSRAM_ASYNC_DEPTH` slots (CMake cache setting,
 default 8, range 1–32); contention or exhaustion returns `BUSY`.
 
+At 125/250 MHz PSRAM clocks, the pinned HAL's HFRC-adjustment mode can wait
+about 10 ms during clock preflight with interrupts masked. The adapter retains
+the reviewed preflight/queue ownership sequence; asynchronous data completion
+does not imply a bounded low-latency submission. Default 48 MHz PSRAM owns
+HFRC already. Board validation here uses that default and does not measure
+the high-clock adjustment wait.
+
 An accepted request calls `done(ctx, status)` once from the MSPI interrupt,
 with success or `TRANSFER_FAILED`. The latter records the original HAL status
 in `get_info().last_transfer_status`, a diagnostic rather than a per-client

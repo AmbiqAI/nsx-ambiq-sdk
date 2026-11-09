@@ -144,6 +144,9 @@ typedef void (*nsx_psram_done_fn)(void *ctx, uint32_t status);
  * Checks: client/done, state, zero length, buffer, PSRAM bounds, capability,
  * alignment, destination, contention/depth, then HAL submission. Refusals leave
  * counters/queue unchanged. Actual HAL refusal statuses are preserved.
+ * At 125/250 MHz PSRAM, HAL HFRC adjustment can wait about 10 ms during
+ * clock preflight with interrupts masked. Async describes data completion,
+ * not an interrupt-latency bound on submission. Default PSRAM clock is 48 MHz.
  * ISR/task notification is legal only at an appropriate configured IRQ priority.
  */
 uint32_t nsx_psram_read_async(nsx_psram_client_t *client, uint32_t offset,
