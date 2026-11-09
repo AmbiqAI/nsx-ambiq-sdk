@@ -166,9 +166,19 @@ fence shapes, so the existing `unparseable_fences` baseline gate remains too.
 
 All sanitation changes are planned before any are written. Export and consumer
 patches have already run, so a failed stage may leave an intermediate tree. This
-is not a whole-stage transaction. Promote only a successfully staged and reviewed
-candidate. No provider source, archive, or marker baseline is automatically
-updated by the replay mechanism.
+is not a whole-stage transaction. Only a successfully staged and reviewed candidate can be promoted: a separate
+`<staged-directory>.stage-receipt.json` sidecar binds the complete output file
+inventory, intended destination and validation policies. Each stage attempt
+invalidates the previous sidecar before source preflight. Promotion validates
+its temporary copy against that receipt, then reruns current marker/fence and
+archive checks before swapping directories. A failed copy/check removes only
+that attempt's temporary directory; the existing provider remains in place.
+
+The success receipt is distinct from the checked-in sanitation replay receipt:
+one records validated output bytes, the other authorizes reviewed removals.
+Missing receipts or changed content/policies require re-staging. Neither receipt
+is a signature, and concurrent writers are unsupported. No provider source,
+archive, or marker baseline is automatically updated by sanitation replay.
 
 ### The Baseline Is Review-Gated, Not Tool-Gated
 

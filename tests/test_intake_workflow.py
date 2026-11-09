@@ -2122,6 +2122,17 @@ def test_assert_patch_paths_allowed_fails_closed_on_zero_reported_paths(tmp_path
 # --------------------------------------------------------------------------
 # Promotion: explicit confirmation, atomicity, and rollback
 # --------------------------------------------------------------------------
+def _seal_staged_for_test(helper, staged: Path, provider: Path) -> None:
+    policy = helper.repo_root() / "sdk-intake" / "sanitation-replay.json"
+    policy.parent.mkdir(parents=True, exist_ok=True)
+    policy.write_bytes(Path(helper.__file__).with_name("sanitation-replay.json").read_bytes())
+    helper.stage_snapshot.write(staged, helper.stage_snapshot.StageSnapshot(
+        provider_path=provider.relative_to(helper.repo_root()).as_posix(),
+        train="stable", version="test", source_commit=None,
+        policy=helper._stage_policy_hashes(), files=helper.stage_snapshot.capture_files(staged),
+    ))
+
+
 def test_promote_from_staging_requires_explicit_confirmation(tmp_path: Path, helper) -> None:
     staged = tmp_path / "staged"
     staged.mkdir()
@@ -2159,6 +2170,8 @@ def test_promote_from_staging_swaps_directories(tmp_path: Path, helper, monkeypa
     provider.mkdir()
     (provider / "old-only.txt").write_text("stale content\n", encoding="utf-8")
 
+    _seal_staged_for_test(helper, staged, provider)
+
     helper.promote_from_staging(staged, provider, confirm=True)
 
     assert (provider / "lib" / "gcc" / "apollo2" / "libam_hal.a").read_bytes() == b"new-archive"
@@ -2179,6 +2192,8 @@ def test_promote_from_staging_refuses_hash_mismatched_staging(tmp_path: Path, he
     provider = tmp_path / "provider"
     provider.mkdir()
     (provider / "keep.txt").write_text("keep\n", encoding="utf-8")
+
+    _seal_staged_for_test(helper, staged, provider)
 
     with pytest.raises(helper.IntakeVerificationError):
         helper.promote_from_staging(staged, provider, confirm=True)
@@ -2368,6 +2383,8 @@ def test_promote_from_staging_recovers_backup_by_baseexception_not_just_oserror(
         return original_rename(self, target)
 
     monkeypatch.setattr(Path, "rename", failing_rename)
+
+    _seal_staged_for_test(helper, staged, provider)
 
     with pytest.raises(KeyboardInterrupt):
         helper.promote_from_staging(staged, provider, confirm=True)

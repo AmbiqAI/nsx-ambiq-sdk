@@ -146,6 +146,21 @@ python sdk-intake/intake_workflow.py promote --train stable \
   --staged-dir sdk-intake/local/staging/stable/stable-2026.06.18/sdk --yes
 ```
 
+A successful stage writes `sdk.stage-receipt.json` beside the staged `sdk/`
+directory. This records the complete file inventory and hashes, destination,
+source identity, and validation-policy fingerprints. Each new stage attempt
+invalidates the old receipt, including when source resolution or preflight fails.
+Existing staged trees without a receipt must be staged again.
+
+Promotion requires that receipt and validates a temporary copy against it before
+replacing the provider. Source additions, edits, deletions, changed policies, or
+archive drift require re-staging; promotion does not sanitize or repair them.
+The copied candidate also passes the current marker/fence and archive checks.
+The receipt stays outside the provider payload. It detects accidental drift;
+it is not a signature. Do not run concurrent writers against the same candidate
+or destination. An existing `.promote-tmp` or `.promote-backup` requires inspection
+and manual cleanup/recovery before retrying; promotion does not overwrite it.
+
 Staging sanitizes source content after applying consumer patches, then checks
 retained `#### INTERNAL ####` markers against the existing baseline and verifies
 archive hashes. Live declarations and their markers remain in place.
