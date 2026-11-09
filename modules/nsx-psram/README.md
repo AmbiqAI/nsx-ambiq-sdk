@@ -142,6 +142,9 @@ DTCM storage; CPU copies move data between that storage and the caller. Neither
 caller-buffer cache maintenance nor whole-cache invalidation is needed for this
 path. The caller must not concurrently access its buffer until the call returns.
 See the blocking-transfer ownership rules below for timeout and power behavior.
+Calibration clears its readback cache while the XIP interface is still usable,
+before teardown. This prevents calibration data from surviving into application
+loads; it does not replace caller-managed coherence for later XIP accesses.
 Apollo3/Apollo4 retain their existing device-driver paths.
 
 The XIP aperture is a separate cacheable alias. A DMA write updates PSRAM but

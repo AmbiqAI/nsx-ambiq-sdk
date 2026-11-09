@@ -2227,7 +2227,7 @@ static int prepare_test_pattern(uint32_t pattern_index, uint8_t* buff, uint32_t 
 //
 //*****************************************************************************
 static bool
-psram_check_by_xip(void* flashHandle, uint32_t length, uint32_t address)
+psram_check_by_xip_impl(void* flashHandle, uint32_t length, uint32_t address)
 {
     // Try to use as less ram as possible in stack
     uint32_t ui32NumberOfBytesLeft = length;
@@ -2416,6 +2416,16 @@ psram_check_by_xip(void* flashHandle, uint32_t length, uint32_t address)
 
     return false;
 }
+
+static bool
+psram_check_by_xip(void* flashHandle, uint32_t length, uint32_t address)
+{
+    bool result = psram_check_by_xip_impl(flashHandle, length, address);
+    /* Clear calibration readback while XIP is still usable, before teardown. */
+    am_hal_sysctrl_bus_write_flush();
+    return result;
+}
+
 
 //*****************************************************************************
 //

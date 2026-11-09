@@ -1,6 +1,7 @@
 #include "am_mcu_apollo.h"
 #include "nsx_system.h"
 #include "nsx_psram.h"
+#include "nsx_mem.h"
 #include "unity.h"
 #include "result_reporter.h"
 #include <string.h>
@@ -8,6 +9,11 @@
 #define MAX_BYTES 8195u
 #define OFFSET 0x10000u
 static uint8_t source[MAX_BYTES + 17u], destination[MAX_BYTES + 17u];
+/* Covers the BA driver's 48 MHz scan windows (4 KiB windows, turnaround 6,
+ * three Boolean offsets and up to 124 bytes of DQS offset). */
+#define SCAN_COVER_BYTES (64u * 1024u)
+static uint32_t scan_source[SCAN_COVER_BYTES / sizeof(uint32_t)];
+static uint32_t init_xip_mismatches, init_xip_first_bad;
 static bool ready;
 void setUp(void) {}
 void tearDown(void) {}
@@ -19,6 +25,8 @@ static void initialize(void) {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
     __enable_irq();
+    for (unsigned i=0; i<sizeof(scan_source)/sizeof(scan_source[0]); ++i)
+        scan_source[i]=0xa6935c17u ^ (i*2654435761u);
     nsx_psram_config_t config;
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_default_config(&config));
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_init(&config));
@@ -27,7 +35,24 @@ static void initialize(void) {
     TEST_ASSERT_EQUAL_UINT32(NSX_PSRAM_STATE_READY, info.state);
     TEST_ASSERT_EQUAL_UINT32(48000000u, info.configured_clock_hz);
     TEST_ASSERT_TRUE(info.size_bytes > OFFSET + sizeof(source));
+    /* No XIP read or caller cache maintenance between calibration and DMA. */
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(0, scan_source, sizeof(scan_source)));
+    const volatile uint32_t *xip=(const volatile uint32_t *)(uintptr_t)info.base_address;
+    for (unsigned i=0; i<sizeof(scan_source)/sizeof(scan_source[0]); ++i) {
+        if (xip[i] != scan_source[i]) {
+            if (!init_xip_mismatches) init_xip_first_bad=i*sizeof(uint32_t);
+            ++init_xip_mismatches;
+        }
+    }
     ready = true;
+}
+
+static void calibration_xip(void) {
+    TEST_ASSERT_TRUE(ready);
+    UnityPrint("init_xip_mismatches="); UnityPrintNumberUnsigned(init_xip_mismatches);
+    UnityPrint(" first_bad_offset="); UnityPrintNumberUnsigned(init_xip_first_bad);
+    UnityPrint("\n");
+    TEST_ASSERT_EQUAL_UINT32(0, init_xip_mismatches);
 }
 
 static void roundtrip(void) {
@@ -74,6 +99,20 @@ static void roundtrip(void) {
     }
 }
 
+static void caller_xip_sync(void) {
+    TEST_ASSERT_TRUE(ready);
+    nsx_psram_info_t info;
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_get_info(&info));
+    uint32_t value=0x11223344u;
+    const volatile uint32_t *xip=(const volatile uint32_t *)(uintptr_t)(info.base_address+OFFSET);
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(OFFSET, &value, sizeof(value)));
+    TEST_ASSERT_EQUAL_UINT32(value, *xip); /* Populate a caller-owned clean alias. */
+    value=0x55667788u;
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(OFFSET, &value, sizeof(value)));
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_cache_sync_shared_data());
+    TEST_ASSERT_EQUAL_UINT32(value, *xip);
+}
+
 static void refusals(void) {
     TEST_ASSERT_TRUE(ready);
     TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_INVALID_OPERATION,
@@ -95,7 +134,9 @@ static void refusals(void) {
 int main(void) {
     nsx_test_begin(__FILE__);
     RUN_TEST(initialize);
+    RUN_TEST(calibration_xip);
     RUN_TEST(roundtrip);
     RUN_TEST(refusals);
+    RUN_TEST(caller_xip_sync);
     nsx_test_finish();
 }

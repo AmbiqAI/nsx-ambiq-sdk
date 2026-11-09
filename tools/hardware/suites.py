@@ -180,7 +180,7 @@ def psram_options(repo: Path, output: Path, board: str, fault: str,
 
 
 PSRAM_BLOCKING = Suite('psram-blocking', 'tests/hardware/test_psram.py::test_psram_blocking',
-                       ('initialize', 'roundtrip', 'refusals'),
+                       ('initialize', 'calibration_xip', 'roundtrip', 'refusals', 'caller_xip_sync'),
                        'tests/hardware/psram', 'psram_blocking.elf', configure=psram_options)
 
 
