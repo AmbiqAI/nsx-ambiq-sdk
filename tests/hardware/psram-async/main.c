@@ -61,17 +61,19 @@ static void check_record(unsigned i) {
     TEST_ASSERT_TRUE(records[i].ipsr>=16u);
 }
 static void initialize(void) {
-    nsx_system_config_t system={.enable_cache=true,.perf_mode=NSX_PERF_LOW,
+    nsx_system_config_t system={.enable_cache=true,.perf_mode=NSX_TEST_CPU_HIGH?NSX_PERF_HIGH:NSX_PERF_LOW,
                                 .debug={.transport=NSX_DEBUG_ITM}};
     TEST_ASSERT_EQUAL_UINT32(0,nsx_system_init(&system));
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_CPU_HIGH?250000000u:96000000u,SystemCoreClock);
     __enable_irq();
     nsx_psram_config_t config;
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_default_config(&config));
+    config.clock_hz=NSX_TEST_PSRAM_CLOCK;
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_init(&config));
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_get_info(&info));
     TEST_ASSERT_TRUE(info.capabilities & NSX_PSRAM_CAP_ASYNC_READ);
     TEST_ASSERT_EQUAL_UINT32(NSX_TEST_ASYNC_DEPTH,info.async_depth);
-    TEST_ASSERT_EQUAL_UINT32(48000000u,info.configured_clock_hz);
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_PSRAM_CLOCK,info.configured_clock_hz);
     TEST_ASSERT_TRUE((uintptr_t)buffers>=DTCM_BASEADDR);
     TEST_ASSERT_TRUE((uintptr_t)buffers+sizeof(buffers)<=DTCM_BASEADDR+DTCM_MAX_SIZE);
     for(unsigned i=0;i<WORDS;++i) {
