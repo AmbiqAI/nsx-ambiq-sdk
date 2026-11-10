@@ -213,3 +213,20 @@ def test_unicode_comments_and_literal_contents_stay_supported(markers, compiler)
     subprocess.run([compiler, '-fsyntax-only', '-std=c11', '-x', 'c', '-'],
                    input=source.encode(), capture_output=True, check=True)
     assert markers.scrub_text(source).text == source
+
+
+@pytest.mark.parametrize('quote', ['"', "'"])
+@pytest.mark.parametrize('backslashes', [2, 3, 4])
+def test_quote_escape_cannot_skip_a_remaining_newline(markers, compiler, tmp_path, quote, backslashes):
+    source = (BEGIN + '#if 0\n' + quote + '\\' * backslashes + '\n\n#else // '
+              + quote + '\nint live;\n#endif\n' + END)
+    result = subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=source.encode(),
+                            capture_output=True, check=True)
+    assert result.stdout.split() == [b'int', b'live;']
+    dead = BEGIN + '// private note\n' + END
+    (tmp_path / 'a.h').write_text(dead)
+    (tmp_path / 'z.h').write_text(source)
+    with pytest.raises(markers.InternalMarkerError, match='newline in an unterminated quoted literal'):
+        markers.scrub_tree(tmp_path, write=True)
+    assert (tmp_path / 'a.h').read_text() == dead
+    assert (tmp_path / 'z.h').read_text() == source

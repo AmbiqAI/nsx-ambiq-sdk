@@ -159,6 +159,8 @@ def analyze(text: str) -> SourceLines:
                     raise SourceSyntaxError("newline in an unterminated quoted literal")
                 if char == "\\":
                     if index + 1 < len(source):
+                        if source[index + 1] == "\n":
+                            raise SourceSyntaxError("newline in an unterminated quoted literal")
                         physical_code[touch(index + 1)].append(quote)
                     index += 2
                     continue
