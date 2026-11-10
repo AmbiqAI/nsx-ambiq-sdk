@@ -186,6 +186,9 @@ add_library(nsx_psram STATIC
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_PSRAM_ARCH_DIR}/nsx_psram.c
     ${NSX_PSRAM_DEVICE_SOURCE}
 )
+if(NSX_PSRAM_ARCH_DIR STREQUAL "apollo5")
+    target_sources(nsx_psram PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/apollo5/nsx_psram_dma.c)
+endif()
 set_target_properties(nsx_psram PROPERTIES EXPORT_NAME psram)
 add_library(nsx::psram ALIAS nsx_psram)
 

@@ -2425,7 +2425,7 @@ AM_SHARED_RW static uint8_t ui8RxBuffer[PSRAM_CHECK_DATA_SIZE_BYTES];
 //
 //*****************************************************************************
 static bool
-psram_check_by_xip(uint32_t length, uint32_t address)
+psram_check_by_xip_impl(uint32_t length, uint32_t address)
 {
     //
     // Try to use as less ram as possible in stack
@@ -2622,6 +2622,16 @@ psram_check_by_xip(uint32_t length, uint32_t address)
 
     return true;
 }
+
+static bool
+psram_check_by_xip(uint32_t length, uint32_t address)
+{
+    bool result = psram_check_by_xip_impl(length, address);
+    /* Clear calibration readback while XIP is still usable, before teardown. */
+    am_hal_sysctrl_bus_write_flush();
+    return result;
+}
+
 
 //*****************************************************************************
 //

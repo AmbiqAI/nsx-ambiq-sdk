@@ -135,30 +135,17 @@ blocking offset transfers remain available.
 
 ### DMA and cache coherency
 
-The synchronous API accepts arbitrary SRAM buffer alignment and byte lengths.
-On Apollo5, NSX `nsx_psram_read()` clean-invalidates every cache line
-overlapping the destination before starting DMA, then robustly invalidates the
-same range after DMA completes, including when the transfer reports an error.
-The pre-clean preserves dirty bytes outside an unaligned destination that share
-its first or last cache line; the post-invalidate makes DMA-written bytes
-visible to the CPU. NSX `nsx_psram_write()` cleans every source cache line
-before DMA. Both calls return only after the blocking device transfer and
-required caller-buffer range maintenance complete.
-
-The current vendored AmbiqSuite Apollo5 blocking-transfer callback also invokes
-`am_hal_cachectrl_dcache_invalidate(NULL, true)` when each DMA completes. That
-operation cleans and invalidates the *entire* D-cache in addition to NSX's
-targeted range operations. It can dominate short-transfer latency, write back
-unrelated dirty data, and evict unrelated working sets, so repeated small
-blocking transfers can have a substantial whole-cache performance cost. This
-is an AmbiqSuite Apollo5 driver behavior, not an NSX API guarantee; NSX retains
-its explicit post-transfer range invalidation for correctness if the vendor
-callback changes or is replaced.
-
-The caller must not access the DMA buffer, or concurrently modify other data
-sharing its cache lines, until the synchronous call returns. This is the usual
-exclusive-ownership requirement for cache-maintained DMA. No buffer or length
-alignment is otherwise required.
+On Apollo5, the synchronous API accepts arbitrary caller-buffer alignment and
+read lengths with word-aligned PSRAM offsets. Write lengths must be multiples
+of four; partial-word DMA writes can overwrite adjacent PSRAM bytes. DMA uses retained, noncacheable
+DTCM storage; CPU copies move data between that storage and the caller. Neither
+caller-buffer cache maintenance nor whole-cache invalidation is needed for this
+path. The caller must not concurrently access its buffer until the call returns.
+See the blocking-transfer ownership rules below for timeout and power behavior.
+Calibration clears its readback cache while the XIP interface is still usable,
+before teardown. This prevents calibration data from surviving into application
+loads; it does not replace caller-managed coherence for later XIP accesses.
+Apollo3/Apollo4 retain their existing device-driver paths.
 
 The XIP aperture is a separate cacheable alias. A DMA write updates PSRAM but
 does not evict an already-cached XIP copy; invalidate the corresponding XIP
@@ -186,3 +173,22 @@ Hex x16 DDR mode, and timing scan:
 
 The probe reports a 64 KiB, 32-byte-line D-cache. The benchmark's 256 KiB
 pre-invalidated working set is therefore four times D-cache capacity.
+
+## Apollo5 blocking transfer ownership
+
+Blocking reads and writes use a private 4096-byte, 4096-aligned DTCM buffer.
+This adds CPU copies and up to 4095 bytes of linker alignment padding; it keeps
+late DMA completion away from caller buffers after a timeout. The module checks
+placement before hardware initialization, including with custom linker scripts.
+PSRAM offsets and write lengths must be multiples of four. Caller buffers and
+read lengths need not be word-aligned. Unsupported write lengths are rejected
+before submitting any chunk; the adapter does not read/modify/write neighbors.
+Concurrent blocking calls return HAL `IN_USE`.
+
+A transfer error quarantines the retained DMA state and sets `FAILED` until reset.
+Caller buffers can be reused after return, but the module's DTCM must remain
+powered. Prevent deep sleep during transfers and after `FAILED`; an idle-looking
+software queue is not proof that timed-out DMA stopped. A failed multi-chunk
+transfer may have completed a prefix. Apollo5 performs no whole-cache
+maintenance on completion; callers still invalidate cacheable XIP aliases before
+reading a range written through the transfer API.

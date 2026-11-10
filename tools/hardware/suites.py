@@ -169,4 +169,19 @@ POWER_STARTUP = Suite('power-startup', 'tests/hardware/test_power_startup_smoke.
                       'power_startup.elf')
 
 
-SUITES = (POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+PSRAM_BOARDS = ('apollo510_evb', 'apollo510b_evb')
+
+
+def psram_options(repo: Path, output: Path, board: str, fault: str,
+                  sdk_root: Path | None = None) -> list[str]:
+    if board not in PSRAM_BOARDS or fault not in ('none', 'psram-transfer-flush'):
+        raise ValueError('Blocking PSRAM smoke requires AP510/AP510B and a supported fault mode')
+    return []
+
+
+PSRAM_BLOCKING = Suite('psram-blocking', 'tests/hardware/test_psram.py::test_psram_blocking',
+                       ('initialize', 'calibration_xip', 'roundtrip', 'refusals', 'caller_xip_sync'),
+                       'tests/hardware/psram', 'psram_blocking.elf', configure=psram_options)
+
+
+SUITES = (PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

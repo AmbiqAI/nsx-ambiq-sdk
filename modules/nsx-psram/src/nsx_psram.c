@@ -17,6 +17,10 @@ static nsx_psram_info_t g_nsx_psram_info = {
     .timing_status = NSX_PSRAM_TIMING_UNAVAILABLE,
 };
 
+void nsx_psram_mark_failed(void) {
+    g_nsx_psram_info.state = NSX_PSRAM_STATE_FAILED;
+}
+
 static uint32_t nsx_psram_validate_transfer(
     uint32_t offset, const void *buffer, uint32_t length) {
     if (g_nsx_psram_info.state == NSX_PSRAM_STATE_FAILED) {

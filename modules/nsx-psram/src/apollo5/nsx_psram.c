@@ -1,5 +1,6 @@
 #include "nsx_psram.h"
 #include "nsx_psram_internal.h"
+#include "nsx_psram_dma.h"
 
 #include "am_bsp.h"
 #include "nsx_interrupt.h"
@@ -32,8 +33,6 @@
 #define nsx_psram_device_apply_ddr_timing am_devices_mspi_psram_aps25616ba_apply_ddr_timing
 #define nsx_psram_device_ddr_deinit am_devices_mspi_psram_aps25616ba_ddr_deinit
 #define nsx_psram_device_ddr_disable_xip am_devices_mspi_psram_aps25616ba_ddr_disable_xip
-#define nsx_psram_device_ddr_read am_devices_mspi_psram_aps25616ba_ddr_read
-#define nsx_psram_device_ddr_write am_devices_mspi_psram_aps25616ba_ddr_write
 #else
 #include "am_devices_mspi_psram_aps25616n.h"
 #define nsx_psram_device_ddr_init am_devices_mspi_psram_aps25616n_ddr_init
@@ -42,8 +41,6 @@
 #define nsx_psram_device_apply_ddr_timing am_devices_mspi_psram_aps25616n_apply_ddr_timing
 #define nsx_psram_device_ddr_deinit am_devices_mspi_psram_aps25616n_ddr_deinit
 #define nsx_psram_device_ddr_disable_xip am_devices_mspi_psram_aps25616n_ddr_disable_xip
-#define nsx_psram_device_ddr_read am_devices_mspi_psram_aps25616n_ddr_read
-#define nsx_psram_device_ddr_write am_devices_mspi_psram_aps25616n_ddr_write
 #endif
 
 /*
@@ -212,6 +209,10 @@ uint32_t nsx_psram_platform_init(
     if (status != NSX_STATUS_SUCCESS) {
         return status;
     }
+    status = nsx_psram_dma_validate_storage();
+    if (status != AM_HAL_STATUS_SUCCESS) {
+        return status;
+    }
     am_devices_mspi_psram_config_t psram_cfg = {
         /* Both the BA and N driver families accept Hex DDR CE mode directly
          * (there is no BSP macro for it -- only
@@ -306,6 +307,7 @@ uint32_t nsx_psram_platform_init(
         }
     }
 
+    nsx_psram_dma_configure(g_nsx_psram_mspi_handle, cfg->clock_hz);
     info->base_address = cfg->enable_xip ? nsx_psram_aperture_base(NSX_PSRAM_MSPI_MODULE) : 0u;
     info->size_bytes = NSX_PSRAM_DEVICE_SIZE_BYTES;
     info->xip_enabled = cfg->enable_xip;
@@ -318,34 +320,10 @@ uint32_t nsx_psram_platform_init(
 }
 
 uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length) {
-    am_hal_cachectrl_range_t range = {
-        .ui32StartAddr = (uint32_t)buffer,
-        .ui32Size = length,
-    };
-    uint32_t status = am_hal_cachectrl_dcache_invalidate(&range, true);
-    if (status != AM_HAL_STATUS_SUCCESS) {
-        return status;
-    }
-
-    status = nsx_psram_device_ddr_read(
-        g_nsx_psram_device_handle, buffer, offset, length, true);
-    uint32_t cache_status =
-        am_hal_cachectrl_dcache_invalidate(&range, false);
-    return status != AM_DEVICES_MSPI_PSRAM_STATUS_SUCCESS
-        ? status
-        : cache_status;
+    return nsx_psram_dma_read(offset, buffer, length);
 }
 
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length) {
-    am_hal_cachectrl_range_t range = {
-        .ui32StartAddr = (uint32_t)buffer,
-        .ui32Size = length,
-    };
-    uint32_t status = am_hal_cachectrl_dcache_clean(&range);
-    if (status != AM_HAL_STATUS_SUCCESS) {
-        return status;
-    }
-    return nsx_psram_device_ddr_write(
-        g_nsx_psram_device_handle, (uint8_t *)buffer, offset, length, true);
+    return nsx_psram_dma_write(offset, buffer, length);
 }
