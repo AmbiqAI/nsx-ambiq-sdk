@@ -36,7 +36,8 @@ def debug_binary(repo_root, tmp_path_factory):
 def test_optional_transport_state(repo_root, tmp_path, itm, uart):
     binary = build_debug_binary(repo_root, tmp_path / 'debug', (
         '-DNSX_CORE_BSP_CONTRACT=2', f'-DNSX_CORE_DEBUG_ITM={itm}', f'-DNSX_CORE_DEBUG_UART={uart}'))
-    subprocess.run([str(binary), 'capabilities'], check=True, capture_output=True, text=True, timeout=5)
+    for scenario in ('capabilities', 'system-capabilities'):
+        subprocess.run([str(binary), scenario], check=True, capture_output=True, text=True, timeout=5)
 
 
 @pytest.mark.parametrize('scenario', ('system', 'system-reject', 'resume', 'switch', 'noop', 'setup-failure',

@@ -46,10 +46,6 @@ static bool nsx_perf_mode_valid(nsx_perf_mode_e mode) {
     return mode == NSX_PERF_LOW || mode == NSX_PERF_MEDIUM || mode == NSX_PERF_HIGH;
 }
 
-static bool nsx_debug_transport_valid(nsx_debug_transport_e transport) {
-    return transport == NSX_DEBUG_NONE || transport == NSX_DEBUG_ITM || transport == NSX_DEBUG_UART;
-}
-
 uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode) {
     if (!nsx_perf_mode_valid(mode)) return NSX_STATUS_INVALID_CONFIG;
     return nsx_platform_set_perf_mode(mode);
@@ -112,7 +108,7 @@ static uint32_t nsx_system_init_impl(const nsx_system_config_t *cfg) {
 
 uint32_t nsx_system_init(const nsx_system_config_t *cfg) {
     if (cfg == NULL) return NSX_STATUS_INVALID_HANDLE;
-    if (!nsx_perf_mode_valid(cfg->perf_mode) || !nsx_debug_transport_valid(cfg->debug.transport)) {
+    if (!nsx_perf_mode_valid(cfg->perf_mode) || !nsx_debug_transport_available(cfg->debug.transport)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     uint32_t status = nsx_startup_claim();

@@ -45,7 +45,21 @@ int main(int argc, char **argv) {
     assert(argc == 2);
     nsx_debug_config_t itm={.transport=NSX_DEBUG_ITM}, uart={.transport=NSX_DEBUG_UART};
     nsx_system_config_t system={.debug={.transport=NSX_DEBUG_ITM}};
-    if (!strcmp(argv[1], "capabilities")) {
+    if (!strcmp(argv[1], "system-capabilities")) {
+        nsx_debug_config_t supported = {.transport = NSX_CORE_DEBUG_ITM ? NSX_DEBUG_ITM : NSX_DEBUG_UART};
+        if (NSX_CORE_DEBUG_ITM || NSX_CORE_DEBUG_UART) assert(nsx_debug_init(&supported) == 0);
+        unsigned enables = enable_calls;
+        const unsigned available[] = {0, NSX_CORE_DEBUG_ITM, NSX_CORE_DEBUG_UART};
+        for (unsigned t = NSX_DEBUG_ITM; t <= NSX_DEBUG_UART; ++t) {
+            if (available[t]) continue;
+            system.debug.transport = (nsx_debug_transport_e)t;
+            assert(nsx_system_init(&system) == NSX_STATUS_INVALID_CONFIG);
+            assert(bsp_calls == 0 && disable_calls == 0 && enable_calls == enables);
+        }
+        system.debug.transport = NSX_DEBUG_NONE;
+        assert(nsx_system_init(&system) == 0); /* rejection did not consume startup */
+        assert(bsp_calls == 1);
+    } else if (!strcmp(argv[1], "capabilities")) {
         const unsigned supported[] = {0, NSX_CORE_DEBUG_ITM, NSX_CORE_DEBUG_UART};
         for (unsigned t = NSX_DEBUG_ITM; t <= NSX_DEBUG_UART; ++t) {
             nsx_debug_config_t cfg = {.transport = (nsx_debug_transport_e)t};

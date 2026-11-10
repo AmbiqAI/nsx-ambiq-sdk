@@ -59,7 +59,7 @@ function(nsx_validate_bsp out_target)
     get_target_property(version ${provider} NSX_BSP_CONTRACT_VERSION)
     # Compatibility only for the known SDK v1 adapter; a cache entry cannot
     # establish a custom provider contract.
-    if(NOT version AND "${provider}" STREQUAL "nsx_ambiq_bsp" AND
+    if("${version}" STREQUAL "version-NOTFOUND" AND "${provider}" STREQUAL "nsx_ambiq_bsp" AND
        "${NSX_BSP_CONTRACT_VERSION}" STREQUAL "1")
         set(version 1)
     endif()
