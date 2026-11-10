@@ -114,22 +114,30 @@ def analyze(text: str) -> SourceLines:
             line_comment = following == "//"
             index += 2
             continue
+        if ord(char) >= 128:
+            raise SourceSyntaxError("non-ASCII code token requires explicit dialect review")
+        if following in ("\\u", "\\U", "\\N"):
+            raise SourceSyntaxError("universal character name outside a literal requires explicit dialect review")
         if following == 'R"':
             raise SourceSyntaxError("C++ raw string literal requires explicit dialect review")
         # Preprocessing numbers may contain letters, dots and exponent signs.
         # Consume the whole token before interpreting quotes; a separator in
         # an inactive branch can otherwise pair with an apostrophe in a comment.
         previous = source[index - 1] if index else ""
-        inside_identifier = bool(previous) and (previous.isalnum() or previous == "_" or ord(previous) >= 128)
+        inside_identifier = bool(previous) and (previous.isalnum() or previous == "_")
         starts_number = char in "0123456789" or (
             char == "." and index + 1 < len(source) and source[index + 1] in "0123456789")
         if not inside_identifier and starts_number:
             cursor = index + 1
             while cursor < len(source):
                 next_char = source[cursor]
+                if ord(next_char) >= 128:
+                    raise SourceSyntaxError("non-ASCII code token requires explicit dialect review")
+                if source[cursor:cursor + 2] in ("\\u", "\\U", "\\N"):
+                    raise SourceSyntaxError("universal character name outside a literal requires explicit dialect review")
                 if next_char == "'":
                     raise SourceSyntaxError("digit separator requires explicit dialect review")
-                if (next_char.isalnum() or next_char in "_.\\" or ord(next_char) >= 128
+                if (next_char.isalnum() or next_char in "_.\\"
                         or (next_char in "+-" and source[cursor - 1] in "eEpP")):
                     cursor += 1
                 else:

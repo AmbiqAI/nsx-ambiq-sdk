@@ -140,7 +140,7 @@ def test_ambiguous_conditional_suffixes_are_refused(markers, compiler, prefix, k
     output = subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=source.encode(),
                             capture_output=True, check=True).stdout.split()
     assert output == [b'int', b'live;']
-    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive'):
+    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive|non-ASCII code token|universal character name'):
         markers.scrub_text(source)
 
 
@@ -155,7 +155,7 @@ def test_compiler_accepted_else_extra_tokens_refuse_before_writes(markers, compi
     dead = BEGIN + '// private note\n' + END
     (tmp_path / 'a.h').write_text(dead)
     (tmp_path / 'z.h').write_text(source)
-    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive'):
+    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive|non-ASCII code token|universal character name'):
         markers.scrub_tree(tmp_path, write=True)
     assert (tmp_path / 'a.h').read_text() == dead
     assert (tmp_path / 'z.h').read_text() == source
@@ -191,5 +191,25 @@ def test_digit_separators_cannot_hide_live_alternate(markers, compiler, tmp_path
 def test_standard_character_literal_prefixes_remain_live(markers, compiler, prefix):
     source = BEGIN + "const auto value = " + prefix + "'x';\n" + END
     subprocess.run([compiler, '-fsyntax-only', '-std=c++17', '-x', 'c++', '-'],
+                   input=source.encode(), capture_output=True, check=True)
+    assert markers.scrub_text(source).text == source
+
+
+@pytest.mark.parametrize('predecessor', ['\u00a0', '\u2003', '\u00a9', r'\u00A0'])
+def test_uncertain_number_predecessor_refuses_before_quote_scanning(markers, tmp_path, predecessor):
+    source = (BEGIN + '#if 0\nint ignored = ' + predecessor + "1'000; // don't /*\n"
+              + '#else\nint live;\n/* end */\n#endif\n' + END)
+    dead = BEGIN + '// private note\n' + END
+    (tmp_path / 'a.h').write_text(dead)
+    (tmp_path / 'z.h').write_text(source)
+    with pytest.raises(markers.InternalMarkerError, match='non-ASCII code token|universal character name'):
+        markers.scrub_tree(tmp_path, write=True)
+    assert (tmp_path / 'a.h').read_text() == dead
+    assert (tmp_path / 'z.h').read_text() == source
+
+
+def test_unicode_comments_and_literal_contents_stay_supported(markers, compiler):
+    source = BEGIN + '// café\nconst char *text = "café \\u00E9";\n' + END
+    subprocess.run([compiler, '-fsyntax-only', '-std=c11', '-x', 'c', '-'],
                    input=source.encode(), capture_output=True, check=True)
     assert markers.scrub_text(source).text == source

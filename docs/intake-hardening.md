@@ -158,7 +158,9 @@ continuations and comments when identifying literal `#if 0` regions, and refuses
 deletions that cut a logical line. Raw C++ strings, trigraphs and the compiler
 extension allowing whitespace after a continuation backslash require explicit
 review and are refused. Digit separators are also refused
-before character-literal scanning. Conditional directives with backslashes, non-ASCII
+before character-literal scanning. Non-ASCII code tokens and universal-character
+names outside literals require explicit dialect review; Unicode comments and
+literal contents remain supported. Conditional directives with backslashes, non-ASCII
 characters or dollar signs also require dialect review and are refused. This
 remains a review aid, not a complete C parser;
 deleting lines also changes source locations such as `__LINE__`.
