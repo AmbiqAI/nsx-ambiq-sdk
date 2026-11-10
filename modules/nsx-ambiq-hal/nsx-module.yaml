@@ -42,22 +42,7 @@ depends:
 
 compatibility:
   boards:
-    - apollo2_evb
-    - apollo3_evb
-    - apollo3_evb_cygnus
-    - apollo3p_evb
-    - apollo3p_evb_cygnus
-    - apollo4l_evb
-    - apollo4l_blue_evb
-    - apollo4p_evb
-    - apollo4p_blue_kbr_evb
-    - apollo4p_blue_kxr_evb
-    - apollo4p_evb_disp_shield_rev2
-    - apollo330mP_evb
-    - apollo510_evb
-    - apollo510b_evb
-    - apollo510dL_evb
-    - atomiq110_fpga_turbo
+    - "*"
   socs:
     - apollo2
     - apollo3
