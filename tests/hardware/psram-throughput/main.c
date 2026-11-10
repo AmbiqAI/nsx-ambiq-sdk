@@ -95,6 +95,7 @@ static void initialize(void) {
     TEST_ASSERT_TRUE((uintptr_t)storage + sizeof(storage) <= DTCM_BASEADDR + DTCM_MAX_SIZE);
     TEST_ASSERT_TRUE((uintptr_t)shared_storage >= SSRAM_BASEADDR);
     TEST_ASSERT_TRUE((uintptr_t)shared_storage + sizeof(shared_storage) <= SSRAM_BASEADDR + SSRAM_MAX_SIZE);
+    TEST_ASSERT_BITS_HIGH(1u, PWRCTRL->SSRAMPWRST);
     for (unsigned i = 0; i < COPY_BYTES / sizeof(uint32_t); ++i)
         expected[i] = 0x713a9c55u ^ (i * 2654435761u);
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(SOURCE_OFFSET, expected, sizeof(expected)));
@@ -112,6 +113,7 @@ static void initialize(void) {
     field(" burst=", MSPI0->DMABCOUNT);
     field(" threshold=", MSPI0->DMATHRESH);
     field(" poll_nops=", 1024u);
+    field(" ssram_power=", PWRCTRL->SSRAMPWRST);
     line_end();
 }
 
@@ -246,6 +248,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     field(" bytes=", pieces * length);
     field(" piece=", length);
     field(" destination=", (uint32_t)(uintptr_t)DESTINATION);
+    field(" apb_continuous=", MSPI0->MSPICFG_b.APBCLK);
     field(" trials=", TRIALS);
     field(" warmups=", WARMUPS);
     field(" cycles=", sum / TRIALS);
@@ -277,6 +280,21 @@ static void throughput(void) {
     active_storage = shared_storage;
     measure_row("raw_ssram_queue16", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
+    hardware_idle();
+    uint32_t previous_apb = MSPI0->MSPICFG_b.APBCLK;
+    uint32_t continuous_apb = 1u;
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mspi_control(mspi_handle, AM_HAL_MSPI_REQ_APBCLK, &continuous_apb));
+    __DSB();
+    TEST_ASSERT_EQUAL_UINT32(1u, MSPI0->MSPICFG_b.APBCLK);
+    measure_row("public_apb_on", false, false, false, PIECES, PIECE_BYTES);
+    measure_row("raw_apb_on", true, false, false, PIECES, PIECE_BYTES);
+    active_storage = shared_storage;
+    measure_row("raw_ssram_apb_on", true, false, false, PIECES, PIECE_BYTES);
+    active_storage = storage;
+    hardware_idle();
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mspi_control(mspi_handle, AM_HAL_MSPI_REQ_APBCLK, &previous_apb));
+    __DSB();
+    TEST_ASSERT_EQUAL_UINT32(previous_apb, MSPI0->MSPICFG_b.APBCLK);
 }
 
 int main(void) {
