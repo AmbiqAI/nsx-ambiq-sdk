@@ -15,7 +15,10 @@
 
 static uint32_t expected[COPY_BYTES / sizeof(uint32_t)];
 static uint32_t storage[(PIECES + 2u) * WORDS] __attribute__((aligned(PIECE_BYTES)));
-#define DESTINATION (storage + WORDS)
+AM_SHARED_RW static uint32_t shared_storage[(PIECES + 2u) * WORDS]
+    __attribute__((aligned(PIECE_BYTES)));
+static uint32_t *active_storage = storage;
+#define DESTINATION (active_storage + WORDS)
 static nsx_psram_info_t info;
 static nsx_psram_client_t client;
 static void *mspi_handle;
@@ -62,7 +65,7 @@ static void field(const char *name, uint32_t value) {
     UnityPrint(name);
     number(value);
 }
-static void line_end(void) { UnityPrint("\n"); }
+static void line_end(void) { UNITY_OUTPUT_CHAR('\n'); }
 
 static void initialize(void) {
     nsx_system_config_t system = {
@@ -90,6 +93,8 @@ static void initialize(void) {
     TEST_ASSERT_TRUE(info.xip_enabled);
     TEST_ASSERT_TRUE((uintptr_t)storage >= DTCM_BASEADDR);
     TEST_ASSERT_TRUE((uintptr_t)storage + sizeof(storage) <= DTCM_BASEADDR + DTCM_MAX_SIZE);
+    TEST_ASSERT_TRUE((uintptr_t)shared_storage >= SSRAM_BASEADDR);
+    TEST_ASSERT_TRUE((uintptr_t)shared_storage + sizeof(shared_storage) <= SSRAM_BASEADDR + SSRAM_MAX_SIZE);
     for (unsigned i = 0; i < COPY_BYTES / sizeof(uint32_t); ++i)
         expected[i] = 0x713a9c55u ^ (i * 2654435761u);
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_write(SOURCE_OFFSET, expected, sizeof(expected)));
@@ -158,13 +163,24 @@ static void hardware_idle(void) {
 }
 
 static void measure_row(const char *name, bool raw, bool serial, bool xip, unsigned pieces, uint32_t length) {
+    bool shared = active_storage == shared_storage;
+    TEST_ASSERT_TRUE(!shared || raw);
     uint32_t best = UINT32_MAX, worst = 0, sum = 0, submit_sum = 0;
     uint32_t irq_sum = 0, call_sum = 0, cb_sum = 0, bits = 0;
     uint32_t first_sum = 0, last_sum = 0;
     for (unsigned trial = 0; trial < TRIALS + WARMUPS; ++trial) {
         TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
         hardware_idle();
-        memset(storage, 0xa5, sizeof(storage));
+        memset(active_storage, 0xa5, sizeof(storage));
+        am_hal_cachectrl_range_t destination_range = {
+            .ui32StartAddr = (uint32_t)(uintptr_t)active_storage,
+            .ui32Size = sizeof(storage),
+        };
+        if (shared) {
+            TEST_ASSERT_EQUAL_UINT32(0, am_hal_cachectrl_dcache_clean(&destination_range));
+            TEST_ASSERT_EQUAL_UINT32(0, am_hal_cachectrl_dcache_invalidate(&destination_range, false));
+            __DSB();
+        }
         client = (nsx_psram_client_t){0};
         callbacks = callback_errors = interrupts = interrupt_bits = hal_calls = 0;
         first_callback = last_callback = 0;
@@ -193,6 +209,11 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
         __DSB();
         uint32_t elapsed = DWT->CYCCNT - start;
         measuring = false;
+        hardware_idle();
+        if (shared) {
+            TEST_ASSERT_EQUAL_UINT32(0, am_hal_cachectrl_dcache_invalidate(&destination_range, false));
+            __DSB();
+        }
         TEST_ASSERT_EQUAL_UINT32(0, callback_errors);
         TEST_ASSERT_EQUAL_UINT32(xip ? 0u : pieces, callbacks);
         TEST_ASSERT_EQUAL_UINT32(xip ? 0u : pieces, hal_calls);
@@ -224,6 +245,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     UnityPrint("PERF "); UnityPrint(name);
     field(" bytes=", pieces * length);
     field(" piece=", length);
+    field(" destination=", (uint32_t)(uintptr_t)DESTINATION);
     field(" trials=", TRIALS);
     field(" warmups=", WARMUPS);
     field(" cycles=", sum / TRIALS);
@@ -252,6 +274,9 @@ static void throughput(void) {
     measure_row("public_64", false, false, false, PIECES, 64u);
     measure_row("raw_64", true, false, false, PIECES, 64u);
     measure_row("cold_xip_memcpy", false, false, true, PIECES, PIECE_BYTES);
+    active_storage = shared_storage;
+    measure_row("raw_ssram_queue16", true, false, false, PIECES, PIECE_BYTES);
+    active_storage = storage;
 }
 
 int main(void) {
