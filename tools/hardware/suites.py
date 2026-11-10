@@ -210,4 +210,21 @@ PSRAM_ASYNC = Suite('psram-async', 'tests/hardware/test_psram_async.py::test_psr
                     'tests/hardware/psram-async', 'psram_async.elf', configure=psram_async_options)
 
 
-SUITES = (PSRAM_ASYNC, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+def psram_throughput_options(repo: Path, output: Path, board: str, fault: str,
+                             sdk_root: Path | None = None, *, clock_hz: int, high: bool) -> list[str]:
+    if board not in PSRAM_BOARDS or fault != 'none':
+        raise ValueError('PSRAM throughput diagnostic requires AP510/AP510B without fault injection')
+    return ['-DCMAKE_BUILD_TYPE=Release', '-DNSX_PSRAM_ASYNC_DEPTH=16',
+            f'-DNSX_TEST_PSRAM_CLOCK={clock_hz}', f'-DNSX_TEST_CPU_HIGH={"ON" if high else "OFF"}']
+
+
+PSRAM_THROUGHPUT = tuple(
+    Suite(f'psram-throughput-{mode}-{clock_hz // 1000000}',
+          f'tests/hardware/test_psram_throughput.py::test_psram_throughput[psram-throughput-{mode}-{clock_hz // 1000000}]',
+          ('initialize', 'throughput'), 'tests/hardware/psram-throughput', 'psram_throughput.elf',
+          configure=partial(psram_throughput_options, clock_hz=clock_hz, high=high))
+    for mode, high in (('lp', False), ('hp', True))
+    for clock_hz in (48000000, 96000000))
+
+
+SUITES = (*PSRAM_THROUGHPUT, PSRAM_ASYNC, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
