@@ -106,6 +106,7 @@ static void initialize(void) {
     field(" boundary=", MSPI0->DEV0BOUNDARY);
     field(" burst=", MSPI0->DMABCOUNT);
     field(" threshold=", MSPI0->DMATHRESH);
+    field(" poll_nops=", 1024u);
     line_end();
 }
 
@@ -119,7 +120,7 @@ static void wait_for(unsigned target, uint32_t start) {
         }
         /* Keep DWT running while avoiding a tight stream of CPU loads from
          * DTCM competing with the DMA destination. Callback times are separate. */
-        for (unsigned spin = 0; spin < 32u; ++spin) __NOP();
+        for (unsigned spin = 0; spin < 1024u; ++spin) __NOP();
     }
     __DMB();
 }
