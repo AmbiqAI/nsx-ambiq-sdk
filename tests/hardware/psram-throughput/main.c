@@ -98,6 +98,9 @@ static void initialize(void) {
     field("CONFIG cpu=", SystemCoreClock);
     field(" psram=", info.configured_clock_hz);
     field(" rxdqs=", info.rxdqs_delay);
+    field(" part=", MCUCTRL->CHIPPN);
+    field(" revision=", MCUCTRL->CHIPREV);
+    field(" ioclock=", CLKGEN->MSPIIOCLKCTRL);
     field(" mspicfg=", MSPI0->MSPICFG);
     field(" devcfg=", MSPI0->DEV0CFG);
     field(" boundary=", MSPI0->DEV0BOUNDARY);
@@ -121,7 +124,7 @@ static void wait_for(unsigned target, uint32_t start) {
     __DMB();
 }
 
-static void submit(bool raw, unsigned index) {
+static void submit(bool raw, unsigned index, uint32_t length) {
     uint32_t offset = SOURCE_OFFSET + index * PIECE_BYTES;
     uint32_t *destination = DESTINATION + index * WORDS;
     uint32_t status;
@@ -131,24 +134,35 @@ static void submit(bool raw, unsigned index) {
         am_hal_mspi_dma_transfer_t transfer = {
             .ui8Priority = 1,
             .eDirection = AM_HAL_MSPI_RX,
-            .ui32TransferCount = PIECE_BYTES,
+            .ui32TransferCount = length,
             .ui32DeviceAddress = offset,
             .ui32SRAMAddress = (uint32_t)(uintptr_t)destination,
         };
         status = am_hal_mspi_nonblocking_transfer(mspi_handle, &transfer,
                                                  AM_HAL_MSPI_TRANS_DMA, complete, NULL);
     } else {
-        status = nsx_psram_read_async(&client, offset, destination, PIECE_BYTES, complete, NULL);
+        status = nsx_psram_read_async(&client, offset, destination, length, complete, NULL);
     }
-    TEST_ASSERT_EQUAL_UINT32(0, status);
+    if (status != 0u) {
+        measuring = false;
+        TEST_ASSERT_EQUAL_UINT32(0, status);
+    }
 }
 
-static void measure_row(const char *name, bool raw, bool serial, bool xip) {
+static void hardware_idle(void) {
+    am_hal_mspi_status_t hardware = {0};
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mspi_status_get(mspi_handle, &hardware));
+    TEST_ASSERT_FALSE(hardware.bTIP);
+    TEST_ASSERT_EQUAL_UINT32(0, hardware.ui32NumCQEntries);
+}
+
+static void measure_row(const char *name, bool raw, bool serial, bool xip, unsigned pieces, uint32_t length) {
     uint32_t best = UINT32_MAX, worst = 0, sum = 0, submit_sum = 0;
     uint32_t irq_sum = 0, call_sum = 0, cb_sum = 0, bits = 0;
     uint32_t first_sum = 0, last_sum = 0;
     for (unsigned trial = 0; trial < TRIALS + WARMUPS; ++trial) {
         TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
+        hardware_idle();
         memset(storage, 0xa5, sizeof(storage));
         client = (nsx_psram_client_t){0};
         callbacks = callback_errors = interrupts = interrupt_bits = hal_calls = 0;
@@ -167,24 +181,31 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip) {
         if (xip) {
             memcpy(DESTINATION, (const void *)(uintptr_t)(info.base_address + SOURCE_OFFSET), COPY_BYTES);
         } else {
-            for (unsigned i = 0; i < PIECES; ++i) {
+            for (unsigned i = 0; i < pieces; ++i) {
                 uint32_t a = DWT->CYCCNT;
-                submit(raw, i);
+                submit(raw, i, length);
                 submitted += (uint32_t)(DWT->CYCCNT - a);
                 if (serial) wait_for(i + 1u, start);
             }
-            wait_for(PIECES, start);
+            wait_for(pieces, start);
         }
         __DSB();
         uint32_t elapsed = DWT->CYCCNT - start;
         measuring = false;
         TEST_ASSERT_EQUAL_UINT32(0, callback_errors);
-        TEST_ASSERT_EQUAL_UINT32(xip ? 0u : PIECES, callbacks);
-        TEST_ASSERT_EQUAL_UINT32(xip ? 0u : PIECES, hal_calls);
+        TEST_ASSERT_EQUAL_UINT32(xip ? 0u : pieces, callbacks);
+        TEST_ASSERT_EQUAL_UINT32(xip ? 0u : pieces, hal_calls);
         TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
         TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[-1]);
         TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[COPY_BYTES / sizeof(uint32_t)]);
-        TEST_ASSERT_EQUAL_MEMORY(expected, DESTINATION, COPY_BYTES);
+        if (pieces < PIECES)
+            TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[pieces * WORDS]);
+        hardware_idle();
+        for (unsigned i = 0; i < pieces; ++i) {
+            TEST_ASSERT_EQUAL_MEMORY(expected + i * WORDS, DESTINATION + i * WORDS, length);
+            if (length < PIECE_BYTES)
+                TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[i * WORDS + length / sizeof(uint32_t)]);
+        }
         if (trial < WARMUPS) continue;
         if (elapsed < best) best = elapsed;
         if (elapsed > worst) worst = elapsed;
@@ -200,7 +221,8 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip) {
         }
     }
     UnityPrint("PERF "); UnityPrint(name);
-    field(" bytes=", COPY_BYTES);
+    field(" bytes=", pieces * length);
+    field(" piece=", length);
     field(" trials=", TRIALS);
     field(" warmups=", WARMUPS);
     field(" cycles=", sum / TRIALS);
@@ -218,11 +240,17 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip) {
 
 static void throughput(void) {
     TEST_ASSERT_TRUE(initialized);
-    measure_row("public_queue16", false, false, false);
-    measure_row("raw_queue16", true, false, false);
-    measure_row("public_serial", false, true, false);
-    measure_row("raw_serial", true, true, false);
-    measure_row("cold_xip_memcpy", false, false, true);
+    measure_row("public_queue16", false, false, false, PIECES, PIECE_BYTES);
+    measure_row("raw_queue16", true, false, false, PIECES, PIECE_BYTES);
+    measure_row("public_serial", false, true, false, PIECES, PIECE_BYTES);
+    measure_row("raw_serial", true, true, false, PIECES, PIECE_BYTES);
+    measure_row("public_single", false, false, false, 1u, PIECE_BYTES);
+    measure_row("raw_single", true, false, false, 1u, PIECE_BYTES);
+    measure_row("public_1k", false, false, false, PIECES, 1024u);
+    measure_row("raw_1k", true, false, false, PIECES, 1024u);
+    measure_row("public_64", false, false, false, PIECES, 64u);
+    measure_row("raw_64", true, false, false, PIECES, 64u);
+    measure_row("cold_xip_memcpy", false, false, true, PIECES, PIECE_BYTES);
 }
 
 int main(void) {
