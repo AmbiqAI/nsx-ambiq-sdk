@@ -208,11 +208,20 @@ static void verify_async_tails(void) {
     client = (nsx_psram_client_t){0};
     callbacks = callback_errors = 0;
     uint32_t start = DWT->CYCCNT;
+    uint32_t irq = am_hal_interrupt_master_disable();
+    uint32_t submission_status = 0;
     for (unsigned i = 0; i < PIECES; ++i) {
-        TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_read_async(
+        submission_status = nsx_psram_read_async(
             &client, SOURCE_OFFSET + i * PIECE_BYTES, DESTINATION + i * WORDS,
-            lengths[i], tail_complete, &tail_completions[i]));
+            lengths[i], tail_complete, &tail_completions[i]);
+        if (submission_status != 0u) break;
     }
+    uint32_t queued = nsx_psram_client_pending(&client);
+    uint32_t completed_before_unmask = callbacks;
+    am_hal_interrupt_master_set(irq);
+    TEST_ASSERT_EQUAL_UINT32(0, submission_status);
+    TEST_ASSERT_EQUAL_UINT32(PIECES, queued);
+    TEST_ASSERT_EQUAL_UINT32(0, completed_before_unmask);
     wait_for(PIECES, start);
     hardware_idle();
     TEST_ASSERT_EQUAL_UINT32(0, callback_errors);
