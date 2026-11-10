@@ -166,6 +166,69 @@ static void hardware_idle(void) {
     TEST_ASSERT_EQUAL_UINT32(0, hardware.ui32NumCQEntries);
 }
 
+typedef struct { volatile uint32_t count; } tail_completion_t;
+static tail_completion_t tail_completions[PIECES];
+
+static void tail_complete(void *ctx, uint32_t status) {
+    tail_completion_t *record = ctx;
+    ++record->count;
+    complete(NULL, status);
+}
+
+static void verify_async_tails(void) {
+    measuring = false;
+    for (unsigned length = sizeof(uint32_t); length <= PIECE_BYTES; length += sizeof(uint32_t)) {
+        for (unsigned end = 0; end < 2u; ++end) {
+            hardware_idle();
+            TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
+            memset(storage, 0xa5, sizeof(storage));
+            client = (nsx_psram_client_t){0};
+            callbacks = callback_errors = 0;
+            tail_completions[0].count = 0;
+            unsigned words = length / sizeof(uint32_t);
+            uint32_t *destination = DESTINATION + (end ? WORDS - words : 0u);
+            uint32_t start = DWT->CYCCNT;
+            TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_read_async(
+                &client, SOURCE_OFFSET, destination, length, tail_complete, &tail_completions[0]));
+            wait_for(1u, start);
+            hardware_idle();
+            TEST_ASSERT_EQUAL_UINT32(0, callback_errors);
+            TEST_ASSERT_EQUAL_UINT32(1u, tail_completions[0].count);
+            TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_client_pending(&client));
+            TEST_ASSERT_EQUAL_MEMORY(expected, destination, length);
+            TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, destination[-1]);
+            TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, destination[words]);
+        }
+    }
+    const uint32_t lengths[PIECES] = {4, 8, 12, 16, 20, 24, 28, 32, 36, 60, 64, 68, 124, 128, 4092, 4096};
+    hardware_idle();
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
+    memset(storage, 0xa5, sizeof(storage));
+    memset(tail_completions, 0, sizeof(tail_completions));
+    client = (nsx_psram_client_t){0};
+    callbacks = callback_errors = 0;
+    uint32_t start = DWT->CYCCNT;
+    for (unsigned i = 0; i < PIECES; ++i) {
+        TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_read_async(
+            &client, SOURCE_OFFSET + i * PIECE_BYTES, DESTINATION + i * WORDS,
+            lengths[i], tail_complete, &tail_completions[i]));
+    }
+    wait_for(PIECES, start);
+    hardware_idle();
+    TEST_ASSERT_EQUAL_UINT32(0, callback_errors);
+    TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_client_pending(&client));
+    TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[-1]);
+    TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[COPY_BYTES / sizeof(uint32_t)]);
+    for (unsigned i = 0; i < PIECES; ++i) {
+        TEST_ASSERT_EQUAL_UINT32(1u, tail_completions[i].count);
+        TEST_ASSERT_EQUAL_MEMORY(expected + i * WORDS, DESTINATION + i * WORDS, lengths[i]);
+        for (unsigned word = lengths[i] / sizeof(uint32_t); word < WORDS; ++word)
+            TEST_ASSERT_EQUAL_HEX32(0xa5a5a5a5u, DESTINATION[i * WORDS + word]);
+    }
+    field("TAIL verified_reads=", 2u * WORDS + PIECES);
+    line_end();
+}
+
 static void measure_row(const char *name, bool raw, bool serial, bool xip, unsigned pieces, uint32_t length) {
     bool shared = active_storage == shared_storage;
     TEST_ASSERT_TRUE(!shared || raw);
@@ -301,6 +364,7 @@ static void throughput(void) {
     active_storage = storage;
     hardware_idle();
     measure_row("public_dtcm_burst64", false, false, false, PIECES, PIECE_BYTES);
+    verify_async_tails();
     hardware_idle();
     MSPI0->DMABCOUNT = previous_burst;
     MSPI0->DMATHRESH = previous_threshold;
