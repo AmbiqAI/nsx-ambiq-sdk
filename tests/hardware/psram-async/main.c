@@ -258,7 +258,8 @@ static void blocking_transitions(void) {
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
     check_record(0);TEST_ASSERT_EQUAL_MEMORY(source,SLOT(1),4096);
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_write(offset,xip_source,4096));
-    uint8_t *readback=(uint8_t *)SLOT(2)+1;
+    memset(SLOT(1),0x5a,4096);
+    uint8_t *readback=(uint8_t *)SLOT(1)+1;
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read(offset,readback,4095));
     TEST_ASSERT_EQUAL_MEMORY(xip_source,readback,4095);
     TEST_ASSERT_EQUAL_HEX8(0x5a,readback[-1]);
