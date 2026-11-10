@@ -266,6 +266,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     field(" piece=", length);
     field(" destination=", (uint32_t)(uintptr_t)DESTINATION);
     field(" burst=", MSPI0->DMABCOUNT);
+    field(" threshold=", MSPI0->DMATHRESH);
     field(" trials=", TRIALS);
     field(" warmups=", WARMUPS);
     field(" cycles=", sum / TRIALS);
@@ -306,17 +307,28 @@ static void throughput(void) {
     active_storage = storage;
     hardware_idle();
     uint32_t previous_burst = MSPI0->DMABCOUNT;
-    MSPI0->DMABCOUNT = 16u;
+    uint32_t previous_threshold = MSPI0->DMATHRESH;
+    MSPI0->DMATHRESH = (previous_threshold & ~MSPI0_DMATHRESH_DMARXTHRESH_Msk) |
+        _VAL2FLD(MSPI0_DMATHRESH_DMARXTHRESH, 15u);
+    MSPI0->DMABCOUNT = (previous_burst & ~MSPI0_DMABCOUNT_BCOUNT_Msk) |
+        _VAL2FLD(MSPI0_DMABCOUNT_BCOUNT, 64u);
     __DSB();
-    TEST_ASSERT_EQUAL_UINT32(16u, MSPI0->DMABCOUNT);
-    measure_row("raw_dtcm_burst16", true, false, false, PIECES, PIECE_BYTES);
+    TEST_ASSERT_EQUAL_UINT32(64u, MSPI0->DMABCOUNT_b.BCOUNT);
+    TEST_ASSERT_EQUAL_UINT32(15u, MSPI0->DMATHRESH_b.DMARXTHRESH);
+    TEST_ASSERT_EQUAL_UINT32(previous_threshold & ~MSPI0_DMATHRESH_DMARXTHRESH_Msk,
+                            MSPI0->DMATHRESH & ~MSPI0_DMATHRESH_DMARXTHRESH_Msk);
+    measure_row("raw_dtcm_burst64", true, false, false, PIECES, PIECE_BYTES);
     active_storage = shared_storage;
-    measure_row("raw_ssram_burst16", true, false, false, PIECES, PIECE_BYTES);
+    measure_row("raw_ssram_burst64", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
     hardware_idle();
+    measure_row("public_dtcm_burst64", false, false, false, PIECES, PIECE_BYTES);
+    hardware_idle();
     MSPI0->DMABCOUNT = previous_burst;
+    MSPI0->DMATHRESH = previous_threshold;
     __DSB();
     TEST_ASSERT_EQUAL_UINT32(previous_burst, MSPI0->DMABCOUNT);
+    TEST_ASSERT_EQUAL_UINT32(previous_threshold, MSPI0->DMATHRESH);
 }
 
 int main(void) {
