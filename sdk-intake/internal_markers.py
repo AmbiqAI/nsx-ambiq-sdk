@@ -72,10 +72,14 @@ import yaml
 # more on either side, case-insensitively, so a stray variant can never slip
 # past the ratchet.
 MARKER_RE = re.compile(r"#{3,}\s*INTERNAL\s+(BEGIN|END)\s*#{3,}", re.IGNORECASE)
-_IF_DIRECTIVE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:if|ifdef|ifndef)\b")
+# A Python word boundary is insufficient for C identifiers: a universal
+# character name starts with a backslash, and combining characters or the
+# common '$' extension may also continue an identifier. Do not split them.
+_DIRECTIVE_BOUNDARY = r"(?![\w\\$\x80-\U0010ffff])"
+_IF_DIRECTIVE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:if|ifdef|ifndef)" + _DIRECTIVE_BOUNDARY)
 _IF_ZERO_RE = re.compile(r"^\s*(?:#|%:)\s*if\s+0\s*$")
-_ENDIF_RE = re.compile(r"^\s*(?:#|%:)\s*endif\b")
-_ELSE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:else|elif|elifdef|elifndef)\b")
+_ENDIF_RE = re.compile(r"^\s*(?:#|%:)\s*endif" + _DIRECTIVE_BOUNDARY)
+_ELSE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:else|elif|elifdef|elifndef)" + _DIRECTIVE_BOUNDARY)
 # Loaded by file location, matching the other standalone intake utilities.
 _spec = importlib.util.spec_from_file_location(
     "nsx_intake_c_source", Path(__file__).with_name("c_source.py"))

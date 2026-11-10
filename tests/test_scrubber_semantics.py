@@ -128,3 +128,18 @@ def test_comment_only_deletion_preserves_surviving_raw_bytes(markers, newline):
 def test_commented_declaration_with_trailing_semicolon_is_retained(markers):
     source = BEGIN + '/* typedef enum { OLD_ENTRY } old_type; */;\n' + END
     assert markers.scrub_text(source).text == source
+
+
+@pytest.mark.parametrize('prefix', ['#', '%:'])
+@pytest.mark.parametrize('keyword', ['if', 'ifdef', 'ifndef', 'endif', 'else', 'elif', 'elifdef', 'elifndef'])
+@pytest.mark.parametrize('suffix', [r'\u00E9', r'\U000000E9', '\u00e9', '\u0301', '$'])
+def test_directive_identifier_suffixes_are_not_keywords(markers, compiler, prefix, keyword, suffix):
+    # Unknown directive names are ignored in skipped groups. They cannot open,
+    # close or provide a live alternate for the real conditional around them.
+    source = BEGIN + '#if 0\n' + prefix + keyword + suffix + '\nint dead;\n#endif\n' + END + 'int live;\n'
+    result = markers.scrub_text(source)
+    assert result.text == 'int live;\n'
+    outputs = [subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=text.encode(),
+                              capture_output=True, check=True).stdout.split()
+               for text in (source, result.text)]
+    assert outputs[0] == outputs[1] == [b'int', b'live;']
