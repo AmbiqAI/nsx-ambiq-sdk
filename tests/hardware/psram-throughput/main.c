@@ -111,6 +111,8 @@ static void initialize(void) {
     field(" ioclock=", CLKGEN->MSPIIOCLKCTRL);
     field(" mspicfg=", MSPI0->MSPICFG);
     field(" devcfg=", MSPI0->DEV0CFG);
+    field(" devcfg1=", MSPI0->DEV0CFG1);
+    field(" ddr=", MSPI0->DEV0DDR);
     field(" boundary=", MSPI0->DEV0BOUNDARY);
     field(" burst=", MSPI0->DMABCOUNT);
     field(" threshold=", MSPI0->DMATHRESH);
