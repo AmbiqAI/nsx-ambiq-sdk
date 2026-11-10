@@ -106,11 +106,23 @@ def test_actual_platform_without_evb_header(repo_root, tmp_path, board, itm, uar
 
 
 @pytest.mark.parametrize('soc', ('apollo330P', 'apollo510'))
-def test_custom_provider_core_build(repo_root, tmp_path, soc):
-    """Build every core library with no EVB board aggregate or BSP archive."""
+@pytest.mark.parametrize('itm,uart', ((0, 0), (1, 0), (0, 1), (1, 1)))
+def test_custom_provider_core_build(repo_root, tmp_path, soc, itm, uart):
+    """Force core objects into an ARM image without EVB headers/archive or section GC."""
     from test_small_m55_memory import compiler_for_test
     compiler = compiler_for_test('gcc')
-    (tmp_path / 'am_bsp.h').write_text('void am_bsp_low_power_init(void);\n')
+    header = '#include "am_mcu_apollo.h"\nvoid am_bsp_low_power_init(void);\n'
+    source = '#include "am_bsp.h"\nvoid am_bsp_low_power_init(void) {}\n'
+    # Link-only provider: no hardware execution or claim of real initialization.
+    if itm:
+        header += '#define AM_BSP_GPIO_ITM_SWO 28\nextern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_ITM_SWO;\n'
+        source += 'am_hal_gpio_pincfg_t g_AM_BSP_GPIO_ITM_SWO = {0};\n'
+    if uart:
+        header += 'int32_t am_bsp_uart_printf_enable(void);\nvoid am_bsp_uart_printf_disable(void);\n'
+        source += 'int32_t am_bsp_uart_printf_enable(void) {return 0;}\nvoid am_bsp_uart_printf_disable(void) {}\n'
+    (tmp_path / 'am_bsp.h').write_text(header)
+    (tmp_path / 'bsp.c').write_text(source)
+    (tmp_path / 'main.c').write_text('int main(void) {return 0;}\n')
     (tmp_path / 'CMakeLists.txt').write_text(f'''
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_C_COMPILER "{compiler}")
@@ -126,16 +138,23 @@ include("{repo_root}/cmake/socs/{soc}.cmake")
 add_library(board_flags INTERFACE)
 add_library(nsx::board_flags ALIAS board_flags)
 target_link_libraries(board_flags INTERFACE ${{NSX_SOC_FLAGS_TARGET}})
+target_compile_definitions(board_flags INTERFACE STACK_SIZE=4096)
 add_subdirectory("{repo_root}/modules/nsx-cmsis-core" cmsis)
 add_subdirectory("{repo_root}/modules/nsx-ambiq-hal" hal)
 include("{repo_root}/cmake/nsx_bsp_contract.cmake")
 set(NSX_BSP_CONTRACT_REQUIRED 2)
-add_library(custom INTERFACE)
-target_link_libraries(custom INTERFACE nsx::board_flags nsx_ambiq_hal)
-target_include_directories(custom INTERFACE "{tmp_path}")
-nsx_register_bsp(TARGET custom CONTRACT 2 DEBUG_ITM 0 DEBUG_UART 0)
+add_library(custom STATIC bsp.c)
+target_link_libraries(custom PUBLIC nsx::board_flags nsx_ambiq_hal)
+target_include_directories(custom PUBLIC "{tmp_path}")
+nsx_register_bsp(TARGET custom CONTRACT 2 DEBUG_ITM {itm} DEBUG_UART {uart})
 add_subdirectory("{repo_root}/modules/nsx-soc-hal" soc)
 add_subdirectory("{repo_root}/modules/nsx-core" core)
+add_subdirectory("{repo_root}/modules/nsx-cmsis-startup" startup)
+add_executable(image main.c)
+target_link_libraries(image PRIVATE nsx::cmsis_startup
+    -Wl,--whole-archive nsx::system nsx::runtime -Wl,--no-whole-archive)
+target_link_options(image PRIVATE -nostartfiles "LINKER:-T,${{NSX_LINKER_SCRIPT}}"
+    LINKER:-u,Reset_Handler LINKER:--no-gc-sections)
 ''')
     build = tmp_path / 'build'
     result = subprocess.run(['cmake', '-S', str(tmp_path), '-B', str(build)],
@@ -148,4 +167,14 @@ add_subdirectory("{repo_root}/modules/nsx-core" core)
     undefined = subprocess.check_output([str(compiler.with_name('arm-none-eabi-nm')), '-u',
                                          *map(str, objects)], text=True)
     bsp_symbols = {line.split()[-1] for line in undefined.splitlines() if 'am_bsp' in line.lower()}
-    assert bsp_symbols == {'am_bsp_low_power_init'}
+    expected = {'am_bsp_low_power_init'}
+    if itm:
+        expected.add('g_AM_BSP_GPIO_ITM_SWO')
+    if uart:
+        expected.update(('am_bsp_uart_printf_enable', 'am_bsp_uart_printf_disable'))
+    assert bsp_symbols == expected
+    assert (build / 'image').is_file()
+    # A required provider entrypoint must not be hidden by archive extraction.
+    (tmp_path / 'bsp.c').write_text(source.replace('void am_bsp_low_power_init(void) {}', ''))
+    failed = subprocess.run(['cmake', '--build', str(build), '-j2'], capture_output=True, text=True)
+    assert failed.returncode != 0 and 'am_bsp_low_power_init' in failed.stderr
