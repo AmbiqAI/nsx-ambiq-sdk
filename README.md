@@ -6,6 +6,10 @@ The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate u
 
 It is not a full AmbiqSuite mirror. Optional middleware and examples such as FreeRTOS, TinyUSB, Cordio, USB stacks, CMSIS-NN, CMSIS-DSP, and AmbiqSuite sample applications belong in separate optional modules or applications.
 
+The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports)
+lets Apollo330P/Apollo510 core consumers omit unavailable UART/SWO board APIs.
+Existing EVBs retain the default v1 path; NSX custom-provider resolution is separate.
+
 ## Current Coverage
 
 The `5.2.30` release candidate contains the `stable-2026.11.05` intake from

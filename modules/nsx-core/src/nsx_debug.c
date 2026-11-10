@@ -1,4 +1,5 @@
 #include "nsx_debug_internal.h"
+#include "nsx_bsp_contract_internal.h"
 
 extern uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg);
 extern uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport);
@@ -30,6 +31,12 @@ void nsx_debug_suspend(void) {
 uint32_t nsx_debug_init(const nsx_debug_config_t *cfg) {
     if (cfg == NULL || cfg->transport == NSX_DEBUG_NONE) return 0;
     if (cfg->transport != NSX_DEBUG_ITM && cfg->transport != NSX_DEBUG_UART) {
+        return NSX_STATUS_INVALID_CONFIG;
+    }
+    /* Configuration rejection neither tears down a working transport nor
+     * latches/clears a previous hardware failure. */
+    if ((cfg->transport == NSX_DEBUG_ITM && !NSX_CORE_DEBUG_ITM) ||
+        (cfg->transport == NSX_DEBUG_UART && !NSX_CORE_DEBUG_UART)) {
         return NSX_STATUS_INVALID_CONFIG;
     }
     if (s_error != 0) return s_error;
