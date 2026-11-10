@@ -4,6 +4,7 @@
 #include "am_mcu_apollo.h"
 
 uint32_t nsx_psram_dma_validate_storage(void);
+uint32_t nsx_psram_dma_check_destination(const void *buffer, uint32_t length);
 void nsx_psram_dma_configure(void *handle, uint32_t clock_hz);
 /* Caller holds PRIMASK and exclusively owns this MSPI instance. */
 uint32_t nsx_psram_dma_submit(am_hal_mspi_dma_transfer_t *transfer,

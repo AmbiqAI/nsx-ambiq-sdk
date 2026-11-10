@@ -7,7 +7,7 @@
 #define NSX_PSRAM_MSPI_MODULE 0
 #endif
 
-#define NSX_PSRAM_DMA_WINDOW 4096u
+#define NSX_PSRAM_DMA_WINDOW NSX_PSRAM_DTCM_DMA_BOUNDARY
 #define NSX_PSRAM_DMA_WAIT_US 1000000u
 #define NSX_PSRAM_DMA_WAITING UINT32_MAX
 
@@ -19,6 +19,17 @@ static void *g_dma_handle;
 static bool g_non_hfrc;
 static bool g_busy;
 static bool g_failed;
+
+uint32_t nsx_psram_dma_check_destination(const void *buffer, uint32_t length) {
+    uintptr_t address = (uintptr_t)buffer;
+    if (length == 0u || length > NSX_PSRAM_DMA_WINDOW || length > DTCM_MAX_SIZE ||
+        address < DTCM_BASEADDR ||
+        address - DTCM_BASEADDR > DTCM_MAX_SIZE - length ||
+        (address - DTCM_BASEADDR) % NSX_PSRAM_DMA_WINDOW > NSX_PSRAM_DMA_WINDOW - length) {
+        return NSX_PSRAM_STATUS_DESTINATION;
+    }
+    return NSX_STATUS_SUCCESS;
+}
 
 uint32_t nsx_psram_dma_validate_storage(void) {
     uintptr_t address = (uintptr_t)g_dma_buffer;

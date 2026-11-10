@@ -15,8 +15,8 @@ def test_psram_common_behavior(repo_root: Path, tmp_path: Path) -> None:
 #include <stdint.h>
 #define NSX_STATUS_SUCCESS 0u
 #define NSX_STATUS_INVALID_HANDLE 1u
-#define NSX_STATUS_INVALID_CONFIG 2u
-#define NSX_STATUS_INVALID_VERSION 3u
+#define NSX_STATUS_INVALID_CONFIG 3u
+#define NSX_STATUS_INVALID_VERSION 2u
 typedef struct { uint32_t major, minor, revision; } nsx_version_t;
 typedef struct { uint32_t apiId; nsx_version_t version; } nsx_core_api_t;
 static inline bool nsx_core_check_api(
@@ -40,6 +40,23 @@ static uint32_t init_status;
 static bool safe_to_retry;
 static unsigned reads;
 static unsigned writes;
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)offset; (void)buffer; (void)length; (void)write; return NSX_STATUS_SUCCESS;
+}
+uint32_t nsx_psram_platform_irq_save(void) { return 0u; }
+void nsx_psram_platform_irq_restore(uint32_t state) { (void)state; }
+void nsx_psram_platform_delay_us(uint32_t us) { (void)us; }
+uint32_t nsx_psram_platform_dma_in_progress(bool *value) {
+    (void)value; return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
+uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t length) {
+    (void)buffer; (void)length; return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
+uint32_t nsx_psram_platform_read_async(uint32_t offset, void *buffer, uint32_t length,
+                                     nsx_psram_async_slot_t *slot, bool previous) {
+    (void)offset; (void)buffer; (void)length; (void)slot; (void)previous;
+    assert(0); return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
 
 uint32_t nsx_psram_platform_init(
     const nsx_psram_config_t *cfg, nsx_psram_platform_info_t *info) {

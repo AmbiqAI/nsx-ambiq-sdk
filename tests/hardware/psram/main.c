@@ -134,14 +134,14 @@ static void caller_xip_sync(void) {
 
 static void refusals(void) {
     TEST_ASSERT_TRUE(ready);
-    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_INVALID_OPERATION,
+    TEST_ASSERT_EQUAL_UINT32(NSX_PSRAM_STATUS_ALIGNMENT,
                              nsx_psram_read(OFFSET+1, destination+1, 4));
-    TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_INVALID_OPERATION,
+    TEST_ASSERT_EQUAL_UINT32(NSX_PSRAM_STATUS_ALIGNMENT,
                              nsx_psram_write(OFFSET+1, source+1, 4));
     const unsigned invalid[] = {1, 2, 3, 45, 4095, 4097, MAX_BYTES};
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_read(OFFSET, source, MAX_BYTES+9));
     for (unsigned i=0; i<sizeof(invalid)/sizeof(invalid[0]); ++i)
-        TEST_ASSERT_EQUAL_UINT32(AM_HAL_STATUS_INVALID_OPERATION,
+        TEST_ASSERT_EQUAL_UINT32(NSX_PSRAM_STATUS_ALIGNMENT,
                                  nsx_psram_write(OFFSET, destination, invalid[i]));
     TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_read(OFFSET, destination, MAX_BYTES+9));
     TEST_ASSERT_EQUAL_MEMORY(source, destination, MAX_BYTES+9);

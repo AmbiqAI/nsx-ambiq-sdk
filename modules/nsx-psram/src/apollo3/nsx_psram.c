@@ -169,8 +169,31 @@ uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length)
         g_nsx_psram_device_handle, buffer, offset, length, true);
 }
 
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)offset; (void)length; (void)write;
+    uintptr_t address = (uintptr_t)buffer;
+    return address >= AM_HAL_FLASH_DTCM_START && address <= AM_HAL_FLASH_DTCM_END
+        ? NSX_PSRAM_STATUS_DESTINATION : NSX_STATUS_SUCCESS;
+}
+
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length) {
     return am_devices_mspi_psram_write(
         g_nsx_psram_device_handle, (uint8_t *)buffer, offset, length, true);
+}
+
+uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t length) {
+    (void)buffer; (void)length;
+    return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
+
+uint32_t nsx_psram_platform_dma_in_progress(bool *in_progress) {
+    (void)in_progress;
+    return NSX_PSRAM_STATUS_UNSUPPORTED;
+}
+
+uint32_t nsx_psram_platform_read_async(uint32_t offset, void *buffer, uint32_t length,
+                                     nsx_psram_async_slot_t *slot, bool previously_pending) {
+    (void)offset; (void)buffer; (void)length; (void)slot; (void)previously_pending;
+    return NSX_PSRAM_STATUS_UNSUPPORTED;
 }

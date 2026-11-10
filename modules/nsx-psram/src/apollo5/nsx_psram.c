@@ -70,8 +70,14 @@
 #define NSX_PSRAM_DEVICE_SIZE_BYTES 33554432u
 #endif
 
+#if NSX_PSRAM_USE_BA_DRIVER
 #ifndef AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA
-#error "nsx-psram R5 currently supports BSPs that advertise AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA."
+#error "The selected BA PSRAM driver requires AM_BSP_MSPI_PSRAM_DEVICE_APS25616BA."
+#endif
+#else
+#ifndef AM_BSP_MSPI_PSRAM_DEVICE_APS25616N
+#error "The selected N PSRAM driver requires AM_BSP_MSPI_PSRAM_DEVICE_APS25616N."
+#endif
 #endif
 
 /*
@@ -323,7 +329,41 @@ uint32_t nsx_psram_platform_read(uint32_t offset, void *buffer, uint32_t length)
     return nsx_psram_dma_read(offset, buffer, length);
 }
 
+uint32_t nsx_psram_platform_validate_blocking(uint32_t offset, const void *buffer, uint32_t length, bool write) {
+    (void)buffer;
+    return ((offset & 3u) || (write && (length & 3u)))
+        ? NSX_PSRAM_STATUS_ALIGNMENT : NSX_STATUS_SUCCESS;
+}
+
 uint32_t nsx_psram_platform_write(
     uint32_t offset, const void *buffer, uint32_t length) {
     return nsx_psram_dma_write(offset, buffer, length);
+}
+
+uint32_t nsx_psram_platform_check_destination(const void *buffer, uint32_t length) {
+    return nsx_psram_dma_check_destination(buffer, length);
+}
+
+uint32_t nsx_psram_platform_dma_in_progress(bool *in_progress) {
+    am_hal_mspi_status_t hardware = {0};
+    uint32_t status = am_hal_mspi_status_get(g_nsx_psram_mspi_handle, &hardware);
+    if (status == AM_HAL_STATUS_SUCCESS) *in_progress = hardware.bTIP;
+    return status;
+}
+
+static void nsx_psram_async_hal_done(void *ctx, uint32_t status) {
+    __DMB();
+    nsx_psram_async_complete(ctx, status);
+}
+
+uint32_t nsx_psram_platform_read_async(uint32_t offset, void *buffer, uint32_t length,
+                                     nsx_psram_async_slot_t *slot, bool previously_pending) {
+    am_hal_mspi_dma_transfer_t transfer = {
+        .ui8Priority = 1,
+        .eDirection = AM_HAL_MSPI_RX,
+        .ui32TransferCount = length,
+        .ui32DeviceAddress = offset,
+        .ui32SRAMAddress = (uint32_t)(uintptr_t)buffer,
+    };
+    return nsx_psram_dma_submit(&transfer, previously_pending, nsx_psram_async_hal_done, slot);
 }

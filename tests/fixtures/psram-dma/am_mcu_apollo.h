@@ -6,7 +6,9 @@
 #ifndef DTCM_BASEADDR
 #define DTCM_BASEADDR 0x1000u
 #endif
+#ifndef DTCM_MAX_SIZE
 #define DTCM_MAX_SIZE UINT32_MAX
+#endif
 #define AM_HAL_STATUS_SUCCESS 0u
 #define AM_HAL_STATUS_FAIL 1u
 #define AM_HAL_STATUS_IN_USE 3u
