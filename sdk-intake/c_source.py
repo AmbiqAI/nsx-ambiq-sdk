@@ -116,6 +116,28 @@ def analyze(text: str) -> SourceLines:
             continue
         if following == 'R"':
             raise SourceSyntaxError("C++ raw string literal requires explicit dialect review")
+        # Preprocessing numbers may contain letters, dots and exponent signs.
+        # Consume the whole token before interpreting quotes; a separator in
+        # an inactive branch can otherwise pair with an apostrophe in a comment.
+        previous = source[index - 1] if index else ""
+        inside_identifier = bool(previous) and (previous.isalnum() or previous == "_" or ord(previous) >= 128)
+        starts_number = char in "0123456789" or (
+            char == "." and index + 1 < len(source) and source[index + 1] in "0123456789")
+        if not inside_identifier and starts_number:
+            cursor = index + 1
+            while cursor < len(source):
+                next_char = source[cursor]
+                if next_char == "'":
+                    raise SourceSyntaxError("digit separator requires explicit dialect review")
+                if (next_char.isalnum() or next_char in "_.\\" or ord(next_char) >= 128
+                        or (next_char in "+-" and source[cursor - 1] in "eEpP")):
+                    cursor += 1
+                else:
+                    break
+            for position in range(index, cursor):
+                emit(source[position], touch(position))
+            index = cursor
+            continue
         if char in "\"'":
             quote = char
             emit(quote, number)

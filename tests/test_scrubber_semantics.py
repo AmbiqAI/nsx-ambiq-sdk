@@ -169,3 +169,27 @@ def test_ascii_identifier_suffix_remains_unambiguously_not_a_keyword(markers, co
     for text in (source, result.text):
         assert subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=text.encode(),
                               capture_output=True, check=True).stdout.split() == [b'int', b'live;']
+
+
+@pytest.mark.parametrize('number', ["1'000", "0xA'B", "1e1'0", "1'\\\n000", "1e+L'0"])
+def test_digit_separators_cannot_hide_live_alternate(markers, compiler, tmp_path, number):
+    source = (BEGIN + '#if 0\nint ignored = ' + number + "; // don't /*\n"
+              + '#else\nint live;\n/* end */\n#endif\n' + END)
+    result = subprocess.run([compiler, '-E', '-P', '-std=c++14', '-x', 'c++', '-'],
+                            input=source.encode(), capture_output=True, check=True)
+    assert result.stdout.split() == [b'int', b'live;']
+    dead = BEGIN + '// private note\n' + END
+    (tmp_path / 'a.h').write_text(dead)
+    (tmp_path / 'z.h').write_text(source)
+    with pytest.raises(markers.InternalMarkerError, match='digit separator'):
+        markers.scrub_tree(tmp_path, write=True)
+    assert (tmp_path / 'a.h').read_text() == dead
+    assert (tmp_path / 'z.h').read_text() == source
+
+
+@pytest.mark.parametrize('prefix', ['', 'L', 'u', 'U', 'u8'])
+def test_standard_character_literal_prefixes_remain_live(markers, compiler, prefix):
+    source = BEGIN + "const auto value = " + prefix + "'x';\n" + END
+    subprocess.run([compiler, '-fsyntax-only', '-std=c++17', '-x', 'c++', '-'],
+                   input=source.encode(), capture_output=True, check=True)
+    assert markers.scrub_text(source).text == source
