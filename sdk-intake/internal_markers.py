@@ -76,10 +76,17 @@ MARKER_RE = re.compile(r"#{3,}\s*INTERNAL\s+(BEGIN|END)\s*#{3,}", re.IGNORECASE)
 # character name starts with a backslash, and combining characters or the
 # common '$' extension may also continue an identifier. Do not split them.
 _DIRECTIVE_BOUNDARY = r"(?![\w\\$\x80-\U0010ffff])"
-_IF_DIRECTIVE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:if|ifdef|ifndef)" + _DIRECTIVE_BOUNDARY)
-_IF_ZERO_RE = re.compile(r"^\s*(?:#|%:)\s*if\s+0\s*$")
-_ENDIF_RE = re.compile(r"^\s*(?:#|%:)\s*endif" + _DIRECTIVE_BOUNDARY)
-_ELSE_RE = re.compile(r"^\s*(?:#|%:)\s*(?:else|elif|elifdef|elifndef)" + _DIRECTIVE_BOUNDARY)
+_DIRECTIVE_PREFIX = r"^[ \t\v\f]*(?:#|%:)[ \t\v\f]*"
+_IF_DIRECTIVE_RE = re.compile(_DIRECTIVE_PREFIX + r"(?:if|ifdef|ifndef)" + _DIRECTIVE_BOUNDARY)
+_IF_ZERO_RE = re.compile(_DIRECTIVE_PREFIX + r"if[ \t\v\f]+0[ \t\v\f]*$")
+_ENDIF_RE = re.compile(_DIRECTIVE_PREFIX + r"endif" + _DIRECTIVE_BOUNDARY)
+_ELSE_RE = re.compile(_DIRECTIVE_PREFIX + r"(?:else|elif|elifdef|elifndef)" + _DIRECTIVE_BOUNDARY)
+# Compiler extensions can interpret a nonidentifier suffix as extra tokens on
+# a real #else, whereas a valid UCN can continue its name. Refuse either case
+# before classifying conditionals; ignoring an uncertain alternate is unsafe.
+_POSSIBLE_CONDITIONAL_RE = re.compile(
+    r"^\s*(?:#|%:)\s*(?:if|ifdef|ifndef|endif|else|elif|elifdef|elifndef)(?![A-Za-z0-9_])")
+_UNCERTAIN_DIRECTIVE_RE = re.compile(r"[\\$\x80-\U0010ffff]")
 # Loaded by file location, matching the other standalone intake utilities.
 _spec = importlib.util.spec_from_file_location(
     "nsx_intake_c_source", Path(__file__).with_name("c_source.py"))
@@ -301,9 +308,14 @@ def render_baseline(counts: dict[str, int], unparseable: Iterable[str] = ()) -> 
 # --------------------------------------------------------------------------
 def _analyze_source(text: str, *, label: str) -> c_source.SourceLines:
     try:
-        return c_source.analyze(text)
+        analysis = c_source.analyze(text)
     except c_source.SourceSyntaxError as error:
         raise InternalMarkerError(f"{label}: {error}; refusing to scrub") from error
+    for line in analysis.logical:
+        if _POSSIBLE_CONDITIONAL_RE.match(line.code) and _UNCERTAIN_DIRECTIVE_RE.search(line.code):
+            raise InternalMarkerError(
+                f"{label}:{line.start + 1}: ambiguous conditional directive spelling; refusing to scrub")
+    return analysis
 
 
 def code_only_lines_with_state(lines: list[str]) -> tuple[list[str], list[tuple[bool, bool]]]:

@@ -133,13 +133,39 @@ def test_commented_declaration_with_trailing_semicolon_is_retained(markers):
 @pytest.mark.parametrize('prefix', ['#', '%:'])
 @pytest.mark.parametrize('keyword', ['if', 'ifdef', 'ifndef', 'endif', 'else', 'elif', 'elifdef', 'elifndef'])
 @pytest.mark.parametrize('suffix', [r'\u00E9', r'\U000000E9', '\u00e9', '\u0301', '$'])
-def test_directive_identifier_suffixes_are_not_keywords(markers, compiler, prefix, keyword, suffix):
+def test_ambiguous_conditional_suffixes_are_refused(markers, compiler, prefix, keyword, suffix):
     # Unknown directive names are ignored in skipped groups. They cannot open,
     # close or provide a live alternate for the real conditional around them.
     source = BEGIN + '#if 0\n' + prefix + keyword + suffix + '\nint dead;\n#endif\n' + END + 'int live;\n'
+    output = subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=source.encode(),
+                            capture_output=True, check=True).stdout.split()
+    assert output == [b'int', b'live;']
+    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive'):
+        markers.scrub_text(source)
+
+
+@pytest.mark.parametrize('suffix', ['\u00a0', '\u2003', '\u0085', r'\q'])
+def test_compiler_accepted_else_extra_tokens_refuse_before_writes(markers, compiler, tmp_path, suffix):
+    # Both compilers accept these as real #else plus extra tokens (with a
+    # warning), rather than an identifier continuation. Never guess and drop it.
+    source = BEGIN + '#if 0\nint dead;\n#else' + suffix + '\nint live;\n#endif\n' + END
+    output = subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=source.encode(),
+                            capture_output=True, check=True).stdout.split()
+    assert output == [b'int', b'live;']
+    dead = BEGIN + '// private note\n' + END
+    (tmp_path / 'a.h').write_text(dead)
+    (tmp_path / 'z.h').write_text(source)
+    with pytest.raises(markers.InternalMarkerError, match='ambiguous conditional directive'):
+        markers.scrub_tree(tmp_path, write=True)
+    assert (tmp_path / 'a.h').read_text() == dead
+    assert (tmp_path / 'z.h').read_text() == source
+
+
+@pytest.mark.parametrize('suffix', ['_', '0', 'suffix'])
+def test_ascii_identifier_suffix_remains_unambiguously_not_a_keyword(markers, compiler, suffix):
+    source = BEGIN + '#if 0\n%:endif' + suffix + '\nint dead;\n#endif\n' + END + 'int live;\n'
     result = markers.scrub_text(source)
     assert result.text == 'int live;\n'
-    outputs = [subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=text.encode(),
-                              capture_output=True, check=True).stdout.split()
-               for text in (source, result.text)]
-    assert outputs[0] == outputs[1] == [b'int', b'live;']
+    for text in (source, result.text):
+        assert subprocess.run([compiler, '-E', '-P', '-x', 'c', '-'], input=text.encode(),
+                              capture_output=True, check=True).stdout.split() == [b'int', b'live;']

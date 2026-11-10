@@ -157,7 +157,9 @@ including null statements. Its lexical analysis follows backslash-newline
 continuations and comments when identifying literal `#if 0` regions, and refuses
 deletions that cut a logical line. Raw C++ strings, trigraphs and the compiler
 extension allowing whitespace after a continuation backslash require explicit
-review and are refused. This remains a review aid, not a complete C parser;
+review and are refused. Conditional directives with backslashes, non-ASCII
+characters or dollar signs also require dialect review and are refused. This
+remains a review aid, not a complete C parser;
 deleting lines also changes source locations such as `__LINE__`.
 
 Historical sanitation replay is independent of that generic analysis. It
