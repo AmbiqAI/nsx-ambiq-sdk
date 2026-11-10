@@ -6,6 +6,9 @@
 #ifndef NSX_PSRAM_MSPI_MODULE
 #define NSX_PSRAM_MSPI_MODULE 0
 #endif
+#ifndef NSX_PSRAM_ASYNC_BURST_QUALIFIED
+#define NSX_PSRAM_ASYNC_BURST_QUALIFIED 0
+#endif
 
 #define NSX_PSRAM_DMA_WINDOW NSX_PSRAM_DTCM_DMA_BOUNDARY
 #define NSX_PSRAM_DMA_WAIT_US 1000000u
@@ -19,6 +22,48 @@ static void *g_dma_handle;
 static bool g_non_hfrc;
 static bool g_busy;
 static bool g_failed;
+
+typedef enum {
+    NSX_PSRAM_DMA_BLOCKING,
+    NSX_PSRAM_DMA_ASYNC_READ,
+} nsx_psram_dma_purpose_t;
+
+#if NSX_PSRAM_ASYNC_BURST_QUALIFIED
+static bool g_burst_qualified;
+static uint32_t g_default_burst, g_default_threshold;
+
+static uint32_t nsx_psram_dma_select_policy(
+    nsx_psram_dma_purpose_t purpose, bool previously_pending) {
+    if (!g_burst_qualified) return AM_HAL_STATUS_SUCCESS;
+
+    MSPI0_Type *mspi = MSPIn(NSX_PSRAM_MSPI_MODULE);
+    uint32_t burst = g_default_burst;
+    uint32_t threshold = g_default_threshold;
+    if (purpose == NSX_PSRAM_DMA_ASYNC_READ) {
+        burst = (burst & ~MSPI0_DMABCOUNT_BCOUNT_Msk) |
+            _VAL2FLD(MSPI0_DMABCOUNT_BCOUNT, 64u);
+        threshold = (threshold & ~MSPI0_DMATHRESH_DMARXTHRESH_Msk) |
+            _VAL2FLD(MSPI0_DMATHRESH_DMARXTHRESH, 15u);
+    }
+    if (mspi->DMABCOUNT == burst && mspi->DMATHRESH == threshold)
+        return AM_HAL_STATUS_SUCCESS;
+    if (previously_pending) return NSX_PSRAM_STATUS_BUSY;
+
+    am_hal_mspi_status_t hardware = {0};
+    uint32_t status = am_hal_mspi_status_get(g_dma_handle, &hardware);
+    if (status != AM_HAL_STATUS_SUCCESS) return status;
+    if (hardware.bTIP || hardware.ui32NumCQEntries != 0u)
+        return AM_HAL_STATUS_INVALID_OPERATION;
+
+    /* BCOUNT is shared by RX and TX. Switch only between quiescent batches. */
+    mspi->DMATHRESH = threshold;
+    mspi->DMABCOUNT = burst;
+    __DSB();
+    if (mspi->DMABCOUNT != burst || mspi->DMATHRESH != threshold)
+        return AM_HAL_STATUS_FAIL;
+    return AM_HAL_STATUS_SUCCESS;
+}
+#endif
 
 uint32_t nsx_psram_dma_check_destination(const void *buffer, uint32_t length) {
     uintptr_t address = (uintptr_t)buffer;
@@ -44,11 +89,19 @@ uint32_t nsx_psram_dma_validate_storage(void) {
 void nsx_psram_dma_configure(void *handle, uint32_t clock_hz) {
     g_dma_handle = handle;
     g_non_hfrc = clock_hz == 125000000u || clock_hz == 250000000u;
+#if NSX_PSRAM_ASYNC_BURST_QUALIFIED
+    g_burst_qualified = clock_hz == 48000000u || clock_hz == 96000000u;
+    if (g_burst_qualified) {
+        g_default_burst = MSPIn(NSX_PSRAM_MSPI_MODULE)->DMABCOUNT;
+        g_default_threshold = MSPIn(NSX_PSRAM_MSPI_MODULE)->DMATHRESH;
+    }
+#endif
 }
 
-uint32_t nsx_psram_dma_submit(am_hal_mspi_dma_transfer_t *transfer,
-                            bool previously_pending,
-                            am_hal_mspi_callback_t done, void *ctx) {
+static uint32_t nsx_psram_dma_enqueue(am_hal_mspi_dma_transfer_t *transfer,
+                                    bool previously_pending,
+                                    am_hal_mspi_callback_t done, void *ctx,
+                                    nsx_psram_dma_purpose_t purpose) {
     am_hal_clkmgr_user_id_e user =
         (am_hal_clkmgr_user_id_e)(AM_HAL_CLKMGR_USER_ID_MSPI0 + NSX_PSRAM_MSPI_MODULE);
     /* The HAL requests this clock after posting the CQ entry. Preflight it so
@@ -57,15 +110,29 @@ uint32_t nsx_psram_dma_submit(am_hal_mspi_dma_transfer_t *transfer,
     if (status != AM_HAL_STATUS_SUCCESS) {
         return status;
     }
-    __DMB();
-    status = am_hal_mspi_nonblocking_transfer(
-        g_dma_handle, transfer, AM_HAL_MSPI_TRANS_DMA, done, ctx);
+#if NSX_PSRAM_ASYNC_BURST_QUALIFIED
+    status = nsx_psram_dma_select_policy(purpose, previously_pending);
+#else
+    (void)purpose;
+#endif
+    if (status == AM_HAL_STATUS_SUCCESS) {
+        __DMB();
+        status = am_hal_mspi_nonblocking_transfer(
+            g_dma_handle, transfer, AM_HAL_MSPI_TRANS_DMA, done, ctx);
+    }
     if (status != AM_HAL_STATUS_SUCCESS && g_non_hfrc && !previously_pending) {
         /* HFRC ownership is a user bit, not a refcount. Successful requests
          * leave its release to HAL IRQ cleanup, after the callback. */
         (void)am_hal_clkmgr_clock_release(AM_HAL_CLKMGR_CLK_ID_HFRC, user);
     }
     return status;
+}
+
+uint32_t nsx_psram_dma_submit(am_hal_mspi_dma_transfer_t *transfer,
+                            bool previously_pending,
+                            am_hal_mspi_callback_t done, void *ctx) {
+    return nsx_psram_dma_enqueue(transfer, previously_pending, done, ctx,
+                                NSX_PSRAM_DMA_ASYNC_READ);
 }
 
 static void nsx_psram_dma_done(void *ctx, uint32_t status) {
@@ -114,7 +181,8 @@ static uint32_t nsx_psram_dma_transfer(
         };
         irq = am_hal_interrupt_master_disable();
         g_dma_status = NSX_PSRAM_DMA_WAITING;
-        status = nsx_psram_dma_submit(&transfer, false, nsx_psram_dma_done, NULL);
+        status = nsx_psram_dma_enqueue(&transfer, false, nsx_psram_dma_done, NULL,
+                                      NSX_PSRAM_DMA_BLOCKING);
         am_hal_interrupt_master_set(irq);
         if (status != AM_HAL_STATUS_SUCCESS) {
             break;

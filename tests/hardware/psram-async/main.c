@@ -83,22 +83,44 @@ static void initialize(void) {
     ready=true;
 }
 static void dtcm_sizes_and_edges(void) {
-    const unsigned sizes[]={4,64,1024,4096};
-    for(unsigned s=0;s<sizeof(sizes)/sizeof(sizes[0]);++s) {
+    for(unsigned size=4;size<=4096;size+=4) {
         for(unsigned edge=0;edge<2;++edge) {
             prepare();
             static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
-            unsigned words=sizes[s]/4;
+            unsigned words=size/4;
             uint32_t *destination=SLOT(1)+(edge?WORDS-words:0);
-            TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,destination,sizes[s],done,&records[0]));
+            TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,destination,size,done,&records[0]));
             TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
             TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_pending(&client));
             check_record(0);
-            TEST_ASSERT_EQUAL_MEMORY(source,destination,sizes[s]);
+            TEST_ASSERT_EQUAL_MEMORY(source,destination,size);
             TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a, destination[-1]);
             TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a, destination[words]);
         }
     }
+}
+static void mixed_lengths(void) {
+    prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
+    const unsigned sizes[]={4096,4,68};
+    uint32_t statuses[NSX_TEST_ASYNC_DEPTH];
+    __disable_irq();
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i)
+        statuses[i]=nsx_psram_read_async(&client,SOURCE_OFFSET,SLOT(i+1),sizes[i%3],done,&records[i]);
+    uint32_t pending=nsx_psram_client_pending(&client);
+    uint32_t callbacks=callback_sequence;
+    __enable_irq();
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i) TEST_ASSERT_EQUAL_UINT32(0,statuses[i]);
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_ASYNC_DEPTH,pending);
+    TEST_ASSERT_EQUAL_UINT32(0,callbacks);
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i) {
+        check_record(i);
+        TEST_ASSERT_EQUAL_MEMORY(source,SLOT(i+1),sizes[i%3]);
+        for(unsigned word=sizes[i%3]/4;word<WORDS;++word)
+            TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(i+1)[word]);
+    }
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(1)[-1]);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(NSX_TEST_ASYNC_DEPTH+1)[0]);
 }
 static void queue_depth(void) {
     prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
@@ -227,10 +249,30 @@ static void normal_sleep_wait(void) {
     check_record(0);TEST_ASSERT_EQUAL_MEMORY(source,SLOT(1),4096);
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_pending(&c));
 }
+static void blocking_transitions(void) {
+    prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
+    const uint32_t offset=SOURCE_OFFSET+8192u;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,SLOT(1),4096,done,&records[0]));
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    check_record(0);TEST_ASSERT_EQUAL_MEMORY(source,SLOT(1),4096);
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_write(offset,xip_source,4096));
+    uint8_t *readback=(uint8_t *)SLOT(2)+1;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read(offset,readback,4095));
+    TEST_ASSERT_EQUAL_MEMORY(xip_source,readback,4095);
+    TEST_ASSERT_EQUAL_HEX8(0x5a,readback[-1]);
+    TEST_ASSERT_EQUAL_HEX8(0x5a,readback[4095]);
+    prepare();client=(nsx_psram_client_t){0};
+    uint32_t *last=SLOT(1)+WORDS-1;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,offset,last,4,done,&records[0]));
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    check_record(0);TEST_ASSERT_EQUAL_UINT32(xip_source[0],*last);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,last[-1]);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,last[1]);
+}
 int main(void) {
     nsx_test_begin("psram-async");
-    RUN_TEST(initialize);RUN_TEST(dtcm_sizes_and_edges);RUN_TEST(queue_depth);
+    RUN_TEST(initialize);RUN_TEST(dtcm_sizes_and_edges);RUN_TEST(queue_depth);RUN_TEST(mixed_lengths);
     RUN_TEST(xip_during_dma);RUN_TEST(two_clients);RUN_TEST(refusals);
-    RUN_TEST(blocking_exclusion);RUN_TEST(normal_sleep_wait);
+    RUN_TEST(blocking_exclusion);RUN_TEST(blocking_transitions);RUN_TEST(normal_sleep_wait);
     nsx_test_finish();
 }

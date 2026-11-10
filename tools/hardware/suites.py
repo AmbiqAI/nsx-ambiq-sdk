@@ -205,8 +205,8 @@ def psram_async_options(repo: Path, output: Path, board: str, fault: str,
 
 
 PSRAM_ASYNC = Suite('psram-async', 'tests/hardware/test_psram_async.py::test_psram_async',
-                    ('initialize', 'dtcm_sizes_and_edges', 'queue_depth', 'xip_during_dma',
-                     'two_clients', 'refusals', 'blocking_exclusion', 'normal_sleep_wait'),
+                    ('initialize', 'dtcm_sizes_and_edges', 'queue_depth', 'mixed_lengths', 'xip_during_dma',
+                     'two_clients', 'refusals', 'blocking_exclusion', 'blocking_transitions', 'normal_sleep_wait'),
                     'tests/hardware/psram-async', 'psram_async.elf', configure=psram_async_options)
 
 

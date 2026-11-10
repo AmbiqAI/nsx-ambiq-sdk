@@ -55,7 +55,7 @@ typedef enum {
 typedef struct {
     uint32_t base_address;
     uint32_t size_bytes;
-    uint32_t configured_clock_hz;
+    uint32_t configured_clock_hz; /**< Requested HAL setting, not measured pin SCK. */
     /**
      * Static capabilities supported by this platform build. These bits do not
      * describe the current initialization state, whether XIP was enabled for
@@ -73,7 +73,7 @@ typedef struct {
 
 typedef struct {
     const nsx_core_api_t *api;
-    uint32_t clock_hz;
+    uint32_t clock_hz; /**< Platform HAL setting; Apollo5 emulated-DDR SCK is nominally half. */
     bool enable_xip;
     bool configure_mpu;
 } nsx_psram_config_t;
