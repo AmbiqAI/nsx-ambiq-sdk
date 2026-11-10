@@ -102,6 +102,8 @@ add_library(nsx_system STATIC
     ${NSX_SYSTEM_SOURCES}
 )
 set_target_properties(nsx_system PROPERTIES EXPORT_NAME system)
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/nsx_bsp_contract.cmake")
+nsx_configure_core_bsp(nsx_system)
 add_library(nsx::system ALIAS nsx_system)
 target_include_directories(nsx_system PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/includes-internal>

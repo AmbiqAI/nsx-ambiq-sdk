@@ -318,6 +318,8 @@ uint32_t nsx_set_perf_mode(nsx_perf_mode_e mode);
  * @param cfg Debug configuration. NULL and NONE are successful no-ops.
  * @return 0 on success.
  */
+/* An unavailable BSP transport returns NSX_STATUS_INVALID_CONFIG before
+ * changing active transport or sticky hardware-error state. NULL/NONE are no-ops. */
 uint32_t nsx_debug_init(const nsx_debug_config_t *cfg);
 
 #ifdef __cplusplus

@@ -32,6 +32,45 @@ just the ring buffer, with no system/BSP surface). Existing consumers that link
 | `nsx_presets.h` | Opinionated, opt-in system presets (`nsx_system_development` / `_inference` / `_minimal`); link `nsx::presets` |
 | `nsx_mem.h` | Portable memory-placement macros (`NSX_MEM_SRAM`, `NSX_MEM_FAST_CODE`, etc.) and cache helpers (`nsx_cache_enable()`, `nsx_cache_flush()`) |
 
+## Optional BSP debug transports
+
+The SDK's opt-in BSP contract v2 supports Apollo330P and Apollo510 core consumers.
+Set `NSX_BSP_CONTRACT_REQUIRED=2` before adding the BSP, include
+`cmake/nsx_bsp_contract.cmake`, create a concrete provider target and register it:
+
+```cmake
+nsx_register_bsp(TARGET my_bsp CONTRACT 2 DEBUG_ITM 1 DEBUG_UART 0)
+```
+
+The target supplies its include directories/libraries and links the board flags and
+HAL. Add HAL first, then BSP, then SoC HAL and core. The helper creates `nsx::bsp`;
+only one provider is allowed. Both capability values must be literal `0` or `1`.
+The SDK independently checks the selected `NSX_SOC_SKEW`; a provider declaration
+cannot enable v2 on an unqualified family. Consumers read target properties, not
+cached global capability values. Existing built-in BSPs default to v1; the two
+qualified built-ins can explicitly opt into v2 with both transports available.
+
+The bounded provider header `am_bsp.h` declares `void am_bsp_low_power_init(void)`.
+UART support additionally requires `int32_t am_bsp_uart_printf_enable(void)` and
+`void am_bsp_uart_printf_disable(void)`. SWO support requires `AM_BSP_GPIO_ITM_SWO`
+and `extern am_hal_gpio_pincfg_t g_AM_BSP_GPIO_ITM_SWO`, with explicit HAL type
+includes and C++ linkage guards as appropriate. SWO configuration must be valid
+before full board initialization. Disabled transports need none of these optional
+symbols. The void board-init function cannot report failure and remains responsible
+for real board prerequisites; successful host builds do not qualify physical wiring.
+
+An unsupported transport returns `NSX_STATUS_INVALID_CONFIG` before suspending a
+working backend or changing sticky hardware-error state. NULL/NONE remain no-ops.
+Legacy void convenience APIs preserve their signatures and cannot report rejection;
+use `nsx_debug_init()` when the caller needs a status. Hardware-error handling and
+single-attempt startup coordination otherwise retain their existing behavior.
+
+This is the SDK CMake/runtime seam. NSX board-provider metadata, resolver/vendoring
+and lock integration are a separate coordinated change; this helper alone does not
+make a custom board selectable in released NSX. Provider provenance is checked by
+that integration, not established by a CMake target name. Sensor/peripheral drivers
+and actual board initialization remain outside this core contract.
+
 ## nsx_system Quick Start
 
 On AP3/3P, AP4P/L, AP510/B/5A/5B and AP330P/510L, choose one startup entry point per reset:

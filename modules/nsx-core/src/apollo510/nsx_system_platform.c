@@ -15,9 +15,10 @@
  * shared body's default, so no register aliases are defined here.
  */
 
+#include "nsx_bsp_contract_internal.h"
 #include "../nsx_system_platform_apollo5.inc"
 
-#if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
+#if NSX_CORE_DEBUG_ITM && (defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P))
 /* Preserve the BSP's SWO preparation after NSX's broader DCU preparation.
  * The vendor helper has additional boot/scope rules; it is not redundant. */
 static uint32_t nsx_platform_bsp_swo_prepare(void) {
@@ -80,8 +81,8 @@ uint32_t nsx_platform_spot_mgr_profile(void) {
  *   - Apollo510/5B/5A: Manual TPIU config with HFRC_96MHz because
  *     MCUCTRL_DBGCTRL_DBGTPIUCLKSEL is only available on these parts.
  *     SWO pin (GPIO 28) is configured via the BSP-supplied
- *     g_AM_BSP_GPIO_ITM_SWO pincfg (defined in libam_bsp.a's .data,
- *     so it is valid before any BSP entrypoint runs).
+ *     g_AM_BSP_GPIO_ITM_SWO pincfg, which the provider must make valid
+ *     before debug initialization (including before full BSP init).
  *
  * The JLink SWO viewer must be told the *trace clock* frequency
  * (not CPU clock) via -cpufreq so that its ACPR override matches.
@@ -92,6 +93,7 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
     if (cfg == NULL) return 0;
 
     if (cfg->transport == NSX_DEBUG_ITM) {
+#if NSX_CORE_DEBUG_ITM
         /* Step 1: Unlock DCU (common to all Apollo5 variants) */
         uint32_t status = nsx_platform_dcu_unlock_swo();
         if (status != 0) return status;
@@ -131,17 +133,21 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
             _VAL2FLD(ITM_TCR_SYNCENA, 1) |
             _VAL2FLD(ITM_TCR_ITMENA, 1);
 
-        /* Use the BSP-supplied SWO pincfg (correct funcsel for AP510 GPIO 28).
-         * The previous code constructed a pincfg with uFuncSel=0, which is
-         * the GPIO function — not SWO — so SWO output never reached the pin
-         * even though TPIU/ITM were configured correctly. */
+        /* Pin function values are SoC-specific; consume the board's config. */
         status = am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, g_AM_BSP_GPIO_ITM_SWO);
         if (status != 0) return status;
 
         am_util_stdio_printf_init((am_util_stdio_print_char_t)am_hal_itm_print);
 #endif
+#else
+        return NSX_STATUS_INVALID_CONFIG;
+#endif
     } else if (cfg->transport == NSX_DEBUG_UART) {
+#if NSX_CORE_DEBUG_UART
         return am_bsp_uart_printf_enable();
+#else
+        return NSX_STATUS_INVALID_CONFIG;
+#endif
     }
 
     return 0;
@@ -149,10 +155,13 @@ uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg) {
 
 uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
     if (transport == NSX_DEBUG_UART) {
+#if NSX_CORE_DEBUG_UART
         am_bsp_uart_printf_disable();
+#endif
         return 0;
     }
     if (transport != NSX_DEBUG_ITM) return 0;
+#if NSX_CORE_DEBUG_ITM
 #if defined(AM_PART_APOLLO510L) || defined(AM_PART_APOLLO330P)
     uint32_t status = am_hal_itm_disable();
     if (status != 0) return status;
@@ -173,5 +182,8 @@ uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport) {
     if (status != 0) return status;
     am_util_stdio_printf_init(0);
     return am_hal_gpio_pinconfig(AM_BSP_GPIO_ITM_SWO, am_hal_gpio_pincfg_default);
+#endif
+#else
+    return 0;
 #endif
 }

@@ -55,8 +55,16 @@ target_include_directories(nsx_ambiq_bsp INTERFACE
 # binding to the AmbiqSuite-specific target name. A configure may only have a
 # single BSP producer (a duplicate ALIAS is a hard CMake error), which enforces
 # the single-producer rule between the SDK provider and any custom BSP module.
-set(NSX_BSP_CONTRACT_VERSION 1 CACHE INTERNAL "nsx::bsp role contract version" FORCE)
-add_library(nsx::bsp ALIAS nsx_ambiq_bsp)
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/nsx_bsp_contract.cmake")
+if(DEFINED NSX_BSP_CONTRACT_REQUIRED AND NOT "${NSX_BSP_CONTRACT_REQUIRED}" STREQUAL "1")
+    # Explicit opt-in; qualification is enforced by the SDK helper.
+    nsx_register_bsp(TARGET nsx_ambiq_bsp CONTRACT "${NSX_BSP_CONTRACT_REQUIRED}"
+        DEBUG_ITM 1 DEBUG_UART 1)
+else()
+    set_target_properties(nsx_ambiq_bsp PROPERTIES NSX_BSP_CONTRACT_VERSION 1)
+    set(NSX_BSP_CONTRACT_VERSION 1 CACHE INTERNAL "nsx::bsp role contract version" FORCE)
+    add_library(nsx::bsp ALIAS nsx_ambiq_bsp)
+endif()
 
 # Capability advertisement. Board-layer fragments declare hardware facts as
 # plain variables before this module is added; we surface them as an open,

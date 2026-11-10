@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "nsx_system.h"
+#include "nsx_bsp_contract_internal.h"
 #include "nsx_power.h"
 #include "am_bsp.h"
 #include "am_util_stdio.h"
@@ -44,7 +45,57 @@ int main(int argc, char **argv) {
     assert(argc == 2);
     nsx_debug_config_t itm={.transport=NSX_DEBUG_ITM}, uart={.transport=NSX_DEBUG_UART};
     nsx_system_config_t system={.debug={.transport=NSX_DEBUG_ITM}};
-    if (!strcmp(argv[1], "system")) {
+    if (!strcmp(argv[1], "system-capabilities")) {
+        nsx_debug_config_t supported = {.transport = NSX_CORE_DEBUG_ITM ? NSX_DEBUG_ITM : NSX_DEBUG_UART};
+        if (NSX_CORE_DEBUG_ITM || NSX_CORE_DEBUG_UART) assert(nsx_debug_init(&supported) == 0);
+        unsigned enables = enable_calls;
+        const unsigned available[] = {0, NSX_CORE_DEBUG_ITM, NSX_CORE_DEBUG_UART};
+        for (unsigned t = NSX_DEBUG_ITM; t <= NSX_DEBUG_UART; ++t) {
+            if (available[t]) continue;
+            system.debug.transport = (nsx_debug_transport_e)t;
+            assert(nsx_system_init(&system) == NSX_STATUS_INVALID_CONFIG);
+            assert(bsp_calls == 0 && disable_calls == 0 && enable_calls == enables);
+        }
+        system.debug.transport = NSX_DEBUG_NONE;
+        assert(nsx_system_init(&system) == 0); /* rejection did not consume startup */
+        assert(bsp_calls == 1);
+    } else if (!strcmp(argv[1], "capabilities")) {
+        const unsigned supported[] = {0, NSX_CORE_DEBUG_ITM, NSX_CORE_DEBUG_UART};
+        for (unsigned t = NSX_DEBUG_ITM; t <= NSX_DEBUG_UART; ++t) {
+            nsx_debug_config_t cfg = {.transport = (nsx_debug_transport_e)t};
+            if (supported[t]) {
+                assert(nsx_debug_init(&cfg) == 0);
+                assert(route == cfg.transport);
+            } else {
+                unsigned enables = enable_calls, disables = disable_calls;
+                nsx_debug_transport_e previous = route;
+                assert(nsx_debug_init(&cfg) == NSX_STATUS_INVALID_CONFIG);
+                if (t == NSX_DEBUG_ITM) nsx_itm_printf_enable();
+                else nsx_uart_printf_enable();
+                assert(enable_calls == enables && disable_calls == disables && route == previous);
+            }
+        }
+        /* Reject absent selection with an already working backend, then
+         * repeat after a sticky hardware error. Neither may change state. */
+        for (unsigned t = NSX_DEBUG_ITM; t <= NSX_DEBUG_UART; ++t) {
+            if (!supported[t]) continue;
+            nsx_debug_config_t cfg = {.transport = (nsx_debug_transport_e)t};
+            assert(nsx_debug_init(&cfg) == 0);
+            for (unsigned u = NSX_DEBUG_ITM; u <= NSX_DEBUG_UART; ++u) {
+                if (supported[u]) continue;
+                nsx_debug_config_t absent = {.transport = (nsx_debug_transport_e)u};
+                unsigned disables = disable_calls;
+                assert(nsx_debug_init(&absent) == NSX_STATUS_INVALID_CONFIG);
+                assert(route == cfg.transport && disable_calls == disables);
+                nsx_debug_printf_disable();
+                fail_enable = 0x61;
+                assert(nsx_debug_init(&cfg) == 0x61);
+                fail_enable = 0;
+                assert(nsx_debug_init(&absent) == NSX_STATUS_INVALID_CONFIG);
+                assert(nsx_debug_init(&cfg) == 0x61);
+            }
+        }
+    } else if (!strcmp(argv[1], "system")) {
         output(0);
         assert(nsx_system_init(&system) == 0);
         output(1);

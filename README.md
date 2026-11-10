@@ -40,7 +40,7 @@ The records of earlier versions are kept alongside them.
 
 ## Using The Modules
 
-Select a board descriptor, add the staged modules your app needs, and consume the stable CMake targets. The board descriptor defines `nsx::board` and `nsx::board_flags`; the platform modules provide targets such as:
+The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports) supports optional UART/SWO on Apollo330P/Apollo510; existing EVBs default to v1 and NSX custom-provider resolution follows separately. Select a board descriptor, add the staged modules your app needs, and consume the stable CMake targets. The board descriptor defines `nsx::board` and `nsx::board_flags`; the platform modules provide targets such as:
 
 | Target | Purpose |
 | --- | --- |
