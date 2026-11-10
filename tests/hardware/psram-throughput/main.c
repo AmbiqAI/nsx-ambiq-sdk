@@ -26,6 +26,8 @@ static bool initialized;
 static volatile bool measuring;
 static volatile uint32_t callbacks, callback_errors, interrupts, interrupt_bits, hal_calls;
 static volatile uint32_t first_callback, last_callback;
+static bool sample_fifo;
+static uint32_t fifo_count, fifo_total, fifo_max, fifo_empty, fifo_high;
 
 uint32_t __real_am_hal_mspi_nonblocking_transfer(void *, void *, am_hal_mspi_trans_e,
                                                 am_hal_mspi_callback_t, void *);
@@ -128,6 +130,14 @@ static void wait_for(unsigned target, uint32_t start) {
         /* Keep DWT running while avoiding a tight stream of CPU loads from
          * DTCM competing with the DMA destination. Callback times are separate. */
         for (unsigned spin = 0; spin < 1024u; ++spin) __NOP();
+        if (sample_fifo && MSPI0->DMASTAT_b.DMATIP) {
+            uint32_t words = MSPI0->RXENTRIES_b.RXENTRIES;
+            ++fifo_count;
+            fifo_total += words;
+            if (words > fifo_max) fifo_max = words;
+            if (words == 0u) ++fifo_empty;
+            if (words > 24u) ++fifo_high;
+        }
     }
     __DMB();
 }
@@ -170,6 +180,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     uint32_t best = UINT32_MAX, worst = 0, sum = 0, submit_sum = 0;
     uint32_t irq_sum = 0, call_sum = 0, cb_sum = 0, bits = 0;
     uint32_t first_sum = 0, last_sum = 0;
+    uint32_t samples = 0, levels = 0, maximum = 0, empty = 0, high = 0;
     for (unsigned trial = 0; trial < TRIALS + WARMUPS; ++trial) {
         TEST_ASSERT_EQUAL_UINT32(0, nsx_psram_pending());
         hardware_idle();
@@ -186,6 +197,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
         client = (nsx_psram_client_t){0};
         callbacks = callback_errors = interrupts = interrupt_bits = hal_calls = 0;
         first_callback = last_callback = 0;
+        fifo_count = fifo_total = fifo_max = fifo_empty = fifo_high = 0;
         /* Source aliases were never CPU-written. Invalidate their clean cache
          * lines before every method; timing begins after the maintenance. */
         am_hal_cachectrl_range_t range = {
@@ -239,6 +251,11 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
         call_sum += hal_calls;
         cb_sum += callbacks;
         bits |= interrupt_bits;
+        samples += fifo_count;
+        levels += fifo_total;
+        if (fifo_max > maximum) maximum = fifo_max;
+        empty += fifo_empty;
+        high += fifo_high;
         if (!xip) {
             first_sum += (uint32_t)(first_callback - start);
             last_sum += (uint32_t)(last_callback - start);
@@ -261,6 +278,13 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     field(" callbacks=", cb_sum);
     field(" irqs=", irq_sum);
     field(" bits=", bits);
+    if (sample_fifo) {
+        field(" fifo_samples=", samples);
+        field(" fifo_sum=", levels);
+        field(" fifo_max=", maximum);
+        field(" fifo_empty=", empty);
+        field(" fifo_gt24=", high);
+    }
     line_end();
 }
 
@@ -280,21 +304,12 @@ static void throughput(void) {
     active_storage = shared_storage;
     measure_row("raw_ssram_queue16", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
-    hardware_idle();
-    uint32_t previous_apb = MSPI0->MSPICFG_b.APBCLK;
-    uint32_t continuous_apb = 1u;
-    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mspi_control(mspi_handle, AM_HAL_MSPI_REQ_APBCLK, &continuous_apb));
-    __DSB();
-    TEST_ASSERT_EQUAL_UINT32(1u, MSPI0->MSPICFG_b.APBCLK);
-    measure_row("public_apb_on", false, false, false, PIECES, PIECE_BYTES);
-    measure_row("raw_apb_on", true, false, false, PIECES, PIECE_BYTES);
+    sample_fifo = true;
+    measure_row("raw_dtcm_fifo", true, false, false, PIECES, PIECE_BYTES);
     active_storage = shared_storage;
-    measure_row("raw_ssram_apb_on", true, false, false, PIECES, PIECE_BYTES);
+    measure_row("raw_ssram_fifo", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
-    hardware_idle();
-    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mspi_control(mspi_handle, AM_HAL_MSPI_REQ_APBCLK, &previous_apb));
-    __DSB();
-    TEST_ASSERT_EQUAL_UINT32(previous_apb, MSPI0->MSPICFG_b.APBCLK);
+    sample_fifo = false;
 }
 
 int main(void) {
