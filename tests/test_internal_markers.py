@@ -287,7 +287,7 @@ def test_scrub_keeps_a_block_whose_only_survivor_is_a_separator_comma(markers) -
     scrubbed = markers.scrub_text(text, label="sample.h").text
     assert scrubbed == text, "the separator comma is live code; the block must be kept intact"
     assert markers.line_is_live(",")
-    assert not markers.line_is_live(";")
+    assert markers.line_is_live(";")
     assert not markers.line_is_live("   ")
 
 

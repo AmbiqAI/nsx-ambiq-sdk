@@ -152,11 +152,23 @@ with the reviewed provider output. Only the generated revision-banner comment
 may vary. The receipt currently covers 238 files from the reviewed intake;
 staging never regenerates it.
 
-The generic `internal_markers.py scrub` command is a review aid, not a complete C
-parser. Null statements and backslash-newline continuations can invalidate its
-assumptions (#203). New or changed inputs require explicit inspection of both
-the original content and proposed output before a receipt is updated. Do not
-use a blanket scrub or automatic baseline refresh to bypass a staging refusal.
+The generic `internal_markers.py scrub` command preserves every live token,
+including null statements. Its lexical analysis follows backslash-newline
+continuations and comments when identifying literal `#if 0` regions, and refuses
+deletions that cut a logical line. Raw C++ strings, trigraphs and the compiler
+extension allowing whitespace after a continuation backslash require explicit
+review and are refused. This remains a review aid, not a complete C parser;
+deleting lines also changes source locations such as `__LINE__`.
+
+Historical sanitation replay is independent of that generic analysis. It
+reconstructs the exact reviewed output by deleting original lines in order,
+after checking the receipt, source identity and reviewed reference. This keeps
+the four previously reviewed file-scope semicolon cleanups reproducible without
+treating new null statements as removable. Changed input for a receipted path
+is refused even if the generic scrubber would retain it. New or changed inputs
+require inspection of both original content and proposed output before a
+receipt is updated. Do not use a blanket scrub or automatic baseline refresh
+to bypass a staging refusal.
 
 A retained block keeps its body and its `BEGIN`/`END` fences, so live content
 remains visible to future reviews. The five known malformed files are preserved
