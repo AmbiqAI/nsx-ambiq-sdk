@@ -114,7 +114,7 @@ static void initialize(void) {
     field(" boundary=", MSPI0->DEV0BOUNDARY);
     field(" burst=", MSPI0->DMABCOUNT);
     field(" threshold=", MSPI0->DMATHRESH);
-    field(" poll_nops=", 1024u);
+    field(" poll_nops=", 32u);
     field(" ssram_power=", PWRCTRL->SSRAMPWRST);
     line_end();
 }
@@ -129,7 +129,7 @@ static void wait_for(unsigned target, uint32_t start) {
         }
         /* Keep DWT running while avoiding a tight stream of CPU loads from
          * DTCM competing with the DMA destination. Callback times are separate. */
-        for (unsigned spin = 0; spin < 1024u; ++spin) __NOP();
+        for (unsigned spin = 0; spin < 32u; ++spin) __NOP();
         if (sample_fifo && MSPI0->DMASTAT_b.DMATIP) {
             uint32_t words = MSPI0->RXENTRIES_b.RXENTRIES;
             ++fifo_count;
@@ -265,7 +265,7 @@ static void measure_row(const char *name, bool raw, bool serial, bool xip, unsig
     field(" bytes=", pieces * length);
     field(" piece=", length);
     field(" destination=", (uint32_t)(uintptr_t)DESTINATION);
-    field(" apb_continuous=", MSPI0->MSPICFG_b.APBCLK);
+    field(" burst=", MSPI0->DMABCOUNT);
     field(" trials=", TRIALS);
     field(" warmups=", WARMUPS);
     field(" cycles=", sum / TRIALS);
@@ -304,12 +304,19 @@ static void throughput(void) {
     active_storage = shared_storage;
     measure_row("raw_ssram_queue16", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
-    sample_fifo = true;
-    measure_row("raw_dtcm_fifo", true, false, false, PIECES, PIECE_BYTES);
+    hardware_idle();
+    uint32_t previous_burst = MSPI0->DMABCOUNT;
+    MSPI0->DMABCOUNT = 16u;
+    __DSB();
+    TEST_ASSERT_EQUAL_UINT32(16u, MSPI0->DMABCOUNT);
+    measure_row("raw_dtcm_burst16", true, false, false, PIECES, PIECE_BYTES);
     active_storage = shared_storage;
-    measure_row("raw_ssram_fifo", true, false, false, PIECES, PIECE_BYTES);
+    measure_row("raw_ssram_burst16", true, false, false, PIECES, PIECE_BYTES);
     active_storage = storage;
-    sample_fifo = false;
+    hardware_idle();
+    MSPI0->DMABCOUNT = previous_burst;
+    __DSB();
+    TEST_ASSERT_EQUAL_UINT32(previous_burst, MSPI0->DMABCOUNT);
 }
 
 int main(void) {
