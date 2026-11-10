@@ -43,25 +43,25 @@ of it forever. Keeping the fence means the retained lines stay counted in the
 baseline and stay reviewable at the next intake, and it makes the scrub
 idempotent (a second run over a scrubbed tree is a no-op).
 
-A line counts as live unless the only code left on it after comment-stripping
-is a lone `;` (e.g. the stray semicolon trailing a fully commented-out
-`/*typedef enum {...}*/;`), which carries no symbol. This also misclassifies live null statements; C line
-splicing can invalidate the physical-line parser too (issue #203). Automatic
-staging therefore uses `scrub_reviewed_tree` and requires reviewed whole-input
-and whole-output receipts for every removal. A bare `,` is *not*
-treated as dead: it is an enum/initializer separator whose removal would
-change live code.
+Every non-whitespace code token is live, including a lone null statement.
+Analysis follows C newline, continuation and comment boundaries; dialect-sensitive
+spellings are refused. This remains a conservative review aid, not a complete C
+parser. Deleting lines changes source locations such as __LINE__.
+
+Automatic staging independently replays exact reviewed deletion-only outputs;
+it does not rely on this generic parser to reconstruct historical removals.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Sequence
 
 import yaml
 
@@ -72,13 +72,29 @@ import yaml
 # more on either side, case-insensitively, so a stray variant can never slip
 # past the ratchet.
 MARKER_RE = re.compile(r"#{3,}\s*INTERNAL\s+(BEGIN|END)\s*#{3,}", re.IGNORECASE)
-_IF_DIRECTIVE_RE = re.compile(r"^\s*#\s*(?:if|ifdef|ifndef)\b")
-_IF_ZERO_RE = re.compile(r"^\s*#\s*if\s+0\s*(?:$|//|/\*)")
-_ENDIF_RE = re.compile(r"^\s*#\s*endif\b")
-_ELSE_RE = re.compile(r"^\s*#\s*(?:else|elif)\b")
-# Every terminator `str.splitlines()` recognizes, anchored at end of line, so a
-# keepends split can be reversed without guessing.
-_LINE_TERMINATOR_RE = re.compile("(?:\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029])$")
+# A Python word boundary is insufficient for C identifiers: a universal
+# character name starts with a backslash, and combining characters or the
+# common '$' extension may also continue an identifier. Do not split them.
+_DIRECTIVE_BOUNDARY = r"(?![\w\\$\x80-\U0010ffff])"
+_DIRECTIVE_PREFIX = r"^[ \t\v\f]*(?:#|%:)[ \t\v\f]*"
+_IF_DIRECTIVE_RE = re.compile(_DIRECTIVE_PREFIX + r"(?:if|ifdef|ifndef)" + _DIRECTIVE_BOUNDARY)
+_IF_ZERO_RE = re.compile(_DIRECTIVE_PREFIX + r"if[ \t\v\f]+0[ \t\v\f]*$")
+_ENDIF_RE = re.compile(_DIRECTIVE_PREFIX + r"endif" + _DIRECTIVE_BOUNDARY)
+_ELSE_RE = re.compile(_DIRECTIVE_PREFIX + r"(?:else|elif|elifdef|elifndef)" + _DIRECTIVE_BOUNDARY)
+# Compiler extensions can interpret a nonidentifier suffix as extra tokens on
+# a real #else, whereas a valid UCN can continue its name. Refuse either case
+# before classifying conditionals; ignoring an uncertain alternate is unsafe.
+_POSSIBLE_CONDITIONAL_RE = re.compile(
+    r"^\s*(?:#|%:)\s*(?:if|ifdef|ifndef|endif|else|elif|elifdef|elifndef)(?![A-Za-z0-9_])")
+_UNCERTAIN_DIRECTIVE_RE = re.compile(r"[\\$\x80-\U0010ffff]")
+# Loaded by file location, matching the other standalone intake utilities.
+_spec = importlib.util.spec_from_file_location(
+    "nsx_intake_c_source", Path(__file__).with_name("c_source.py"))
+if _spec is None or _spec.loader is None:
+    raise ImportError("cannot load intake C source analysis")
+c_source = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = c_source
+_spec.loader.exec_module(c_source)
 
 # Suffixes worth scanning. Markers only ever appear in vendor C sources and
 # headers today, but docs/build glue is cheap to cover and closes the obvious
@@ -290,60 +306,22 @@ def render_baseline(counts: dict[str, int], unparseable: Iterable[str] = ()) -> 
 # --------------------------------------------------------------------------
 # Scrubbing
 # --------------------------------------------------------------------------
+def _analyze_source(text: str, *, label: str) -> c_source.SourceLines:
+    try:
+        analysis = c_source.analyze(text)
+    except c_source.SourceSyntaxError as error:
+        raise InternalMarkerError(f"{label}: {error}; refusing to scrub") from error
+    for line in analysis.logical:
+        if _POSSIBLE_CONDITIONAL_RE.match(line.code) and _UNCERTAIN_DIRECTIVE_RE.search(line.code):
+            raise InternalMarkerError(
+                f"{label}:{line.start + 1}: ambiguous conditional directive spelling; refusing to scrub")
+    return analysis
+
+
 def code_only_lines_with_state(lines: list[str]) -> tuple[list[str], list[tuple[bool, bool]]]:
-    """Return `(code, states)`.
-
-    `code` is `lines` with every comment (and string body) blanked out, so a
-    line's remaining text is exactly its live code. Block-comment state is
-    carried across lines, which is what makes a fully commented-out `/*typedef
-    enum {...}*/` recognizable as dead rather than as code.
-
-    `states[i]` is `(in_block_comment_before, in_block_comment_after)` for line
-    `i`. The scrub uses it to refuse a marker line that itself opens or closes a
-    block comment: deleting such a line would leave the surrounding `/*` or `*/`
-    unbalanced and silently comment out (or uncomment) live code."""
-    stripped: list[str] = []
-    states: list[tuple[bool, bool]] = []
-    in_block_comment = False
-    for line in lines:
-        entry_state = in_block_comment
-        out: list[str] = []
-        index = 0
-        length = len(line)
-        while index < length:
-            if in_block_comment:
-                end = line.find("*/", index)
-                if end < 0:
-                    index = length
-                else:
-                    in_block_comment = False
-                    index = end + 2
-                continue
-            char = line[index]
-            if char == "/" and index + 1 < length and line[index + 1] == "/":
-                break
-            if char == "/" and index + 1 < length and line[index + 1] == "*":
-                in_block_comment = True
-                index += 2
-                continue
-            if char in "\"'":
-                quote = char
-                out.append(char)
-                index += 1
-                while index < length:
-                    if line[index] == "\\":
-                        index += 2
-                        continue
-                    if line[index] == quote:
-                        index += 1
-                        break
-                    index += 1
-                continue
-            out.append(char)
-            index += 1
-        stripped.append("".join(out))
-        states.append((entry_state, in_block_comment))
-    return stripped, states
+    """Analyze physical C line bodies; comments become whitespace, literals live."""
+    analysis = _analyze_source("".join(line + "\n" for line in lines), label="<lines>")
+    return list(analysis.code), list(analysis.comment_states)
 
 
 def code_only_lines(lines: list[str]) -> list[str]:
@@ -352,22 +330,16 @@ def code_only_lines(lines: list[str]) -> list[str]:
 
 
 def line_is_live(code: str) -> bool:
-    """True when a comment-stripped line still carries a symbol.
-
-    Only a lone `;` counts as dead -- the vestigial semicolon a fully
-    commented-out `/*typedef enum {...}*/;` leaves behind. A bare `,` is live:
-    it is an enum or initializer separator, and deleting it rewrites the
-    surrounding live declaration."""
-    stripped = code.strip()
-    return bool(stripped) and stripped != ";"
+    """Any remaining code token, including punctuation, can affect semantics."""
+    return bool(code.strip())
 
 
 def _find_blocks(
-    lines: list[str],
-    code: list[str],
+    lines: Sequence[str],
+    code: Sequence[str],
     *,
     label: str,
-    comment_states: list[tuple[bool, bool]] | None = None,
+    comment_states: Sequence[tuple[bool, bool]] | None = None,
 ) -> list[tuple[int, int]]:
     """Return `(begin_index, end_index)` pairs, 0-based and inclusive.
 
@@ -380,6 +352,10 @@ def _find_blocks(
         match = MARKER_RE.search(line)
         if not match:
             continue
+        if line.endswith("\\") or (index > 0 and lines[index - 1].endswith("\\")):
+            raise InternalMarkerError(
+                f"{label}:{index + 1}: INTERNAL marker belongs to a continued preprocessing line; refusing to scrub"
+            )
         if code[index].strip():
             raise InternalMarkerError(
                 f"{label}:{index + 1}: INTERNAL marker shares a line with live code; refusing to scrub"
@@ -403,47 +379,41 @@ def _find_blocks(
     return blocks
 
 
-def _find_if_zero_regions(code: list[str], start: int, stop: int, *, label: str) -> list[tuple[int, int]]:
-    """Return `(if_index, endif_index)` pairs for `#if 0` regions fully inside
-    `[start, stop)`. Regions carrying a top-level `#else`/`#elif` have a live
-    branch and are left alone.
+def _find_if_zero_regions(code: Sequence[str], start: int, stop: int, *, label: str,
+                          logical_lines: Sequence[c_source.LogicalLine] | None = None) -> list[tuple[int, int]]:
+    """Find literal-zero regions fully within the fence, with no live alternate.
 
-    `code` must be the *comment-stripped* lines. Matching raw lines instead
-    would count a commented-out `#if`/`#else`/`#endif` -- which vendor headers
-    are full of, inside the very INTERNAL blocks this walks -- as a real
-    directive, mistracking depth and deleting live code or leaving an orphan
-    `#endif` behind."""
+    Real scrubs pass preprocessing lines with physical provenance. The code-only
+    fallback supports callers already supplying one complete logical line each.
+    """
+    records = logical_lines if logical_lines is not None else tuple(
+        c_source.LogicalLine(i, i, line) for i, line in enumerate(code))
+    records = [line for line in records if start <= line.start and line.stop < stop]
     regions: list[tuple[int, int]] = []
-    index = start
-    while index < stop:
-        if not _IF_ZERO_RE.match(code[index]):
+    index = 0
+    while index < len(records):
+        if not _IF_ZERO_RE.match(records[index].code):
             index += 1
             continue
-        depth = 1
-        has_else = False
+        depth, has_else = 1, False
         cursor = index + 1
-        end_index: int | None = None
-        while cursor < stop:
-            line = code[cursor]
+        while cursor < len(records):
+            line = records[cursor].code
             if _IF_DIRECTIVE_RE.match(line):
                 depth += 1
             elif _ENDIF_RE.match(line):
                 depth -= 1
                 if depth == 0:
-                    end_index = cursor
                     break
             elif depth == 1 and _ELSE_RE.match(line):
                 has_else = True
             cursor += 1
-        if end_index is None:
-            # `#endif` lives outside the INTERNAL block (or is missing): the
-            # region is not self-contained, so removing it would unbalance the
-            # file. Leave it and let the scan keep reporting it.
+        if cursor == len(records):
             index += 1
             continue
         if not has_else:
-            regions.append((index, end_index))
-        index = end_index + 1
+            regions.append((records[index].start, records[cursor].stop))
+        index = cursor + 1
     return regions
 
 
@@ -461,22 +431,16 @@ class ScrubResult:
 
 
 def split_lines_keepends(text: str) -> tuple[list[str], list[str]]:
-    """Return `(raw, bodies)`: `raw` is `text` split with its line terminators
-    intact, `bodies` the same lines with the terminator removed.
-
-    The scrub rebuilds its output by joining surviving `raw` lines, so CRLF
-    endings, a bare CR, a form feed used as a page break, and a missing final
-    newline all survive byte-for-byte. Splitting on `str.splitlines()` and
-    re-joining with `"\\n"` would silently rewrite every one of them, turning a
-    deletion-only pass into a whole-file reformat."""
-    raw = text.splitlines(keepends=True)
-    return raw, [_LINE_TERMINATOR_RE.sub("", line) for line in raw]
+    """Preserve raw bytes while splitting only at actual C newline boundaries."""
+    return c_source.split_lines(text)
 
 
 def scrub_text(text: str, *, label: str = "<text>") -> ScrubResult:
-    raw_lines, lines = split_lines_keepends(text)
-    code, comment_states = code_only_lines_with_state(lines)
-    blocks = _find_blocks(lines, code, label=label, comment_states=comment_states)
+    if not MARKER_RE.search(text):
+        return ScrubResult(text, (), (), (), ())
+    analysis = _analyze_source(text, label=label)
+    raw_lines, lines, code = analysis.raw, analysis.bodies, analysis.code
+    blocks = _find_blocks(lines, code, label=label, comment_states=analysis.comment_states)
 
     doomed: set[int] = set()
     removed_blocks: list[tuple[int, int]] = []
@@ -484,7 +448,7 @@ def scrub_text(text: str, *, label: str = "<text>") -> ScrubResult:
     removed_if_zero: list[tuple[int, int]] = []
 
     for begin, end in blocks:
-        if_zero_regions = _find_if_zero_regions(code, begin + 1, end, label=label)
+        if_zero_regions = _find_if_zero_regions(code, begin + 1, end, label=label, logical_lines=analysis.logical)
         dead_from_if_zero = {index for start, stop in if_zero_regions for index in range(start, stop + 1)}
         survivors = [index for index in range(begin + 1, end) if index not in dead_from_if_zero]
         if any(line_is_live(code[index]) for index in survivors):
@@ -500,6 +464,11 @@ def scrub_text(text: str, *, label: str = "<text>") -> ScrubResult:
         removed_if_zero.extend((start + 1, stop + 1) for start, stop in if_zero_regions)
 
     doomed |= _seam_blank_lines(lines, raw_lines, doomed)
+    for line in analysis.logical:
+        touched = sum(index in doomed for index in range(line.start, line.stop + 1))
+        if touched and touched != line.stop - line.start + 1:
+            raise InternalMarkerError(
+                f"{label}:{line.start + 1}: removal cuts a continued preprocessing line; refusing to scrub")
 
     removed = tuple((index + 1, lines[index]) for index in sorted(doomed))
     scrubbed = "".join(line for index, line in enumerate(raw_lines) if index not in doomed)
@@ -515,7 +484,7 @@ def scrub_text(text: str, *, label: str = "<text>") -> ScrubResult:
 _COLLAPSIBLE_TERMINATORS = frozenset({"", "\n", "\r\n", "\r"})
 
 
-def _seam_blank_lines(lines: list[str], raw_lines: list[str], doomed: set[int]) -> set[int]:
+def _seam_blank_lines(lines: Sequence[str], raw_lines: Sequence[str], doomed: set[int]) -> set[int]:
     """Collapse the run of blank lines a removal leaves behind down to a single
     blank line. Only ever returns indices of blank lines, and only for runs that
     a removal actually touched -- pre-existing blank runs elsewhere in the file
@@ -676,6 +645,31 @@ def _reviewed_file_bytes(root: Path, relative: Path) -> bytes:
     return read_source(path).encode("utf-8")
 
 
+def _replay_reviewed_text(before: str, reference: bytes, *, label: str) -> ScrubResult:
+    """Reconstruct a trusted reviewed output by deleting original raw lines.
+
+    Ordered matching preserves duplicates and current banner bytes. Hash/source
+    checks belong to the caller; this function never invents replacement text.
+    """
+    raw, bodies = split_lines_keepends(before)
+    normalized, _ = split_lines_keepends(normalize_reviewed_banner(before.encode()).decode())
+    expected, _ = split_lines_keepends(normalize_reviewed_banner(reference).decode())
+    kept: set[int] = set()
+    cursor = 0
+    for line in expected:
+        while cursor < len(normalized) and normalized[cursor] != line:
+            cursor += 1
+        if cursor == len(normalized):
+            raise InternalMarkerError(f"{label}: reviewed output is not a deletion-only replay")
+        kept.add(cursor)
+        cursor += 1
+    output = "".join(line for index, line in enumerate(raw) if index in kept)
+    if normalize_reviewed_banner(output.encode()) != normalize_reviewed_banner(reference):
+        raise InternalMarkerError(f"{label}: replay differs from reviewed output")
+    removed = tuple((i + 1, line) for i, line in enumerate(bodies) if i not in kept)
+    return ScrubResult(output, removed, (), (), ())
+
+
 def scrub_reviewed_tree(
     root: Path,
     *,
@@ -705,6 +699,26 @@ def scrub_reviewed_tree(
         key = f"{path_prefix.strip('/')}/{relative.as_posix()}"
         # Decode before exception handling: invalid UTF-8 cannot be exempted.
         before = read_source(path)
+        evidence = replay.files.get(relative.as_posix())
+        if evidence is not None:
+            before_hash = hashlib.sha256(normalize_reviewed_banner(before.encode())).hexdigest()
+            reference = _reviewed_file_bytes(reviewed_root, relative)
+            reference_hash = hashlib.sha256(normalize_reviewed_banner(reference)).hexdigest()
+            if reference_hash != evidence.output_sha256:
+                raise InternalMarkerError(f"{key}: sanitation replay output differs from reviewed reference")
+            if before_hash == evidence.output_sha256:
+                # Already the exact reviewed output: idempotence needs no deletion.
+                continue
+            if source_commit != replay.source_commit or before_hash != evidence.input_sha256:
+                raise InternalMarkerError(f"{key}: unreviewed sanitation input; replay receipt/source required")
+            result = _replay_reviewed_text(before, reference, label=key)
+            if hashlib.sha256(normalize_reviewed_banner(result.text.encode())).hexdigest() != evidence.output_sha256:
+                raise InternalMarkerError(f"{key}: sanitation replay output hash differs")
+            if result.changed:
+                replayed.append(key)
+                planned.append((path, result))
+            continue
+
         try:
             result = scrub_text(before, label=key)
         except InternalMarkerError as error:
@@ -715,19 +729,8 @@ def scrub_reviewed_tree(
                 raise InternalMarkerError(f"{key}: malformed content differs from reviewed reference; review required") from error
             preserved.append(PreservedFenceFile(key, hashlib.sha256(before.encode()).hexdigest(), str(error)))
             continue
-
         if result.changed:
-            evidence = replay.files.get(relative.as_posix())
-            before_hash = hashlib.sha256(normalize_reviewed_banner(before.encode())).hexdigest()
-            after_hash = hashlib.sha256(normalize_reviewed_banner(result.text.encode())).hexdigest()
-            if source_commit != replay.source_commit or evidence != ReplayHashes(before_hash, after_hash):
-                raise InternalMarkerError(f"{key}: unreviewed sanitation; input/output replay receipt required")
-            reference = _reviewed_file_bytes(reviewed_root, relative)
-            if normalize_reviewed_banner(result.text.encode()) != normalize_reviewed_banner(reference):
-                raise InternalMarkerError(f"{key}: sanitation replay output differs from reviewed reference")
-            replayed.append(key)
-        if result.changed:
-            planned.append((path, result))
+            raise InternalMarkerError(f"{key}: unreviewed sanitation; input/output replay receipt required")
 
     for path, result in planned:
         path.write_bytes(result.text.encode("utf-8"))
@@ -762,8 +765,9 @@ def find_unparseable_fences(root: Path, *, path_prefix: str = "", **kwargs) -> l
         if not any(MARKER_RE.search(line) for line in lines):
             continue
         try:
-            code, comment_states = code_only_lines_with_state(lines)
-            _find_blocks(lines, code, label=key, comment_states=comment_states)
+            analysis = _analyze_source(read_source(path), label=key)
+            _find_blocks(analysis.bodies, analysis.code, label=key,
+                         comment_states=analysis.comment_states)
         except InternalMarkerError as error:
             problems.append((key, str(error)))
     return problems

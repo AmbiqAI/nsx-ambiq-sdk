@@ -15,7 +15,8 @@ BEGIN = b"// #### INTERNAL BEGIN ####\n"
 END = b"// #### INTERNAL END ####\n"
 DEAD = BEGIN + b"// private note\n" + END
 NULL_STATEMENT = b"if (x)\n" + BEGIN + b";\n" + END + b"    work();\n"
-NULL_OUTPUT = b"if (x)\n    work();\n"
+RESIDUE = BEGIN + b"/* typedef enum { OLD_ENTRY } old_type; */;\n" + END + b"int public_api;\n"
+RESIDUE_OUTPUT = b"int public_api;\n"
 COMMIT = "a" * 40
 PREFIX = "modules/nsx-ambiqsuite/sdk"
 
@@ -52,7 +53,7 @@ def run(markers, env, *, source_commit=COMMIT):
                                       source_commit=source_commit, replay_path=receipt, baseline=baseline)
 
 
-def record(markers, env, before=NULL_STATEMENT, after=NULL_OUTPUT, *, name="z.h"):
+def record(markers, env, before=RESIDUE, after=RESIDUE_OUTPUT, *, name="z.h"):
     def digest(data):
         return hashlib.sha256(markers.normalize_reviewed_banner(data)).hexdigest()
 
@@ -134,11 +135,11 @@ def test_invalid_utf8_is_never_exempted(markers, env, location):
 
 
 def test_receipted_semicolon_replay_accepts_banner_drift_and_is_idempotent(markers, env):
-    before = banner("current") + NULL_STATEMENT
-    after = banner("current") + NULL_OUTPUT
-    record(markers, env, banner("historical") + NULL_STATEMENT, banner("historical") + NULL_OUTPUT)
+    before = banner("current") + RESIDUE
+    after = banner("current") + RESIDUE_OUTPUT
+    record(markers, env, banner("historical") + RESIDUE, banner("historical") + RESIDUE_OUTPUT)
     env[0].joinpath("z.h").write_bytes(before)
-    env[1].joinpath("z.h").write_bytes(banner("released") + NULL_OUTPUT)
+    env[1].joinpath("z.h").write_bytes(banner("released") + RESIDUE_OUTPUT)
     result = run(markers, env)
     assert result.replayed_files == (f"{PREFIX}/z.h",)
     assert result.changed_files == ("z.h",)
@@ -150,23 +151,19 @@ def test_receipted_semicolon_replay_accepts_banner_drift_and_is_idempotent(marke
     assert env[0].joinpath("z.h").read_bytes() == after
 
 
-@pytest.mark.parametrize("guard", ["input", "output", "source", "missing_entry", "provider"])
+@pytest.mark.parametrize("guard", ["input", "output", "source", "provider"])
 def test_semicolon_replay_guards_fail_before_any_write(markers, env, guard):
     env[0].joinpath("a.h").write_bytes(DEAD)
-    before = NULL_STATEMENT
+    before = RESIDUE
     record(markers, env)
     if guard == "input":
-        # The extra comment is removed too: output equality cannot authorize this input.
-        before = NULL_STATEMENT.replace(b";\n", b";\n// new input\n", 1)
-        assert markers.scrub_text(before.decode()).text.encode() == NULL_OUTPUT
+        # Retaining a null statement in the generic parser cannot authorize input drift.
+        before = RESIDUE.replace(b";\n", b";\n// new input\n", 1)
+        assert markers.scrub_text(before.decode()).text.encode() == before
     elif guard == "output":
         record(markers, env, after=b"different output\n")
-    elif guard == "missing_entry":
-        receipt = json.loads(env[3].read_text())
-        del receipt["files"]["z.h"]
-        env[3].write_text(json.dumps(receipt))
     env[0].joinpath("z.h").write_bytes(before)
-    env[1].joinpath("z.h").write_bytes(b"different provider\n" if guard == "provider" else NULL_OUTPUT)
+    env[1].joinpath("z.h").write_bytes(b"different provider\n" if guard == "provider" else RESIDUE_OUTPUT)
     with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation|sanitation replay output"):
         run(markers, env, source_commit="b" * 40 if guard == "source" else COMMIT)
     assert env[0].joinpath("a.h").read_bytes() == DEAD
@@ -208,13 +205,21 @@ SPLICED_COMMENT = (BEGIN + b"#if 0\n// continued comment \\\n#endif\nint inactiv
 SPLICED_MACRO = b'#define FLAG \\\n' + DEAD + b"int public_api(void);\n"
 
 
-@pytest.mark.parametrize("before", [SPLICED_ELSE, SPLICED_COMMENT, SPLICED_MACRO])
-def test_unreviewed_line_splicing_is_refused_before_any_write(markers, env, before):
+def test_macro_boundary_refusal_occurs_before_any_write(markers, env):
+    before = SPLICED_MACRO
     env[0].joinpath("a.h").write_bytes(DEAD)
     env[0].joinpath("z.h").write_bytes(before)
-    with pytest.raises(markers.InternalMarkerError, match="unreviewed sanitation"):
+    with pytest.raises(markers.InternalMarkerError, match="reviewed reference is missing"):
         run(markers, env)
     assert env[0].joinpath("a.h").read_bytes() == DEAD
+    assert env[0].joinpath("z.h").read_bytes() == before
+
+
+@pytest.mark.parametrize("before", [SPLICED_ELSE, SPLICED_COMMENT, NULL_STATEMENT])
+def test_unreceipted_live_source_is_preserved_without_deletion(markers, env, before):
+    env[0].joinpath("z.h").write_bytes(before)
+    result = run(markers, env)
+    assert not result.changed_files
     assert env[0].joinpath("z.h").read_bytes() == before
 
 
@@ -270,3 +275,43 @@ def test_replay_loader_rejects_invalid_or_ambiguous_receipts(markers, env, mutat
 def test_replay_loader_reports_missing_receipt(markers, tmp_path):
     with pytest.raises(markers.InternalMarkerError, match="invalid sanitation replay receipt"):
         markers.load_sanitation_replay(tmp_path / "missing.json")
+
+
+@pytest.mark.parametrize('before,after', [
+    (b'int a;\nint b;\n' + DEAD, b'int b;\nint a;\n'),
+    (b'int a;\n' + DEAD, b'int changed;\n'),
+    (b'int a;\n' + DEAD, b'int a;\r\n'),
+])
+def test_receipt_cannot_authorize_non_deletion_rewrites(markers, env, before, after):
+    env[0].joinpath('a.h').write_bytes(DEAD)
+    env[0].joinpath('z.h').write_bytes(before)
+    env[1].joinpath('z.h').write_bytes(after)
+    record(markers, env, before, after)
+    with pytest.raises(markers.InternalMarkerError, match='deletion-only replay'):
+        run(markers, env)
+    assert env[0].joinpath('a.h').read_bytes() == DEAD
+    assert env[0].joinpath('z.h').read_bytes() == before
+
+
+def test_replay_preserves_duplicate_lines_in_order_and_original_banner(markers, env):
+    before = banner('current') + b'int a;\n' + DEAD + b'int a;\nint b;'
+    after = banner('reviewed') + b'int a;\nint a;\nint b;'
+    record(markers, env, before, after)
+    env[0].joinpath('z.h').write_bytes(before)
+    env[1].joinpath('z.h').write_bytes(after)
+    assert run(markers, env).changed_files == ('z.h',)
+    assert env[0].joinpath('z.h').read_bytes() == after.replace(b'reviewed', b'current')
+
+
+def test_removing_receipt_entry_refuses_otherwise_identical_deletion(markers, env):
+    record(markers, env, DEAD, b'')
+    env[0].joinpath('a.h').write_bytes(DEAD)
+    env[0].joinpath('z.h').write_bytes(DEAD)
+    env[1].joinpath('z.h').write_bytes(b'')
+    receipt = json.loads(env[3].read_text())
+    del receipt['files']['z.h']
+    env[3].write_text(json.dumps(receipt))
+    with pytest.raises(markers.InternalMarkerError, match='unreviewed sanitation'):
+        run(markers, env)
+    assert env[0].joinpath('a.h').read_bytes() == DEAD
+    assert env[0].joinpath('z.h').read_bytes() == DEAD
