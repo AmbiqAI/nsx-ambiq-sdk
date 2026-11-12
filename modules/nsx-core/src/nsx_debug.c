@@ -1,4 +1,5 @@
 #include "nsx_debug_internal.h"
+#include "nsx_bsp_contract_internal.h"
 
 extern uint32_t nsx_platform_debug_init(const nsx_debug_config_t *cfg);
 extern uint32_t nsx_platform_debug_disable(nsx_debug_transport_e transport);
@@ -27,11 +28,16 @@ void nsx_debug_suspend(void) {
     nsx_debug_disable(s_active);
 }
 
+bool nsx_debug_transport_available(nsx_debug_transport_e transport) {
+    return transport == NSX_DEBUG_NONE ||
+           (transport == NSX_DEBUG_ITM && NSX_CORE_DEBUG_ITM) ||
+           (transport == NSX_DEBUG_UART && NSX_CORE_DEBUG_UART);
+}
+
 uint32_t nsx_debug_init(const nsx_debug_config_t *cfg) {
     if (cfg == NULL || cfg->transport == NSX_DEBUG_NONE) return 0;
-    if (cfg->transport != NSX_DEBUG_ITM && cfg->transport != NSX_DEBUG_UART) {
-        return NSX_STATUS_INVALID_CONFIG;
-    }
+    /* Shared with system preflight, before claiming startup or changing state. */
+    if (!nsx_debug_transport_available(cfg->transport)) return NSX_STATUS_INVALID_CONFIG;
     if (s_error != 0) return s_error;
     if (cfg->transport == s_active) return 0;
     nsx_debug_suspend();

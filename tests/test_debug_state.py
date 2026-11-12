@@ -6,17 +6,15 @@ import subprocess
 import pytest
 
 
-@pytest.fixture(scope='module')
-def debug_binary(repo_root, tmp_path_factory):
+def build_debug_binary(repo_root, output, definitions=()):
     compiler = shutil.which('cc')
     assert compiler, 'Host C compiler required for debug state tests'
     core = repo_root / 'modules/nsx-core'
     fixture = repo_root / 'tests/fixtures'
-    output = tmp_path_factory.mktemp('debug-state') / 'debug'
     env = os.environ.copy()
     env.pop('GCC_ROOT', None)
     subprocess.run([compiler, '-std=c11', '-Wall', '-Wextra', '-Werror',
-                    '-DAM_PART_APOLLO510', '-DNSX_DISABLE_API_VALIDATION',
+                    '-DAM_PART_APOLLO510', '-DNSX_DISABLE_API_VALIDATION', *definitions,
                     '-I' + str(fixture / 'system-status'), '-I' + str(core / 'includes-api'),
                     '-I' + str(core / 'includes-internal'),
                     '-I' + str(repo_root / 'modules/nsx-power/includes-api'),
@@ -27,6 +25,19 @@ def debug_binary(repo_root, tmp_path_factory):
                       ('nsx_debug.c', 'nsx_system.c', 'nsx_startup.c', 'nsx_core_portable.c')),
                     '-o', str(output)], check=True, capture_output=True, text=True, env=env)
     return output
+
+
+@pytest.fixture(scope='module')
+def debug_binary(repo_root, tmp_path_factory):
+    return build_debug_binary(repo_root, tmp_path_factory.mktemp('debug-state') / 'debug')
+
+
+@pytest.mark.parametrize('itm,uart', ((0, 0), (1, 0), (0, 1), (1, 1)))
+def test_optional_transport_state(repo_root, tmp_path, itm, uart):
+    binary = build_debug_binary(repo_root, tmp_path / 'debug', (
+        '-DNSX_CORE_BSP_CONTRACT=2', f'-DNSX_CORE_DEBUG_ITM={itm}', f'-DNSX_CORE_DEBUG_UART={uart}'))
+    for scenario in ('capabilities', 'system-capabilities'):
+        subprocess.run([str(binary), scenario], check=True, capture_output=True, text=True, timeout=5)
 
 
 @pytest.mark.parametrize('scenario', ('system', 'system-reject', 'resume', 'switch', 'noop', 'setup-failure',
