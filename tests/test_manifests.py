@@ -171,6 +171,19 @@ REGISTRY_RESOLVED_DEPENDENCIES = {
 }
 
 
+def required_module_names(manifest: dict) -> set[str]:
+    names = set()
+    for dependency in manifest["depends"].get("required", []):
+        if isinstance(dependency, dict):
+            # The SDK SoC HAL accepts both qualified role interfaces. Role
+            # binding is owned by the app's board, not a concrete SDK name.
+            assert dependency == {"role": "bsp", "contracts": [1, 2]}
+        else:
+            assert isinstance(dependency, str)
+            names.add(dependency)
+    return names
+
+
 def test_required_manifest_dependencies_resolve(manifests: dict[Path, dict]) -> None:
     known_names = {manifest_name(manifest) for manifest in manifests.values()}
     # If an external module ever moves back in-repo, its allowlist entry is
@@ -179,7 +192,7 @@ def test_required_manifest_dependencies_resolve(manifests: dict[Path, dict]) -> 
     known_names |= REGISTRY_RESOLVED_DEPENDENCIES
     unresolved = []
     for path, manifest in manifests.items():
-        for dependency in manifest["depends"].get("required", []):
+        for dependency in required_module_names(manifest):
             if dependency not in known_names:
                 unresolved.append((path.name, manifest_name(manifest), dependency))
     assert unresolved == []
@@ -215,7 +228,7 @@ def test_sdk_provider_advertises_only_staged_payload(repo_root: Path, manifests:
     provider = next(manifest for manifest in manifests.values() if manifest_name(manifest) == "nsx-ambiqsuite")
     compatibility = provider["compatibility"]
     assert set(compatibility["socs"]) == STAGED_PROVIDER_SOCS
-    assert set(compatibility["boards"]) == STAGED_PROVIDER_BOARDS
+    assert compatibility["boards"] == ["*"]
     assert compatibility["toolchains"] == expected_provider_toolchains(repo_root)
 
     payload = repo_root / "modules" / "nsx-ambiqsuite" / "sdk"
@@ -224,7 +237,7 @@ def test_sdk_provider_advertises_only_staged_payload(repo_root: Path, manifests:
     lib_parts = sorted(path.name for path in (payload / "lib" / "gcc").iterdir() if path.is_dir())
     for part in lib_parts:
         assert (payload / "mcu" / part).is_dir()
-    for board in compatibility["boards"]:
+    for board in STAGED_PROVIDER_BOARDS:
         assert (payload / "boards" / board / "bsp").is_dir()
     for toolchain in ("gcc", "atfe"):
         for part in lib_parts:
@@ -234,7 +247,7 @@ def test_sdk_provider_advertises_only_staged_payload(repo_root: Path, manifests:
 def test_ambiqsuite_dependent_manifests_advertise_staged_compatibility(manifests: dict[Path, dict]) -> None:
     offenders = []
     for path, manifest in manifests.items():
-        dependencies = set(manifest["depends"].get("required", []))
+        dependencies = required_module_names(manifest)
         is_provider = manifest_name(manifest) == "nsx-ambiqsuite"
         if not is_provider and "nsx-ambiqsuite" not in dependencies:
             continue
@@ -282,3 +295,15 @@ def test_at110_timer_and_power_support_boundary(manifests: dict[Path, dict]) -> 
     assert "nsx-timer" in modules["nsx-power"]["depends"]["required"]
     assert "atomiq110" in modules["nsx-npu"]["compatibility"]["socs"]
     assert not {"nsx-timer", "nsx-power"}.intersection(modules["nsx-npu"]["depends"]["required"])
+
+
+def test_bsp_role_metadata_matches_qualified_sdk_contract(manifests: dict[Path, dict]) -> None:
+    modules = {manifest_name(m): m for m in manifests.values()}
+    assert modules["nsx-ambiq-hal"]["compatibility"]["boards"] == ["*"]
+    assert set(modules["nsx-ambiq-bsp"]["compatibility"]["boards"]) == STAGED_PROVIDER_BOARDS
+    assert modules["nsx-soc-hal"]["depends"]["required"] == [
+        "nsx-ambiq-hal", {"role": "bsp", "contracts": [1, 2]},
+    ]
+    assert modules["nsx-ambiq-bsp"]["contracts"] == {
+        "provides": {"bsp": {"versions": [1, 2], "socs": ["apollo330P", "apollo510"]}},
+    }

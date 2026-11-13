@@ -73,3 +73,9 @@ compatibility:
     - arm-none-eabi-gcc
     - atfe
     - armclang
+
+contracts:
+  provides:
+    bsp:
+      versions: [1, 2]
+      socs: [apollo330P, apollo510]
