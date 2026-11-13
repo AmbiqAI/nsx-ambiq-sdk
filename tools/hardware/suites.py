@@ -197,17 +197,29 @@ PSRAM_BLOCKING = Suite('psram-blocking', 'tests/hardware/test_psram.py::test_psr
 
 
 def psram_async_options(repo: Path, output: Path, board: str, fault: str,
-                        sdk_root: Path | None = None) -> list[str]:
+                        sdk_root: Path | None = None, *, clock_hz: int = 48000000,
+                        high: bool = False) -> list[str]:
     if board not in PSRAM_BOARDS or fault not in (
             'none', 'async-done-early', 'async-global-drain', 'async-drain-early'):
         raise ValueError('Async PSRAM requires AP510/AP510B and a supported fault mode')
-    return []
+    if clock_hz not in (48000000, 96000000):
+        raise ValueError('Async qualification requires HAL clock settings 48/96 MHz')
+    return [f'-DNSX_TEST_PSRAM_CLOCK={clock_hz}', f'-DNSX_TEST_CPU_HIGH={"ON" if high else "OFF"}']
 
 
-PSRAM_ASYNC = Suite('psram-async', 'tests/hardware/test_psram_async.py::test_psram_async',
-                    ('initialize', 'dtcm_sizes_and_edges', 'queue_depth', 'xip_during_dma',
-                     'two_clients', 'refusals', 'blocking_exclusion', 'normal_sleep_wait'),
+PSRAM_ASYNC = Suite('psram-async', 'tests/hardware/test_psram_async.py::test_psram_async[psram-async]',
+                    ('initialize', 'dtcm_sizes_and_edges', 'queue_depth', 'mixed_lengths', 'xip_during_dma',
+                     'two_clients', 'refusals', 'blocking_exclusion', 'blocking_transitions', 'normal_sleep_wait'),
                     'tests/hardware/psram-async', 'psram_async.elf', configure=psram_async_options)
 
+PSRAM_ASYNC_MATRIX = (PSRAM_ASYNC,) + tuple(
+    Suite(f'psram-async-{mode}-{clock_hz // 1000000}',
+          f'tests/hardware/test_psram_async.py::test_psram_async[psram-async-{mode}-{clock_hz // 1000000}]',
+          PSRAM_ASYNC.cases, PSRAM_ASYNC.source_dir, PSRAM_ASYNC.elf_name,
+          configure=partial(psram_async_options, clock_hz=clock_hz, high=high))
+    for mode, high in (('lp', False), ('hp', True))
+    for clock_hz in (48000000, 96000000)
+    if high or clock_hz != 48000000)
 
-SUITES = (PSRAM_ASYNC, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+
+SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

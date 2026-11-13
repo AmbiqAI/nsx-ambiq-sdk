@@ -33,6 +33,18 @@ void am_hal_interrupt_master_set(uint32_t state);
 void am_hal_delay_us(uint32_t us);
 void test_dmb(void);
 #define __DMB() test_dmb()
+void test_dsb(void);
+#define __DSB() test_dsb()
+typedef struct { volatile uint32_t DMABCOUNT, DMATHRESH; } MSPI0_Type;
+MSPI0_Type *test_mspi(unsigned module);
+#define MSPIn(module) test_mspi(module)
+#define MSPI0_DMABCOUNT_BCOUNT_Pos 0u
+#define MSPI0_DMABCOUNT_BCOUNT_Msk 0xffu
+#define MSPI0_DMATHRESH_DMARXTHRESH_Pos 8u
+#define MSPI0_DMATHRESH_DMARXTHRESH_Msk 0x1f00u
+#define _VAL2FLD(field, value) (((value) << field##_Pos) & field##_Msk)
+typedef struct { bool bTIP; uint32_t ui32NumCQEntries; } am_hal_mspi_status_t;
+uint32_t am_hal_mspi_status_get(void *handle, am_hal_mspi_status_t *status);
 uint32_t am_hal_clkmgr_clock_request(unsigned clock, am_hal_clkmgr_user_id_e user);
 uint32_t am_hal_clkmgr_clock_release(unsigned clock, am_hal_clkmgr_user_id_e user);
 uint32_t am_hal_mspi_nonblocking_transfer(void *handle, void *transfer, unsigned mode,

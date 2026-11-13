@@ -225,10 +225,21 @@ The whole destination must fit canonical DTCM and one 4096-byte DTCM window
 rejected. The queue has `NSX_PSRAM_ASYNC_DEPTH` slots (CMake cache setting,
 default 8, range 1–32); contention or exhaustion returns `BUSY`.
 
-At 125/250 MHz PSRAM clocks, the pinned HAL's HFRC-adjustment mode can wait
+On AP510/AP510B EVBs using MSPI0 and requested HAL clock settings 48/96 MHz,
+async reads use 64-byte DMA bursts with receive threshold 15. Blocking transfers
+restore the original vendor policy. Switching requires an idle engine and empty
+command queue; accepted async reads retain one policy throughout the batch.
+Other board, module and clock combinations keep their original policy.
+
+`clock_hz` selects the platform HAL setting, and `configured_clock_hz` echoes it;
+neither measures the pin clock. Apollo5's emulated-DDR mode has nominal external
+SCK at half the selected rate: settings 48/96 MHz correspond to nominal 24/48 MHz
+SCK. These clock settings are independent of the CPU's 96/250 MHz modes.
+
+At requested HAL settings 125/250 MHz, the pinned HAL's HFRC-adjustment mode can wait
 about 10 ms during clock preflight with interrupts masked. The adapter retains
 the reviewed preflight/queue ownership sequence; asynchronous data completion
-does not imply a bounded low-latency submission. Default 48 MHz PSRAM owns
+does not imply a bounded low-latency submission. The default 48 MHz HAL setting owns
 HFRC already. Board validation here uses that default and does not measure
 the high-clock adjustment wait.
 

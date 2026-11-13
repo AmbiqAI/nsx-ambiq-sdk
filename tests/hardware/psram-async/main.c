@@ -61,17 +61,19 @@ static void check_record(unsigned i) {
     TEST_ASSERT_TRUE(records[i].ipsr>=16u);
 }
 static void initialize(void) {
-    nsx_system_config_t system={.enable_cache=true,.perf_mode=NSX_PERF_LOW,
+    nsx_system_config_t system={.enable_cache=true,.perf_mode=NSX_TEST_CPU_HIGH?NSX_PERF_HIGH:NSX_PERF_LOW,
                                 .debug={.transport=NSX_DEBUG_ITM}};
     TEST_ASSERT_EQUAL_UINT32(0,nsx_system_init(&system));
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_CPU_HIGH?250000000u:96000000u,SystemCoreClock);
     __enable_irq();
     nsx_psram_config_t config;
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_default_config(&config));
+    config.clock_hz=NSX_TEST_PSRAM_CLOCK;
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_init(&config));
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_get_info(&info));
     TEST_ASSERT_TRUE(info.capabilities & NSX_PSRAM_CAP_ASYNC_READ);
     TEST_ASSERT_EQUAL_UINT32(NSX_TEST_ASYNC_DEPTH,info.async_depth);
-    TEST_ASSERT_EQUAL_UINT32(48000000u,info.configured_clock_hz);
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_PSRAM_CLOCK,info.configured_clock_hz);
     TEST_ASSERT_TRUE((uintptr_t)buffers>=DTCM_BASEADDR);
     TEST_ASSERT_TRUE((uintptr_t)buffers+sizeof(buffers)<=DTCM_BASEADDR+DTCM_MAX_SIZE);
     for(unsigned i=0;i<WORDS;++i) {
@@ -83,22 +85,44 @@ static void initialize(void) {
     ready=true;
 }
 static void dtcm_sizes_and_edges(void) {
-    const unsigned sizes[]={4,64,1024,4096};
-    for(unsigned s=0;s<sizeof(sizes)/sizeof(sizes[0]);++s) {
+    for(unsigned size=4;size<=4096;size+=4) {
         for(unsigned edge=0;edge<2;++edge) {
             prepare();
             static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
-            unsigned words=sizes[s]/4;
+            unsigned words=size/4;
             uint32_t *destination=SLOT(1)+(edge?WORDS-words:0);
-            TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,destination,sizes[s],done,&records[0]));
+            TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,destination,size,done,&records[0]));
             TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
             TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_pending(&client));
             check_record(0);
-            TEST_ASSERT_EQUAL_MEMORY(source,destination,sizes[s]);
+            TEST_ASSERT_EQUAL_MEMORY(source,destination,size);
             TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a, destination[-1]);
             TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a, destination[words]);
         }
     }
+}
+static void mixed_lengths(void) {
+    prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
+    const unsigned sizes[]={4096,4,68};
+    uint32_t statuses[NSX_TEST_ASYNC_DEPTH];
+    __disable_irq();
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i)
+        statuses[i]=nsx_psram_read_async(&client,SOURCE_OFFSET,SLOT(i+1),sizes[i%3],done,&records[i]);
+    uint32_t pending=nsx_psram_client_pending(&client);
+    uint32_t callbacks=callback_sequence;
+    __enable_irq();
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i) TEST_ASSERT_EQUAL_UINT32(0,statuses[i]);
+    TEST_ASSERT_EQUAL_UINT32(NSX_TEST_ASYNC_DEPTH,pending);
+    TEST_ASSERT_EQUAL_UINT32(0,callbacks);
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    for(unsigned i=0;i<NSX_TEST_ASYNC_DEPTH;++i) {
+        check_record(i);
+        TEST_ASSERT_EQUAL_MEMORY(source,SLOT(i+1),sizes[i%3]);
+        for(unsigned word=sizes[i%3]/4;word<WORDS;++word)
+            TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(i+1)[word]);
+    }
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(1)[-1]);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,SLOT(NSX_TEST_ASYNC_DEPTH+1)[0]);
 }
 static void queue_depth(void) {
     prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
@@ -227,10 +251,31 @@ static void normal_sleep_wait(void) {
     check_record(0);TEST_ASSERT_EQUAL_MEMORY(source,SLOT(1),4096);
     TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_pending(&c));
 }
+static void blocking_transitions(void) {
+    prepare(); static nsx_psram_client_t client; client=(nsx_psram_client_t){0};
+    const uint32_t offset=SOURCE_OFFSET+8192u;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,SOURCE_OFFSET,SLOT(1),4096,done,&records[0]));
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    check_record(0);TEST_ASSERT_EQUAL_MEMORY(source,SLOT(1),4096);
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_write(offset,xip_source,4096));
+    memset(SLOT(1),0x5a,4096);
+    uint8_t *readback=(uint8_t *)SLOT(1)+1;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read(offset,readback,4095));
+    TEST_ASSERT_EQUAL_MEMORY(xip_source,readback,4095);
+    TEST_ASSERT_EQUAL_HEX8(0x5a,readback[-1]);
+    TEST_ASSERT_EQUAL_HEX8(0x5a,readback[4095]);
+    prepare();client=(nsx_psram_client_t){0};
+    uint32_t *last=SLOT(1)+WORDS-1;
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_read_async(&client,offset,last,4,done,&records[0]));
+    TEST_ASSERT_EQUAL_UINT32(0,nsx_psram_client_drain(&client,100000));
+    check_record(0);TEST_ASSERT_EQUAL_UINT32(xip_source[0],*last);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,last[-1]);
+    TEST_ASSERT_EQUAL_HEX32(0x5a5a5a5a,last[1]);
+}
 int main(void) {
     nsx_test_begin("psram-async");
-    RUN_TEST(initialize);RUN_TEST(dtcm_sizes_and_edges);RUN_TEST(queue_depth);
+    RUN_TEST(initialize);RUN_TEST(dtcm_sizes_and_edges);RUN_TEST(queue_depth);RUN_TEST(mixed_lengths);
     RUN_TEST(xip_during_dma);RUN_TEST(two_clients);RUN_TEST(refusals);
-    RUN_TEST(blocking_exclusion);RUN_TEST(normal_sleep_wait);
+    RUN_TEST(blocking_exclusion);RUN_TEST(blocking_transitions);RUN_TEST(normal_sleep_wait);
     nsx_test_finish();
 }
