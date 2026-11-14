@@ -24,6 +24,7 @@ def _startup_command(repo, board, gcc_root, request, output, sdk_root, fault, ti
             '--hardware-artifacts', str(output), '--fault-injection', fault,
             '--hardware-timeout', str(timeout),
             *(['--device', request.device] if request.device else []),
+            *(['--jlink-library', str(request.jlink_library)] if request.jlink_library is not None else []),
             *(['--candidate-sdk-root', str(sdk_root)] if sdk_root else [])]
 
 

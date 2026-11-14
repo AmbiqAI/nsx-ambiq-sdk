@@ -29,6 +29,7 @@ def pytest_addoption(parser):
                     help='Suite-specific negative control (validated before building)')
     group.addoption('--probe', help='Exact J-Link serial, never auto-select')
     group.addoption('--device', help='Optional check against descriptor SEGGER device; never an override')
+    group.addoption('--jlink-library', type=Path, help='Explicit SEGGER library; no discovery fallback')
     group.addoption('--gcc-root', type=Path)
     group.addoption('--candidate-sdk-root', type=Path,
                     help='Production SDK checkout; tests and runner remain in this harness')
@@ -71,8 +72,9 @@ def run_config(request):
             raise pytest.UsageError('Install Arm GCC or supply --gcc-root')
         root = Path(cc).resolve().parent.parent
     try:
-        board_request = BoardRequest(config.getoption('--probe'), config.getoption('--device'), timeout) if hardware else None
-    except ValueError as exc:
+        board_request = BoardRequest(config.getoption('--probe'), config.getoption('--device'), timeout,
+                                     config.getoption('--jlink-library')) if hardware else None
+    except (ValueError, OSError) as exc:
         raise pytest.UsageError(str(exc)) from exc
     return RunConfig(board, root.resolve(), hardware, config.getoption('--hardware-artifacts'),
                      config.getoption('--fault-injection'), board_request, config.getoption('--candidate-sdk-root'))

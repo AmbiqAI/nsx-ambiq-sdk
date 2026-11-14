@@ -5,6 +5,43 @@ host orchestration; pinned Unity 2.6.1 runs assertions on the target. No GitHub
 runner, Helia installation, microphone, or external wiring is needed for the
 startup case. Helia code and infrastructure are unchanged.
 
+## Supervised farm pilot
+
+The manual **SDK hardware pilot** workflow runs the existing host and AP510
+qualification scopes on one `apollo510_evb` farm runner. Dispatch with the
+reviewed local plan and patch-decisions files as JSON input values:
+
+```sh
+jq -n --slurpfile plan /absolute/plan.json --slurpfile decisions /absolute/decisions.json \
+  '{plan_json: ($plan[0] | tojson), decisions_json: ($decisions[0] | tojson)}' |
+  gh workflow run sdk-hardware-qualification.yml --repo AmbiqAI/nsx-ambiq-sdk --ref main --json
+```
+
+The runner group must first allow this repository and exact workflow/ref;
+coordinate provisioning through `aitg-hardware-runner-nixos`. The pilot accepts
+full baseline/candidate/harness SHAs and uses the selected harness's locked
+dependencies. Host checks, descriptor discovery and board execution use the
+same tool environment. Physical identity comes from the runner and bench
+inventory; no probe is auto-selected. J-Link reset is not cold power-on.
+
+A successful pilot means the host and AP510 scopes passed. **Full five-board
+qualification remains incomplete**; the workflow cannot approve a release.
+Evidence includes the unchanged assessment, source/tool identities, explicit
+J-Link library and deployed device-overlay hashes. Artifacts are uploaded after
+failure as well as success, with run/attempt-specific names.
+
+The adapter reserves the board through `bench-agent` before access. It releases
+only a matching lease after verified results and cleanup. Failure/cancellation
+retains a conservative UNKNOWN/recovery-required reservation for up to 70 minutes;
+inspect the run and recover the board before manually returning it. TTL expiry
+does not establish board health, and the farm currently has no persistent
+quarantine mechanism. This is a supervised pilot, with no scheduled dispatch.
+
+For a nonstandard local SEGGER installation, both pytest and qualification CLI
+accept `--jlink-library /absolute/libjlinkarm.so`. The typed API accepts
+`BoardRequest(..., jlink_library=Path(...))`. An explicit path must load;
+there is no discovery fallback. Omitting it preserves existing local discovery.
+
 This first phase tests the SDK's shipped CMake board/startup/HAL/BSP integration.
 It does **not** yet test neuralspotx's public install/registry/vendoring workflow.
 That requires a separate generated-app acceptance test. No implicit sibling-repo

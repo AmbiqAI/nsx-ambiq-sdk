@@ -1,0 +1,102 @@
+name: SDK hardware pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      plan_json:
+        description: Reviewed qualification plan JSON with full baseline/candidate/harness SHAs
+        required: true
+        type: string
+      decisions_json:
+        description: Reviewed patch-decisions JSON for those exact SDK revisions
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ap510-pilot:
+    name: AP510 pilot (full qualification incomplete)
+    runs-on: [self-hosted, hpx-hardware, apollo510_evb]
+    timeout-minutes: 60
+    env:
+      SDK_PILOT_ROOT: ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}
+      UV_CACHE_DIR: ${{ runner.temp }}/sdk-uv-cache
+      UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/sdk-python
+      UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/sdk-venv
+      PRE_COMMIT_HOME: ${{ runner.temp }}/sdk-pre-commit
+      XDG_CACHE_HOME: ${{ runner.temp }}/sdk-cache
+    steps:
+      - name: Stage incomplete evidence
+        run: |
+          mkdir -p "${SDK_PILOT_ROOT}"
+          echo 'Pilot has not completed; full qualification incomplete.' > "${SDK_PILOT_ROOT}/NOT_STARTED"
+          if [[ -z "${SSL_CERT_FILE:-}" && -f /etc/ssl/certs/ca-certificates.crt ]]; then
+            echo 'SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt' >> "${GITHUB_ENV}"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: driver
+          persist-credentials: false
+      - name: Read reviewed inputs
+        id: inputs
+        working-directory: driver
+        env:
+          SDK_PLAN_JSON: ${{ inputs.plan_json }}
+          SDK_DECISIONS_JSON: ${{ inputs.decisions_json }}
+        run: >-
+          uv run --no-project --python 3.12 python -m tools.sdk_qualification.farm
+          prepare --output "${SDK_PILOT_ROOT}/inputs"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.inputs.outputs.baseline }}
+          path: baseline
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.inputs.outputs.candidate }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.inputs.outputs.harness }}
+          path: harness
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install locked harness dependencies
+        run: uv sync --locked --python 3.12 --project harness --group ci --group hardware
+      - name: Run the existing host and AP510 scopes
+        working-directory: driver
+        run: |
+          set -euo pipefail
+          gcc_exe="$(command -v arm-none-eabi-gcc)"
+          gcc_root="$(dirname "$(dirname "$(readlink -f "${gcc_exe}")")")"
+          "${UV_PROJECT_ENVIRONMENT}/bin/python" -m tools.sdk_qualification.farm run \
+            --inputs "${SDK_PILOT_ROOT}/inputs" \
+            --baseline "${GITHUB_WORKSPACE}/baseline" --candidate "${GITHUB_WORKSPACE}/candidate" \
+            --harness "${GITHUB_WORKSPACE}/harness" --python "${UV_PROJECT_ENVIRONMENT}/bin/python" \
+            --gcc-root "${gcc_root}" --output "${SDK_PILOT_ROOT}/evidence"
+          rm "${SDK_PILOT_ROOT}/NOT_STARTED"
+      - name: Summarize pilot and board state
+        if: always()
+        run: |
+          echo '### AP510 pilot — full five-board qualification incomplete' >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -f "${SDK_PILOT_ROOT}/evidence/pilot.json" ]]; then
+            jq '{pilot_status, qualification, global_status, board_state, lease, reason, error}' \
+              "${SDK_PILOT_ROOT}/evidence/pilot.json" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo 'No finalized pilot result. No qualification claim is available.' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          echo 'If interrupted after reservation: the lease is retained for at most 70 minutes. An operator must inspect/recover the board; expiry does not establish health.' >> "${GITHUB_STEP_SUMMARY}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-ap510-pilot-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.SDK_PILOT_ROOT }}/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

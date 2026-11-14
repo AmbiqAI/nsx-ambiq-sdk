@@ -57,16 +57,25 @@ def main() -> None:
     parser.add_argument('--build-id', required=True)
     parser.add_argument('--timeout', type=float, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--jlink-library', type=Path)
     args = parser.parse_args()
     firmware = Firmware(args.elf, args.address, args.build_id, '', args.device, args.speed,
                         tuple(args.cases), tuple(MemorySeed(n, int(a), int(v)) for n, a, v in args.seed))
     # Optional dependency: regular SDK tests never import the SEGGER transport.
     import pylink
-    probe = pylink.JLink()
+    library = None
+    if args.jlink_library is not None:
+        from .build import digest
+        path = args.jlink_library.resolve(strict=True)
+        library = {'path': str(path), 'sha256': digest(path)}
+        probe = pylink.JLink(lib=pylink.library.Library(dllpath=str(path)))
+    else:
+        probe = pylink.JLink()
     try:
         pack = configure_device_pack(probe, args.device)
         (args.output / 'jlink.json').write_text(json.dumps(
-            {'version': probe.version, 'device': args.device, 'device_pack': pack}, indent=2) + '\n')
+            {'version': probe.version, 'device': args.device, 'device_pack': pack,
+             'library': library}, indent=2) + '\n')
         probe.open(serial_no=args.probe)
         probe.set_tif(pylink.enums.JLinkInterfaces.SWD)
         probe.connect(args.device, speed=args.speed)
@@ -76,6 +85,8 @@ def main() -> None:
         raise
     finally:
         probe.close()
+        if library is not None and digest(path) != library['sha256']:
+            raise RuntimeError('J-Link library changed during execution')
 
 
 if __name__ == '__main__':

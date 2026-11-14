@@ -27,12 +27,18 @@ class BoardRequest:
     probe: str
     device: str | None = None
     timeout: float = 15.0
+    jlink_library: Path | None = None
 
     def __post_init__(self):
         if not self.probe.isdecimal():
             raise ValueError('Probe serial must contain only decimal digits')
         if not math.isfinite(self.timeout) or self.timeout <= 0:
             raise ValueError('Hardware timeout must be finite and positive')
+        if self.jlink_library is not None:
+            library = self.jlink_library.resolve(strict=True)
+            if not library.is_file():
+                raise ValueError('J-Link library must be a file')
+            object.__setattr__(self, 'jlink_library', library)
 
 
 def build_firmware(request: BuildRequest) -> Firmware:
@@ -51,7 +57,8 @@ class BoardSession:
         if not self._open:
             raise RuntimeError('Board session is closed')
         return execute(firmware, self.request.probe, self.request.device,
-                       self.request.timeout, output.resolve(), lease_fd=self._lease_fd)
+                       self.request.timeout, output.resolve(), lease_fd=self._lease_fd,
+                       jlink_library=self.request.jlink_library)
 
 
 @contextmanager

@@ -21,6 +21,7 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument('--' + name, type=Path, required=True)
         command.add_argument('--host-timeout', type=float, default=1200)
         command.add_argument('--hardware-timeout', type=float, default=40)
+        command.add_argument('--jlink-library', type=Path, help='Explicit SEGGER library; no discovery fallback')
         if action in ('host', 'run'):
             command.add_argument('--decisions', type=Path, required=True,
                                  help='Reviewed intake patch decisions for these exact revisions')
@@ -49,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         plan = load_plan(args.plan)
         config = Config(args.baseline, args.candidate, args.gcc_root, args.output,
-                        args.host_timeout, args.hardware_timeout)
+                        args.host_timeout, args.hardware_timeout, args.jlink_library)
         if args.action == 'host':
             report = operations.host(plan, config, args.decisions)
         elif args.action == 'build':
