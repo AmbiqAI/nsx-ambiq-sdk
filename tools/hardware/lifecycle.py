@@ -93,10 +93,16 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
     owned = {}
     process = None
     root = None
+    finishing = False
     signals = {signal.SIGTERM, signal.SIGINT}
     previous = {sig: signal.getsignal(sig) for sig in signals}
 
     def cancel(signum, frame):
+        nonlocal finishing
+        if finishing:
+            return
+        # A second cancellation must not interrupt the first one's cleanup.
+        finishing = True
         raise RunCancelled(f'Transport control observer cancelled by signal {signum}')
 
     def alive(member):
@@ -196,10 +202,12 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
                 manifest['device'] != receipt['device'] or execution.get('status') != 'passed' or
                 execution.get('probe') != request.probe or not _released(request.probe)):
             raise RuntimeError('Recovery evidence/lease did not satisfy the control')
+        finishing = True
         receipt.update(status='passed', board_state='startup-recovered', recovery=str(directory),
                        recovery_build_id=manifest['build_id'])
         return receipt
     except BaseException as exc:
+        finishing = True
         receipt['error'] = str(exc)
         raise
     finally:

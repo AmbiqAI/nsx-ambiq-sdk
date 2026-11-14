@@ -118,8 +118,9 @@ def test_wrong_control_failure_cannot_pass(tmp_path, change):
 
 @pytest.mark.skipif(sys.platform != 'linux', reason='Linux observer/process lease')
 @pytest.mark.parametrize('cancel_signal', (signal.SIGTERM, signal.SIGINT))
+@pytest.mark.parametrize('repeat_during_cleanup', (False, True))
 def test_cancelling_observer_stops_owned_child_and_records_unknown_state(
-        tmp_path, repo_root, cancel_signal):
+        tmp_path, repo_root, cancel_signal, repeat_during_cleanup):
     psutil = pytest.importorskip('psutil')
     serial = str(810000000+os.getpid())
     ready = tmp_path/'child-ready'
@@ -135,7 +136,17 @@ with probe_lock({serial!r}):
 from pathlib import Path
 from tools.hardware import lifecycle
 from tools.hardware.api import BoardRequest
-import sys
+import os, signal, sys
+original_signal=signal.signal
+injected=False
+def intercept_signal(signum, handler):
+    global injected
+    if {repeat_during_cleanup!r} and handler == signal.SIG_IGN and not injected:
+        injected=True
+        # Arrive exactly before the observer installs its cleanup ignore mask.
+        os.kill(os.getpid(), {int(cancel_signal)!r})
+    return original_signal(signum, handler)
+signal.signal=intercept_signal
 lifecycle._startup_command=lambda *args: [sys.executable, '-c', {child!r}]
 lifecycle.run_control(Path({str(repo_root)!r}), 'fake-board', Path('/unused'),
     BoardRequest({serial!r}), Path({str(tmp_path/'control')!r}), 'term')
