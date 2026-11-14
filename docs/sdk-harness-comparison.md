@@ -1,5 +1,23 @@
 # Compare two SDKs with one fixed harness
 
+The declaration-only `tools.sdk_qualification` API defines the next local
+qualification contract tracked in #218. `Plan(Revisions(baseline, candidate,
+harness))` requires full commit SHAs and declares startup/runtime plus
+startup-ownership/full-system acceptance on the five local GCC board variants.
+Its independent policy refuses missing core rows and harness case drift.
+`write_plan`/`load_plan` preserve strict versioned JSON; `Plan.digest` binds
+revisions, requirements, prerequisites and exclusions separately from inventory.
+New-API acceptance may be candidate-only with a reason; common CRT/runtime
+comparisons remain paired.
+
+`initial_report(plan)` always says `incomplete`, `qualification: false` and
+`executed: false`, including intake/host gates and every required board/side.
+These APIs do not inspect Git, verify evidence, flash hardware or approve a
+release. GCC debugger-reset/SRAM is the initial firmware policy; other compiler
+obligations can be declared as host gates but need execution support in the
+subsequent orchestrator. Experimental clock results cannot be qualification
+rows. The existing commands below remain the executable local path.
+
 Run this from a clean, committed test-harness checkout. Tests and the Python
 runner come from this checkout; the two explicit SDK roots supply production
 modules, board descriptors, CMake, startup/linker inputs and HAL/BSP archives.
