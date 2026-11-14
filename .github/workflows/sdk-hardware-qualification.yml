@@ -86,6 +86,7 @@ jobs:
       - name: Summarize pilot and board state
         if: always()
         run: |
+          SDK_PILOT_ROOT="${RUNNER_TEMP}/sdk-farm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo '### AP510 pilot — full five-board qualification incomplete' >> "${GITHUB_STEP_SUMMARY}"
           if [[ -f "${SDK_PILOT_ROOT}/evidence/pilot.json" ]]; then
             jq '{pilot_status, qualification, global_status, board_state, lease, reason, error}' \
@@ -98,7 +99,7 @@ jobs:
         if: always()
         with:
           name: sdk-ap510-pilot-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.SDK_PILOT_ROOT }}/
+          path: ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

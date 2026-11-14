@@ -179,3 +179,7 @@ def test_workflow_is_manual_scoped_and_retains_failed_evidence(repo_root):
     assert upload['with']['include-hidden-files'] is True
     assert upload['with']['if-no-files-found'] == 'error'
     assert '${{ github.run_attempt }}' in upload['with']['name']
+    # A failed staging step may never export GITHUB_ENV. Upload must still be
+    # constrained to this run's temp directory, never an empty root plus '/'.
+    assert upload['with']['path'].startswith('${{ runner.temp }}/sdk-farm-')
+    assert '${{ github.run_attempt }}' in upload['with']['path']
