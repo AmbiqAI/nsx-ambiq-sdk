@@ -74,6 +74,7 @@ class Session:
 
     def call(self, command, label, *, cwd=None, env=None, timeout=None):
         self.config.roots(self.plan)
+        self.tools.recheck()
         folder = self.config.output / 'commands'
         folder.mkdir(exist_ok=True)
         path = folder / f'{len(self.calls):04}-{re.sub("[^A-Za-z0-9_-]", "_", label)}.log'
@@ -88,6 +89,7 @@ class Session:
                            timeout=timeout or self.config.host_timeout,
                            env=env if env is not None else self.tools.environment(self.config.output / 'scratch'))
             self.config.roots(self.plan)
+            self.tools.recheck()
             step.update(outcome='passed', returncode=0)
             return path.read_text()
         except BaseException as error:
@@ -103,6 +105,8 @@ class Session:
         checked = False
         try:
             checked = self.config.roots(self.plan) == self.roots
+            if self.tools is not None:
+                self.tools.recheck()
         except Exception as changed:
             error = error or changed
         if not checked:

@@ -225,6 +225,7 @@ def test_assessment_partial_is_incomplete_and_invalid_is_failed(setup, collectio
     monkeypatch.setattr(Config, 'prepare', lambda self, plan: (self.output.mkdir(), setup.roots)[1])
     monkeypatch.setattr(Config, 'roots', lambda *args: setup.roots)
     monkeypatch.setattr(Tools, 'capture', lambda *args: setup.tools)
+    monkeypatch.setattr(Tools, 'recheck', lambda self: None)  # Aggregation-only fixture has synthetic tool paths.
     directory = setup.root / 'build'
     body = record(setup, directory, 'build', (BOARDS[0],))
     config = Config(Path('/baseline'), Path('/candidate'), Path('/gcc'), setup.root / 'assessment')
@@ -458,3 +459,67 @@ def test_production_startup_system_linker_cannot_be_replaced_outside_sdk(setup, 
     sample.entry['files'] = {path.name: sha256(path) for path in sample.output.iterdir() if path.is_file()}
     with pytest.raises(ValueError, match='outside the SDK'):
         verify_example(setup, sample)
+
+
+@pytest.fixture
+def mutable_tools(tmp_path):
+    executable = tmp_path / 'recorded-python'
+    executable.write_text('recorded executable bytes')
+    executable.chmod(0o755)
+    return Tools(str(tmp_path / 'gcc'), '/cmake',
+                 (Binary('python', str(executable), sha256(executable), 'recorded-version'),))
+
+
+@pytest.mark.parametrize('action', ('replace', 'remove'))
+def test_tool_recheck_rejects_replacement_or_disappearance(mutable_tools, action):
+    mutable_tools.recheck()
+    executable = mutable_tools.path('python')
+    if action == 'replace':
+        executable.write_text('replacement executable bytes')
+    else:
+        executable.unlink()
+    with pytest.raises(ValueError, match='identity changed or disappeared'):
+        mutable_tools.recheck()
+
+
+def test_tool_recheck_rejects_new_path_shadow(tmp_path):
+    early, late = tmp_path / 'early', tmp_path / 'late'
+    early.mkdir(); late.mkdir()
+    selected = late / 'cmake'
+    selected.write_text('#!/bin/sh\necho selected\n'); selected.chmod(0o755)
+    tools = Tools('/gcc', '/cmake', (Binary('cmake', str(selected), sha256(selected), 'version'),),
+                  str(early) + ':' + str(late))
+    tools.recheck()
+    shadow = early / 'cmake'
+    shadow.write_bytes(selected.read_bytes()); shadow.chmod(0o755)
+    with pytest.raises(ValueError, match='selection changed'):
+        tools.recheck()
+
+
+def test_worker_tool_change_and_finalization_cannot_pass(setup, mutable_tools, monkeypatch):
+    from tools.sdk_qualification.operations import Session
+    monkeypatch.setattr(Config, 'prepare', lambda self, plan: (self.output.mkdir(), setup.roots)[1])
+    monkeypatch.setattr(Config, 'roots', lambda *args: setup.roots)
+    config = Config(Path('/baseline'), Path('/candidate'), Path('/gcc'), setup.root / 'changed-tools')
+    current = Session(setup.plan, config, 'host', ())
+    current.tools = mutable_tools
+    def replace_during_command(*args, **kwargs):
+        mutable_tools.path('python').write_text('changed during worker execution')
+    monkeypatch.setattr('tools.sdk_qualification.operations.run_worker', replace_during_command)
+    with pytest.raises(ValueError, match='identity changed'):
+        current.call(['owned-worker'], 'replaced-tool')
+    assert current.calls[0]['outcome'] == 'failed'
+    final = current.finish(None)['body']
+    assert final['scope_status'] == 'failed' and final['qualification'] is False
+    assert 'Tool identity changed' in final['error']
+
+
+def test_assessment_rechecks_tools_before_finalizing(setup, mutable_tools, monkeypatch):
+    monkeypatch.setattr(Config, 'prepare', lambda self, plan: (self.output.mkdir(), setup.roots)[1])
+    monkeypatch.setattr(Config, 'roots', lambda *args: setup.roots)
+    monkeypatch.setattr(Tools, 'capture', lambda *args: mutable_tools)
+    monkeypatch.setattr(Collection, 'add', lambda *args: mutable_tools.path('python').unlink())
+    config = Config(Path('/baseline'), Path('/candidate'), Path('/gcc'), setup.root / 'assessment-tools-changed')
+    report = assess(setup.plan, config, (setup.root,))
+    assert report['status'] == 'failed' and report['qualification'] is False
+    assert 'Tool identity changed or disappeared' in report['errors'][0]

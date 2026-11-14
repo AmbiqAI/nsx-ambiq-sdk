@@ -135,14 +135,19 @@ class Tools:
             path = path.absolute()
             if not path.is_file() or not os.access(path, os.X_OK):
                 raise ValueError(f'Missing executable: {path}')
+            digest = sha256(path)
             text = capture([str(path), '--version'], name)
-            binaries.append(Binary(name, str(path), sha256(path), text.splitlines()[0]))
+            if sha256(path) != digest:
+                raise ValueError(f'Tool changed while capturing identity: {name}')
+            binaries.append(Binary(name, str(path), digest, text.splitlines()[0]))
         script = output / 'cmake-root.cmake'
         script.write_text('message("${CMAKE_ROOT}")\n')
         root = capture([str(paths['cmake']), '-P', str(script)], 'cmake-root').strip()
         if not Path(root).is_dir():
             raise ValueError('CMake did not report its module directory')
-        return cls(str(gcc), root, tuple(binaries), env['PATH'])
+        tools = cls(str(gcc), root, tuple(binaries), env['PATH'])
+        tools.recheck()
+        return tools
 
     def path(self, name: str) -> Path:
         return Path(next(item.path for item in self.binaries if item.name == name))
@@ -152,6 +157,16 @@ class Tools:
 
     def fingerprint(self) -> dict:
         return {item.name: (item.sha256, item.version) for item in self.binaries}
+
+    def recheck(self) -> None:
+        for item in self.binaries:
+            path = Path(item.path)
+            if not path.is_file() or not os.access(path, os.X_OK) or sha256(path) != item.sha256:
+                raise ValueError(f'Tool identity changed or disappeared: {item.name}')
+            if item.name in ('cmake', 'ninja', 'cc'):
+                selected = shutil.which(item.name, path=self.search_path)
+                if selected is None or Path(selected).resolve() != path.resolve():
+                    raise ValueError(f'Tool selection changed: {item.name}')
 
     def environment(self, scratch: Path) -> dict[str, str]:
         scratch.mkdir(exist_ok=True)

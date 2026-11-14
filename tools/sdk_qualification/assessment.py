@@ -119,17 +119,20 @@ def assess(plan: Plan, config: Config, records: tuple[Path, ...]) -> dict:
         def command(args, label):
             nonlocal count
             config.roots(plan)
+            tools.recheck()
             output = calls / f'{count:04}-{re.sub("[^A-Za-z0-9_-]", "_", label)}.log'
             count += 1
             with output.open('w') as log:
                 run_worker(args, log=log, cwd=HARNESS_ROOT, timeout=60,
                            env=tools.environment(config.output / 'scratch'))
             config.roots(plan)
+            tools.recheck()
             return output.read_text()
         collection = Collection(plan, roots, tools, command)
         for directory in records:
             collection.add(directory.resolve())
         config.roots(plan)
+        tools.recheck()
         for item in report['requirements']:
             execution = collection.passed.get((item['requirement'], item['side']))
             if execution is not None:
