@@ -302,6 +302,13 @@ def case_parameters(params: dict) -> dict:
     return result
 
 
+def immutable_parameter(value):
+    """Restore sequence-valued pytest parameters after JSON serialization."""
+    if isinstance(value, (list, tuple)):
+        return tuple(immutable_parameter(item) for item in value)
+    return value
+
+
 class Gate:
     def __init__(self, requirements: tuple[Requirement, ...]):
         self.requirements = requirements
@@ -346,7 +353,7 @@ class Gate:
         missing_boards = {selector: boards for selector, boards in missing_boards.items() if boards}
         missing_variants = {}
         for requirement in self.requirements:
-            observed = {tuple(self.parameters.get(n, {}).get(p) for p in requirement.parameters)
+            observed = {tuple(immutable_parameter(self.parameters.get(n, {}).get(p)) for p in requirement.parameters)
                         for n in self.selected if belongs(n, requirement.selector)}
             absent = [v for v in requirement.variants if v not in observed]
             if absent:
@@ -356,6 +363,11 @@ class Gate:
         status = completion(statuses.values(), session_ok=exit_code == 0,
                             requirements_met=not (missing or missing_boards or missing_variants))
         return {'status': status, 'pytest_exit_code': int(exit_code),
+                'observations': {n: {key: value for key, value in self.parameters.get(n, {}).items()
+                                     if key in {'family', 'board'} | {
+                                         p for r in self.requirements if belongs(n, r.selector)
+                                         for p in r.parameters}}
+                                 for n in self.selected},
                 'missing_requirements': missing, 'missing_boards': missing_boards, 'missing_variants': missing_variants, 'incomplete_cases': incomplete,
                 'selected_count': len(self.selected), 'cases': self.phases,
                 'excluded_other_compilers': self.excluded,
@@ -389,7 +401,7 @@ def main() -> int:
         parser.error('--output must be a new directory; preserve prior run evidence')
     output.mkdir(parents=True)
     report_path = output / 'compatibility.json'
-    report = {'schema_version': 1, 'profile': args.profile, 'status': 'incomplete'}
+    report = {'schema_version': 2, 'profile': args.profile, 'status': 'incomplete'}
     report_path.write_text(json.dumps(report, indent=2) + '\n')
     gate = Gate(PROFILES[args.profile])
     code = 2

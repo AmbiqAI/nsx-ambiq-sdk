@@ -1,22 +1,69 @@
 # Compare two SDKs with one fixed harness
 
-The declaration-only `tools.sdk_qualification` API defines the next local
-qualification contract tracked in #218. `Plan(Revisions(baseline, candidate,
-harness))` requires full commit SHAs and declares startup/runtime plus
-startup-ownership/full-system acceptance on the five local GCC board variants.
-Its independent policy refuses missing core rows and harness case drift.
-`write_plan`/`load_plan` preserve strict versioned JSON; `Plan.digest` binds
-revisions, requirements, prerequisites and exclusions separately from inventory.
-New-API acceptance may be candidate-only with a reason; common CRT/runtime
-comparisons remain paired.
+## Qualification runner
 
-`initial_report(plan)` always says `incomplete`, `qualification: false` and
-`executed: false`, including intake/host gates and every required board/side.
-These APIs do not inspect Git, verify evidence, flash hardware or approve a
-release. GCC debugger-reset/SRAM is the initial firmware policy; other compiler
-obligations use typed `CompilerCoverage(toolchain, boards, checks)` declarations
-for build/link/ABI and need execution support in the subsequent orchestrator. Experimental clock results cannot be qualification
-rows. The existing commands below remain the executable local path.
+`python -m tools.sdk_qualification` composes the existing intake review,
+pytest checks and typed board-session API. It requires Linux, explicit clean
+baseline/candidate SDK checkouts and the executing harness commit. The default
+plan covers startup/runtime, startup ownership and full-system initialization
+on AP3 Blue Plus, AP4 Blue Plus KXR, AP330 Plus, AP510 and AP510B with GCC.
+Shared lab claims remain the caller's responsibility; inventory never grants
+ownership. Install the CI and hardware dependency groups in the harness venv.
+
+```sh
+python -m tools.sdk_qualification plan --baseline "$BASELINE" \
+  --candidate "$CANDIDATE" --output /tmp/intake-plan.json
+# Review the plan before execution. Every output below must be new and outside source roots.
+python -m tools.sdk_qualification host --plan /tmp/intake-plan.json \
+  --baseline "$BASELINE" --candidate "$CANDIDATE" --gcc-root "$GCC" \
+  --decisions "$DECISIONS" --output /tmp/intake-host
+python -m tools.sdk_qualification build --plan /tmp/intake-plan.json \
+  --baseline "$BASELINE" --candidate "$CANDIDATE" --gcc-root "$GCC" \
+  --board apollo510b_evb --output /tmp/intake-build
+python -m tools.sdk_qualification run-board --plan /tmp/intake-plan.json \
+  --baseline "$BASELINE" --candidate "$CANDIDATE" --gcc-root "$GCC" \
+  --inventory /path/to/local-inventory.json --board apollo510b_evb \
+  --host-record /tmp/intake-host --output /tmp/intake-ap510b
+python -m tools.sdk_qualification assess --plan /tmp/intake-plan.json \
+  --baseline "$BASELINE" --candidate "$CANDIDATE" --gcc-root "$GCC" \
+  --record /tmp/intake-host --record /tmp/intake-ap510b --output /tmp/intake-assessment
+```
+
+Inventory schema 1 is `{"schema_version":1,"boards":[{"board":"apollo510b_evb",
+"probe":"YOUR_DECIMAL_SERIAL","device":"EXACT_SDK_DESCRIPTOR_DEVICE"}]}`.
+Repeat `run-board` for the other boards using the same prior host record, then
+pass each completed board directory to `assess`. Alternatively `run` accepts
+the same common arguments plus `--decisions` and the complete five-board
+`--inventory`, and performs host checks, all boards and assessment sequentially.
+No implicit board discovery or power cycling is performed.
+
+`host`, `build` and `run-board` return success for their completed scope only;
+their finalized records always have `qualification: false` and global status
+`incomplete`. A build rehearsal never satisfies a required hardware row.
+Only `assess`/`run` can report full qualification, and exit nonzero for incomplete
+or failed coverage. The example assessment above is intentionally incomplete:
+four boards are missing. Qualification remains separate from release approval.
+
+The immutable plan binds requirements, exact revisions and exclusions, separately
+from inventory. Execution records bind file inventories, tool content/version,
+resolved build inputs, compiler/link evidence and raw target results. Assessment
+rechecks these rather than trusting PASS text. It accepts explicit records,
+deduplicates identical copies, and rejects competing executions for the same
+obligation; choose one coherent set rather than mixing retries. Source/tool
+paths can relocate if their recorded content still matches. Assessment records
+reference original execution IDs and never claim another hardware run.
+
+GCC ABI evidence checks C/C++ short enums, four-byte wchar, hard-float archive
+attributes and a narrow HAL/BSP link through the shipped targets. This is not
+proof of every vendor structure layout. Host checks use candidate-owned tests,
+whose changes still require review; firmware definitions come from the fixed
+harness. Additional gate handlers and licensed compiler execution are currently
+unsupported and fail preflight when declared. Experimental clock results cannot
+qualify this profile; debugger reset is not standalone cold-power validation.
+
+`Plan`, `write_plan`, `load_plan` and `initial_report` remain declaration-only
+APIs: an initial report always says incomplete and never asserts execution.
+The older comparison and single-suite commands below remain available.
 
 Run this from a clean, committed test-harness checkout. Tests and the Python
 runner come from this checkout; the two explicit SDK roots supply production

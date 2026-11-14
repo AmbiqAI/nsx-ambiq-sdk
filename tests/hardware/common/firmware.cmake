@@ -24,6 +24,13 @@ function(nsx_add_test_firmware target)
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/result_reporter.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../vendor/unity/unity.c")
     set_target_properties(${target} PROPERTIES SUFFIX .elf CXX_STANDARD 17)
+    if(NSX_TEST_ABI_POLICY)
+        target_sources(${target} PRIVATE
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/abi_policy.c"
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/abi_policy.cpp")
+        target_link_options(${target} PRIVATE
+            "LINKER:-u,nsx_test_abi_c" "LINKER:-u,nsx_test_abi_cpp")
+    endif()
     target_compile_definitions(${target} PRIVATE UNITY_INCLUDE_CONFIG_H)
     target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../vendor/unity" "${CMAKE_BINARY_DIR}")
