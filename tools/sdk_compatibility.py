@@ -356,6 +356,11 @@ class Gate:
         status = completion(statuses.values(), session_ok=exit_code == 0,
                             requirements_met=not (missing or missing_boards or missing_variants))
         return {'status': status, 'pytest_exit_code': int(exit_code),
+                'observations': {n: {key: value for key, value in self.parameters.get(n, {}).items()
+                                     if key in {'family', 'board'} | {
+                                         p for r in self.requirements if belongs(n, r.selector)
+                                         for p in r.parameters}}
+                                 for n in self.selected},
                 'missing_requirements': missing, 'missing_boards': missing_boards, 'missing_variants': missing_variants, 'incomplete_cases': incomplete,
                 'selected_count': len(self.selected), 'cases': self.phases,
                 'excluded_other_compilers': self.excluded,
@@ -389,7 +394,7 @@ def main() -> int:
         parser.error('--output must be a new directory; preserve prior run evidence')
     output.mkdir(parents=True)
     report_path = output / 'compatibility.json'
-    report = {'schema_version': 1, 'profile': args.profile, 'status': 'incomplete'}
+    report = {'schema_version': 2, 'profile': args.profile, 'status': 'incomplete'}
     report_path.write_text(json.dumps(report, indent=2) + '\n')
     gate = Gate(PROFILES[args.profile])
     code = 2

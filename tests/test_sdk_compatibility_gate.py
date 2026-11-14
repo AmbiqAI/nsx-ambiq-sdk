@@ -225,3 +225,23 @@ def test_fixed_gcc_timer_builds_are_not_filtered(selector):
     assert len(items) == requirement.minimum
     gate.phases = {n: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for n in gate.selected}
     assert gate.report(0)['status'] == 'passed'
+
+
+def test_observations_replay_board_compiler_and_variant_coverage():
+    requirement = Requirement('test.py::test_case', 2, ('a', 'b'),
+                              ('language',), (('C',), ('C++',)), 'gcc')
+    gate = Gate((requirement,))
+    gate.selected = ['test.py::test_case[a]', 'test.py::test_case[b]']
+    gate.parameters = {node: {'board': board, 'family': 'gcc', 'language': language, 'opaque': object()}
+                       for node, board, language in zip(gate.selected, ('a', 'b'), ('C', 'C++'))}
+    gate.boards = {node: params['board'] for node, params in gate.parameters.items()}
+    gate.phases = {node: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for node in gate.selected}
+    report = json.loads(json.dumps(gate.report(0)))
+    assert report['status'] == 'passed'
+    replay = Gate((requirement,))
+    replay.selected = list(report['cases'])
+    replay.phases, replay.parameters = report['cases'], report['observations']
+    replay.boards = {node: params['board'] for node, params in replay.parameters.items()}
+    assert replay.report(0)['status'] == 'passed'
+    replay.parameters[gate.selected[-1]]['language'] = 'C'
+    assert replay.report(0)['status'] == 'incomplete'
