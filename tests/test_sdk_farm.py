@@ -36,7 +36,9 @@ import json,os,sys
 from pathlib import Path
 args=sys.argv[1:]; path=Path(os.environ['FAKE_STATE'])
 assert 'RUNNER_TRACKING_ID' not in os.environ
-if args[0]=='lock':
+if args[0]=='unlock' and '--help' in args:
+    print('legacy unlock' if os.environ.get('FAKE_MODE')=='legacy' else '--expected-pid --expected-holder --expected-reason')
+elif args[0]=='lock':
     if os.environ.get('FAKE_MODE')=='busy': sys.exit(3)
     value={'pid':987,'holder':args[args.index('--holder')+1],
            'reason':args[args.index('--reason')+1],'user':'runner',
@@ -47,7 +49,12 @@ elif args[0]=='status':
     if os.environ.get('FAKE_MODE')=='replaced' and value.get('checked'): value['pid']=999
     value['checked']=True; path.write_text(json.dumps(value))
     print(json.dumps({'boards':[value]}))
-elif args[0]=='unlock': path.unlink()
+elif args[0]=='unlock':
+    value=json.loads(path.read_text())
+    assert args[args.index('--expected-pid')+1]==str(value['pid'])
+    assert args[args.index('--expected-holder')+1]==value['holder']
+    assert args[args.index('--expected-reason')+1]==value['reason']
+    path.unlink()
 else: sys.exit(2)
 ''')
     bench.chmod(0o755)
@@ -122,6 +129,14 @@ def test_busy_does_not_access_or_unlock_other_claim(lab, monkeypatch):
     with pytest.raises(subprocess.CalledProcessError):
         farm.run(**lab)
     assert not (lab['output'] / 'board').exists()
+    assert not Path(os.environ['FAKE_STATE']).exists()
+
+
+def test_old_allocator_fails_before_host_checks_and_reservation(lab, monkeypatch):
+    monkeypatch.setenv('FAKE_MODE', 'legacy')
+    with pytest.raises(RuntimeError, match='conditional unlock'):
+        farm.run(**lab)
+    assert not (lab['output'] / 'host').exists()
     assert not Path(os.environ['FAKE_STATE']).exists()
 
 

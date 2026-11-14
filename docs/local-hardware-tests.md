@@ -30,10 +30,13 @@ Evidence includes the unchanged assessment, source/tool identities, explicit
 J-Link library and deployed device-overlay hashes. Artifacts are uploaded after
 failure as well as success, with run/attempt-specific names.
 
-The adapter reserves the board through `bench-agent` before access. It releases
-only a matching lease after verified results and cleanup. Failure/cancellation
+The adapter requires bench-agent's conditional unlock support before reservation.
+It releases only a matching lease after verified results and cleanup; the
+allocator rechecks the recorded PID, holder and reason before signaling.
+Failure/cancellation
 retains a conservative UNKNOWN/recovery-required reservation for up to 70 minutes;
-inspect the run and recover the board before manually returning it. TTL expiry
+follow the farm runbook's paused-runner/conditional-release/recovery-session
+handoff before returning the board. TTL expiry
 does not establish board health, and the farm currently has no persistent
 quarantine mechanism. This is a supervised pilot, with no scheduled dispatch.
 

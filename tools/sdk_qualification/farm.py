@@ -98,6 +98,9 @@ def run(inputs: Path, baseline: Path, candidate: Path, harness: Path, python: Pa
         for sig in previous:
             signal.signal(sig, cancel)
         binding = runner_binding(inventory)
+        capabilities = bench(['unlock', '--help'], inventory)
+        if any(flag not in capabilities for flag in ('--expected-pid', '--expected-holder', '--expected-reason')):
+            raise RuntimeError('Deployed bench-agent lacks conditional unlock; update the farm before running')
         library = Path(os.environ['HPX_JLINK_DLL']).resolve(strict=True)
         overlay = Path.home() / '.config/SEGGER/JLinkDevices'
         debug = debugger_inputs(library, overlay)
@@ -155,7 +158,8 @@ def run(inputs: Path, baseline: Path, candidate: Path, harness: Path, python: Pa
             raise RuntimeError('Debugger inputs changed during execution')
         if holder(binding, inventory) != acquired:
             raise RuntimeError('Lease ownership changed; refusing unlock')
-        bench(['unlock', binding['id']], inventory)
+        bench(['unlock', binding['id'], '--expected-pid', str(acquired['pid']),
+               '--expected-holder', acquired['holder'], '--expected-reason', acquired['reason']], inventory)
         state.update(pilot_status='passed', board_state='tests-completed', lease='released')
         return state
     except BaseException as error:
