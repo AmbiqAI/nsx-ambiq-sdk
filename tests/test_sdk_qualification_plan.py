@@ -2,7 +2,8 @@
 from dataclasses import replace
 import pytest
 from tools.sdk_qualification import (
-    Exclusion, Gate, Plan, Revisions, Row, initial_report, load_plan, plan_from_dict, write_plan,
+    CompilerCoverage, Exclusion, Gate, Plan, Revisions, Row, initial_report,
+    load_plan, plan_from_dict, write_plan,
 )
 from tools.sdk_qualification.policy import BOARDS
 from tools.hardware.suites import PSRAM_ASYNC
@@ -18,7 +19,7 @@ def test_matrix_and_initial_report(plan):
     report = initial_report(plan)
     assert len(plan.rows) == 20
     assert set(row.board for row in plan.rows) == set(BOARDS)
-    assert len(report['requirements']) == 43
+    assert len(report['requirements']) == 58
     for board in BOARDS:
         for suite in ('startup', 'runtime', 'startup-ownership', 'system-full'):
             assert {(r['side'], r['revision']) for r in report['requirements']
@@ -154,3 +155,67 @@ def test_strict_roundtrip(plan, tmp_path):
     data['rows'][0]['serial'] = '123456'
     with pytest.raises(ValueError):
         plan_from_dict(data)
+
+
+def test_gate_and_execution_ids_cannot_alias(plan):
+    ids = (plan.rows[0].id, plan.rows[0].id + '/candidate', plan.compilers[0].ids[0])
+    for name in ids:
+        with pytest.raises(ValueError, match='must not collide'):
+            replace(plan, gates=(*plan.gates, Gate(name, 'host', 'Different obligation')))
+
+
+def test_required_gate_semantics_cannot_be_relabelled(plan):
+    gates = tuple(replace(g, description='No review necessary') for g in plan.gates)
+    with pytest.raises(ValueError, match='changed required'):
+        replace(plan, gates=gates)
+
+
+def test_multiple_prerequisites_roundtrip_without_changing_equality(plan):
+    gates = (*plan.gates, Gate('z-fixture', 'prerequisite', 'Z'), Gate('a-fixture', 'prerequisite', 'A'))
+    extra = Row('apollo510_evb', PSRAM_ASYNC.name, PSRAM_ASYNC.cases,
+                comparison='candidate-only', reason='New API', prerequisites=('z-fixture', 'a-fixture'))
+    revised = replace(plan, rows=(*plan.rows, extra), gates=gates)
+    assert plan_from_dict(revised.to_dict()) == revised
+    assert plan_from_dict(revised.to_dict()).digest == revised.digest
+
+
+@pytest.mark.parametrize('toolchain', ['atfe', 'acfe'])
+def test_licensed_compiler_obligations_are_typed_build_only(plan, toolchain):
+    compiler = CompilerCoverage(toolchain, ('apollo510_evb', 'apollo330mP_evb'), ('link', 'abi'))
+    revised = replace(plan, compilers=(*plan.compilers, compiler))
+    report = initial_report(revised)
+    obligations = [r for r in report['requirements'] if r['requirement'] in compiler.ids]
+    assert len(obligations) == 4
+    assert all(r['kind'] == 'compiler' and r['side'] == 'candidate' and r['status'] == 'incomplete'
+               for r in obligations)
+    assert revised.digest != plan.digest
+    assert plan_from_dict(revised.to_dict()) == revised
+    assert len({(r['requirement'], r['side']) for r in report['requirements']}) == len(report['requirements'])
+
+
+@pytest.mark.parametrize('compilers', [(),
+    (CompilerCoverage('gcc', ('apollo510_evb',), ('build', 'link', 'abi')),),
+    (CompilerCoverage('gcc', BOARDS, ('build', 'link')),),
+    (CompilerCoverage('atfe', BOARDS, ('build', 'link', 'abi')),),
+])
+def test_required_compiler_coverage_cannot_shrink(plan, compilers):
+    with pytest.raises(ValueError, match='Required GCC'):
+        replace(plan, compilers=compilers)
+
+
+@pytest.mark.parametrize('toolchain,boards,checks', [
+    ('clang', BOARDS, ('build',)), ('atfe', (), ('abi',)),
+    ('acfe', BOARDS, ('hardware',)), ('gcc', BOARDS, ('build', 'build')),
+])
+def test_invalid_compiler_declarations(toolchain, boards, checks):
+    with pytest.raises(ValueError):
+        CompilerCoverage(toolchain, boards, checks)
+
+
+def test_compiler_scope_and_unique_identity(plan):
+    with pytest.raises(ValueError, match='Duplicate compiler'):
+        replace(plan, compilers=(*plan.compilers, plan.compilers[0]))
+    with pytest.raises(ValueError, match='outside'):
+        replace(plan, compilers=(*plan.compilers, CompilerCoverage('atfe', ('wrong_board',), ('abi',))))
+    with pytest.raises(ValueError, match='Exclusions cannot replace'):
+        replace(plan, exclusions=(Exclusion(plan.compilers[0].ids[0], 'deferred', 'Compiler unavailable'),))

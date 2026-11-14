@@ -20,6 +20,8 @@ def initial_report(plan: Plan) -> dict:
                for gate in sorted(plan.gates, key=lambda g: g.id)]
     pending.extend(Pending(row.id, row.execution, side, getattr(plan.revisions, side), row.cases)
                    for row in sorted(plan.rows, key=lambda r: r.id) for side in row.sides)
+    pending.extend(Pending(name, 'compiler', 'candidate', plan.revisions.candidate)
+                   for compiler in plan.compilers for name in compiler.ids)
     return {'schema_version': 1, 'profile': plan.profile, 'plan_sha256': plan.digest,
             'revisions': asdict(plan.revisions), 'status': 'incomplete',
             'qualification': False, 'executed': False,

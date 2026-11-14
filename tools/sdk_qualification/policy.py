@@ -1,5 +1,5 @@
 """Reviewed minimum contracts; neither pytest collection nor inventory defines them."""
-from .models import Gate, Row
+from .models import CompilerCoverage, Gate, Row
 
 
 PROFILE = 'local-five-board-gcc-v1'
@@ -20,6 +20,7 @@ CORE_GATES = (
     Gate('candidate-host-gcc', 'host', 'Candidate GCC compatibility gate, including payload/ABI checks'),
     Gate('candidate-hygiene', 'host', 'Candidate pre-commit and full host checks'),
 )
+CORE_COMPILER = CompilerCoverage('gcc', BOARDS, ('build', 'link', 'abi'))
 
 NON_AP3 = BOARDS[1:]
 PSRAM_BOARDS = BOARDS[-2:]

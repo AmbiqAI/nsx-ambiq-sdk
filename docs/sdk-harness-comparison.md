@@ -14,8 +14,8 @@ comparisons remain paired.
 `executed: false`, including intake/host gates and every required board/side.
 These APIs do not inspect Git, verify evidence, flash hardware or approve a
 release. GCC debugger-reset/SRAM is the initial firmware policy; other compiler
-obligations can be declared as host gates but need execution support in the
-subsequent orchestrator. Experimental clock results cannot be qualification
+obligations use typed `CompilerCoverage(toolchain, boards, checks)` declarations
+for build/link/ABI and need execution support in the subsequent orchestrator. Experimental clock results cannot be qualification
 rows. The existing commands below remain the executable local path.
 
 Run this from a clean, committed test-harness checkout. Tests and the Python

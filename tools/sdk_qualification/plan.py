@@ -4,8 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from .models import Exclusion, Gate, Revisions, Row
-from .policy import CORE_GATES, PROFILE, core_rows, validate_rows
+from .models import CompilerCoverage, Exclusion, Gate, Revisions, Row
+from .policy import BOARDS, CORE_COMPILER, CORE_GATES, PROFILE, core_rows, validate_rows
 
 
 SCHEMA_VERSION = 1
@@ -19,11 +19,13 @@ class Plan:
     exclusions: tuple[Exclusion, ...] = ()
     profile: str = PROFILE
     reset_transport: str = 'debugger-reset-sram'
+    compilers: tuple[CompilerCoverage, ...] = (CORE_COMPILER,)
 
     def __post_init__(self):
         if not isinstance(self.revisions, Revisions):
             raise ValueError('Expected typed revisions')
-        for values, cls in ((self.rows, Row), (self.gates, Gate), (self.exclusions, Exclusion)):
+        for values, cls in ((self.rows, Row), (self.gates, Gate), (self.exclusions, Exclusion),
+                            (self.compilers, CompilerCoverage)):
             if not isinstance(values, tuple) or any(not isinstance(v, cls) for v in values):
                 raise ValueError(f'Expected an immutable tuple of {cls.__name__}')
         if self.profile != PROFILE:
@@ -35,8 +37,15 @@ class Plan:
         if len(by_id) != len(self.gates):
             raise ValueError('Duplicate gate identifiers')
         for required in CORE_GATES:
-            if required.id not in by_id or by_id[required.id].kind != required.kind:
-                raise ValueError(f'Missing required intake/host gate: {required.id}')
+            if by_id.get(required.id) != required:
+                raise ValueError(f'Missing or changed required intake/host gate: {required.id}')
+        compilers = {item.toolchain: item for item in self.compilers}
+        if len(compilers) != len(self.compilers):
+            raise ValueError('Duplicate compiler coverage')
+        if compilers.get('gcc') != CORE_COMPILER:
+            raise ValueError('Required GCC board/build/link/ABI coverage missing or weakened')
+        if any(set(item.boards) - set(BOARDS) for item in self.compilers):
+            raise ValueError('Compiler board outside the declared five-board profile')
         for row in self.rows:
             for name in row.prerequisites:
                 if name not in by_id or by_id[name].kind != 'prerequisite':
@@ -44,15 +53,19 @@ class Plan:
         scopes = [item.scope for item in self.exclusions]
         if len(scopes) != len(set(scopes)):
             raise ValueError('Duplicate exclusion scopes')
-        required_ids = set(by_id)
+        execution_ids = {name for item in self.compilers for name in item.ids}
         for row in self.rows:
-            required_ids.add(row.id)
-            required_ids.update(f'{row.id}/{side}' for side in row.sides)
+            execution_ids.add(row.id)
+            execution_ids.update(f'{row.id}/{side}' for side in row.sides)
+        if set(by_id).intersection(execution_ids):
+            raise ValueError('Gate and execution requirement identifiers must not collide')
+        required_ids = set(by_id) | execution_ids
         if required_ids.intersection(scopes):
             raise ValueError('Exclusions cannot replace required coverage')
         object.__setattr__(self, 'rows', tuple(sorted(self.rows, key=lambda row: row.id)))
         object.__setattr__(self, 'gates', tuple(sorted(self.gates, key=lambda gate: gate.id)))
         object.__setattr__(self, 'exclusions', tuple(sorted(self.exclusions, key=lambda item: item.scope)))
+        object.__setattr__(self, 'compilers', tuple(sorted(self.compilers, key=lambda item: item.toolchain)))
 
     def to_dict(self) -> dict:
         value = asdict(self)
@@ -62,6 +75,7 @@ class Plan:
             row['prerequisites'] = sorted(row['prerequisites'])
         value['gates'] = sorted(value['gates'], key=lambda g: g['id'])
         value['exclusions'] = sorted(value['exclusions'], key=lambda e: e['scope'])
+        value['compilers'] = sorted(value['compilers'], key=lambda item: item['toolchain'])
         # Return the JSON representation (arrays, not internal tuples).
         return json.loads(json.dumps(value))
 
@@ -85,7 +99,7 @@ def _array(value: object, label: str) -> list:
 
 def plan_from_dict(value: object) -> Plan:
     data = _fields(value, {'schema_version', 'profile', 'reset_transport', 'revisions',
-                           'rows', 'gates', 'exclusions'}, 'Plan')
+                           'rows', 'gates', 'exclusions', 'compilers'}, 'Plan')
     if type(data['schema_version']) is not int or data['schema_version'] != SCHEMA_VERSION:
         raise ValueError(f'Unsupported plan schema_version; expected {SCHEMA_VERSION}')
     revisions = Revisions(**_fields(data['revisions'], {'baseline', 'candidate', 'harness'}, 'Revisions'))
@@ -100,7 +114,14 @@ def plan_from_dict(value: object) -> Plan:
                   for item in _array(data['gates'], 'Gates'))
     exclusions = tuple(Exclusion(**_fields(item, {'scope', 'kind', 'reason'}, 'Exclusion'))
                        for item in _array(data['exclusions'], 'Exclusions'))
-    return Plan(revisions, tuple(rows), gates, exclusions, data['profile'], data['reset_transport'])
+    compilers = []
+    for item in _array(data['compilers'], 'Compilers'):
+        compiler = _fields(item, {'toolchain', 'boards', 'checks'}, 'Compiler coverage')
+        compilers.append(CompilerCoverage(compiler['toolchain'],
+            tuple(_array(compiler['boards'], 'Compiler boards')),
+            tuple(_array(compiler['checks'], 'Compiler checks'))))
+    return Plan(revisions, tuple(rows), gates, exclusions, data['profile'],
+                data['reset_transport'], tuple(compilers))
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict:

@@ -75,6 +75,7 @@ class Row:
             raise ValueError('Row reason must be a string')
         if self.comparison == 'candidate-only':
             text(self.reason, 'Candidate-only justification')
+        object.__setattr__(self, 'prerequisites', tuple(sorted(self.prerequisites)))
 
     @property
     def id(self) -> str:
@@ -96,3 +97,25 @@ class Exclusion:
         if self.kind not in ('deferred', 'unsupported', 'conditional-not-selected'):
             raise ValueError('Unknown exclusion kind')
         text(self.reason, 'Exclusion reason')
+
+
+@dataclass(frozen=True)
+class CompilerCoverage:
+    toolchain: Literal['gcc', 'atfe', 'acfe']
+    boards: tuple[str, ...]
+    checks: tuple[Literal['build', 'link', 'abi'], ...]
+
+    def __post_init__(self):
+        if self.toolchain not in ('gcc', 'atfe', 'acfe'):
+            raise ValueError('Unknown compiler toolchain')
+        strings(self.boards, 'Compiler boards')
+        strings(self.checks, 'Compiler checks')
+        if any(check not in ('build', 'link', 'abi') for check in self.checks):
+            raise ValueError('Compiler coverage declares build/link/ABI, not silicon execution')
+        object.__setattr__(self, 'boards', tuple(sorted(self.boards)))
+        object.__setattr__(self, 'checks', tuple(sorted(self.checks)))
+
+    @property
+    def ids(self) -> tuple[str, ...]:
+        return tuple(f'compiler/{self.toolchain}/{board}/{check}'
+                     for board in self.boards for check in self.checks)
