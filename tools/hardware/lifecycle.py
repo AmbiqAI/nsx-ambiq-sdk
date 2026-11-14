@@ -84,6 +84,8 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
     """
     if sys.platform != 'linux' or action not in ('term', 'interrupt', 'timeout'):
         raise ValueError('Linux controls support term, interrupt and timeout only')
+    repo, gcc_root = repo.resolve(), gcc_root.resolve()
+    sdk_root = sdk_root.resolve() if sdk_root is not None else None
     import psutil  # Optional hardware dependency; never needed for normal tests.
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -112,13 +114,15 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
             return False
 
     def remember():
-        if root is None or not alive(root):
-            return
-        try:
-            for member in [root, *root.children(recursive=True)]:
-                owned.setdefault((member.pid, member.create_time()), member)
-        except psutil.NoSuchProcess:
-            pass
+        # A surviving worker can gain children after its pytest parent exits.
+        parents = [*owned.values(), *([root] if root is not None else [])]
+        for parent in parents:
+            try:
+                if alive(parent):
+                    for member in [parent, *parent.children(recursive=True)]:
+                        owned.setdefault((member.pid, member.create_time()), member)
+            except psutil.NoSuchProcess:
+                pass
 
     def launch(command, log):
         nonlocal process, root
@@ -218,6 +222,21 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
             remaining = [member for member in owned.values() if alive(member)]
             if remaining:
                 receipt.update(status='failed', board_state='unknown', emergency_cleanup=True)
+                # Only after the native verdict: stop owned parents from
+                # creating more children while discovering the final tree.
+                frozen = set()
+                deadline = time.monotonic()+5
+                while any((p.pid, p.create_time()) not in frozen for p in remaining):
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError('Owned process discovery did not stabilize')
+                    for member in remaining:
+                        try:
+                            member.suspend()
+                            frozen.add((member.pid, member.create_time()))
+                        except psutil.NoSuchProcess:
+                            pass
+                    remember()
+                    remaining = [p for p in owned.values() if alive(p)]
                 for member in reversed(remaining):
                     try:
                         member.kill()  # psutil checks process identity, including PID reuse.

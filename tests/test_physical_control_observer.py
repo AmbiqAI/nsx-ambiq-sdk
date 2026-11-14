@@ -6,6 +6,7 @@ import signal
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 
 import pytest
 
@@ -24,13 +25,19 @@ def complete_packet(build_id):
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason='Linux observer/process lease')
-@pytest.mark.parametrize('action,broken', [('term', False), ('interrupt', False),
-                                         ('timeout', False), ('term', True)])
+@pytest.mark.parametrize('action,broken,late_child', [('term', False, False), ('interrupt', False, False),
+                                                     ('timeout', False, False), ('term', True, False),
+                                                     ('term', True, True)])
 def test_observer_distinguishes_native_cleanup_from_its_emergency_cleanup(
-        tmp_path, repo_root, monkeypatch, action, broken):
+        tmp_path, repo_root, monkeypatch, action, broken, late_child):
     pytest.importorskip('psutil')
+    candidate = tmp_path/'candidate'
+    candidate.mkdir()
+    monkeypatch.chdir(tmp_path)
+    marker = tmp_path/'late-child.json'
     request = BoardRequest(str(800000000+os.getpid()), 'fake-device', 1)
     def fake_command(repo, board, gcc_root, request, output, sdk_root, fault, timeout):
+        assert sdk_root == candidate, 'Relative SDK root must resolve before child cwd changes'
         directory = output / board / 'only-owned-build'
         build_id = 'negative' if fault == 'timeout' else 'recovery'
         manifest = dict(board=board, suite='startup', fault_injection=fault,
@@ -50,10 +57,20 @@ directory.mkdir(parents=True)
 '''
         else:
             worker = f'''
-import json, time
+import json, os, subprocess, sys, time
 from pathlib import Path
 directory=Path({str(directory)!r})
+parent=os.getppid()
 (directory/'seeded.json').write_text({json.dumps({s.symbol:s.value for s in STARTUP.seeds})!r})
+if {late_child!r}:
+    while os.getppid() == parent:
+        time.sleep(0.01)
+    import psutil
+    leaf=subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], pass_fds=(int(sys.argv[-1]),))
+    marker=Path({str(marker)!r})
+    pending=marker.with_suffix('.pending')
+    pending.write_text(json.dumps(dict(pid=leaf.pid,created=psutil.Process(leaf.pid).create_time())))
+    pending.replace(marker)
 time.sleep({1 if action == 'timeout' else 60})
 (directory/'failure.json').write_text({json.dumps(dict(status='qualification_failed', error='Timed out waiting for complete firmware evidence'))!r})
 raise SystemExit(1)
@@ -61,7 +78,7 @@ raise SystemExit(1)
             command = [sys.executable, '-c', worker, 'tools.hardware.jlink_worker', '--output', str(directory)]
             if broken:
                 substitute = f'''
-    child=subprocess.Popen({command!r}, pass_fds=(kwargs['lease_fd'],), start_new_session=True)
+    child=subprocess.Popen([*{command!r}, str(kwargs['lease_fd'])], pass_fds=(kwargs['lease_fd'],), start_new_session=True)
     def cancel(signum, frame):
         raise RunCancelled('deliberate defective cleanup')
     signal.signal(signal.SIGTERM, cancel)
@@ -84,24 +101,53 @@ runner.execute(Firmware(Path('unused'),0,{build_id!r}, {board!r}, {request.devic
 '''
         return [sys.executable, '-c', code]
     monkeypatch.setattr(lifecycle, '_startup_command', fake_command)
+    if late_child:
+        original_outcome = lifecycle._native_outcome
+        def after_late_child(*args, **kwargs):
+            deadline = time.monotonic()+5
+            while not marker.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            assert marker.exists(), 'Owned worker did not spawn its late child'
+            return original_outcome(*args, **kwargs)
+        monkeypatch.setattr(lifecycle, '_native_outcome', after_late_child)
     output = tmp_path / 'control'
-    if broken:
-        with pytest.raises(RuntimeError, match='Native transport cleanup'):
-            lifecycle.run_control(repo_root, 'fake-board', Path('/unused'), request, output, action)
-        receipt = json.loads((output/'control.json').read_text())
-        assert receipt['native_outcome']['worker_alive']
-        assert not receipt['native_outcome']['lease_released']
-        assert receipt['status'] == 'failed' and receipt['board_state'] == 'unknown'
-        assert receipt['emergency_cleanup']
-        assert not (output/'recovery').exists()
-    else:
-        receipt = lifecycle.run_control(repo_root, 'fake-board', Path('/unused'), request, output, action)
-        assert receipt['status'] == 'passed'
-        assert not receipt['emergency_cleanup']
-        assert receipt['board_state'] == 'startup-recovered'
-        assert receipt['build_id'] != receipt['recovery_build_id']
-    with probe_lock(request.probe):
-        pass
+    with dispose_leaf(marker):
+        if broken:
+            with pytest.raises(RuntimeError, match='Native transport cleanup'):
+                lifecycle.run_control(repo_root, 'fake-board', Path('/unused'), request,
+                                       output, action, Path('candidate'))
+            receipt = json.loads((output/'control.json').read_text())
+            assert receipt['native_outcome']['worker_alive']
+            assert not receipt['native_outcome']['lease_released']
+            assert receipt['status'] == 'failed' and receipt['board_state'] == 'unknown'
+            assert receipt['emergency_cleanup']
+            assert not (output/'recovery').exists()
+        else:
+            receipt = lifecycle.run_control(repo_root, 'fake-board', Path('/unused'), request,
+                                            output, action, Path('candidate'))
+            assert receipt['status'] == 'passed'
+            assert not receipt['emergency_cleanup']
+            assert receipt['board_state'] == 'startup-recovered'
+            assert receipt['build_id'] != receipt['recovery_build_id']
+        with probe_lock(request.probe):
+            pass
+
+
+@contextmanager
+def dispose_leaf(marker):
+    """A failing regression must not leak the exact fake leaf it created."""
+    import psutil
+    try:
+        yield
+    finally:
+        if marker.is_file():
+            identity = json.loads(marker.read_text())
+            try:
+                child = psutil.Process(identity['pid'])
+                if child.create_time() == identity['created']:
+                    child.kill()
+            except psutil.NoSuchProcess:
+                pass
 
 
 @pytest.mark.parametrize('change', ['success', 'live-worker', 'held-lease', 'wrong-status', 'wrong-timeout'])
