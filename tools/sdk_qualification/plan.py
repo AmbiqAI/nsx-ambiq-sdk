@@ -54,12 +54,15 @@ class Plan:
         if len(scopes) != len(set(scopes)):
             raise ValueError('Duplicate exclusion scopes')
         execution_ids = {name for item in self.compilers for name in item.ids}
+        execution_ids.update(name + '/candidate' for item in self.compilers for name in item.ids)
         for row in self.rows:
             execution_ids.add(row.id)
             execution_ids.update(f'{row.id}/{side}' for side in row.sides)
-        if set(by_id).intersection(execution_ids):
+        gate_sides = {f'{gate.id}/{"candidate" if gate.kind == "host" else "plan"}'
+                      for gate in self.gates}
+        if set(by_id).intersection(execution_ids | gate_sides):
             raise ValueError('Gate and execution requirement identifiers must not collide')
-        required_ids = set(by_id) | execution_ids
+        required_ids = set(by_id) | gate_sides | execution_ids
         if required_ids.intersection(scopes):
             raise ValueError('Exclusions cannot replace required coverage')
         object.__setattr__(self, 'rows', tuple(sorted(self.rows, key=lambda row: row.id)))

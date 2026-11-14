@@ -158,7 +158,8 @@ def test_strict_roundtrip(plan, tmp_path):
 
 
 def test_gate_and_execution_ids_cannot_alias(plan):
-    ids = (plan.rows[0].id, plan.rows[0].id + '/candidate', plan.compilers[0].ids[0])
+    ids = (plan.rows[0].id, plan.rows[0].id + '/candidate', plan.compilers[0].ids[0],
+           plan.compilers[0].ids[0] + '/candidate', 'candidate-host-gcc/candidate', 'intake-review/plan')
     for name in ids:
         with pytest.raises(ValueError, match='must not collide'):
             replace(plan, gates=(*plan.gates, Gate(name, 'host', 'Different obligation')))
@@ -217,5 +218,7 @@ def test_compiler_scope_and_unique_identity(plan):
         replace(plan, compilers=(*plan.compilers, plan.compilers[0]))
     with pytest.raises(ValueError, match='outside'):
         replace(plan, compilers=(*plan.compilers, CompilerCoverage('atfe', ('wrong_board',), ('abi',))))
-    with pytest.raises(ValueError, match='Exclusions cannot replace'):
-        replace(plan, exclusions=(Exclusion(plan.compilers[0].ids[0], 'deferred', 'Compiler unavailable'),))
+    for scope in (plan.compilers[0].ids[0], plan.compilers[0].ids[0] + '/candidate',
+                  'candidate-host-gcc/candidate', 'intake-review/plan'):
+        with pytest.raises(ValueError, match='Exclusions cannot replace'):
+            replace(plan, exclusions=(Exclusion(scope, 'deferred', 'Unavailable'),))
