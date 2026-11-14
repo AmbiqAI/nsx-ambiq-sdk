@@ -165,7 +165,7 @@ class Tools:
                 raise ValueError(f'Tool identity changed or disappeared: {item.name}')
             if item.name in ('cmake', 'ninja', 'cc'):
                 selected = shutil.which(item.name, path=self.search_path)
-                if selected is None or Path(selected).resolve() != path.resolve():
+                if selected is None or Path(selected).absolute() != path.absolute():
                     raise ValueError(f'Tool selection changed: {item.name}')
 
     def environment(self, scratch: Path) -> dict[str, str]:

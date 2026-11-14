@@ -470,19 +470,22 @@ def mutable_tools(tmp_path):
                  (Binary('python', str(executable), sha256(executable), 'recorded-version'),))
 
 
-@pytest.mark.parametrize('action', ('replace', 'remove'))
+@pytest.mark.parametrize('action', ('replace', 'remove', 'unexecutable'))
 def test_tool_recheck_rejects_replacement_or_disappearance(mutable_tools, action):
     mutable_tools.recheck()
     executable = mutable_tools.path('python')
     if action == 'replace':
         executable.write_text('replacement executable bytes')
-    else:
+    elif action == 'remove':
         executable.unlink()
+    else:
+        executable.chmod(0o644)
     with pytest.raises(ValueError, match='identity changed or disappeared'):
         mutable_tools.recheck()
 
 
-def test_tool_recheck_rejects_new_path_shadow(tmp_path):
+@pytest.mark.parametrize('symlink', (False, True))
+def test_tool_recheck_rejects_new_path_shadow(tmp_path, symlink):
     early, late = tmp_path / 'early', tmp_path / 'late'
     early.mkdir(); late.mkdir()
     selected = late / 'cmake'
@@ -491,7 +494,10 @@ def test_tool_recheck_rejects_new_path_shadow(tmp_path):
                   str(early) + ':' + str(late))
     tools.recheck()
     shadow = early / 'cmake'
-    shadow.write_bytes(selected.read_bytes()); shadow.chmod(0o755)
+    if symlink:
+        shadow.symlink_to(selected)
+    else:
+        shadow.write_bytes(selected.read_bytes()); shadow.chmod(0o755)
     with pytest.raises(ValueError, match='selection changed'):
         tools.recheck()
 
