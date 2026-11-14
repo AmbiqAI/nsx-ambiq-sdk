@@ -657,3 +657,21 @@ def test_run_board_device_mismatch_stops_before_probe(setup, board_orchestration
     assert sample.state.opens == sample.state.runs == sample.state.closes == 0
     assert body['scope_status'] == 'failed' and body['qualification'] is False
     assert body['cleanup']['board_state'] == 'not-accessed'
+
+
+@pytest.mark.parametrize('side', ('baseline', 'candidate'))
+def test_run_board_rejected_post_run_evidence_cannot_pass(setup, board_orchestration, monkeypatch, side):
+    sample = board_orchestration
+    def reject_evidence(directory, entry, *args):
+        if entry['side'] == side:
+            raise ValueError('fake post-run evidence rejected')
+    monkeypatch.setattr(sample.operations, 'verify_firmware', reject_evidence)
+    with pytest.raises(ValueError, match='post-run evidence rejected'):
+        sample.operations.run_board(setup.plan, sample.config, sample.board, sample.binding, sample.host)
+    body = read_record(sample.config.output)['body']
+    assert sample.state.opens == sample.state.closes == 1
+    assert sample.state.runs == (1 if side == 'baseline' else 2)
+    assert body['scope_status'] == 'failed' and body['qualification'] is False
+    assert body['cleanup']['board_state'] == 'unknown'
+    assert 'post-run evidence rejected' in body['error']
+    evidence.verify_files(sample.config.output, body['files'])
