@@ -131,15 +131,15 @@ def verify_firmware(directory: Path, entry: dict, row: Row, side: str,
     inputs = (directory / 'inputs.txt').read_text().splitlines()
     if len(inputs) != 5:
         raise ValueError('Missing selected HAL/BSP inputs')
-    archives = []
-    for path in inputs[-2:]:
+    selected = []
+    for path in inputs:
         if path not in hashes:
-            raise ValueError('Selected archive absent from input inventory')
+            raise ValueError('Selected production input absent from input inventory')
         role = next(role for name, role in indexed if name == path)
         if role != 'sdk':
-            raise ValueError('Selected HAL/BSP archive is outside the SDK')
-        archives.append(input_path(path, role, origin, current, entry['origin'], directory, side, old_tools, tools))
-    abi.verify(directory, tools, archives, command)
+            raise ValueError('Selected startup/system/linker/HAL/BSP input is outside the SDK')
+        selected.append(input_path(path, role, origin, current, entry['origin'], directory, side, old_tools, tools))
+    abi.verify(directory, tools, selected[-2:], command)
     if entry['hardware']:
         execution = read_json(directory / 'execution.json')
         binding = entry['binding']

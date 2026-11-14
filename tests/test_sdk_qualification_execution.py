@@ -434,3 +434,27 @@ def test_frozen_path_preserves_symlink_parent_traversal(tmp_path, monkeypatch):
     frozen = execution_path(tmp_path / 'cross')
     monkeypatch.chdir(tmp_path)
     assert Path(shutil.which('cmake', path=frozen)).resolve() == expected
+
+
+@pytest.mark.parametrize('index', (0, 1, 2), ids=('startup', 'system', 'linker'))
+@pytest.mark.parametrize('role', ('harness', 'generated', 'environment'))
+def test_production_startup_system_linker_cannot_be_replaced_outside_sdk(setup, firmware_evidence, index, role):
+    sample = firmware_evidence
+    manifest = sample.manifest
+    inputs = (sample.output / 'inputs.txt').read_text().splitlines()
+    old = inputs[index]
+    bases = {'harness': Path(setup.roots['harness']['root']), 'generated': sample.output,
+             'environment': setup.root / 'external'}
+    replacement = bases[role] / ('replacement-' + Path(old).name)
+    replacement.parent.mkdir(parents=True, exist_ok=True)
+    replacement.write_text('validly inventoried replacement, but not SDK production input')
+    inputs[index] = str(replacement)
+    manifest['input_roles']['sdk'].remove(old)
+    manifest['input_roles'][role].append(str(replacement))
+    del manifest['inputs_sha256'][old]
+    manifest['inputs_sha256'][str(replacement)] = sha256(replacement)
+    (sample.output / 'inputs.txt').write_text('\n'.join(inputs) + '\n')
+    (sample.output / 'manifest.json').write_text(json.dumps(manifest))
+    sample.entry['files'] = {path.name: sha256(path) for path in sample.output.iterdir() if path.is_file()}
+    with pytest.raises(ValueError, match='outside the SDK'):
+        verify_example(setup, sample)
