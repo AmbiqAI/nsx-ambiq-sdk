@@ -21,7 +21,7 @@ def execution_path(gcc: Path) -> str:
              *os.environ.get('PATH', '').split(os.pathsep)]
     # Resolve empty/relative entries against the launch directory once. Preserve
     # symlinks: resolving a venv's Python symlink can discard its environment.
-    return os.pathsep.join(os.path.abspath(part) for part in parts)
+    return os.pathsep.join(str(Path(part).absolute()) for part in parts)
 
 
 @dataclass(frozen=True)

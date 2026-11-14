@@ -411,3 +411,26 @@ def test_tools_freeze_relative_and_empty_path_before_changing_directory(tmp_path
     assert shutil.which('cmake', path=env['PATH']) == str(cmake)
     import subprocess
     assert subprocess.check_output(['cmake', '--version'], env=env, text=True, timeout=5).strip() == 'launch-cmake'
+
+
+def test_frozen_path_preserves_symlink_parent_traversal(tmp_path, monkeypatch):
+    import os
+    import shutil
+    from tools.sdk_qualification.runtime import execution_path
+    launch = tmp_path / 'launch'
+    installed = tmp_path / 'installed'
+    (launch / 'bin').mkdir(parents=True)
+    (installed / 'bin').mkdir(parents=True)
+    (installed / 'release').mkdir()
+    (launch / 'alias').symlink_to(installed / 'release', target_is_directory=True)
+    for parent, label in ((launch, 'wrong-cmake'), (installed, 'selected-cmake')):
+        tool = parent / 'bin/cmake'
+        tool.write_text('#!/bin/sh\necho ' + label + '\n')
+        tool.chmod(0o755)
+    monkeypatch.chdir(launch)
+    monkeypatch.setenv('PATH', 'alias/../bin' + os.pathsep + os.environ['PATH'])
+    expected = Path(shutil.which('cmake')).resolve()
+    assert expected == installed / 'bin/cmake'
+    frozen = execution_path(tmp_path / 'cross')
+    monkeypatch.chdir(tmp_path)
+    assert Path(shutil.which('cmake', path=frozen)).resolve() == expected
