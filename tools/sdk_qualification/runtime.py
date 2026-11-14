@@ -118,7 +118,7 @@ class Tools:
                 run_worker(command, log=log, cwd=output, timeout=15, env=env)
             return path.read_text()
         paths = {name: gcc / 'bin' / f'arm-none-eabi-{name}' for name in ('gcc', 'g++', 'ld', 'nm', 'readelf')}
-        for name in ('cmake', 'ninja'):
+        for name in ('cmake', 'ninja', 'cc'):
             found = shutil.which(name, path=env['PATH'])
             if not found:
                 raise ValueError(f'Missing tool: {name}')
@@ -152,8 +152,11 @@ class Tools:
     def environment(self, scratch: Path) -> dict[str, str]:
         scratch.mkdir(exist_ok=True)
         env = os.environ.copy()
-        for key in ('PYTHONPATH', 'PYTEST_ADDOPTS', 'SKIP'):
+        for key in ('PYTHONPATH', 'PYTEST_ADDOPTS', 'SKIP', 'GCC_ROOT'):
             env.pop(key, None)
-        env.update(PATH=execution_path(Path(self.gcc_root)), GCC_ROOT=self.gcc_root,
+        # GCC_ROOT also changes headers for several host-compiled fixtures.
+        # Cross-compiler discovery uses the explicit root at the front of PATH;
+        # BuildRequest independently receives that same root.
+        env.update(PATH=execution_path(Path(self.gcc_root)),
                    NSX_REQUIRE_ARM_GCC='1', PYTEST_DISABLE_PLUGIN_AUTOLOAD='1', LC_ALL='C', TMPDIR=str(scratch))
         return env

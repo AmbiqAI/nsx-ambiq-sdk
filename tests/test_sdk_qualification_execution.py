@@ -212,11 +212,11 @@ def test_clean_planned_roots_and_fresh_external_output_required(setup, monkeypat
 
 
 def test_environment_clears_test_filters_and_pins_compiler(setup, monkeypatch):
-    for key in ('PYTEST_ADDOPTS', 'PYTHONPATH', 'SKIP'):
+    for key in ('PYTEST_ADDOPTS', 'PYTHONPATH', 'SKIP', 'GCC_ROOT'):
         monkeypatch.setenv(key, 'undesired')
     env = setup.tools.environment(setup.root / 'scratch')
-    assert not any(key in env for key in ('PYTEST_ADDOPTS', 'PYTHONPATH', 'SKIP'))
-    assert env['GCC_ROOT'] == '/gcc'
+    assert not any(key in env for key in ('PYTEST_ADDOPTS', 'PYTHONPATH', 'SKIP', 'GCC_ROOT'))
+    assert env['PATH'].split(':')[0] == '/gcc/bin'
     assert env['NSX_REQUIRE_ARM_GCC'] == '1'
     assert env['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] == '1'
 
@@ -362,3 +362,22 @@ def test_tools_capture_and_build_environment_select_same_cmake(tmp_path):
     assert tools.path('cmake') == cmake
     assert shutil.which('cmake', path=env['PATH']) == str(cmake)
     assert next(item.version for item in tools.binaries if item.name == 'cmake') == 'selected-cmake-version'
+
+
+def test_selected_cross_toolchain_does_not_break_host_c_headers(tmp_path, monkeypatch):
+    import shutil
+    import subprocess
+    gcc = tmp_path / 'cross-toolchain'
+    # This host compile does not need an ARM installation, only the explicit
+    # lookup path. The fake value proves ambient GCC_ROOT cannot leak through.
+    monkeypatch.setenv('GCC_ROOT', '/invalid-cross-headers')
+    tools = Tools(str(gcc), '/cmake', ())
+    env = tools.environment(tmp_path / 'scratch')
+    compiler = shutil.which('cc', path=env['PATH'])
+    assert compiler, 'Host C compiler is a qualification prerequisite'
+    source = '#include <stdio.h>\n#include <stddef.h>\nint main(void){puts("host-ok");return 0;}\n'
+    output = tmp_path / 'host'
+    result = subprocess.run([compiler, '-x', 'c', '-', '-o', str(output)], input=source, text=True,
+                            capture_output=True, env=env, timeout=15)
+    assert result.returncode == 0, result.stderr
+    assert subprocess.check_output([str(output)], env=env, text=True, timeout=5).strip() == 'host-ok'

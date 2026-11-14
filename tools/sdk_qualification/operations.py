@@ -97,6 +97,9 @@ class Session:
             self.track(path)
 
     def finish(self, error):
+        self.track(*(self.config.output / name for name in (
+            'intake-reviewed.json', 'compatibility/compatibility.json',
+            'compatibility/junit.xml', 'host-tests.xml')))
         checked = False
         try:
             checked = self.config.roots(self.plan) == self.roots
