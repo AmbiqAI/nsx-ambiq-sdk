@@ -85,12 +85,14 @@ source = { virtual = "." }
 [package.dev-dependencies]
 ci = [
     { name = "pre-commit" },
+    { name = "psutil" },
     { name = "pytest" },
     { name = "pyyaml" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "virtualenv" },
 ]
 hardware = [
+    { name = "psutil" },
     { name = "pylink-square" },
     { name = "pyserial" },
     { name = "pytest" },
@@ -101,12 +103,14 @@ hardware = [
 [package.metadata.requires-dev]
 ci = [
     { name = "pre-commit", specifier = ">=3.7" },
+    { name = "psutil", specifier = ">=5.9,<8" },
     { name = "pytest", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2" },
     { name = "virtualenv", specifier = ">=21.14.12" },
 ]
 hardware = [
+    { name = "psutil", specifier = ">=5.9,<8" },
     { name = "pylink-square", specifier = ">=1.2,<3" },
     { name = "pyserial", specifier = ">=3.5,<4" },
     { name = "pytest", specifier = ">=8" },

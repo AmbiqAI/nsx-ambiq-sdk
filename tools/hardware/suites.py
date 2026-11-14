@@ -119,6 +119,18 @@ DEBUG_STATE = Suite('debug-state', 'tests/hardware/test_debug_output.py::test_de
                     ('output_lifecycle',), 'tests/fixtures/debug-state-smoke', 'debug_state.elf')
 
 
+def bsp_v2_options(repo: Path, output: Path, board: str, fault: str,
+                    sdk_root: Path | None = None) -> list[str]:
+    if board not in ('apollo330mP_evb', 'apollo510_evb') or fault != 'none':
+        raise ValueError('Built-in BSP v2 smoke requires AP330P/AP510 without faults')
+    return ['-DNSX_TEST_MINIMAL=OFF', '-DNSX_BSP_CONTRACT_REQUIRED=2']
+
+
+BSP_V2_SYSTEM = Suite('bsp-v2-system', 'tests/hardware/test_bsp_v2.py::test_bsp_v2',
+                       SYSTEM_FULL.cases, SYSTEM_FULL.source_dir, SYSTEM_FULL.elf_name,
+                       configure=bsp_v2_options)
+
+
 def debug_failure_options(repo: Path, output: Path, board: str, fault: str,
                           sdk_root: Path | None = None) -> list[str]:
     if board not in ('apollo330mP_evb', 'apollo510dL_evb') or fault != 'none':
@@ -196,6 +208,18 @@ PSRAM_BLOCKING = Suite('psram-blocking', 'tests/hardware/test_psram.py::test_psr
                        'tests/hardware/psram', 'psram_blocking.elf', configure=psram_options)
 
 
+def psram_common_options(repo: Path, output: Path, board: str, fault: str,
+                          sdk_root: Path | None = None) -> list[str]:
+    if board not in PSRAM_BOARDS or fault != 'none':
+        raise ValueError('Common PSRAM contract requires AP510/AP510B without faults')
+    return []
+
+
+PSRAM_COMMON = Suite('psram-common', 'tests/hardware/test_psram_common.py::test_psram_common',
+                     ('initialize', 'aligned_roundtrip', 'common_refusals'),
+                     'tests/hardware/psram-common', 'psram_common.elf', configure=psram_common_options)
+
+
 def psram_async_options(repo: Path, output: Path, board: str, fault: str,
                         sdk_root: Path | None = None, *, clock_hz: int = 48000000,
                         high: bool = False) -> list[str]:
@@ -222,4 +246,4 @@ PSRAM_ASYNC_MATRIX = (PSRAM_ASYNC,) + tuple(
     if high or clock_hz != 48000000)
 
 
-SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)

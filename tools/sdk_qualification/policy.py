@@ -29,10 +29,11 @@ SUPPORTED.update({name: NON_AP3 for name in ('timer-period', 'performance')})
 SUPPORTED['ap3-performance'] = BOARDS[:1]
 SUPPORTED['power-startup'] = BOARDS[2:]
 SUPPORTED['debug-failure'] = ('apollo330mP_evb',)
+SUPPORTED['bsp-v2-system'] = ('apollo330mP_evb', 'apollo510_evb')
 SUPPORTED.update({name: ('apollo4p_blue_kxr_evb',) for name in (
     'tempco-lifecycle', 'tempco-capture', 'usb-keep', 'usb-off', 'memory-preflight')})
 SUPPORTED.update({name: PSRAM_BOARDS for name in (
-    'psram-blocking', 'psram-async', 'psram-async-lp-96',
+    'psram-common', 'psram-blocking', 'psram-async', 'psram-async-lp-96',
     'psram-async-hp-48', 'psram-async-hp-96')})
 # The clock diagnostic is experimental, not a qualification row.
 

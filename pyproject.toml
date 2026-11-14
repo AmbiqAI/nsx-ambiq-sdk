@@ -9,12 +9,13 @@ ci = [
     "pytest>=8",
     "PyYAML>=6",
     "pre-commit>=3.7",
+    "psutil>=5.9,<8",
     # pre-commit hook environments must seed pip with the corrected trust bundle.
     "virtualenv>=21.14.12",
     "tomli>=2; python_version < '3.11'",
 ]
 
-hardware = ["pytest>=8", "pylink-square>=1.2,<3", "pyserial>=3.5,<4"]
+hardware = ["pytest>=8", "pylink-square>=1.2,<3", "pyserial>=3.5,<4", "psutil>=5.9,<8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
