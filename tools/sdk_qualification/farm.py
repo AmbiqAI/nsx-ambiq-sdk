@@ -49,8 +49,11 @@ def runner_binding(inventory: Path) -> dict:
 def debugger_inputs(library: Path, overlay: Path) -> dict:
     if not library.is_file() or not overlay.is_dir():
         raise ValueError('Farm requires its explicit J-Link library and deployed JLinkDevices tree')
+    paths = sorted(overlay.rglob('*'))
+    if any(path.is_symlink() and not path.is_file() for path in paths):
+        raise ValueError('J-Link overlay directory or broken symlinks are unsupported; use a file tree')
     files = {str(path.relative_to(overlay)): {'path': str(path.resolve()), 'sha256': sha256(path)}
-             for path in sorted(overlay.rglob('*')) if path.is_file()}
+             for path in paths if path.is_file()}
     if not files:
         raise ValueError('Deployed J-Link device tree is empty')
     return {'library': {'path': str(library.resolve()), 'sha256': sha256(library)},

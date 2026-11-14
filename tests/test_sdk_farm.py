@@ -161,6 +161,34 @@ def test_overlay_changes_invalidate_debugger_provenance(lab):
         farm.debugger_inputs(library, overlay)
 
 
+def test_nested_overlay_directory_link_fails_before_reservation(lab, tmp_path):
+    scripts = tmp_path / 'external-scripts'
+    scripts.mkdir()
+    (scripts / 'reset.JLinkScript').write_text('reset implementation')
+    overlay = Path.home() / '.config/SEGGER/JLinkDevices'
+    (overlay / 'scripts').symlink_to(scripts, target_is_directory=True)
+    with pytest.raises(ValueError, match='symlinks'):
+        farm.run(**lab)
+    assert not (lab['output'] / 'host').exists()
+    assert not Path(os.environ['FAKE_STATE']).exists()
+
+
+def test_root_overlay_link_and_regular_file_links_are_fingerprinted(lab, tmp_path):
+    overlay = Path.home() / '.config/SEGGER/JLinkDevices'
+    actual = tmp_path / 'deployed-devices'
+    overlay.rename(actual)
+    overlay.symlink_to(actual, target_is_directory=True)
+    script = tmp_path / 'reset.JLinkScript'
+    script.write_text('first reset')
+    (actual / 'reset.JLinkScript').symlink_to(script)
+    library = Path(os.environ['HPX_JLINK_DLL'])
+    before = farm.debugger_inputs(library, overlay)
+    assert before['overlay']['resolved'] == str(actual)
+    assert before['overlay']['files']['reset.JLinkScript']['path'] == str(script)
+    script.write_text('changed reset')
+    assert farm.debugger_inputs(library, overlay) != before
+
+
 @pytest.mark.parametrize('revision', ['main', 'abc', 'a' * 39, 'A' * 40])
 def test_dispatch_rejects_moving_or_malformed_refs(tmp_path, monkeypatch, revision):
     monkeypatch.setenv('SDK_PLAN_JSON', json.dumps({'revisions': dict(baseline=revision, candidate='b'*40, harness='c'*40)}))

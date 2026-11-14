@@ -29,6 +29,8 @@ qualification remains incomplete**; the workflow cannot approve a release.
 Evidence includes the unchanged assessment, source/tool identities, explicit
 J-Link library and deployed device-overlay hashes. Artifacts are uploaded after
 failure as well as success, with run/attempt-specific names.
+The deployed overlay root may be a symlink, as on Nix; nested directory links
+are refused before reservation so scripts cannot be omitted from hashing.
 
 The adapter requires bench-agent's conditional unlock support before reservation.
 It releases only a matching lease after verified results and cleanup; the
