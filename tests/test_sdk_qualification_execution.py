@@ -381,3 +381,33 @@ def test_selected_cross_toolchain_does_not_break_host_c_headers(tmp_path, monkey
                             capture_output=True, env=env, timeout=15)
     assert result.returncode == 0, result.stderr
     assert subprocess.check_output([str(output)], env=env, text=True, timeout=5).strip() == 'host-ok'
+
+
+@pytest.mark.parametrize('component', ('.', ''))
+def test_tools_freeze_relative_and_empty_path_before_changing_directory(tmp_path, monkeypatch, component):
+    import os
+    import shutil
+    original = tmp_path / 'launch'
+    original.mkdir()
+    other = tmp_path / 'execution'
+    other.mkdir()
+    gcc = tmp_path / 'cross'
+    (gcc / 'bin').mkdir(parents=True)
+    for name in ('gcc', 'g++', 'ld', 'nm', 'readelf'):
+        path = gcc / 'bin' / ('arm-none-eabi-' + name)
+        path.write_text('#!/bin/sh\necho selected-tool\n')
+        path.chmod(0o755)
+    cmake = original / 'cmake'
+    cmake.write_text(f'#!/bin/sh\nif [ "$1" = "-P" ]; then echo "{tmp_path}"; else echo launch-cmake; fi\n')
+    cmake.chmod(0o755)
+    monkeypatch.chdir(original)
+    monkeypatch.setenv('PATH', component + os.pathsep + os.environ['PATH'])
+    tools = Tools.capture(gcc, tmp_path / 'tools')
+    assert tools.path('cmake') == cmake
+    monkeypatch.chdir(other)
+    monkeypatch.setenv('PATH', '/changed-after-capture')
+    env = tools.environment(tmp_path / 'scratch')
+    assert all(Path(part).is_absolute() for part in env['PATH'].split(os.pathsep))
+    assert shutil.which('cmake', path=env['PATH']) == str(cmake)
+    import subprocess
+    assert subprocess.check_output(['cmake', '--version'], env=env, text=True, timeout=5).strip() == 'launch-cmake'

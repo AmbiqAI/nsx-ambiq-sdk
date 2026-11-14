@@ -17,8 +17,11 @@ HARNESS_ROOT = Path(__file__).resolve().parents[2]
 
 
 def execution_path(gcc: Path) -> str:
-    return (str(gcc / 'bin') + os.pathsep + str(Path(sys.executable).parent)
-            + os.pathsep + os.environ.get('PATH', ''))
+    parts = [str(gcc / 'bin'), str(Path(sys.executable).parent),
+             *os.environ.get('PATH', '').split(os.pathsep)]
+    # Resolve empty/relative entries against the launch directory once. Preserve
+    # symlinks: resolving a venv's Python symlink can discard its environment.
+    return os.pathsep.join(os.path.abspath(part) for part in parts)
 
 
 @dataclass(frozen=True)
@@ -107,6 +110,7 @@ class Tools:
     gcc_root: str
     cmake_root: str
     binaries: tuple[Binary, ...]
+    search_path: str = ''
 
     @classmethod
     def capture(cls, gcc: Path, output: Path):
@@ -138,7 +142,7 @@ class Tools:
         root = capture([str(paths['cmake']), '-P', str(script)], 'cmake-root').strip()
         if not Path(root).is_dir():
             raise ValueError('CMake did not report its module directory')
-        return cls(str(gcc), root, tuple(binaries))
+        return cls(str(gcc), root, tuple(binaries), env['PATH'])
 
     def path(self, name: str) -> Path:
         return Path(next(item.path for item in self.binaries if item.name == name))
@@ -157,6 +161,6 @@ class Tools:
         # GCC_ROOT also changes headers for several host-compiled fixtures.
         # Cross-compiler discovery uses the explicit root at the front of PATH;
         # BuildRequest independently receives that same root.
-        env.update(PATH=execution_path(Path(self.gcc_root)),
+        env.update(PATH=self.search_path or execution_path(Path(self.gcc_root)),
                    NSX_REQUIRE_ARM_GCC='1', PYTEST_DISABLE_PLUGIN_AUTOLOAD='1', LC_ALL='C', TMPDIR=str(scratch))
         return env
