@@ -6,10 +6,12 @@
 #include <string.h>
 
 #define OFFSET 0x10000u
-#define MAX_BYTES 8192u
-/* Common v1 path: word-sized offsets, buffers and lengths on both SDKs. */
-static uint32_t source[(MAX_BYTES + 32u) / 4u] __attribute__((aligned(32)));
-static uint32_t destination[(MAX_BYTES + 32u) / 4u] __attribute__((aligned(32)));
+#define DMA_WINDOW_BYTES 4096u
+#define MAX_BYTES (DMA_WINDOW_BYTES - 16u)
+/* The baseline forwards caller DMA buffers across the known 4 KiB limit.
+ * Compare single-window transfers here; candidate suites cover crossings. */
+static uint32_t source[DMA_WINDOW_BYTES / 4u] __attribute__((aligned(DMA_WINDOW_BYTES)));
+static uint32_t destination[DMA_WINDOW_BYTES / 4u] __attribute__((aligned(DMA_WINDOW_BYTES)));
 static nsx_psram_config_t config;
 static nsx_psram_info_t info;
 static bool ready;
@@ -17,6 +19,7 @@ void setUp(void) {}
 void tearDown(void) {}
 
 static void initialize(void) {
+    TEST_ASSERT_EQUAL_UINT32(0, ((uintptr_t)source | (uintptr_t)destination) & (DMA_WINDOW_BYTES-1u));
     nsx_system_config_t system = {.enable_cache=true, .perf_mode=NSX_PERF_LOW,
                                   .debug={.transport=NSX_DEBUG_ITM}};
     TEST_ASSERT_EQUAL_UINT32(0, nsx_system_init(&system));
@@ -40,7 +43,7 @@ static void initialize(void) {
 
 static void aligned_roundtrip(void) {
     TEST_ASSERT_TRUE(ready);
-    const uint32_t sizes[] = {4u, 32u, 4092u, 4096u, 4100u, MAX_BYTES};
+    const uint32_t sizes[] = {4u, 32u, 256u, 1024u, 2048u, MAX_BYTES};
     for (unsigned s=0; s<sizeof(sizes)/sizeof(sizes[0]); ++s) {
         uint32_t n=sizes[s];
         memset(source, 0xcc, sizeof(source));

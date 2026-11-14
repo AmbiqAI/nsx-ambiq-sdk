@@ -172,9 +172,11 @@ until recovery succeeds or the owner accepts the unknown state. These controls
 are separate from positive qualification rows; they require the additional flag
 and cannot be combined with `--qualification-profile`. Build-only opens no probe.
 
-For baseline comparisons, `psram-common` uses only shared v1 aligned, word-sized
-transfers and common validation on AP510/AP510B. `psram-blocking` retains the
-candidate's stronger alignment/cache assertions; the older arbitrary-byte-write
+For baseline comparisons, `psram-common` uses v1 aligned, word-sized transfers
+within a single 4 KiB DTCM window and common validation on AP510/AP510B. The
+released baseline incorrectly forwards cross-window caller buffers directly to
+DMA despite its broader API promise. `psram-blocking` retains the candidate's
+cross-window, alignment and cache assertions; the older arbitrary-byte-write
 promise is not a shared safe contract. `bsp-v2-system` reuses the full-system
 firmware with explicit built-in BSP-v2 opt-in on AP330P/AP510 only. It checks
 initialization/ITM configuration, not external UART/SWO data delivery.
