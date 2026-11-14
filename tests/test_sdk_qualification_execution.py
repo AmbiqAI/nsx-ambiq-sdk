@@ -529,3 +529,131 @@ def test_assessment_rechecks_tools_before_finalizing(setup, mutable_tools, monke
     report = assess(setup.plan, config, (setup.root,))
     assert report['status'] == 'failed' and report['qualification'] is False
     assert 'Tool identity changed or disappeared' in report['errors'][0]
+
+
+@pytest.fixture
+def board_orchestration(setup, mutable_tools, monkeypatch):
+    """Exercise run_board with real session/host-copy/finalization and fake build/transport."""
+    from contextlib import contextmanager
+    from tools.hardware.build import Firmware
+    from tools.sdk_qualification import operations
+    monkeypatch.setattr(Config, 'prepare', lambda self, plan: (self.output.mkdir(), setup.roots)[1])
+    monkeypatch.setattr(Config, 'roots', lambda *args: setup.roots)
+    monkeypatch.setattr(Tools, 'capture', lambda *args: mutable_tools)
+    monkeypatch.setattr(operations, 'run_worker', lambda command, log, **kwargs: log.write('fake build completed\n'))
+    events = []
+    monkeypatch.setattr(operations, 'verify_host', lambda *args: events.append(('host-verified',)))
+    monkeypatch.setattr(operations, 'verify_firmware', lambda *args: events.append(('firmware-verified',)))
+    board = BOARDS[0]
+    host = setup.root / 'prior-host'
+    body = record(setup, host, 'host')
+    body['tools'] = mutable_tools.to_dict()
+    rewrite(host, body)
+    state = SimpleNamespace(outcome='success', fail_side='baseline', opens=0, closes=0, runs=0)
+    def fake_build(current, row, side):
+        current.call(['fake-build'], row.id + '-' + side)
+        output = current.config.output / 'firmware' / row.id / side
+        output.mkdir(parents=True)
+        elf = output / 'test.elf'
+        elf.write_bytes(b'fake ELF for orchestration only')
+        device = 'different-device' if state.outcome == 'device-mismatch' else 'device'
+        image = Firmware(elf, 0x1000, uuid.uuid4().hex, row.board, device, 4000, row.cases)
+        entry = dict(row=row.id, side=side, directory=str(output.relative_to(current.config.output)),
+                     origin=str(output), elf=elf.name, build_id=image.build_id, hardware=False, binding=None,
+                     files={elf.name: sha256(elf)})
+        current.entries.append(entry)
+        current.track(elf)
+        events.append(('build', row.suite, side))
+        return image, entry
+    monkeypatch.setattr(operations, '_build', fake_build)
+    class FakeTarget:
+        def run(self, image, output):
+            state.runs += 1
+            side = output.name
+            events.append(('run', side))
+            for name in ('execution.json', 'seeded.json', 'jlink.json', 'result.json'):
+                (output / name).write_text('{}')
+            (output / 'last-result.bin').write_bytes(b'fake transport; protocol verifier tested separately')
+            (output / 'transport.log').write_text('owned fake board session')
+            if side == state.fail_side and state.outcome in ('failure', 'interrupt'):
+                (output / 'failure.json').write_text('{"status":"fake-failure"}')
+                if state.outcome == 'interrupt':
+                    raise KeyboardInterrupt('fake board interruption')
+                raise RuntimeError('fake board execution failure')
+    @contextmanager
+    def fake_open(request):
+        assert request.probe == '123' and request.device == 'device'
+        assert events[0] == ('host-verified',)
+        assert events[-2][0] == events[-1][0] == 'build'
+        assert [events[-2][-1], events[-1][-1]] == ['baseline', 'candidate']
+        state.opens += 1
+        events.append(('open',))
+        try:
+            yield FakeTarget()
+        finally:
+            state.closes += 1
+            events.append(('close',))
+    monkeypatch.setattr(operations, 'open_board', fake_open)
+    config = Config(Path('/baseline'), Path('/candidate'), Path('/gcc'), setup.root / 'board-output')
+    return SimpleNamespace(operations=operations, config=config, board=board, host=host, state=state, events=events,
+                           binding=Binding(board, '123', 'device'))
+
+
+def test_run_board_seals_both_sides_and_closes_sessions(setup, board_orchestration):
+    sample = board_orchestration
+    envelope = sample.operations.run_board(setup.plan, sample.config, sample.board, sample.binding, sample.host)
+    body = envelope['body']
+    expected = [(row.id, side) for row in setup.plan.rows if row.board == sample.board for side in row.sides]
+    assert [(entry['row'], entry['side']) for entry in body['firmware']] == expected
+    assert all(entry['hardware'] is True and entry['binding'] == asdict(sample.binding) for entry in body['firmware'])
+    assert sample.state.opens == sample.state.closes == 4 and sample.state.runs == 8
+    assert body['scope_status'] == 'passed' and body['qualification'] is False and body['global_status'] == 'incomplete'
+    assert body['cleanup']['board_state'] == 'tests-completed'
+    for entry in body['firmware']:
+        evidence.verify_files(contained(sample.config.output, entry['directory']), entry['files'])
+        assert {'execution.json', 'last-result.bin', 'result.json', 'transport.log'}.issubset(entry['files'])
+    evidence.verify_files(sample.config.output, body['files'])
+    assert read_record(sample.config.output / 'host')['sha256'] == read_record(sample.host)['sha256']
+
+
+@pytest.mark.parametrize('outcome', ('failure', 'interrupt'))
+@pytest.mark.parametrize('side', ('baseline', 'candidate'))
+def test_run_board_failure_or_interrupt_finalizes_unknown_board(setup, board_orchestration, outcome, side):
+    sample = board_orchestration
+    sample.state.outcome, sample.state.fail_side = outcome, side
+    error = KeyboardInterrupt if outcome == 'interrupt' else RuntimeError
+    with pytest.raises(error, match='fake board'):
+        sample.operations.run_board(setup.plan, sample.config, sample.board, sample.binding, sample.host)
+    body = read_record(sample.config.output)['body']
+    assert sample.state.opens == sample.state.closes == 1
+    assert body['scope_status'] == 'failed' and body['qualification'] is False and body['global_status'] == 'failed'
+    assert body['cleanup']['board_state'] == 'unknown'
+    assert body['firmware'][-1]['hardware'] is False
+    assert any(name.endswith('failure.json') for name in body['files'])
+    evidence.verify_files(sample.config.output, body['files'])
+
+
+@pytest.mark.parametrize('bad_host', ('failed', 'corrupt'))
+def test_run_board_refuses_bad_host_before_build_or_probe(setup, board_orchestration, bad_host):
+    sample = board_orchestration
+    if bad_host == 'failed':
+        body = read_record(sample.host)['body']; body['scope_status'] = 'failed'; rewrite(sample.host, body)
+    else:
+        (sample.host / 'command.log').write_text('changed after host record finalized')
+    with pytest.raises(ValueError):
+        sample.operations.run_board(setup.plan, sample.config, sample.board, sample.binding, sample.host)
+    body = read_record(sample.config.output)['body']
+    assert not sample.events and sample.state.opens == sample.state.runs == sample.state.closes == 0
+    assert body['scope_status'] == 'failed' and body['qualification'] is False
+    assert body['cleanup']['board_state'] == 'not-accessed' and not body['firmware']
+
+
+def test_run_board_device_mismatch_stops_before_probe(setup, board_orchestration):
+    sample = board_orchestration
+    sample.state.outcome = 'device-mismatch'
+    with pytest.raises(ValueError, match='Inventory device differs'):
+        sample.operations.run_board(setup.plan, sample.config, sample.board, sample.binding, sample.host)
+    body = read_record(sample.config.output)['body']
+    assert sample.state.opens == sample.state.runs == sample.state.closes == 0
+    assert body['scope_status'] == 'failed' and body['qualification'] is False
+    assert body['cleanup']['board_state'] == 'not-accessed'
