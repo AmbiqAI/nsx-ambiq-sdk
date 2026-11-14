@@ -12,6 +12,7 @@ import sys
 import time
 
 from .api import BoardRequest
+from .process import RunCancelled
 from .protocol import decode
 from .runner import probe_lock
 from .suites import STARTUP
@@ -92,6 +93,11 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
     owned = {}
     process = None
     root = None
+    signals = {signal.SIGTERM, signal.SIGINT}
+    previous = {sig: signal.getsignal(sig) for sig in signals}
+
+    def cancel(signum, frame):
+        raise RunCancelled(f'Transport control observer cancelled by signal {signum}')
 
     def alive(member):
         try:
@@ -108,14 +114,28 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
         except psutil.NoSuchProcess:
             pass
 
+    def launch(command, log):
+        nonlocal process, root
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, signals)
+        try:
+            # Register ownership before cancellation can unwind the observer.
+            # The existing exec launcher unblocks signals in the child only.
+            launcher = [sys.executable, str(Path(__file__).with_name('child_exec.py')), *command]
+            process = subprocess.Popen(launcher, cwd=repo, stdout=log, stderr=subprocess.STDOUT,
+                                       start_new_session=True)
+            root = psutil.Process(process.pid)
+            remember()
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+
     try:
+        for sig in signals:
+            signal.signal(sig, cancel)
         negative = output / 'negative'
         timeout = 3 if action == 'timeout' else 60
         command = _startup_command(repo, board, gcc_root, request, negative, sdk_root, 'timeout', timeout)
         with (output / 'negative.log').open('w') as log:
-            process = subprocess.Popen(command, cwd=repo, stdout=log, stderr=subprocess.STDOUT,
-                                       start_new_session=True)
-            root = psutil.Process(process.pid)
+            launch(command, log)
             receipt['child_pid'] = process.pid
             deadline = time.monotonic() + 420
             prepared = None
@@ -159,9 +179,7 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
         recovery = output / 'recovery'
         command = _startup_command(repo, board, gcc_root, request, recovery, sdk_root, 'none', request.timeout)
         with (output / 'recovery.log').open('w') as log:
-            process = subprocess.Popen(command, cwd=repo, stdout=log, stderr=subprocess.STDOUT,
-                                       start_new_session=True)
-            root = psutil.Process(process.pid)
+            launch(command, log)
             deadline = time.monotonic()+420
             while process.poll() is None and time.monotonic() < deadline:
                 remember()
@@ -185,6 +203,8 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
         receipt['error'] = str(exc)
         raise
     finally:
+        for sig in signals:
+            signal.signal(sig, signal.SIG_IGN)
         try:
             remember()
             remaining = [member for member in owned.values() if alive(member)]
@@ -203,4 +223,8 @@ def run_control(repo: Path, board: str, gcc_root: Path, request: BoardRequest,
             receipt.update(status='failed', board_state='unknown', cleanup_error=str(exc))
             raise
         finally:
-            (output / 'control.json').write_text(json.dumps(receipt, indent=2)+'\n')
+            try:
+                (output / 'control.json').write_text(json.dumps(receipt, indent=2)+'\n')
+            finally:
+                for sig, handler in previous.items():
+                    signal.signal(sig, handler)

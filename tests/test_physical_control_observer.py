@@ -2,7 +2,10 @@
 import json
 import os
 from pathlib import Path
+import signal
+import subprocess
 import sys
+import time
 
 import pytest
 
@@ -111,3 +114,58 @@ def test_wrong_control_failure_cannot_pass(tmp_path, change):
     with pytest.raises(RuntimeError):
         lifecycle._native_outcome(tmp_path, 'timeout', 0 if change == 'success' else 1,
                                    change == 'live-worker', change != 'held-lease')
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason='Linux observer/process lease')
+@pytest.mark.parametrize('cancel_signal', (signal.SIGTERM, signal.SIGINT))
+def test_cancelling_observer_stops_owned_child_and_records_unknown_state(
+        tmp_path, repo_root, cancel_signal):
+    psutil = pytest.importorskip('psutil')
+    serial = str(810000000+os.getpid())
+    ready = tmp_path/'child-ready'
+    child = f'''
+import os, time
+from pathlib import Path
+from tools.hardware.runner import probe_lock
+with probe_lock({serial!r}):
+    Path({str(ready)!r}).write_text(str(os.getpid()))
+    time.sleep(60)
+'''
+    observer = f'''
+from pathlib import Path
+from tools.hardware import lifecycle
+from tools.hardware.api import BoardRequest
+import sys
+lifecycle._startup_command=lambda *args: [sys.executable, '-c', {child!r}]
+lifecycle.run_control(Path({str(repo_root)!r}), 'fake-board', Path('/unused'),
+    BoardRequest({serial!r}), Path({str(tmp_path/'control')!r}), 'term')
+'''
+    owned = None
+    with (tmp_path/'observer.log').open('w') as log:
+        process = subprocess.Popen([sys.executable, '-c', observer], cwd=repo_root,
+                                   stdout=log, stderr=subprocess.STDOUT)
+        try:
+            deadline = time.monotonic()+10
+            while time.monotonic() < deadline:
+                if ready.is_file() and ready.read_text():
+                    owned = psutil.Process(int(ready.read_text()))
+                    break
+                assert process.poll() is None, (tmp_path/'observer.log').read_text()
+                time.sleep(0.02)
+            assert owned is not None, 'Fake child did not acquire its lease'
+            process.send_signal(cancel_signal)
+            process.wait(timeout=10)
+            assert process.returncode != 0
+            receipt = json.loads((tmp_path/'control/control.json').read_text())
+            assert receipt['status'] == 'failed' and receipt['board_state'] == 'unknown'
+            assert receipt['emergency_cleanup']
+            assert 'observer cancelled' in receipt['error']
+            assert not owned.is_running() or owned.status() == psutil.STATUS_ZOMBIE
+            with probe_lock(serial):
+                pass
+        finally:
+            if owned is not None and owned.is_running():
+                owned.kill()
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)
