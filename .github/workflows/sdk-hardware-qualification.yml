@@ -20,18 +20,20 @@ jobs:
     name: AP510 pilot (full qualification incomplete)
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]
     timeout-minutes: 60
-    env:
-      SDK_PILOT_ROOT: ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}
-      UV_CACHE_DIR: ${{ runner.temp }}/sdk-uv-cache
-      UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/sdk-python
-      UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/sdk-venv
-      PRE_COMMIT_HOME: ${{ runner.temp }}/sdk-pre-commit
-      XDG_CACHE_HOME: ${{ runner.temp }}/sdk-cache
     steps:
       - name: Stage incomplete evidence
         run: |
+          SDK_PILOT_ROOT="${RUNNER_TEMP}/sdk-farm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           mkdir -p "${SDK_PILOT_ROOT}"
           echo 'Pilot has not completed; full qualification incomplete.' > "${SDK_PILOT_ROOT}/NOT_STARTED"
+          {
+            echo "SDK_PILOT_ROOT=${SDK_PILOT_ROOT}"
+            echo "UV_CACHE_DIR=${RUNNER_TEMP}/sdk-uv-cache"
+            echo "UV_PYTHON_INSTALL_DIR=${RUNNER_TEMP}/sdk-python"
+            echo "UV_PROJECT_ENVIRONMENT=${RUNNER_TEMP}/sdk-venv"
+            echo "PRE_COMMIT_HOME=${RUNNER_TEMP}/sdk-pre-commit"
+            echo "XDG_CACHE_HOME=${RUNNER_TEMP}/sdk-cache"
+          } >> "${GITHUB_ENV}"
           if [[ -z "${SSL_CERT_FILE:-}" && -f /etc/ssl/certs/ca-certificates.crt ]]; then
             echo 'SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt' >> "${GITHUB_ENV}"
           fi
