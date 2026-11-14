@@ -153,6 +153,34 @@ tests, wrong identity, incomplete/unknown protocol, output overflow, timeout,
 disconnect and probe-lock cleanup. Real subprocess tests exercise SIGTERM,
 SIGINT, timeout escalation, reaping, and retained locking after parent SIGKILL. Unity vendoring is integrity-checked.
 
+For a physical cleanup check, first complete the candidate host gates and hold
+the shared board allocation. Run one explicitly selected control, for example:
+
+```sh
+uv run --group ci --group hardware python -m pytest -q \
+  'tests/hardware/test_transport_lifecycle.py::test_transport_lifecycle[term]' \
+  --hardware --transport-controls --board apollo3p_evb --probe SERIAL \
+  --gcc-root /path/to/arm-gnu-toolchain --hardware-artifacts /fresh/external/output
+```
+
+The other selections are `interrupt` and `timeout`. They use the normal startup
+pytest/transport path with completion withheld, verify preparation and the held
+local lease, observe native cleanup, then require fresh ordinary startup on the
+same probe. `control.json` retains both outcomes. Any emergency intervention
+fails the control and leaves board state unknown. Keep the shared allocation
+until recovery succeeds or the owner accepts the unknown state. These controls
+are separate from positive qualification rows; they require the additional flag
+and cannot be combined with `--qualification-profile`. Build-only opens no probe.
+
+For baseline comparisons, `psram-common` uses v1 aligned, word-sized transfers
+within a single 4 KiB DTCM window and common validation on AP510/AP510B. The
+released baseline incorrectly forwards cross-window caller buffers directly to
+DMA despite its broader API promise. `psram-blocking` retains the candidate's
+cross-window, alignment and cache assertions; the older arbitrary-byte-write
+promise is not a shared safe contract. `bsp-v2-system` reuses the full-system
+firmware with explicit built-in BSP-v2 opt-in on AP330P/AP510 only. It checks
+initialization/ITM configuration, not external UART/SWO data delivery.
+
 To demonstrate actual failures on a reserved board, add either:
 
 ```text

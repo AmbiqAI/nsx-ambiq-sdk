@@ -21,6 +21,8 @@ def pytest_addoption(parser):
     group.addoption('--clock-experimental', action='store_true',
                     help='Enable clock diagnostic with provisional reference bounds; not qualification')
     group.addoption('--hardware', action='store_true', help='Explicitly enable board execution')
+    group.addoption('--transport-controls', action='store_true',
+                    help='Also enable expected-failure cleanup tests (not qualification rows)')
     group.addoption('--build-only', action='store_true', help='Build firmware without opening a probe')
     group.addoption('--board', choices=BOARDS)
     group.addoption('--fault-injection', default='none',
