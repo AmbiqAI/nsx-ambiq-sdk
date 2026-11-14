@@ -16,6 +16,11 @@ from .policy import BOARDS, CORE_GATES
 HARNESS_ROOT = Path(__file__).resolve().parents[2]
 
 
+def execution_path(gcc: Path) -> str:
+    return (str(gcc / 'bin') + os.pathsep + str(Path(sys.executable).parent)
+            + os.pathsep + os.environ.get('PATH', ''))
+
+
 @dataclass(frozen=True)
 class Binding:
     board: str
@@ -106,14 +111,15 @@ class Tools:
     @classmethod
     def capture(cls, gcc: Path, output: Path):
         output.mkdir()
+        env = dict(os.environ, PATH=execution_path(gcc))
         def capture(command, name):
             path = output / f'{name}.log'
             with path.open('w') as log:
-                run_worker(command, log=log, cwd=output, timeout=15)
+                run_worker(command, log=log, cwd=output, timeout=15, env=env)
             return path.read_text()
         paths = {name: gcc / 'bin' / f'arm-none-eabi-{name}' for name in ('gcc', 'g++', 'ld', 'nm', 'readelf')}
         for name in ('cmake', 'ninja'):
-            found = shutil.which(name)
+            found = shutil.which(name, path=env['PATH'])
             if not found:
                 raise ValueError(f'Missing tool: {name}')
             paths[name] = Path(found)
@@ -148,7 +154,6 @@ class Tools:
         env = os.environ.copy()
         for key in ('PYTHONPATH', 'PYTEST_ADDOPTS', 'SKIP'):
             env.pop(key, None)
-        env.update(PATH=str(Path(self.gcc_root) / 'bin') + os.pathsep + str(Path(sys.executable).parent)
-                   + os.pathsep + env.get('PATH', ''), GCC_ROOT=self.gcc_root,
+        env.update(PATH=execution_path(Path(self.gcc_root)), GCC_ROOT=self.gcc_root,
                    NSX_REQUIRE_ARM_GCC='1', PYTEST_DISABLE_PLUGIN_AUTOLOAD='1', LC_ALL='C', TMPDIR=str(scratch))
         return env

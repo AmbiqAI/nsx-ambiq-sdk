@@ -245,3 +245,18 @@ def test_observations_replay_board_compiler_and_variant_coverage():
     assert replay.report(0)['status'] == 'passed'
     replay.parameters[gate.selected[-1]]['language'] = 'C'
     assert replay.report(0)['status'] == 'incomplete'
+
+
+def test_real_nested_power_error_parameters_survive_json_replay():
+    requirement = next(item for item in POWER_STARTUP if item.selector.endswith('::test_apollo5_first_error'))
+    gate = Gate((requirement,))
+    gate.selected = [requirement.selector + f'[{index}]' for index in range(requirement.minimum)]
+    gate.parameters = {node: dict(zip(requirement.parameters, variant))
+                       for node, variant in zip(gate.selected, requirement.variants)}
+    gate.phases = {node: dict.fromkeys(('setup', 'call', 'teardown'), 'passed') for node in gate.selected}
+    assert gate.report(0)['status'] == 'passed'
+    serialized = json.loads(json.dumps(gate.report(0)))
+    gate.parameters = serialized['observations']
+    assert gate.report(0)['status'] == 'passed'
+    gate.parameters[gate.selected[-1]] = gate.parameters[gate.selected[0]]
+    assert gate.report(0)['status'] == 'incomplete'

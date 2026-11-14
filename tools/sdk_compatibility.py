@@ -302,6 +302,13 @@ def case_parameters(params: dict) -> dict:
     return result
 
 
+def immutable_parameter(value):
+    """Restore sequence-valued pytest parameters after JSON serialization."""
+    if isinstance(value, (list, tuple)):
+        return tuple(immutable_parameter(item) for item in value)
+    return value
+
+
 class Gate:
     def __init__(self, requirements: tuple[Requirement, ...]):
         self.requirements = requirements
@@ -346,7 +353,7 @@ class Gate:
         missing_boards = {selector: boards for selector, boards in missing_boards.items() if boards}
         missing_variants = {}
         for requirement in self.requirements:
-            observed = {tuple(self.parameters.get(n, {}).get(p) for p in requirement.parameters)
+            observed = {tuple(immutable_parameter(self.parameters.get(n, {}).get(p)) for p in requirement.parameters)
                         for n in self.selected if belongs(n, requirement.selector)}
             absent = [v for v in requirement.variants if v not in observed]
             if absent:

@@ -344,3 +344,21 @@ def test_firmware_verifier_rejects_wrong_or_incomplete_evidence(setup, firmware_
     sample.entry['files'] = {path.name: sha256(path) for path in sample.output.iterdir()}
     with pytest.raises((ValueError, RuntimeError)):
         verify_example(setup, sample)
+
+
+def test_tools_capture_and_build_environment_select_same_cmake(tmp_path):
+    import shutil
+    gcc = tmp_path / 'combined-toolchain'
+    (gcc / 'bin').mkdir(parents=True)
+    for name in ('gcc', 'g++', 'ld', 'nm', 'readelf'):
+        path = gcc / 'bin' / ('arm-none-eabi-' + name)
+        path.write_text('#!/bin/sh\necho fake-tool-version\n')
+        path.chmod(0o755)
+    cmake = gcc / 'bin/cmake'
+    cmake.write_text(f'#!/bin/sh\nif [ "$1" = "-P" ]; then echo "{tmp_path}"; else echo selected-cmake-version; fi\n')
+    cmake.chmod(0o755)
+    tools = Tools.capture(gcc, tmp_path / 'tools')
+    env = tools.environment(tmp_path / 'scratch')
+    assert tools.path('cmake') == cmake
+    assert shutil.which('cmake', path=env['PATH']) == str(cmake)
+    assert next(item.version for item in tools.binaries if item.name == 'cmake') == 'selected-cmake-version'

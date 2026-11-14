@@ -58,3 +58,28 @@ def test_invalid_deadline_never_launches_a_worker(tmp_path, timeout):
             run_worker([sys.executable, '-c', f'open({str(marker)!r},"w").close()'],
                        log=log, cwd=tmp_path, timeout=timeout)
     assert not marker.exists()
+
+
+def test_outer_timeout_cleans_nested_worker_session(tmp_path):
+    """The full host runner encloses pytest tests which themselves use workers."""
+    from tools.hardware.process import __file__ as module_file
+    repo = Path(module_file).resolve().parents[2]
+    ready = tmp_path / 'nested-child'
+    leaf = ('import os,signal,time; from pathlib import Path; '
+            'signal.signal(signal.SIGTERM, signal.SIG_IGN); '
+            f'Path({str(ready)!r}).write_text(str(os.getpgrp())); time.sleep(60)')
+    nested = ('import sys; from pathlib import Path; from tools.hardware.process import run_worker; '
+              f'log=Path({str(tmp_path / "nested.log")!r}).open("w"); '
+              f'run_worker([sys.executable,"-c",{leaf!r}],log=log,cwd=Path.cwd(),timeout=30)')
+    group = None
+    try:
+        with (tmp_path / 'outer.log').open('w') as log:
+            with pytest.raises(subprocess.TimeoutExpired):
+                run_worker([sys.executable, '-c', nested], log=log, cwd=repo, timeout=1)
+        group = int(ready.read_text())
+        assert not _group_alive(group)
+    finally:
+        if group is None and ready.exists():
+            group = int(ready.read_text())
+        if group is not None and _group_alive(group):
+            os.killpg(group, signal.SIGKILL)

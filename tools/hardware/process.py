@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import IO
 
+from .groups import GroupScope
+
 
 class RunCancelled(InterruptedError):
     """The caller requested termination; worker execution did not pass."""
@@ -42,6 +44,7 @@ def run_worker(command: list[str], *, log: IO[str], cwd: Path,
     previous = {sig: signal.getsignal(sig) for sig in signals}
     worker = None
     succeeded = False
+    scope = GroupScope()
 
     def cancel(signum, frame):
         raise RunCancelled(f'Worker run cancelled by signal {signum}')
@@ -50,29 +53,37 @@ def run_worker(command: list[str], *, log: IO[str], cwd: Path,
         if worker is None:
             return False
         worker.poll()
-        alive = _group_alive(worker.pid)
+        def active():
+            return {group for group in scope.groups() | {worker.pid} if _group_alive(group)}
+        alive = active()
         if not alive:
             return False
-        try:
-            os.killpg(worker.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return False
+        signalled = set()
         deadline = time.monotonic() + 3
-        while _group_alive(worker.pid) and time.monotonic() < deadline:
+        while alive and time.monotonic() < deadline:
+            for group in alive - signalled:
+                try:
+                    os.killpg(group, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            signalled.update(alive)
             worker.poll()
             time.sleep(0.02)
-        if _group_alive(worker.pid):
-            try:
-                os.killpg(worker.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        worker.wait(timeout=5)
+            alive = active()
         deadline = time.monotonic() + 5
-        while _group_alive(worker.pid) and time.monotonic() < deadline:
+        while alive and time.monotonic() < deadline:
+            for group in alive:
+                try:
+                    os.killpg(group, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            worker.poll()
             time.sleep(0.02)
-        if _group_alive(worker.pid):
+            alive = active()
+        worker.wait(timeout=5)
+        if active():
             raise RuntimeError('Worker process-group cleanup failed')
-        return alive
+        return True
 
     try:
         for sig in signals:
@@ -82,7 +93,8 @@ def run_worker(command: list[str], *, log: IO[str], cwd: Path,
             launcher = [sys.executable, str(Path(__file__).with_name('child_exec.py')), *command]
             worker = subprocess.Popen(launcher, stdout=log, stderr=subprocess.STDOUT,
                                       cwd=cwd, pass_fds=() if lease_fd is None else (lease_fd,),
-                                      start_new_session=True, env=env)
+                                      start_new_session=True, env=scope.environment(env))
+            scope.register(worker.pid)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, mask)
         code = worker.wait(timeout=timeout)
@@ -97,5 +109,8 @@ def run_worker(command: list[str], *, log: IO[str], cwd: Path,
             if succeeded and leftover:
                 raise RuntimeError('Worker exited with live descendants; process group was terminated')
         finally:
-            for sig, handler in previous.items():
-                signal.signal(sig, handler)
+            try:
+                scope.close()
+            finally:
+                for sig, handler in previous.items():
+                    signal.signal(sig, handler)
