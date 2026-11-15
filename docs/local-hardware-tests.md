@@ -9,10 +9,14 @@ startup case. Helia code and infrastructure are unchanged.
 
 The manual **SDK hardware pilot** workflow uses the same local qualifier in
 three stages: one canonical host-check job, independent selected board jobs,
-and a final assessment. AP3 Blue Plus (`apollo3p_evb`), AP330 Plus
-(`apollo330mP_evb`) and AP510 (`apollo510_evb`) are selectable. The default remains
-AP510 only. The reviewed plan still requires all five variants; a selected-scope
-pilot pass is never full qualification or release approval.
+and a final assessment. AP3 Blue Plus (`apollo3p_evb`), AP4 Blue Plus KXR
+(`apollo4p_blue_kxr_evb`), AP330 Plus (`apollo330mP_evb`), AP510 (`apollo510_evb`)
+and AP510B (`apollo510b_evb`) are selectable. The default remains AP510 only.
+Scheduling support does not establish runner availability. Confirm matching
+physical inventory, runner labels and tool provisioning before dispatch; AP4L
+and AP510L do not substitute for these variants. Farm provisioning for AP4 KXR
+and AP510B is tracked in
+[farm issue #47](https://github.com/AmbiqAI/aitg-hardware-runner-nixos/issues/47).
 
 Dispatch with reviewed plan/patch-decisions files and an explicit board subset:
 
@@ -43,9 +47,16 @@ the SDK descriptor selects the device. No probe is auto-selected.
 Artifacts include run, attempt and board identities. Downloads use exact artifact
 IDs and verify the published ZIP digest. All selected jobs, named tests, evidence,
 cleanup and lease release must pass. Assessment rechecks raw target reports and
-preserves missing AP4 KXR/AP510B coverage. Detailed logs and generated firmware
+keeps every missing required obligation incomplete. Only the final assessment
+with all declared requirements passed reports full qualification; host and
+individual-board stages remain partial. A successful selected subset is not
+full qualification, and qualification never approves a release. Summaries report
+stage completion separately from coverage; a retained raw assessment cannot
+override a failed stage. Detailed logs and generated firmware
 inputs are retained, including hidden CMake files; private environments/caches
-are excluded. Failed jobs upload their partial evidence too.
+are excluded. Failed jobs upload their partial evidence too. Preserve complete
+inputs, receipts and evidence outside GitHub before its 14-day artifact expiry
+when retaining a qualification record for later reassessment.
 
 Use **Re-run all jobs**. Partial retries cannot reuse an earlier attempt's host
 or peer artifacts. An offline queued leg stays pending/incomplete; the job timeout

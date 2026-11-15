@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       boards_json:
-        description: Explicit subset of apollo3p_evb, apollo330mP_evb, apollo510_evb
+        description: Explicit subset of apollo3p_evb, apollo4p_blue_kxr_evb, apollo330mP_evb, apollo510_evb, apollo510b_evb
         default: '["apollo510_evb"]'
         required: true
         type: string
@@ -108,13 +108,14 @@ jobs:
         name: Summarize stage and board state
         if: always()
         run: |
-          echo "### SDK ${SDK_STAGE} — full five-board qualification incomplete" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### SDK ${SDK_STAGE}" >> "${GITHUB_STEP_SUMMARY}"
           if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
             jq '{board,status,board_state,lease,qualification,global_status,error,timings}' "${SDK_FARM_ROOT}/evidence/state.json" >> "${GITHUB_STEP_SUMMARY}"
           else
             echo 'Stage incomplete; board/lease outcome is not established. Inspect the uploaded marker and job logs.' >> "${GITHUB_STEP_SUMMARY}"
           fi
           if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" ]]; then
+            echo 'Raw assessment below; stage completion and qualification are reported above. Release approval is separate.' >> "${GITHUB_STEP_SUMMARY}"
             jq '{status,qualification,counts:(.requirements|group_by(.status)|map({status:.[0].status,count:length}))}' "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" >> "${GITHUB_STEP_SUMMARY}"
           fi
       - &upload
@@ -158,7 +159,7 @@ jobs:
       - *upload
 
   assessment:
-    name: SDK selected-scope assessment (five-board qualification incomplete)
+    name: SDK selected-scope assessment
     needs: [host, boards]
     if: always()
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]

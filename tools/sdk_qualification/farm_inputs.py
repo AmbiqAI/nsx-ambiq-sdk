@@ -7,9 +7,10 @@ import re
 
 from .io import identity, read_json, sha256
 from .plan import Plan, load_plan
+from .policy import BOARDS
 
 
-AVAILABLE_BOARDS = ('apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb')
+AVAILABLE_BOARDS = tuple(sorted(BOARDS))
 
 
 def write(path: Path, value: dict) -> None:
@@ -58,7 +59,7 @@ class Dispatch:
         if (not self.boards or len(set(self.boards)) != len(self.boards)
                 or any(board not in AVAILABLE_BOARDS for board in self.boards)
                 or self.boards != tuple(sorted(self.boards))):
-            raise ValueError('Select unique provisioned AP3/AP330/AP510 boards explicitly')
+            raise ValueError('Select a unique explicit subset of the five-board qualification profile')
         if any(not re.fullmatch('[0-9a-f]{64}', v) for v in (self.plan_sha256, self.decisions_sha256)):
             raise ValueError('Dispatch requires plan/decision content identities')
         if self.device_pack_archive and not Path(self.device_pack_archive).is_absolute():
