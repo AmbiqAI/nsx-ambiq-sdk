@@ -221,16 +221,23 @@ def build(plan: Plan, config: Config, boards: tuple[str, ...] = BOARDS) -> dict:
     return read_record(config.output)
 
 
-def copy_host(plan: Plan, current: Session, source: Path) -> None:
-    # Shared host acceptance is copied before any board access. Final records
-    # remain self-contained when moved between local hosts/farm artifact stores.
+def checked_host(plan: Plan, roots: dict, tools: Tools, source: Path) -> dict:
+    """Verify a canonical host record without allocating or accessing hardware."""
     envelope = read_record(source)
     body = envelope['body']
-    verify_header(plan, body, current.roots, current.tools)
+    verify_header(plan, body, roots, tools)
     if body['scope'] != {'mode': 'host', 'boards': []}:
         raise ValueError('Host prerequisite is not a completed run for this plan')
     verify_files(source, body['files'])
-    verify_host(source, body['host'], current.roots, body['tools'], current.tools)
+    verify_host(source, body['host'], roots, body['tools'], tools)
+    return envelope
+
+
+def copy_host(plan: Plan, current: Session, source: Path) -> None:
+    # Shared host acceptance is copied before any board access. Final records
+    # remain self-contained when moved between local hosts/farm artifact stores.
+    envelope = checked_host(plan, current.roots, current.tools, source)
+    body = envelope['body']
     destination = current.config.output / 'host'
     destination.mkdir()
     for name in ('record.json', *body['files']):

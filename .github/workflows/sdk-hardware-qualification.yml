@@ -4,40 +4,56 @@ on:
   workflow_dispatch:
     inputs:
       plan_json:
-        description: Reviewed qualification plan JSON with full baseline/candidate/harness SHAs
+        description: Reviewed five-board plan with immutable baseline/candidate/harness SHAs
         required: true
         type: string
       decisions_json:
-        description: Reviewed patch-decisions JSON for those exact SDK revisions
+        description: Reviewed patch decisions for those exact revisions
         required: true
+        type: string
+      boards_json:
+        description: Explicit subset of apollo3p_evb, apollo330mP_evb, apollo510_evb
+        default: '["apollo510_evb"]'
+        required: true
+        type: string
+      device_pack_archive:
+        description: Owner-provisioned absolute pinned ZIP path on AP330 runner (required for AP330)
+        default: ''
         type: string
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  ap510-pilot:
-    name: AP510 pilot (full qualification incomplete)
+  host:
+    name: SDK host checks
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]
     timeout-minutes: 60
+    env:
+      SDK_STAGE: host
+    outputs:
+      matrix: ${{ steps.inputs.outputs.matrix }}
     steps:
-      - name: Stage incomplete evidence
+      - &stage
+        name: Stage incomplete evidence and private caches
         run: |
-          SDK_PILOT_ROOT="${RUNNER_TEMP}/sdk-farm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          mkdir -p "${SDK_PILOT_ROOT}"
-          echo 'Pilot has not completed; full qualification incomplete.' > "${SDK_PILOT_ROOT}/NOT_STARTED"
+          root="${RUNNER_TEMP}/sdk-farm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${SDK_STAGE}"
+          mkdir -p "${root}"
+          echo 'Stage not completed; qualification incomplete.' > "${root}/NOT_COMPLETED"
           {
-            echo "SDK_PILOT_ROOT=${SDK_PILOT_ROOT}"
-            echo "UV_CACHE_DIR=${RUNNER_TEMP}/sdk-uv-cache"
-            echo "UV_PYTHON_INSTALL_DIR=${RUNNER_TEMP}/sdk-python"
-            echo "UV_PROJECT_ENVIRONMENT=${RUNNER_TEMP}/sdk-venv"
-            echo "PRE_COMMIT_HOME=${RUNNER_TEMP}/sdk-pre-commit"
-            echo "XDG_CACHE_HOME=${RUNNER_TEMP}/sdk-cache"
+            echo "SDK_FARM_ROOT=${root}"
+            echo "UV_PROJECT_ENVIRONMENT=${root}/venv"
+            echo "UV_CACHE_DIR=${root}/cache/uv"
+            echo "UV_PYTHON_INSTALL_DIR=${root}/cache/python"
+            echo "PRE_COMMIT_HOME=${root}/cache/pre-commit"
+            echo "XDG_CACHE_HOME=${root}/cache/xdg"
           } >> "${GITHUB_ENV}"
           if [[ -z "${SSL_CERT_FILE:-}" && -f /etc/ssl/certs/ca-certificates.crt ]]; then
             echo 'SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt' >> "${GITHUB_ENV}"
           fi
-      - uses: actions/checkout@v4
+      - &driver
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           path: driver
@@ -48,58 +64,116 @@ jobs:
         env:
           SDK_PLAN_JSON: ${{ inputs.plan_json }}
           SDK_DECISIONS_JSON: ${{ inputs.decisions_json }}
-        run: >-
-          uv run --no-project --python 3.12 python -m tools.sdk_qualification.farm
-          prepare --output "${SDK_PILOT_ROOT}/inputs"
-      - uses: actions/checkout@v4
+          SDK_BOARDS_JSON: ${{ inputs.boards_json }}
+          SDK_DEVICE_PACK_ARCHIVE: ${{ inputs.device_pack_archive }}
+        run: uv run --no-project --python 3.12 python -m tools.sdk_qualification.farm prepare --output "${SDK_FARM_ROOT}/inputs"
+      - &baseline
+        uses: actions/checkout@v4
         with:
-          ref: ${{ steps.inputs.outputs.baseline }}
+          ref: ${{ env.SDK_BASELINE }}
           path: baseline
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/checkout@v4
+      - &candidate
+        uses: actions/checkout@v4
         with:
-          ref: ${{ steps.inputs.outputs.candidate }}
+          ref: ${{ env.SDK_CANDIDATE }}
           path: candidate
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/checkout@v4
+      - &harness
+        uses: actions/checkout@v4
         with:
-          ref: ${{ steps.inputs.outputs.harness }}
+          ref: ${{ env.SDK_HARNESS }}
           path: harness
           fetch-depth: 0
           persist-credentials: false
-      - name: Install locked harness dependencies
+      - &install
+        name: Install locked harness dependencies
         run: uv sync --locked --python 3.12 --project harness --group ci --group hardware
-      - name: Run the existing host and AP510 scopes
+      - &execute
+        name: Run SDK farm stage
         working-directory: driver
         run: |
-          set -euo pipefail
           gcc_exe="$(command -v arm-none-eabi-gcc)"
           gcc_root="$(dirname "$(dirname "$(readlink -f "${gcc_exe}")")")"
-          "${UV_PROJECT_ENVIRONMENT}/bin/python" -m tools.sdk_qualification.farm run \
-            --inputs "${SDK_PILOT_ROOT}/inputs" \
+          "${UV_PROJECT_ENVIRONMENT}/bin/python" -m tools.sdk_qualification.farm execute \
+            --stage "${SDK_STAGE}" --inputs "${SDK_FARM_ROOT}/inputs" \
             --baseline "${GITHUB_WORKSPACE}/baseline" --candidate "${GITHUB_WORKSPACE}/candidate" \
             --harness "${GITHUB_WORKSPACE}/harness" --python "${UV_PROJECT_ENVIRONMENT}/bin/python" \
-            --gcc-root "${gcc_root}" --output "${SDK_PILOT_ROOT}/evidence"
-          rm "${SDK_PILOT_ROOT}/NOT_STARTED"
-      - name: Summarize pilot and board state
+            --gcc-root "${gcc_root}" --output "${SDK_FARM_ROOT}/evidence" \
+            --host-download "${SDK_FARM_ROOT}/host-download"
+          rm "${SDK_FARM_ROOT}/NOT_COMPLETED"
+      - &summary
+        name: Summarize stage and board state
         if: always()
         run: |
-          SDK_PILOT_ROOT="${RUNNER_TEMP}/sdk-farm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          echo '### AP510 pilot — full five-board qualification incomplete' >> "${GITHUB_STEP_SUMMARY}"
-          if [[ -f "${SDK_PILOT_ROOT}/evidence/pilot.json" ]]; then
-            jq '{pilot_status, qualification, global_status, board_state, lease, reason, error}' \
-              "${SDK_PILOT_ROOT}/evidence/pilot.json" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### SDK ${SDK_STAGE} — full five-board qualification incomplete" >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
+            jq '{board,status,board_state,lease,qualification,global_status,error,timings}' "${SDK_FARM_ROOT}/evidence/state.json" >> "${GITHUB_STEP_SUMMARY}"
           else
-            echo 'No finalized pilot result. No qualification claim is available.' >> "${GITHUB_STEP_SUMMARY}"
+            echo 'Stage incomplete; board/lease outcome is not established. Inspect the uploaded marker and job logs.' >> "${GITHUB_STEP_SUMMARY}"
           fi
-          echo 'If interrupted after reservation: the lease is retained for at most 70 minutes. An operator must inspect/recover the board; expiry does not establish health.' >> "${GITHUB_STEP_SUMMARY}"
-      - uses: actions/upload-artifact@v4
+          if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" ]]; then
+            jq '{status,qualification,counts:(.requirements|group_by(.status)|map({status:.[0].status,count:length}))}' "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - &upload
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sdk-ap510-pilot-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}/
+          name: sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.SDK_STAGE }}
+          path: |
+            ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.SDK_STAGE }}/inputs/
+            ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.SDK_STAGE }}/evidence/
+            ${{ runner.temp }}/sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.SDK_STAGE }}/NOT_COMPLETED
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+
+  boards:
+    name: SDK board (${{ matrix.board }})
+    needs: host
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.host.outputs.matrix) }}
+    runs-on: [self-hosted, hpx-hardware, '${{ matrix.board }}']
+    timeout-minutes: 60
+    env:
+      SDK_STAGE: ${{ matrix.board }}
+    steps:
+      - *stage
+      - *driver
+      - &fetch
+        name: Fetch exact canonical host artifact
+        working-directory: driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project --python 3.12 python -m tools.sdk_qualification.farm fetch-host --output "${SDK_FARM_ROOT}/host-download" --inputs "${SDK_FARM_ROOT}/inputs"
+      - *baseline
+      - *candidate
+      - *harness
+      - *install
+      - *execute
+      - *summary
+      - *upload
+
+  assessment:
+    name: SDK selected-scope assessment (five-board qualification incomplete)
+    needs: [host, boards]
+    if: always()
+    runs-on: [self-hosted, hpx-hardware, apollo510_evb]
+    timeout-minutes: 60
+    env:
+      SDK_STAGE: assessment
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - *stage
+      - *driver
+      - *fetch
+      - *baseline
+      - *candidate
+      - *harness
+      - *install
+      - *execute
+      - *summary
+      - *upload
