@@ -254,7 +254,8 @@ def run_board(plan: Plan, config: Config, board: str, binding: Binding, host_rec
                 continue
             if any(image.device != binding.device or image.board != board for _, image, _ in images):
                 raise ValueError('Inventory device differs from a built SDK descriptor')
-            with open_board(BoardRequest(binding.probe, binding.device, config.hardware_timeout)) as target:
+            with open_board(BoardRequest(binding.probe, binding.device, config.hardware_timeout,
+                                         config.jlink_library)) as target:
                 current.touched = True
                 for side, image, entry in images:
                     output = contained(config.output, entry['directory'])

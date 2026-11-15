@@ -29,7 +29,8 @@ def probe_lock(serial: str) -> Iterator[int]:
         yield stream.fileno()
 
 
-def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, output: Path, *, lease_fd: int | None = None) -> Result:
+def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, output: Path, *, lease_fd: int | None = None,
+            jlink_library: Path | None = None) -> Result:
     if device is not None and device != firmware.device:
         raise ValueError(f'Device {device} disagrees with board descriptor {firmware.device}')
     device = firmware.device
@@ -45,6 +46,7 @@ def execute(firmware: Firmware, probe: str, device: str | None, timeout: float, 
                     '--elf', str(firmware.elf), '--probe', probe, '--device', device,
                     '--speed', str(firmware.speed), '--address', str(firmware.address), '--build-id', firmware.build_id,
                     '--timeout', str(timeout), '--output', str(output),
+                    *(['--jlink-library', str(jlink_library)] if jlink_library is not None else []),
                     '--cases', *firmware.cases,
                     *(part for seed in firmware.seeds for part in
                       ('--seed', seed.symbol, str(seed.address), str(seed.value))),

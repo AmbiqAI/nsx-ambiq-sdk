@@ -64,10 +64,15 @@ class Config:
     output: Path
     host_timeout: float = 1200
     hardware_timeout: float = 40
+    jlink_library: Path | None = None
 
     def __post_init__(self):
         for name in ('baseline', 'candidate', 'gcc_root', 'output'):
             object.__setattr__(self, name, getattr(self, name).resolve())
+        if self.jlink_library is not None:
+            object.__setattr__(self, 'jlink_library', self.jlink_library.resolve(strict=True))
+            if not self.jlink_library.is_file():
+                raise ValueError('J-Link library must be a file')
         for value in (self.host_timeout, self.hardware_timeout):
             if not math.isfinite(value) or value <= 0:
                 raise ValueError('Timeouts must be finite and positive')

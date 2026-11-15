@@ -57,15 +57,22 @@ class FakeProbe:
 
 @pytest.mark.parametrize('relative_output', [False, True])
 @pytest.mark.parametrize('seeds', [(), (MemorySeed('second_seed', 4, 123),)])
-def test_second_suite_capture_and_parent_validation(tmp_path, monkeypatch, seeds, relative_output):
+@pytest.mark.parametrize('explicit_library', [False, True])
+def test_second_suite_capture_and_parent_validation(tmp_path, monkeypatch, seeds, relative_output, explicit_library):
     from tools.hardware import runner
     firmware = Firmware(tmp_path / 'second_suite.elf', 32, 'synthetic', 'board', 'device', 1000, SECOND.cases, seeds)
     output = tmp_path / 'evidence'
     output.mkdir()
     monkeypatch.chdir(tmp_path)
     probe = FakeProbe()
+    library = tmp_path / 'libjlink.so'
+    library.write_bytes(b'explicit library fixture')
+    def link(**kwargs):
+        assert kwargs == ({'lib': str(library)} if explicit_library else {})
+        return probe
     monkeypatch.setitem(sys.modules, 'pylink', SimpleNamespace(
-        JLink=lambda: probe, enums=SimpleNamespace(JLinkInterfaces=SimpleNamespace(SWD=1))))
+        JLink=link, library=SimpleNamespace(Library=lambda dllpath: dllpath),
+        enums=SimpleNamespace(JLinkInterfaces=SimpleNamespace(SWD=1))))
     def worker(command, **kwargs):
         assert command[command.index('--cases') + 1:command.index('--cases') + 3] == list(SECOND.cases)
         with monkeypatch.context() as worker_context:
@@ -73,10 +80,17 @@ def test_second_suite_capture_and_parent_validation(tmp_path, monkeypatch, seeds
             worker_context.setattr(sys, 'argv', ['worker', *command[3:]])
             jlink_worker.main()
     monkeypatch.setattr(runner, 'run_worker', worker)
-    with open_board(BoardRequest('999999991', timeout=1)) as session:
+    with open_board(BoardRequest('999999991', timeout=1,
+                                 jlink_library=library if explicit_library else None)) as session:
         assert session.run(firmware, Path('evidence') if relative_output else output).total == 2
     assert json.loads((output / 'seeded.json').read_text()) == {s.symbol: s.value for s in seeds}
     assert probe.events[-2:] == ['run', 'close']
+    metadata = json.loads((output / 'jlink.json').read_text())
+    if explicit_library:
+        from tools.hardware.build import digest
+        assert metadata['library'] == {'path': str(library), 'sha256': digest(library)}
+    else:
+        assert metadata['library'] is None
     with pytest.raises(RuntimeError, match='closed'):
         session.run(firmware, Path('evidence') if relative_output else output)
     with pytest.raises(QualificationError):
@@ -105,6 +119,31 @@ def test_invalid_suite_contract(cases):
 def test_invalid_session_request(timeout):
     with pytest.raises(ValueError):
         BoardRequest('123', timeout=timeout)
+
+
+def test_explicit_library_must_exist_before_board_session(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        BoardRequest('123', jlink_library=tmp_path / 'missing.so')
+    with pytest.raises(ValueError, match='file'):
+        BoardRequest('123', jlink_library=tmp_path)
+
+
+def test_unloadable_explicit_library_never_falls_back_or_opens_probe(tmp_path, monkeypatch):
+    library = tmp_path / 'invalid.so'
+    library.write_bytes(b'not a native library')
+    def load(dllpath):
+        assert dllpath == str(library)
+        raise OSError('cannot load explicit library')
+    def forbidden(**kwargs):
+        pytest.fail('Probe construction/discovery must not follow explicit library failure')
+    monkeypatch.setitem(sys.modules, 'pylink', SimpleNamespace(
+        library=SimpleNamespace(Library=load), JLink=forbidden))
+    monkeypatch.setattr(sys, 'argv', ['worker', '--elf', 'unused', '--probe', '123',
+                        '--device', 'device', '--speed', '1000', '--address', '0',
+                        '--build-id', 'id', '--timeout', '1', '--output', str(tmp_path),
+                        '--cases', 'case', '--jlink-library', str(library)])
+    with pytest.raises(OSError, match='explicit library'):
+        jlink_worker.main()
 
 
 def test_build_refuses_cached_options(repo_root, tmp_path):
