@@ -16,29 +16,40 @@ from tools.hardware.provenance import dependency_inputs, cmake_inputs, classify_
 from test_small_m55_memory import compiler_for_test
 
 
-def test_candidate_tests_are_not_loaded_but_production_headers_are(repo_root, tmp_path):
+@pytest.fixture(scope='module')
+def comparison_harness_root(repo_root, tmp_path_factory):
+    compiler_for_test('gcc')
+    # Reproduce the farm layout: legitimate harness inputs also contain /candidate/tests/.
+    harness = tmp_path_factory.mktemp('comparison-harness') / 'candidate'
+    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(repo_root), str(harness)],
+                   check=True, capture_output=True, timeout=60)
+    return harness
+
+
+def test_candidate_tests_are_not_loaded_but_production_headers_are(comparison_harness_root, tmp_path):
+    harness = comparison_harness_root
     candidate = tmp_path / 'candidate'
-    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(repo_root), str(candidate)],
+    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(harness), str(candidate)],
                    check=True, capture_output=True, timeout=60)
     # This must never be configured: test code belongs to the running harness.
     (candidate / 'tests/hardware/common/firmware.cmake').write_text('message(FATAL_ERROR "candidate test loaded")\n')
     compiler = compiler_for_test('gcc')
     output = tmp_path / 'normal'
-    build_firmware(BuildRequest(repo_root, output, 'apollo510b_evb', compiler.parent.parent,
+    build_firmware(BuildRequest(harness, output, 'apollo510b_evb', compiler.parent.parent,
                                 CLOCK, sdk_root=candidate))
     record = json.loads((output / 'manifest.json').read_text())
     assert record['schema_version'] == 3
-    assert record['harness']['root'] == str(repo_root)
+    assert record['harness']['root'] == str(harness)
     assert record['sdk']['root'] == str(candidate)
     assert record['sdk']['dirty']
-    assert str(repo_root / 'tests/hardware/clock/main.c') in record['input_roles']['harness']
+    assert str(harness / 'tests/hardware/clock/main.c') in record['input_roles']['harness']
     header = candidate / 'modules/nsx-power/includes-api/nsx_power.h'
     assert str(header) in record['input_roles']['sdk']
     assert str(candidate / 'boards/apollo510b_evb/board.cmake') in record['input_roles']['sdk']
-    assert not any('/candidate/tests/' in p for p in record['inputs_sha256'])
+    assert not any(Path(p).is_relative_to(candidate / 'tests') for p in record['inputs_sha256'])
     header.write_text('#error candidate_production_header_used\n' + header.read_text())
     with pytest.raises(RuntimeError, match='Command failed'):
-        build_firmware(BuildRequest(repo_root, tmp_path / 'broken', 'apollo510b_evb',
+        build_firmware(BuildRequest(harness, tmp_path / 'broken', 'apollo510b_evb',
                                     compiler.parent.parent, CLOCK, sdk_root=candidate))
     assert 'candidate_production_header_used' in (tmp_path / 'broken/build.log').read_text()
 
@@ -174,9 +185,10 @@ def test_production_and_harness_roles_across_checkout_layouts(tmp_path, layout):
     assert groups['sdk'] == [str(header)]
 
 
-def test_sdk_link_fixture_uses_harness_tests(repo_root, tmp_path):
+def test_sdk_link_fixture_uses_harness_tests(comparison_harness_root, tmp_path):
+    harness = comparison_harness_root
     candidate = tmp_path / 'candidate'
-    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(repo_root), str(candidate)],
+    subprocess.run(['git', 'clone', '--local', '--shared', '--quiet', str(harness), str(candidate)],
                    check=True, capture_output=True, timeout=60)
     (candidate / 'tests/hardware/common/firmware.cmake').write_text('message(FATAL_ERROR "candidate tests loaded")\n')
     (candidate / 'tests/hardware/firmware/main.cpp').write_text('#error candidate_firmware_loaded\n')
@@ -184,11 +196,11 @@ def test_sdk_link_fixture_uses_harness_tests(repo_root, tmp_path):
                     elf_name='sdk_link.elf', configure=no_options)
     compiler = compiler_for_test('gcc')
     output = tmp_path / 'build'
-    build_firmware(BuildRequest(repo_root, output, 'apollo3p_evb', compiler.parent.parent,
+    build_firmware(BuildRequest(harness, output, 'apollo3p_evb', compiler.parent.parent,
                                 suite, sdk_root=candidate))
     manifest = json.loads((output/'manifest.json').read_text())
-    assert str(repo_root/'tests/hardware/firmware/main.cpp') in manifest['input_roles']['harness']
-    assert not any('/candidate/tests/' in p for p in manifest['inputs_sha256'])
+    assert str(harness/'tests/hardware/firmware/main.cpp') in manifest['input_roles']['harness']
+    assert not any(Path(p).is_relative_to(candidate / 'tests') for p in manifest['inputs_sha256'])
 
 
 def test_tempco_capture_can_be_selected_by_comparison_cli(tmp_path, monkeypatch):
