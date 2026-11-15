@@ -96,6 +96,11 @@ else:sys.exit(2)
     package.mkdir(parents=True)
     (harness/'tools/__init__.py').write_text(f'__path__.append({str(repo_root/"tools")!r})\n')
     (package/'__init__.py').write_text(f'__path__.append({str(repo_root/"tools/sdk_qualification")!r})\n')
+    hardware = harness/'tools/hardware'
+    hardware.mkdir()
+    (hardware/'__init__.py').write_text(f'__path__.append({str(repo_root/"tools/hardware")!r})\n')
+    for name in ('device_pack.py','device-pack.json'):
+        shutil.copyfile(repo_root/'tools/hardware'/name,hardware/name)
     (package/'build_worker.py').write_text('''
 import json,sys
 from pathlib import Path
@@ -105,7 +110,12 @@ out=Path(sys.argv[sys.argv.index('--output')+1]);out.mkdir()
     (package/'farm.py').write_text('''
 import json,os,sys
 from pathlib import Path
-args=sys.argv[1:];out=Path(args[args.index('--output')+1]);out.mkdir()
+args=sys.argv[1:];out=Path(args[args.index('--output')+1])
+if args[0]=='check-pack':
+    from tools.sdk_qualification.farm_run import check_pack
+    archive=Path(args[args.index('--archive')+1]) if '--archive' in args else None
+    check_pack(args[args.index('--device')+1],archive,out);sys.exit()
+out.mkdir()
 if os.environ.get('FAKE_MODE')=='preflight':sys.exit(1)
 host=Path(args[args.index('--host-record')+1]);record=json.loads((host/'record.json').read_text())
 (out/'checked.json').write_text(json.dumps({'host_record_sha256':record['sha256']}))
@@ -315,13 +325,36 @@ def test_collection_requires_complete_coherent_released_peer_set(lab,tmp_path,fa
 
 
 def test_ap330_missing_pinned_archive_stops_before_reservation(lab,tmp_path,monkeypatch):
-    from tools.hardware import device_pack
     dispatch,_=three_board_artifacts(lab,tmp_path)
     monkeypatch.setenv('HPX_BOARD','apollo330mP_evb')
     write(lab.inventory,{'boards':[{'id':'ap510-2','name':'apollo330mP_evb','serial':'123','runner':True}]})
-    manifest=tmp_path/'pack.json'
+    manifest=lab.paths.harness/'tools/hardware/device-pack.json'
     write(manifest,{'devices':['SDK-selected-device'],'archive_sha256':'1'*64})
-    monkeypatch.setattr(device_pack,'MANIFEST',manifest)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(subprocess.CalledProcessError):
         farm_run.board(lab.paths,'apollo330mP_evb',lab.download,lab.inventory)
     assert not Path(os.environ['FAKE_STATE']).exists()
+
+
+def test_pack_preflight_uses_selected_harness_pins_and_private_cache(lab,tmp_path,monkeypatch):
+    import hashlib
+    import zipfile
+    archive=tmp_path/'selected-pack.zip'
+    content=b'reviewed different harness pack'
+    with zipfile.ZipFile(archive,'w') as zipped:zipped.writestr('pack/script.txt',content)
+    manifest={'name':'selected-harness-pack','devices':['SDK-selected-device'],
+              'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),'archive_prefix':'pack/',
+              'files':{'script.txt':hashlib.sha256(content).hexdigest()}}
+    write(lab.paths.harness/'tools/hardware/device-pack.json',manifest)
+    dispatch=replace(lab.dispatch,device_pack_archive=str(archive))
+    write(lab.paths.inputs/'dispatch.json',dispatch.to_dict())
+    write(lab.download/'payload/inputs/dispatch.json',dispatch.to_dict())
+    host_sha=read_record(lab.download/'payload/evidence/host')['sha256']
+    State(dispatch.run,'host',dispatch.digest,status='passed',host_record_sha256=host_sha).save(
+        lab.download/'payload/evidence')
+    cache=tmp_path/'private-job-cache'
+    monkeypatch.setenv('XDG_CACHE_HOME',str(cache))
+    state=farm_run.board(lab.paths,'apollo510_evb',lab.download,lab.inventory)
+    pack=state.debugger['sdk_device_pack']
+    assert pack['manifest']==manifest
+    assert Path(pack['directory']).is_relative_to(cache)
+    assert (Path(pack['directory'])/'script.txt').read_bytes()==content

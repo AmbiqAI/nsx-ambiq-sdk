@@ -21,6 +21,10 @@ def main() -> int:
     check = sub.add_parser('check-host')
     for name in ('plan', 'baseline', 'candidate', 'gcc-root', 'output', 'host-record'):
         check.add_argument('--' + name, type=Path, required=True)
+    pack = sub.add_parser('check-pack')
+    pack.add_argument('--device', required=True)
+    pack.add_argument('--archive', type=Path)
+    pack.add_argument('--output', type=Path, required=True)
     execute = sub.add_parser('execute')
     execute.add_argument('--stage', choices=('host', 'assessment', *AVAILABLE_BOARDS), required=True)
     for name in ('inputs', 'baseline', 'candidate', 'harness', 'python', 'gcc-root', 'output'):
@@ -41,6 +45,8 @@ def main() -> int:
             if args.action == 'check-host':
                 farm_run.check_host(load_plan(args.plan), args.baseline, args.candidate,
                                     args.gcc_root, args.output, args.host_record)
+            elif args.action == 'check-pack':
+                farm_run.check_pack(args.device, args.archive, args.output)
             else:
                 paths = farm_run.Paths(args.inputs.resolve(), args.baseline.resolve(), args.candidate.resolve(),
                                        args.harness.resolve(), args.python.absolute(), args.gcc_root.resolve(),

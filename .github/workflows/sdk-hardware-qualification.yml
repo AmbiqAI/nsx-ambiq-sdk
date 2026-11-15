@@ -109,10 +109,12 @@ jobs:
         if: always()
         run: |
           echo "### SDK ${SDK_STAGE} — full five-board qualification incomplete" >> "${GITHUB_STEP_SUMMARY}"
-          if [[ -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
+          if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
             jq '{board,status,board_state,lease,qualification,global_status,error,timings}' "${SDK_FARM_ROOT}/evidence/state.json" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo 'Stage incomplete; board/lease outcome is not established. Inspect the uploaded marker and job logs.' >> "${GITHUB_STEP_SUMMARY}"
           fi
-          if [[ -f "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" ]]; then
+          if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" ]]; then
             jq '{status,qualification,counts:(.requirements|group_by(.status)|map({status:.[0].status,count:length}))}' "${SDK_FARM_ROOT}/evidence/assessment/assessment.json" >> "${GITHUB_STEP_SUMMARY}"
           fi
       - &upload

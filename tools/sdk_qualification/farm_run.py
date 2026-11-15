@@ -150,14 +150,58 @@ def check_host(plan: Plan, baseline: Path, candidate: Path, gcc: Path, output: P
     write(output / 'checked.json', {'host_record_sha256': envelope['sha256']})
 
 
-def pack_for_device(dispatch: Dispatch, device: str):
+def check_pack(device: str, archive: Path | None, output: Path):
+    """Executed inside the selected harness, whose transport owns these pins."""
     from tools.hardware import device_pack
+    output.mkdir(parents=True, exist_ok=False)
     manifest = read_json(device_pack.MANIFEST)
+    pack = None
+    if device in manifest['devices']:
+        if archive is None:
+            raise ValueError('Selected harness requires a pinned device-pack archive')
+        root = device_pack.install(archive, device_pack.cache_root())
+        pack = {'manifest': manifest, 'directory': str(root)}
+    write(output / 'pack.json', {'pack': pack})
+
+
+def pack_for_device(paths: Paths, state: State, dispatch: Dispatch, device: str):
+    from .evidence import verify_files
+    args = [str(paths.python), '-m', 'tools.sdk_qualification.farm', 'check-pack', '--device', device,
+            '--output', str(paths.output / 'pack')]
+    if dispatch.device_pack_archive:
+        args.extend(('--archive', dispatch.device_pack_archive))
+    command(paths, state, args, 'device-pack', 120)
+    manifest = read_json(paths.harness / 'tools/hardware/device-pack.json')
+    pack = read_json(paths.output / 'pack/pack.json')['pack']
     if device not in manifest['devices']:
+        if pack is not None:
+            raise ValueError('Unexpected selected-harness device-pack receipt')
         return None
-    archive = Path(dispatch.device_pack_archive)
-    root = device_pack.install(archive, device_pack.cache_root())
-    return {'manifest': manifest, 'directory': str(root)}
+    if not isinstance(pack, dict) or set(pack) != {'manifest', 'directory'} or pack['manifest'] != manifest:
+        raise ValueError('Device-pack receipt differs from the selected harness manifest')
+    verify_files(Path(pack['directory']), manifest['files'])
+    return pack
+
+
+@dataclass(frozen=True)
+class CanonicalHost:
+    receipt: Artifact
+    directory: Path
+    sha256: str
+
+
+def canonical_host(download: Path, dispatch: Dispatch, plan: Plan) -> CanonicalHost:
+    receipt = read_receipt(download / 'receipt.json', dispatch.run, 'host')
+    origin = download / 'payload'
+    original, _ = load_dispatch(origin / 'inputs', dispatch.run)
+    if original != dispatch:
+        raise ValueError('Inputs differ from canonical host dispatch')
+    state = passed_state(origin / 'evidence', dispatch, 'host')
+    source = origin / 'evidence/host'
+    envelope = scoped_record(source, plan, 'host')
+    if state['host_record_sha256'] != envelope['sha256']:
+        raise ValueError('Canonical host outcome/record identity mismatch')
+    return CanonicalHost(receipt, source, envelope['sha256'])
 
 
 def board(paths: Paths, board: str, downloaded_host: Path, inventory: Path = Path('/etc/bench/boards.json')):
@@ -166,18 +210,10 @@ def board(paths: Paths, board: str, downloaded_host: Path, inventory: Path = Pat
         raise ValueError('Board is not in the explicitly dispatched scope')
     state = State(dispatch.run, 'board', dispatch.digest, board=board)
     with journal(paths.output, state):
-        receipt = read_receipt(downloaded_host / 'receipt.json', dispatch.run, 'host')
-        origin = downloaded_host / 'payload'
-        original, _ = load_dispatch(origin / 'inputs', dispatch.run)
-        if original != dispatch:
-            raise ValueError('Board inputs differ from canonical host dispatch')
-        host_state = passed_state(origin / 'evidence', dispatch, 'host')
-        source = origin / 'evidence/host'
-        host_record = scoped_record(source, plan, 'host')
-        if host_state['host_record_sha256'] != host_record['sha256']:
-            raise ValueError('Canonical host outcome/record identity mismatch')
-        state.host_artifact = receipt.to_dict()
-        state.host_record_sha256 = host_record['sha256']
+        shared = canonical_host(downloaded_host, dispatch, plan)
+        source = shared.directory
+        state.host_artifact = shared.receipt.to_dict()
+        state.host_record_sha256 = shared.sha256
         binding = runner_binding(inventory, board)
         state.binding = binding
         capability(inventory)
@@ -188,14 +224,14 @@ def board(paths: Paths, board: str, downloaded_host: Path, inventory: Path = Pat
         command(paths, state, [str(paths.python), '-m', 'tools.sdk_qualification.farm', 'check-host',
                               *paths.common(), '--output', str(paths.output / 'preflight'),
                               '--host-record', str(source)], 'host-preflight', 300)
-        if read_json(paths.output / 'preflight/checked.json')['host_record_sha256'] != host_record['sha256']:
+        if read_json(paths.output / 'preflight/checked.json')['host_record_sha256'] != shared.sha256:
             raise ValueError('Runner preflight used a different host record')
         command(paths, state, [str(paths.python), '-m', 'tools.sdk_qualification.build_worker',
                               '--sdk-root', str(paths.candidate), '--gcc-root', str(paths.gcc),
                               '--board', board, '--suite', 'startup', '--output', str(paths.output / 'descriptor')],
                 'descriptor', 300)
         device = read_json(paths.output / 'descriptor/firmware.json')['device']
-        pack = pack_for_device(dispatch, device)
+        pack = pack_for_device(paths, state, dispatch, device)
         if pack:
             state.debugger = dict(debug, sdk_device_pack=pack)
         write(paths.output / 'inventory.json', {'schema_version': 1,
@@ -224,8 +260,8 @@ def board(paths: Paths, board: str, downloaded_host: Path, inventory: Path = Pat
         if debugger_inputs(library, overlay) != debug:
             raise RuntimeError('Debugger inputs changed during execution')
         if pack:
-            from tools.hardware.device_pack import verify
-            verify(Path(pack['directory']), pack['manifest'])
+            from .evidence import verify_files
+            verify_files(Path(pack['directory']), pack['manifest']['files'])
         if holder(binding, inventory) != acquired:
             raise RuntimeError('Lease ownership changed; refusing unlock')
         bench(['unlock', binding['id'], '--expected-pid', str(acquired['pid']),
@@ -256,22 +292,14 @@ def aggregate(paths: Paths, downloaded_host: Path, client: GitHub | None = None)
     client = client or GitHub(dispatch.run)
     state = State(dispatch.run, 'assessment', dispatch.digest)
     with journal(paths.output, state):
-        receipt = read_receipt(downloaded_host / 'receipt.json', dispatch.run, 'host')
-        origin = downloaded_host / 'payload'
-        original, _ = load_dispatch(origin / 'inputs', dispatch.run)
-        if original != dispatch:
-            raise ValueError('Assessment inputs differ from canonical host dispatch')
-        host_state = passed_state(origin / 'evidence', dispatch, 'host')
-        source = origin / 'evidence/host'
-        if scoped_record(source, plan, 'host')['sha256'] != host_state['host_record_sha256']:
-            raise ValueError('Canonical host outcome/record identity mismatch')
-        state.host_artifact = receipt.to_dict()
-        state.host_record_sha256 = host_state['host_record_sha256']
-        records = [source]
+        shared = canonical_host(downloaded_host, dispatch, plan)
+        state.host_artifact = shared.receipt.to_dict()
+        state.host_record_sha256 = shared.sha256
+        records = [shared.directory]
         problems = []
         for board_name in dispatch.boards:
             try:
-                records.append(collect_board(paths, dispatch, plan, receipt, state.host_record_sha256, board_name, client))
+                records.append(collect_board(paths, dispatch, plan, shared.receipt, shared.sha256, board_name, client))
             except (ValueError, OSError, KeyError, TypeError) as error:
                 problems.append(f'{board_name}: {error}')
         try:
