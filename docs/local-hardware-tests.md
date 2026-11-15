@@ -7,40 +7,58 @@ startup case. Helia code and infrastructure are unchanged.
 
 ## Supervised farm pilot
 
-The manual **SDK hardware pilot** workflow runs the existing host and AP510
-qualification scopes on one `apollo510_evb` farm runner. Dispatch with the
-reviewed local plan and patch-decisions files as JSON input values:
+The manual **SDK hardware pilot** workflow uses the same local qualifier in
+three stages: one canonical host-check job, independent selected board jobs,
+and a final assessment. AP3 Blue Plus (`apollo3p_evb`), AP330 Plus
+(`apollo330mP_evb`) and AP510 (`apollo510_evb`) are selectable. The default remains
+AP510 only. The reviewed plan still requires all five variants; a selected-scope
+pilot pass is never full qualification or release approval.
+
+Dispatch with reviewed plan/patch-decisions files and an explicit board subset:
 
 ```sh
 jq -n --slurpfile plan /absolute/plan.json --slurpfile decisions /absolute/decisions.json \
-  '{plan_json: ($plan[0] | tojson), decisions_json: ($decisions[0] | tojson)}' |
+  '{plan_json: ($plan[0] | tojson), decisions_json: ($decisions[0] | tojson),
+    boards_json: "[\"apollo510_evb\"]"}' |
   gh workflow run sdk-hardware-qualification.yml --repo AmbiqAI/nsx-ambiq-sdk --ref main --json
 ```
 
-The runner group must first allow this repository and exact workflow/ref;
-coordinate provisioning through `aitg-hardware-runner-nixos`. The pilot accepts
-full baseline/candidate/harness SHAs and uses the selected harness's locked
-dependencies. Host checks, descriptor discovery and board execution use the
-same tool environment. Physical identity comes from the runner and bench
-inventory; no probe is auto-selected. J-Link reset is not cold power-on.
+To include AP330, supply `device_pack_archive` as an absolute, owner-provisioned
+path readable by its runner user. The ZIP must match the pinned pack described
+below; the job verifies/extracts it into its private cache before reservation.
+The farm's installed SEGGER overlay is separate and does not replace the SDK's
+pinned pack. No vendor archive is downloaded during tests or uploaded as evidence.
 
-A successful pilot means the host and AP510 scopes passed. **Full five-board
-qualification remains incomplete**; the workflow cannot approve a release.
-Evidence includes the unchanged assessment, source/tool identities, explicit
-J-Link library and deployed device-overlay hashes. Artifacts are uploaded after
-failure as well as success, with run/attempt-specific names.
-The deployed overlay root may be a symlink, as on Nix; nested directory links
-are refused before reservation so scripts cannot be omitted from hashing.
+The runner group must allow this exact workflow/ref. Coordinate provisioning
+and any temporary premerge test ref through the farm owner. The driver, baseline,
+candidate and harness identities are recorded separately. Choose a reviewed
+harness supporting this farm preflight; unsupported harnesses fail before a lease.
 
-The adapter requires bench-agent's conditional unlock support before reservation.
-It releases only a matching lease after verified results and cleanup; the
-allocator rechecks the recorded PID, holder and reason before signaling.
-Failure/cancellation
-retains a conservative UNKNOWN/recovery-required reservation for up to 70 minutes;
-follow the farm runbook's paused-runner/conditional-release/recovery-session
-handoff before returning the board. TTL expiry
-does not establish board health, and the farm currently has no persistent
-quarantine mechanism. This is a supervised pilot, with no scheduled dispatch.
+Every board receives the same immutable host execution and checks it against its
+actual source/tool identities. Changed binaries or unavailable system inputs
+fail preflight; paths may relocate only under the existing content checks.
+Runner variables and authoritative bench inventory select the physical probe;
+the SDK descriptor selects the device. No probe is auto-selected.
+
+Artifacts include run, attempt and board identities. Downloads use exact artifact
+IDs and verify the published ZIP digest. All selected jobs, named tests, evidence,
+cleanup and lease release must pass. Assessment rechecks raw target reports and
+preserves missing AP4 KXR/AP510B coverage. Detailed logs and generated firmware
+inputs are retained, including hidden CMake files; private environments/caches
+are excluded. Failed jobs upload their partial evidence too.
+
+Use **Re-run all jobs**. Partial retries cannot reuse an earlier attempt's host
+or peer artifacts. An offline queued leg stays pending/incomplete; the job timeout
+does not bound GitHub's queue wait. This workflow remains manually supervised.
+
+The adapter requires conditional bench unlock before reservation. It releases
+only the acquired PID/holder/reason after verified scope results and cleanup.
+Interrupted acquisition or later failure can retain UNKNOWN/recovery-required
+ownership for up to 70 minutes. Preserve its run/board identity and follow the
+farm runbook's paused-runner/conditional-release/recovery-session procedure;
+TTL expiry does not establish board health. Artifact upload and aggregation
+never release a board. A later upload failure does not erase an established
+successful release. J-Link reset is not cold power-on.
 
 For a nonstandard local SEGGER installation, both pytest and qualification CLI
 accept `--jlink-library /absolute/libjlinkarm.so`. The typed API accepts
