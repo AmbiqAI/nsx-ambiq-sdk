@@ -108,7 +108,8 @@ jobs:
         name: Summarize stage and board state
         if: always()
         run: |
-          echo "### SDK ${SDK_STAGE}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### SDK ${SDK_STAGE} — provisional scope evidence" >> "${GITHUB_STEP_SUMMARY}"
+          echo 'Acceptance also requires the completed workflow and its jobs to succeed, including evidence upload and cleanup.' >> "${GITHUB_STEP_SUMMARY}"
           if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
             jq '{board,status,board_state,lease,qualification,global_status,error,timings}' "${SDK_FARM_ROOT}/evidence/state.json" >> "${GITHUB_STEP_SUMMARY}"
           else
@@ -130,6 +131,24 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+      - &outcome
+        name: Record enclosing workflow stage outcome
+        if: always()
+        env:
+          SDK_JOB_STATUS: ${{ job.status }}
+        run: |
+          echo "### SDK ${SDK_STAGE} — workflow stage outcome: ${SDK_JOB_STATUS}" >> "${GITHUB_STEP_SUMMARY}"
+          if [[ "${SDK_JOB_STATUS}" != success ]]; then
+            if [[ -n "${SDK_FARM_ROOT:-}" && -f "${SDK_FARM_ROOT}/evidence/state.json" ]]; then
+              state="${SDK_FARM_ROOT}/evidence/state.json"
+              jq --arg outcome "${SDK_JOB_STATUS}" \
+                '.status = "failed" | .global_status = "failed" | .qualification = false | .error = (.error // ("Enclosing workflow stage: " + $outcome))' \
+                "${state}" > "${state}.tmp"
+              mv "${state}.tmp" "${state}"
+            fi
+            echo 'Qualification is not established for this workflow. This outcome supersedes provisional scope evidence above; retained artifacts may predate the failure.' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          echo 'Require final successful GitHub job/workflow conclusions; a missing outcome or later cleanup failure cannot establish acceptance.' >> "${GITHUB_STEP_SUMMARY}"
 
   boards:
     name: SDK board (${{ matrix.board }})
@@ -157,6 +176,7 @@ jobs:
       - *execute
       - *summary
       - *upload
+      - *outcome
 
   assessment:
     name: SDK selected-scope assessment
@@ -178,3 +198,4 @@ jobs:
       - *execute
       - *summary
       - *upload
+      - *outcome

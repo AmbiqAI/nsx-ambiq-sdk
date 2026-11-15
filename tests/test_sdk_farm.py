@@ -315,6 +315,38 @@ def test_summary_frames_positive_raw_report_with_stage_outcome(lab, repo_root, t
     assert 'Release approval is separate.' in raw_text
 
 
+@pytest.mark.parametrize('outcome', ['failure', 'cancelled', 'success'])
+def test_workflow_failure_after_upload_supersedes_positive_scope(lab, repo_root, tmp_path, outcome):
+    import yaml
+    if shutil.which('jq') is None:
+        pytest.skip('workflow outcome uses jq')
+    root = tmp_path/'completed-scope'
+    evidence = root/'evidence'
+    evidence.mkdir(parents=True)
+    state = State(lab.dispatch.run, 'assessment', lab.dispatch.digest, status='passed',
+                  global_status='passed', qualification=True, lease='released')
+    state.save(evidence)
+    workflow = yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
+    for job in workflow['jobs'].values():
+        steps = job['steps']
+        upload_index = next(i for i,s in enumerate(steps) if s.get('uses','').startswith('actions/upload-artifact@'))
+        final = steps[upload_index+1]
+        assert final['name'] == 'Record enclosing workflow stage outcome'
+        assert final['if'] == 'always()' and final['env']['SDK_JOB_STATUS'] == '${{ job.status }}'
+    summary = tmp_path/'summary.md'
+    env = dict(os.environ, SDK_FARM_ROOT=str(root), SDK_STAGE='assessment',
+               SDK_JOB_STATUS=outcome, GITHUB_STEP_SUMMARY=str(summary))
+    subprocess.run(['bash','-e','-o','pipefail','-c',final['run']], env=env, check=True)
+    value = json.loads((evidence/'state.json').read_text())
+    assert value['qualification'] is (outcome == 'success')
+    assert value['status'] == value['global_status'] == ('passed' if outcome == 'success' else 'failed')
+    assert value['lease'] == 'released'
+    text = summary.read_text()
+    assert 'final successful GitHub job/workflow conclusions' in text
+    if outcome != 'success':
+        assert 'supersedes provisional scope evidence' in text
+
+
 def selected_board_artifacts(lab, tmp_path, boards=('apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb')):
     dispatch = replace(lab.dispatch, boards=tuple(sorted(boards)),
                        device_pack_archive='/provisioned/pinned.zip')

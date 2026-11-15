@@ -51,8 +51,13 @@ keeps every missing required obligation incomplete. Only the final assessment
 with all declared requirements passed reports full qualification; host and
 individual-board stages remain partial. A successful selected subset is not
 full qualification, and qualification never approves a release. Summaries report
-stage completion separately from coverage; a retained raw assessment cannot
-override a failed stage. Detailed logs and generated firmware
+stage completion separately from coverage. Scope summaries and uploaded records
+are snapshots: acceptance additionally requires final successful GitHub
+workflow/job conclusions, including upload and post-job cleanup. An always-run
+outcome step after upload clears positive local stage state and supersedes the
+provisional summary on failure/cancellation. If that step cannot run, or later
+cleanup fails, the missing/failed workflow outcome prevents acceptance; a retained
+raw assessment cannot override it. Detailed logs and generated firmware
 inputs are retained, including hidden CMake files; private environments/caches
 are excluded. Failed jobs upload their partial evidence too. Preserve complete
 inputs, receipts and evidence outside GitHub before its 14-day artifact expiry
