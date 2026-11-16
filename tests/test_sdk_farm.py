@@ -327,7 +327,7 @@ def test_workflow_failure_after_upload_supersedes_positive_scope(lab, repo_root,
                   global_status='passed', qualification=True, lease='released')
     state.save(evidence)
     workflow = yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
-    for job in workflow['jobs'].values():
+    for job in (workflow['jobs'][name] for name in ('host','boards','assessment')):
         steps = job['steps']
         upload_index = next(i for i,s in enumerate(steps) if s.get('uses','').startswith('actions/upload-artifact@'))
         final = steps[upload_index+1]

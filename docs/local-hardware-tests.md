@@ -76,6 +76,39 @@ TTL expiry does not establish board health. Artifact upload and aggregation
 never release a board. A later upload failure does not erase an established
 successful release. J-Link reset is not cold power-on.
 
+### Optional result on the tested PR commit
+
+For an open same-repository PR, add `pull_request_number` to the manual workflow
+inputs and explicitly select `apollo3p_evb`, `apollo330mP_evb`, and
+`apollo510_evb`. The existing AP330 archive input is required. Dispatch from
+`main` with reviewed immutable plan/decisions: the candidate must be the PR's
+current head, and the driver/harness must be compatible commits in reviewed
+main history. Forks and unmerged harness revisions are not supported in this
+optional reporting mode. Omitting the PR number preserves normal manual use.
+
+A hosted preflight uploads the exact PR/run/attempt association before creating
+`SDK farm (AP3/AP330/AP510)` on that commit. The ordinary farm jobs perform all
+execution and assessment. A separate hosted reporter runs only after the
+original workflow has completed, including upload and post-job cleanup. It
+reads the original run's artifacts and final job conclusions without executing
+candidate or artifact code. The reporter workflow must exist on the default
+branch before this integration can run; premerge host tests are not deployed
+end-to-end reporting proof.
+
+The check reports selected-scope success alongside the full plan's missing
+AP4 KXR/AP510B coverage. It does not approve a release or enable branch
+protection. Changed/closed PRs and newer attempts supersede the old result;
+publication always targets the original tested commit and uniquely identified
+check. Missing binding/evidence, ambiguous checks and API errors cannot produce
+a passing result. Inspect both workflow logs when no PR result was published.
+
+Use **Re-run all jobs** for a new farm attempt. A reporter-only retry can recover
+a publication error using the same completed original run; it does not repeat
+hardware tests. Expired evidence requires a fresh original run, not a guessed
+result. Preserve complete original evidence and publication receipts before
+the 14-day artifact expiry. Publication uses the hosted jobs' scoped Actions
+token; no additional personal token or farm-runner permission is required.
+
 For a nonstandard local SEGGER installation, both pytest and qualification CLI
 accept `--jlink-library /absolute/libjlinkarm.so`. The typed API accepts
 `BoardRequest(..., jlink_library=Path(...))`. An explicit path must load;

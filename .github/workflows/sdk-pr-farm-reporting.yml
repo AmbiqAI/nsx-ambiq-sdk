@@ -1,0 +1,51 @@
+name: SDK PR farm reporting
+
+on:
+  workflow_run:
+    workflows: [SDK hardware pilot]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  report:
+    name: Report completed SDK farm evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: sdk-farm-check-${{ github.repository_id }}-${{ github.event.workflow_run.id }}
+      cancel-in-progress: false
+    steps:
+      - name: Stage publication diagnostics
+        run: |
+          root="${RUNNER_TEMP}/sdk-pr-report-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${root}"
+          echo 'Reporting started; inspect publication.json and workflow outcomes. This marker is not acceptance.' > "${root}/STARTED"
+          echo "SDK_PR_REPORT=${root}" >> "${GITHUB_ENV}"
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run uses the default-branch commit, not the PR candidate.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v5
+      - name: Verify original completed run and publish its exact PR result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --no-project --python 3.12 python -m tools.sdk_qualification.pr_reporting report \
+            --output "${SDK_PR_REPORT}/result"
+      - name: Retain publication diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-pr-report-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/sdk-pr-report-${{ github.run_id }}-${{ github.run_attempt }}/STARTED
+            ${{ runner.temp }}/sdk-pr-report-${{ github.run_id }}-${{ github.run_attempt }}/result/*.json
+          if-no-files-found: error
+          retention-days: 14
