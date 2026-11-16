@@ -131,6 +131,7 @@ def synthetic(tmp_path):
     host_record = write_record(host_dir, body('host', (), '1'*32, {'host.txt': sha256(host_dir/'host.txt')}))
     State(run, 'host', dispatch.digest, status='passed', host_record_sha256=host_record['sha256']).save(host/'evidence')
     executions = [{'execution_id': '1'*32, 'sha256': host_record['sha256']}]
+    owners = {(gate.id, 'candidate' if gate.kind == 'host' else 'plan'): '1'*32 for gate in plan.gates}
     for index, board in enumerate(BOARDS):
         root = payload(board)
         directory = root/'evidence/board'
@@ -162,6 +163,13 @@ def synthetic(tmp_path):
         record = write_record(directory, dict(body('hardware', (board,), execution_id, files),
                               firmware=entries, host_reference={'directory':'host','sha256':host_record['sha256']}))
         executions.append({'execution_id': execution_id, 'sha256': record['sha256']})
+        for row in plan.rows:
+            if row.board == board:
+                owners.update({(row.id,side):execution_id for side in row.sides})
+        for compiler in plan.compilers:
+            if board in compiler.boards:
+                owners.update({(f'compiler/{compiler.toolchain}/{board}/{check}','candidate'):execution_id
+                               for check in compiler.checks})
         holder = f'sdk-{run.run_id}-{run.attempt}-{board}'
         reason = f'UNKNOWN/recovery-required if interrupted: {run.url} board={board}'
         State(run, 'board', dispatch.digest, board=board, status='passed', lease='released',
@@ -179,9 +187,9 @@ def synthetic(tmp_path):
         write(download/'receipt.json', api.receipts[board].to_dict())
     report = dict(initial_report(plan), errors=[], executions=executions)
     for item in report['requirements']:
-        parts = item['requirement'].split('/')
-        if len(parts)==1 or parts[0] in BOARDS or parts[0]=='compiler' and parts[2] in BOARDS:
-            item['status'] = 'passed'
+        owner = owners.get((item['requirement'],item['side']))
+        if owner is not None:
+            item.update(status='passed',execution_id=owner)
     report_dir = assessment/'evidence/assessment'
     report_dir.mkdir()
     write(report_dir/'assessment.json', report)

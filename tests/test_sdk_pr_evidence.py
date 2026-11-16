@@ -89,3 +89,31 @@ def test_privileged_reporting_does_not_start_workers_or_assess_again(farm,monkey
     result=report(farm.event,farm.root/'report',farm.api)
     assert result.conclusion=='success'
     assert json.loads((farm.root/'report/validated-scope.json').read_text())['full_qualification'] is False
+
+
+@pytest.mark.parametrize('change', ['missing','unknown','gate-board','board-host','board-other',
+                                   'compiler-host','compiler-other','incomplete-owner'])
+def test_passed_requirements_must_belong_to_their_verified_execution(farm,change):
+    farm.api.pending(farm.binding)
+    path=farm.api.payloads['assessment']/'evidence/assessment/assessment.json'
+    value=read_json(path)
+    host=value['executions'][0]['execution_id']
+    first=value['executions'][1]['execution_id']
+    other=value['executions'][2]['execution_id']
+    gate=next(i for i in value['requirements'] if i['status']=='passed' and '/' not in i['requirement'])
+    board=next(i for i in value['requirements'] if i['status']=='passed' and i['kind']=='hardware'
+               and i['execution_id']==first)
+    compiler=next(i for i in value['requirements'] if i['status']=='passed' and i['kind']=='compiler'
+                  and i['execution_id']==first)
+    if change=='missing':gate.pop('execution_id')
+    if change=='unknown':gate['execution_id']='f'*32
+    if change=='gate-board':gate['execution_id']=first
+    if change=='board-host':board['execution_id']=host
+    if change=='board-other':board['execution_id']=other
+    if change=='compiler-host':compiler['execution_id']=host
+    if change=='compiler-other':compiler['execution_id']=other
+    if change=='incomplete-owner':
+        next(i for i in value['requirements'] if i['status']=='incomplete')['execution_id']=first
+    write(path,value)
+    result=report(farm.event,farm.root/'report',farm.api)
+    assert result.conclusion=='failure' and 'execution' in result.diagnostic

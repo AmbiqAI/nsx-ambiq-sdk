@@ -22,7 +22,9 @@ def validate(api, binding: Binding, output: Path) -> dict:
     dispatch, plan = load_dispatch(host_payload / 'inputs', run)
     binding.verify_inputs(dispatch, plan)
     host = canonical_host(host_download, dispatch, plan)
-    executions = {read_record(host.directory)['body']['execution_id']: host.sha256}
+    host_execution = read_record(host.directory)['body']['execution_id']
+    executions = {host_execution: host.sha256}
+    board_executions = {}
     payload = output / 'assessment/payload'
     other, other_plan = load_dispatch(payload / 'inputs', run)
     binding.verify_inputs(other, other_plan)
@@ -49,6 +51,7 @@ def validate(api, binding: Binding, output: Path) -> dict:
                 or read_record(directory / 'host')['sha256'] != host.sha256):
             raise ValueError('Board record references another host execution')
         executions[body['execution_id']] = record['sha256']
+        board_executions[board] = body['execution_id']
         rows = {row.id: row for row in plan.rows if row.board == board}
         expected = {(row.id, side) for row in rows.values() for side in row.sides}
         actual = [(entry['row'], entry['side']) for entry in body['firmware']]
@@ -81,6 +84,20 @@ def validate(api, binding: Binding, output: Path) -> dict:
     if (len(executions) != len(BOARDS) + 1 or len(report['executions']) != len(executions)
             or {e['execution_id']: e['sha256'] for e in report['executions']} != executions):
         raise ValueError('Assessment does not contain exactly the canonical host and selected boards')
+    gates = {gate.id for gate in plan.gates}
+    for item in report['requirements']:
+        if item['status'] != 'passed':
+            if item.get('execution_id') is not None:
+                raise ValueError('Incomplete requirement claims an execution owner')
+            continue
+        if item['requirement'] in gates:
+            owner = host_execution
+        else:
+            parts = item['requirement'].split('/')
+            board = parts[2] if item['kind'] == 'compiler' else parts[0]
+            owner = board_executions[board]
+        if item.get('execution_id') != owner:
+            raise ValueError('Passed requirement does not belong to its verified execution')
     return {'images': images, 'target_case_executions': cases,
             'requirements': {status: sum(item['status'] == status for item in report['requirements'])
                              for status in ('passed', 'incomplete')},
