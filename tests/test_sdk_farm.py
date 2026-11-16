@@ -14,7 +14,7 @@ import pytest
 from tools.sdk_qualification import Plan, Revisions, write_plan
 from tools.sdk_qualification import farm_bench, farm_run
 from tools.sdk_qualification.farm_artifacts import Artifact
-from tools.sdk_qualification.farm_inputs import AVAILABLE_BOARDS, State, prepare, write
+from tools.sdk_qualification.farm_inputs import AVAILABLE_BOARDS, State, passed_state, prepare, write
 from tools.sdk_qualification.io import read_record, write_record
 
 
@@ -140,7 +140,9 @@ if action=='assess':
         parts=item['requirement'].split('/')
         if len(parts)==1 or parts[0] in boards or parts[0]=='compiler' and parts[2] in boards:
             item['status']='passed'
-    (out/'assessment.json').write_text(json.dumps(report));sys.exit(1)
+    if not report['errors'] and all(i['status']=='passed' for i in report['requirements']):
+        report.update(status='passed',qualification=True)
+    (out/'assessment.json').write_text(json.dumps(report));sys.exit(0 if report['qualification'] else 1)
 if action=='run-board':
     if mode=='missing':sys.exit(0)
     if mode=='overlay':(Path.home()/'.config/SEGGER/JLinkDevices/Ambiq/Device.xml').write_text('changed')
@@ -253,8 +255,100 @@ def test_later_upload_failure_does_not_erase_released_board(lab):
     assert result['board_state'] == 'tests-completed'
 
 
-def three_board_artifacts(lab, tmp_path):
-    dispatch = replace(lab.dispatch, boards=tuple(sorted(AVAILABLE_BOARDS)),
+@pytest.mark.parametrize('error', [OSError('late failure'), farm_run.FarmCancelled('cancelled')])
+def test_late_failure_clears_positive_qualification(lab, error):
+    state = State(lab.dispatch.run, 'assessment', lab.dispatch.digest)
+    with pytest.raises(type(error)):
+        with farm_run.journal(lab.paths.output, state):
+            state.global_status, state.qualification = 'passed', True
+            raise error
+    result = json.loads((lab.paths.output/'state.json').read_text())
+    assert result['qualification'] is False
+    assert result['status'] == result['global_status'] == 'failed'
+
+
+@pytest.mark.parametrize('stage,board', [('host', None), ('board', 'apollo510b_evb')])
+def test_scoped_envelopes_cannot_claim_full_qualification(lab, tmp_path, stage, board):
+    state = State(lab.dispatch.run, stage, lab.dispatch.digest, board=board,
+                  status='passed', qualification=True, global_status='passed')
+    state.save(tmp_path)
+    with pytest.raises(ValueError, match='did not complete'):
+        passed_state(tmp_path, lab.dispatch, stage, board)
+
+
+@pytest.mark.parametrize('board', ['apollo4p_blue_kxr_evb', 'apollo510b_evb'])
+def test_new_variants_require_their_exact_runner_inventory(lab, monkeypatch, board):
+    monkeypatch.setenv('HPX_BOARD', board)
+    write(lab.inventory, {'boards': [{'id': 'ap510-2', 'name': board, 'serial': '123', 'runner': True}]})
+    assert farm_bench.runner_binding(lab.inventory, board) == {'id': 'ap510-2', 'board': board, 'probe': '123'}
+    substitute = 'apollo4l_blue_evb' if board.startswith('apollo4') else 'apollo510L_evb'
+    write(lab.inventory, {'boards': [{'id': 'ap510-2', 'name': substitute, 'serial': '123', 'runner': True}]})
+    with pytest.raises(ValueError, match='authoritative'):
+        farm_bench.runner_binding(lab.inventory, board)
+
+
+@pytest.mark.parametrize('failed', [False, True])
+def test_summary_frames_positive_raw_report_with_stage_outcome(lab, repo_root, tmp_path, failed):
+    import yaml
+    if shutil.which('jq') is None:
+        pytest.skip('workflow summary uses jq')
+    root = tmp_path/'summary-root'
+    evidence = root/'evidence'
+    assessment = evidence/'assessment'
+    assessment.mkdir(parents=True)
+    state = State(lab.dispatch.run, 'assessment', lab.dispatch.digest,
+                  status='failed' if failed else 'passed', qualification=not failed,
+                  global_status='failed' if failed else 'passed')
+    state.save(evidence)
+    write(assessment/'assessment.json', {'status':'passed', 'qualification':True, 'requirements':[]})
+    workflow = yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
+    script = next(s['run'] for s in workflow['jobs']['assessment']['steps']
+                  if s.get('name') == 'Summarize stage and board state')
+    summary = tmp_path/'summary.md'
+    env = dict(os.environ, SDK_FARM_ROOT=str(root), SDK_STAGE='assessment', GITHUB_STEP_SUMMARY=str(summary))
+    subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', script], env=env, check=True)
+    text = summary.read_text()
+    stage_text, raw_text = text.split('Raw assessment below;', 1)
+    stage_value = json.loads(stage_text[stage_text.index('{'):])
+    assert stage_value['qualification'] is (not failed)
+    assert stage_value['status'] == stage_value['global_status'] == ('failed' if failed else 'passed')
+    assert 'Release approval is separate.' in raw_text
+
+
+@pytest.mark.parametrize('outcome', ['failure', 'cancelled', 'success'])
+def test_workflow_failure_after_upload_supersedes_positive_scope(lab, repo_root, tmp_path, outcome):
+    import yaml
+    if shutil.which('jq') is None:
+        pytest.skip('workflow outcome uses jq')
+    root = tmp_path/'completed-scope'
+    evidence = root/'evidence'
+    evidence.mkdir(parents=True)
+    state = State(lab.dispatch.run, 'assessment', lab.dispatch.digest, status='passed',
+                  global_status='passed', qualification=True, lease='released')
+    state.save(evidence)
+    workflow = yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
+    for job in workflow['jobs'].values():
+        steps = job['steps']
+        upload_index = next(i for i,s in enumerate(steps) if s.get('uses','').startswith('actions/upload-artifact@'))
+        final = steps[upload_index+1]
+        assert final['name'] == 'Record enclosing workflow stage outcome'
+        assert final['if'] == 'always()' and final['env']['SDK_JOB_STATUS'] == '${{ job.status }}'
+    summary = tmp_path/'summary.md'
+    env = dict(os.environ, SDK_FARM_ROOT=str(root), SDK_STAGE='assessment',
+               SDK_JOB_STATUS=outcome, GITHUB_STEP_SUMMARY=str(summary))
+    subprocess.run(['bash','-e','-o','pipefail','-c',final['run']], env=env, check=True)
+    value = json.loads((evidence/'state.json').read_text())
+    assert value['qualification'] is (outcome == 'success')
+    assert value['status'] == value['global_status'] == ('passed' if outcome == 'success' else 'failed')
+    assert value['lease'] == 'released'
+    text = summary.read_text()
+    assert 'final successful GitHub job/workflow conclusions' in text
+    if outcome != 'success':
+        assert 'supersedes provisional scope evidence' in text
+
+
+def selected_board_artifacts(lab, tmp_path, boards=('apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb')):
+    dispatch = replace(lab.dispatch, boards=tuple(sorted(boards)),
                        device_pack_archive='/provisioned/pinned.zip')
     write(lab.paths.inputs/'dispatch.json', dispatch.to_dict())
     write(lab.download/'payload/inputs/dispatch.json', dispatch.to_dict())
@@ -286,9 +380,12 @@ def three_board_artifacts(lab, tmp_path):
 
 
 @pytest.mark.parametrize('failure', [None,'missing','lease','host','record','attempt','job'])
-def test_collection_requires_complete_coherent_released_peer_set(lab,tmp_path,failure):
-    dispatch, remote=three_board_artifacts(lab,tmp_path)
-    board=dispatch.boards[0]
+@pytest.mark.parametrize('boards', [
+    ('apollo3p_evb', 'apollo330mP_evb', 'apollo510_evb'), AVAILABLE_BOARDS,
+], ids=['three-board', 'five-board'])
+def test_collection_requires_complete_coherent_released_peer_set(lab,tmp_path,failure,boards):
+    dispatch, remote=selected_board_artifacts(lab,tmp_path,boards)
+    board='apollo4p_blue_kxr_evb' if len(boards)==5 else dispatch.boards[0]
     if failure in ('lease','host'):
         path=remote[board]/'evidence/state.json'
         state=json.loads(path.read_text())
@@ -319,13 +416,14 @@ def test_collection_requires_complete_coherent_released_peer_set(lab,tmp_path,fa
         assert state['status']=='failed' and state['qualification'] is False
     else:
         state=farm_run.aggregate(lab.paths,lab.download,client)
-        assert state.status=='passed' and state.qualification is False and client.verified_jobs
+        complete = len(boards) == 5
+        assert state.status=='passed' and state.qualification is complete and client.verified_jobs
         report=json.loads((lab.paths.output/'assessment/assessment.json').read_text())
-        assert report['status']=='incomplete'
+        assert state.global_status == report['status'] == ('passed' if complete else 'incomplete')
 
 
 def test_ap330_missing_pinned_archive_stops_before_reservation(lab,tmp_path,monkeypatch):
-    dispatch,_=three_board_artifacts(lab,tmp_path)
+    dispatch,_=selected_board_artifacts(lab,tmp_path)
     monkeypatch.setenv('HPX_BOARD','apollo330mP_evb')
     write(lab.inventory,{'boards':[{'id':'ap510-2','name':'apollo330mP_evb','serial':'123','runner':True}]})
     manifest=lab.paths.harness/'tools/hardware/device-pack.json'

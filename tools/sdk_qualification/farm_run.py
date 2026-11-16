@@ -54,6 +54,7 @@ def journal(output: Path, state: State):
     except BaseException as error:
         state.status = 'failed'
         state.global_status = 'failed'
+        state.qualification = False
         state.error = f'{type(error).__name__}: {error}'
         raise
     finally:
@@ -96,9 +97,9 @@ def scoped_record(directory: Path, plan: Plan, mode: str, boards: tuple[str, ...
 
 def verify_selected(report: dict, plan: Plan, boards: tuple[str, ...]):
     expected = initial_report(plan)
-    if (report['plan_sha256'] != plan.digest or report['revisions'] != expected['revisions']
-            or report['errors'] or report['status'] != 'incomplete' or report['qualification'] is not False):
-        raise ValueError('Selected pilot requires valid evidence and incomplete five-board qualification')
+    if (any(report[name] != expected[name] for name in (
+            'schema_version', 'profile', 'plan_sha256', 'revisions', 'exclusions')) or report['errors']):
+        raise ValueError('Selected scope requires valid evidence for the unchanged reviewed plan')
     wanted = {(entry['requirement'], entry['side']): entry for entry in expected['requirements']}
     actual = {(entry['requirement'], entry['side']): entry for entry in report['requirements']}
     if len(actual) != len(report['requirements']) or actual.keys() != wanted.keys():
@@ -112,6 +113,9 @@ def verify_selected(report: dict, plan: Plan, boards: tuple[str, ...]):
         selected = (parts[0] == 'compiler' and parts[2] in boards) or parts[0] in boards or key[0] in gates
         if item['status'] != ('passed' if selected else 'incomplete'):
             raise ValueError(f'Selected/missing requirement has an invalid result: {key}')
+    complete = all(item['status'] == 'passed' for item in actual.values())
+    if report['status'] != ('passed' if complete else 'incomplete') or report['qualification'] is not complete:
+        raise ValueError('Assessment qualification does not match its complete requirement set')
 
 
 def assess_scope(paths: Paths, state: State, plan: Plan, boards: tuple[str, ...], records: list[Path]):
@@ -126,6 +130,7 @@ def assess_scope(paths: Paths, state: State, plan: Plan, boards: tuple[str, ...]
             raise
     report = read_json(paths.output / 'assessment/assessment.json')
     verify_selected(report, plan, boards)
+    return report
 
 
 def host(paths: Paths):
@@ -308,5 +313,7 @@ def aggregate(paths: Paths, downloaded_host: Path, client: GitHub | None = None)
             problems.append(str(error))
         if problems:
             raise ValueError('Selected farm evidence incomplete: ' + '; '.join(problems))
-        assess_scope(paths, state, plan, dispatch.boards, records)
+        report = assess_scope(paths, state, plan, dispatch.boards, records)
+        state.global_status = report['status']
+        state.qualification = report['qualification']
     return state
