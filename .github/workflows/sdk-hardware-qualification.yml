@@ -30,9 +30,25 @@ permissions:
   actions: read
 
 jobs:
+  pr_dispatch:
+    name: PR farm dispatch
+    if: inputs.pull_request_number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require main before PR writer checkout
+        run: |
+          if [[ "${GITHUB_REF}" != refs/heads/main ]]; then
+            echo '::error::PR reporting requires a main dispatch. Omit the PR number for ordinary reviewed manual mode.'
+            exit 1
+          fi
+
   binding:
     name: PR farm binding
-    if: inputs.pull_request_number != ''
+    needs: pr_dispatch
+    if: inputs.pull_request_number != '' && github.ref == 'refs/heads/main' && needs.pr_dispatch.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -233,7 +249,7 @@ jobs:
   assessment:
     name: SDK selected-scope assessment
     needs: [host, boards]
-    if: always()
+    if: ${{ always() && (inputs.pull_request_number == '' || github.ref == 'refs/heads/main') }}
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]
     timeout-minutes: 60
     env:

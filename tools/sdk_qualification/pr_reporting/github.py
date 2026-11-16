@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 import urllib.request
 
 from ..farm_artifacts import GitHub
-from .models import BINDING_JOB, BOARDS, CHECK_NAME, WORKFLOW, Binding, Check
+from .models import BINDING_JOB, BOARDS, CHECK_NAME, DISPATCH_JOB, WORKFLOW, Binding, Check
 
 
 def timestamp():
@@ -95,7 +95,7 @@ class API(GitHub):
         if metadata['status'] != 'completed' or metadata['conclusion'] != 'success':
             raise ValueError('Original complete workflow did not succeed')
         jobs = self.pages(f'/actions/runs/{self.run.run_id}/attempts/{self.run.attempt}/jobs', 'jobs')
-        wanted = {BINDING_JOB, 'SDK host checks', 'SDK selected-scope assessment',
+        wanted = {DISPATCH_JOB, BINDING_JOB, 'SDK host checks', 'SDK selected-scope assessment',
                   *(f'SDK board ({board})' for board in BOARDS)}
         if (len(jobs) != len(wanted) or {job['name'] for job in jobs} != wanted
                 or any(job['status'] != 'completed' or job['conclusion'] != 'success' for job in jobs)):

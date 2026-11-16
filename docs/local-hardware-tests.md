@@ -85,6 +85,8 @@ inputs and explicitly select `apollo3p_evb`, `apollo330mP_evb`, and
 current head, and the driver/harness must be compatible commits in reviewed
 main history. Forks and unmerged harness revisions are not supported in this
 optional reporting mode. Omitting the PR number preserves normal manual use.
+The dispatch-ref check runs without checkout or check-write permission; only
+a passing main dispatch can start the check-writing job and load its code.
 
 A hosted preflight uploads the exact PR/run/attempt association before creating
 `SDK farm (AP3/AP330/AP510)` on that commit. The ordinary farm jobs perform all

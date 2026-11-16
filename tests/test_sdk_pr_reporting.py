@@ -2,6 +2,8 @@
 from copy import deepcopy
 from dataclasses import replace
 import json
+import os
+import subprocess
 
 import pytest
 import yaml
@@ -115,8 +117,8 @@ def test_final_workflow_failure_after_positive_assessment_cannot_pass(farm,failu
 @pytest.mark.parametrize('change', ['assessment','preflight','cleanup','missing-job','duplicate-job'])
 def test_all_original_jobs_including_assessment_and_cleanup_are_required(farm,change):
     farm.api.pending(farm.binding)
-    if change=='assessment':farm.api.jobs[2]['conclusion']='failure'
-    if change=='preflight':farm.api.jobs[0]['conclusion']='cancelled'
+    if change=='assessment':next(j for j in farm.api.jobs if j['name']=='SDK selected-scope assessment')['conclusion']='failure'
+    if change=='preflight':next(j for j in farm.api.jobs if j['name']=='PR farm binding')['conclusion']='cancelled'
     if change=='cleanup':farm.api.jobs[-1]['status']='in_progress'
     if change=='missing-job':farm.api.jobs.pop()
     if change=='duplicate-job':farm.api.jobs[-1]=deepcopy(farm.api.jobs[-2])
@@ -159,6 +161,9 @@ def test_workflow_binding_upload_precedes_check_and_writer_jobs_are_hosted(repo_
     manual=yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
     binding=manual['jobs']['binding']
     assert binding['runs-on']=='ubuntu-latest' and binding['permissions']['checks']=='write'
+    assert binding['needs']=='pr_dispatch'
+    assert "github.ref == 'refs/heads/main'" in binding['if']
+    assert "needs.pr_dispatch.result == 'success'" in binding['if']
     assert 'checks' not in manual['permissions']
     steps=binding['steps']
     upload=next(i for i,s in enumerate(steps) if s.get('uses','').startswith('actions/upload-artifact@'))
@@ -176,3 +181,16 @@ def test_workflow_binding_upload_precedes_check_and_writer_jobs_are_hosted(repo_
     assert job['concurrency']['group'].replace('github.event.workflow_run.id','github.run_id')==binding['concurrency']['group']
     checkout=next(s for s in job['steps'] if s.get('uses','').startswith('actions/checkout@'))
     assert checkout['with']['ref']=='${{ github.sha }}' and checkout['with']['persist-credentials'] is False
+
+
+@pytest.mark.parametrize('ref,accepted', [('refs/heads/main',True),('refs/heads/feature',False),('refs/tags/v5.2.30',False)])
+def test_main_context_rejection_precedes_any_writer_checkout(repo_root,ref,accepted):
+    workflow=yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
+    dispatch=workflow['jobs']['pr_dispatch']
+    assert dispatch['permissions']=={'contents':'read'}
+    assert len(dispatch['steps'])==1 and 'uses' not in dispatch['steps'][0]
+    result=subprocess.run(['bash','-e','-o','pipefail','-c',dispatch['steps'][0]['run']],
+                          env=dict(os.environ,GITHUB_REF=ref),capture_output=True,text=True)
+    assert (result.returncode==0) is accepted
+    if not accepted:assert 'requires a main dispatch' in result.stdout
+    assert "github.ref == 'refs/heads/main'" in workflow['jobs']['assessment']['if']

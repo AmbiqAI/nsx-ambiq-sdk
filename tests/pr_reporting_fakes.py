@@ -16,7 +16,7 @@ from tools.sdk_qualification.io import sha256, write_record
 from tools.sdk_qualification.models import Revisions
 from tools.sdk_qualification.plan import Plan
 from tools.sdk_qualification.pr_reporting.github import API
-from tools.sdk_qualification.pr_reporting.models import BINDING_JOB, BOARDS, WORKFLOW, Binding
+from tools.sdk_qualification.pr_reporting.models import BINDING_JOB, BOARDS, DISPATCH_JOB, WORKFLOW, Binding
 from tools.sdk_qualification.report import initial_report
 
 
@@ -34,7 +34,7 @@ class FakeAPI(API):
         self.pr = dict(number=7, state='open', base={'repo': {'full_name': run.repository}},
                        head={'sha': 'b'*40, 'repo': {'full_name': run.repository}})
         self.jobs = [dict(name=name, status='completed', conclusion='success') for name in
-                     (BINDING_JOB, 'SDK host checks', 'SDK selected-scope assessment',
+                     (DISPATCH_JOB, BINDING_JOB, 'SDK host checks', 'SDK selected-scope assessment',
                       *(f'SDK board ({b})' for b in BOARDS))]
         self.checks = []
         self.writes = []

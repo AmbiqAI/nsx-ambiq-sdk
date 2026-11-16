@@ -144,9 +144,9 @@ def test_workflow_is_explicit_manual_and_keeps_failure_evidence(repo_root):
     workflow=yaml.safe_load((repo_root/'.github/workflows/sdk-hardware-qualification.yml').read_text())
     assert set(workflow.get('on',workflow.get(True)))=={'workflow_dispatch'}
     jobs=workflow['jobs']
-    assert set(jobs)=={'binding','host','boards','assessment'}
+    assert set(jobs)=={'pr_dispatch','binding','host','boards','assessment'}
     assert jobs['boards']['strategy']['fail-fast'] is False
-    assert jobs['assessment']['if']=='always()'
+    assert 'always()' in jobs['assessment']['if']
     assert jobs['host']['runs-on']==['self-hosted','hpx-hardware','apollo510_evb']
     for job in (jobs[name] for name in ('host','boards','assessment')):
         assert job['timeout-minutes']<70

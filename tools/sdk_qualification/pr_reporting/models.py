@@ -12,6 +12,7 @@ CHECK_NAME = 'SDK farm (AP3/AP330/AP510)'
 WORKFLOW = '.github/workflows/sdk-hardware-qualification.yml'
 BINDING_STAGE = 'pr-binding'
 BINDING_JOB = 'PR farm binding'
+DISPATCH_JOB = 'PR farm dispatch'
 
 
 @dataclass(frozen=True)
