@@ -101,7 +101,8 @@ The check reports selected-scope success alongside the full plan's missing
 AP4 KXR/AP510B coverage. It does not approve a release or enable branch
 protection. Changed/closed PRs and newer attempts supersede the old result;
 publication always targets the original tested commit and uniquely identified
-check. Missing binding/evidence, ambiguous checks and API errors cannot produce
+check. Before accepting a result, verify that the check is attached to the
+reviewed candidate commit and links to the intended original run and attempt. Missing binding/evidence, ambiguous checks and API errors cannot produce
 a passing result. Inspect both workflow logs when no PR result was published.
 
 Use **Re-run all jobs** for a new farm attempt. A reporter-only retry can recover
