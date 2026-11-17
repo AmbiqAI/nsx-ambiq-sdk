@@ -42,7 +42,7 @@ class Run:
         return f'{self.server}/{self.repository}/actions/runs/{self.run_id}/attempts/{self.attempt}'
 
     def artifact_name(self, stage: str) -> str:
-        if stage not in ('host', 'assessment', *AVAILABLE_BOARDS):
+        if stage not in ('host', 'assessment', 'pr-binding', *AVAILABLE_BOARDS):
             raise ValueError('Unknown farm artifact stage')
         return f'sdk-farm-{self.run_id}-{self.attempt}-{stage}'
 

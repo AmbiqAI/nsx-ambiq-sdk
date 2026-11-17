@@ -20,14 +20,82 @@ on:
         description: Owner-provisioned absolute pinned ZIP path on AP330 runner (required for AP330)
         default: ''
         type: string
+      pull_request_number:
+        description: Optional open same-repository PR; requires explicit AP3/AP330/AP510 boards_json and main dispatch
+        default: ''
+        type: string
 
 permissions:
   contents: read
   actions: read
 
 jobs:
+  pr_dispatch:
+    name: PR farm dispatch
+    if: inputs.pull_request_number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require main before PR writer checkout
+        run: |
+          if [[ "${GITHUB_REF}" != refs/heads/main ]]; then
+            echo '::error::PR reporting requires a main dispatch. Omit the PR number for ordinary reviewed manual mode.'
+            exit 1
+          fi
+
+  binding:
+    name: PR farm binding
+    needs: pr_dispatch
+    if: inputs.pull_request_number != '' && github.ref == 'refs/heads/main' && needs.pr_dispatch.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      checks: write
+    concurrency:
+      group: sdk-farm-check-${{ github.repository_id }}-${{ github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - name: Stage PR binding paths
+        run: echo "SDK_PR_ROOT=${RUNNER_TEMP}/sdk-pr-bind-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_ENV}"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v5
+      - name: Validate exact PR and farm association
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_PR_NUMBER: ${{ inputs.pull_request_number }}
+          SDK_PLAN_JSON: ${{ inputs.plan_json }}
+          SDK_DECISIONS_JSON: ${{ inputs.decisions_json }}
+          SDK_BOARDS_JSON: ${{ inputs.boards_json }}
+          SDK_DEVICE_PACK_ARCHIVE: ${{ inputs.device_pack_archive }}
+        run: |
+          uv run --no-project --python 3.12 python -m tools.sdk_qualification.pr_reporting preflight \
+            --pull-request "${SDK_PR_NUMBER}" --output "${SDK_PR_ROOT}/binding"
+      - name: Publish immutable PR association before creating a check
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-farm-${{ github.run_id }}-${{ github.run_attempt }}-pr-binding
+          path: ${{ runner.temp }}/sdk-pr-bind-${{ github.run_id }}-${{ github.run_attempt }}/binding/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Create or rediscover this attempt's pending PR check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --no-project --python 3.12 python -m tools.sdk_qualification.pr_reporting pending \
+            --output "${SDK_PR_ROOT}/published-binding"
+
   host:
     name: SDK host checks
+    needs: binding
+    if: ${{ !cancelled() && (inputs.pull_request_number == '' || needs.binding.result == 'success') }}
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]
     timeout-minutes: 60
     env:
@@ -181,7 +249,7 @@ jobs:
   assessment:
     name: SDK selected-scope assessment
     needs: [host, boards]
-    if: always()
+    if: ${{ always() && (inputs.pull_request_number == '' || github.ref == 'refs/heads/main') }}
     runs-on: [self-hosted, hpx-hardware, apollo510_evb]
     timeout-minutes: 60
     env:
