@@ -67,6 +67,9 @@ def test_lite_real_firmware_builds(repo_root, tmp_path, board, suite):
     manifest = json.loads((tmp_path / 'manifest.json').read_text())
     assert firmware.board == board and firmware.cases == suite.cases
     assert manifest['board'] == board and manifest['expected_cases'] == list(suite.cases)
+    assert manifest['device'] == firmware.device
+    if board == 'apollo510dL_evb':
+        assert firmware.device == 'AP510DLA-CBR'
     commands = json.loads((tmp_path / 'compile_commands.json').read_text())
     cpu = 'cortex-m4' if board == 'apollo4l_blue_evb' else 'cortex-m55'
     assert any(f'-mcpu={cpu}' in entry['command'] for entry in commands)
