@@ -123,10 +123,11 @@ def test_timeout_must_be_bounded(timeout):
         wait_for_result(lambda: packet(), IDENTITY, timeout, CASES)
 
 
-def test_device_mismatch_refused_before_transport(tmp_path, monkeypatch):
+@pytest.mark.parametrize('board', ('apollo3p_evb', 'apollo4l_blue_evb', 'apollo510dL_evb'))
+def test_device_mismatch_refused_before_transport(tmp_path, monkeypatch, board):
     from tools.hardware.build import Firmware
     from tools.hardware import runner
-    firmware = Firmware(tmp_path / 'test.elf', 0, IDENTITY, 'apollo3p_evb', 'expected', 4000, CASES)
+    firmware = Firmware(tmp_path / 'test.elf', 0, IDENTITY, board, 'expected', 4000, CASES)
     def forbidden(*args, **kwargs):
         pytest.fail('Touched transport for a mismatched device')
     monkeypatch.setattr(runner, 'run_worker', forbidden)

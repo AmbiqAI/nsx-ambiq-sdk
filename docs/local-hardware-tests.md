@@ -183,7 +183,8 @@ reported as a **skipped execution**, with an evidence path, never a hardware
 pass. Compile errors fail the run. Missing requested tools are errors, not skips.
 
 The initial selectable boards are `apollo3_evb`, `apollo3p_evb`, `apollo4p_evb`,
-`apollo4p_blue_kxr_evb`, `apollo4p_blue_kbr_evb`, `apollo330mP_evb`, `apollo510_evb`, and `apollo510b_evb`. These are
+`apollo4p_blue_kxr_evb`, `apollo4p_blue_kbr_evb`, `apollo330mP_evb`, `apollo510_evb`,
+`apollo510b_evb`, `apollo4l_blue_evb`, and `apollo510dL_evb`. These are
 exact SDK descriptor names, not a claim that all have been physically qualified.
 CMake consumes the existing board/SoC definitions; the test does not duplicate
 pin, clock, memory or compiler-flag tables. Only GCC is implemented initially.
@@ -405,6 +406,21 @@ including cleared result memory and poisoned CRT probes in the startup suite.
 There is no reset loop, power-cycle control, cold-boot claim, or HAL/silicon
 reliability qualification. Profile availability does not imply physical coverage
 of every listed board; record actual builds and executions separately.
+
+The local `apollo4l_blue_evb-gcc-lite-smoke` and
+`apollo510dL_evb-gcc-lite-smoke` profiles require these same three nodes plus
+`tests/hardware/test_runtime.py::test_runtime`. Use that four-node selection
+with the chosen Lite profile, a fresh report path and an approved explicit
+`--jlink-library`. Each profile requires ten cases across four firmware images.
+Build-only and missing/deselected cases remain incomplete. Confirm the fitted
+EVB/part and accepted SEGGER selector before opening a probe; profile availability
+does not establish physical identity or silicon qualification. Current bring-up
+and evidence are tracked in [#227](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/227).
+The farm's `apollo510L_evb` label maps to the SDK's `apollo510dL_evb` only after
+that identity check. These local profiles do not extend the existing five-board
+qualification plan or AP3/AP330/AP510 PR check. For a paired local run with an
+explicit J-Link library, use `ComparisonRequest` with
+`BoardRequest(..., jlink_library=...)`; the comparison CLI has no library option.
 
 ### Standalone UART observation
 

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import json
 from pathlib import Path
 
-from .inventory import BOARDS
+from .inventory import BOARDS, LITE_BOARDS
 from .build import Firmware
 from .protocol import Result, decode
 from .suites import Suite, STARTUP, RUNTIME, TEMPCO, OWNERSHIP, SYSTEM_FULL, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT
@@ -27,6 +27,10 @@ for board in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo330mP_evb',
               'apollo510_evb', 'apollo510b_evb'):
     name = f'{board}-gcc-startup-seam'
     PROFILES[name] = Profile(name, board, 'gcc', (STARTUP, OWNERSHIP, SYSTEM_FULL))
+
+for board in LITE_BOARDS:
+    name = f'{board}-gcc-lite-smoke'
+    PROFILES[name] = Profile(name, board, 'gcc', (STARTUP, RUNTIME, OWNERSHIP, SYSTEM_FULL))
 
 PROFILES['apollo4p_blue_kxr_evb-gcc-tempco-lifecycle'] = Profile(
     'apollo4p_blue_kxr_evb-gcc-tempco-lifecycle', 'apollo4p_blue_kxr_evb', 'gcc', (TEMPCO,))
