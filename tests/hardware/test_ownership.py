@@ -1,13 +1,12 @@
 """One real system startup followed by rejection of repeated startup entry points."""
 import pytest
-from tools.hardware.suites import OWNERSHIP
+from tools.hardware.suites import OWNERSHIP, STARTUP_BOARDS
 
 
 @pytest.fixture
 def suite_spec(request):
-    if request.config.getoption('--board') not in ('apollo3p_evb', 'apollo4p_blue_kxr_evb', 'apollo510_evb',
-                                                         'apollo510b_evb', 'apollo330mP_evb'):
-        pytest.skip('Startup ownership smoke requires a supported AP3/AP4/AP510/AP330 board')
+    if request.config.getoption('--board') not in STARTUP_BOARDS:
+        pytest.skip('Startup ownership smoke requires a supported startup board')
     return OWNERSHIP
 
 
