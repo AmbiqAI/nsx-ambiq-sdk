@@ -60,7 +60,7 @@
 #include "am_util.h"
 #include "nsx_core.h"
 #include "nsx_debug_internal.h"
-#include "nsx_power.h"
+#include "nsx_power_internal.h"
 #include "am_hal_clkmgr.h"
 #include "am_hal_spotmgr.h"
 
@@ -79,12 +79,7 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode) {
 // Internal method for turning off peripherals
 //
 //*****************************************************************************
-static void nsx_power_disable_periph(am_hal_pwrctrl_periph_e peripheral) {
-    (void)am_hal_pwrctrl_periph_disable(peripheral);
-}
-
-void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
-
+static uint32_t nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
     //
     // Switch the RTC off the XTAL to LFRC. Despite the name, this does not
     // power down the XTAL itself (confirmed via disassembly) — only the
@@ -92,7 +87,7 @@ void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
     //
     if (!pCfg->need_xtal) {
         am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
-        am_hal_rtc_osc_disable();
+        NSX_POWER_RETURN_IF_ERROR(am_hal_rtc_osc_disable());
     }
 
     //
@@ -101,85 +96,47 @@ void nsx_power_platform_shutdown_peripherals(const nsx_power_config_t *pCfg) {
     VCOMP->PWDKEY = _VAL2FLD(VCOMP_PWDKEY_PWDKEY, VCOMP_PWDKEY_PWDKEY_Key);
 
     if (!pCfg->need_usb) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USB);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_USBPHY);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_USB));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_USBPHY));
     }
 
     if (!pCfg->need_iom) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM0);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM1);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM2);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM3);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM4);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM5);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM6);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_IOM7);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM0));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM1));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM2));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM3));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM4));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM5));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM6));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM7));
     }
 
     if (!pCfg->need_uart) {
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART0);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART1);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART2);
-        nsx_power_disable_periph(AM_HAL_PWRCTRL_PERIPH_UART3);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_UART0));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_UART1));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_UART2));
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_UART3));
     }
 
     //
     // NOTE: Atomiq110 has no dedicated AUDADC peripheral (only LPADC), so
     // there is nothing to shut down here for pCfg->need_audadc.
     //
-
+    return NSX_STATUS_SUCCESS;
 }
 
-void nsx_power_platform_memory_config(const nsx_power_config_t *pCfg) {
-    // configure SRAM & other memories
-    am_hal_pwrctrl_mcu_memory_config_t McuMemCfg =
-    {
-        .eROMMode       = AM_HAL_PWRCTRL_ROM_AUTO,
-        .eDTCMCfg       = pCfg->small_tcm ? AM_HAL_PWRCTRL_DTCM128K : AM_HAL_PWRCTRL_DTCM512K,
-        .eRetainDTCM    = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
-        .eNVMCfg        = AM_HAL_PWRCTRL_NVM,
-        .bKeepNVMOnInDeepSleep     = false
+static uint32_t configure_memory(am_hal_pwrctrl_dtcm_select_e dtcm, am_hal_pwrctrl_sram_select_e ssram) {
+    am_hal_pwrctrl_mcu_memory_config_t mem = {
+        .eROMMode    = AM_HAL_PWRCTRL_ROM_AUTO,
+        .eDTCMCfg    = dtcm,
+        .eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
+        .eNVMCfg     = AM_HAL_PWRCTRL_NVM,
     };
-
-    am_hal_pwrctrl_mcu_memory_config(&McuMemCfg);
-
-    if (pCfg->need_ssram == false) {
-        am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
-            .eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithMCU  = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithGFX  = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eSRAMRetain     = AM_HAL_PWRCTRL_SRAM_NONE
-        };
-        am_hal_pwrctrl_sram_config(&SRAMMemCfg);
-
-    } else {
-         am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
-            .eSRAMCfg = AM_HAL_PWRCTRL_SRAM_3M,
-            .eActiveWithMCU   = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithGFX   = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eActiveWithDISP  = AM_HAL_PWRCTRL_SRAM_NONE,
-            .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_3M
-        };
-        am_hal_pwrctrl_sram_config(&SRAMMemCfg);
-    };
+    NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_mcu_memory_config(&mem));
+    return am_hal_pwrctrl_sram_config(ssram);
 }
 
-
-int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
-    uint32_t ui32ReturnStatus = AM_HAL_STATUS_SUCCESS;
-
-#ifndef NSX_DISABLE_API_VALIDATION
-    if (pCfg == NULL) {
-        return NSX_STATUS_INVALID_HANDLE;
-    }
-
-    if (nsx_core_check_api(
-            pCfg->api, &nsx_power_oldest_supported_version, &nsx_power_current_version)) {
-        return NSX_STATUS_INVALID_VERSION;
-    }
-#endif
-
+uint32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     am_bsp_low_power_init();
 
     if (pCfg->spotmgr_collapse) {
@@ -197,49 +154,42 @@ int32_t nsx_power_platform_config(const nsx_power_config_t *pCfg) {
     };
 
     // Configure the cache power domain (CPDLP must precede cache enable).
-    am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig));
 
     // Enable the I-Cache and D-Cache.
-    am_hal_cachectrl_icache_enable();
-    am_hal_cachectrl_dcache_enable(true);
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_icache_enable());
+    NSX_POWER_RETURN_IF_ERROR(am_hal_cachectrl_dcache_enable(true));
 
     // NOTE: the RTC-osc/VCOMP shutdown sequence that used to live here is
     // performed by nsx_power_platform_shutdown_peripherals() below (#53).
-    // NOTE: Atomiq110's MCUCTRL has no DBGCTRL register; disabling the
-    // DEBUG power domain below is sufficient here.
     // Powering down various peripheral power domains
     if (!pCfg->need_itm) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG));
     }
     if (!pCfg->need_crypto) {
-        am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO));
+        // The AT110 HAL requires OTP while the crypto domain is powered.
+        NSX_POWER_RETURN_IF_ERROR(am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP));
     }
-    am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
 
-    nsx_power_platform_memory_config(pCfg);
+    NSX_POWER_RETURN_IF_ERROR(configure_memory(AM_HAL_PWRCTRL_DTCM512K, AM_HAL_PWRCTRL_SRAM_3M));
 
     am_hal_sysctrl_fpu_enable();
     am_hal_sysctrl_fpu_stacking_enable(true);
 
-    nsx_power_platform_shutdown_peripherals(pCfg);
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_platform_shutdown_peripherals(pCfg));
 
-    //
-    // TODO(#53): unexplained 10 ms busy-wait inherited from FPGA bring-up,
-    // paid on every boot. Suspected to mask power-domain settling after the
-    // peripheral shutdowns above. Verify on atomiq110 FPGA whether it can be
-    // deleted or replaced with a status poll, then close
-    // https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/53.
-    //
+    // Keep the inherited startup delay pending cold-power qualification (#53).
     nsx_delay_us(10000);
 
     // Configure power mode
-    NSX_TRY(nsx_power_set_performance_mode(pCfg->perf_mode), "Set CPU Perf mode failed.");
+    NSX_POWER_RETURN_IF_ERROR(nsx_power_set_performance_mode(pCfg->perf_mode));
 
     if (pCfg->need_tempco) {
         nsx_printf("WARNING TempCo not supported.\n");
     }
 
-    return ui32ReturnStatus;
+    return NSX_STATUS_SUCCESS;
 }
 
 /**
@@ -274,31 +224,8 @@ uint32_t nsx_power_shutdown_peripherals(void) {
 }
 
 uint32_t nsx_power_minimize_memory(void) {
-    // Smallest DTCM, single NVM bank.
-    am_hal_pwrctrl_mcu_memory_config_t mem = {
-        .eROMMode              = AM_HAL_PWRCTRL_ROM_AUTO,
-        .eDTCMCfg              = AM_HAL_PWRCTRL_DTCM128K,
-        .eRetainDTCM           = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
-        .eNVMCfg               = AM_HAL_PWRCTRL_NVM,
-        .bKeepNVMOnInDeepSleep = false,
-    };
-    am_hal_pwrctrl_mcu_memory_config(&mem);
-
-    // No shared SRAM
-    am_hal_pwrctrl_sram_memcfg_t sram = {
-        .eSRAMCfg        = AM_HAL_PWRCTRL_SRAM_NONE,
-        .eActiveWithMCU  = AM_HAL_PWRCTRL_SRAM_NONE,
-        .eActiveWithGFX  = AM_HAL_PWRCTRL_SRAM_NONE,
-        .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
-        .eSRAMRetain     = AM_HAL_PWRCTRL_SRAM_NONE,
-    };
-    am_hal_pwrctrl_sram_config(&sram);
-
-    // NOTE: Atomiq110 has no MRAMCRYPTOPWRCTRL register, so there is no
-    // MRAM low-power-read-mode / crypto-clock-gate poke to apply here
-    // (unlike the Apollo5 backend).
-
-    return AM_HAL_STATUS_SUCCESS;
+    // The caller supplies a constrained layout for this explicit measurement helper.
+    return configure_memory(AM_HAL_PWRCTRL_DTCM128K, AM_HAL_PWRCTRL_SRAM_NONE);
 }
 
 void nsx_power_disable_nvm(void) {
@@ -323,8 +250,6 @@ void nsx_power_disable_caches(void) {
 
 void nsx_power_disable_debug(void) {
     nsx_debug_disable(NSX_DEBUG_ITM);
-    // NOTE: Atomiq110 has no MCUCTRL DBGCTRL register. Disabling the DEBUG
-    // power domain is the equivalent step on this target.
     am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG);
 }
 

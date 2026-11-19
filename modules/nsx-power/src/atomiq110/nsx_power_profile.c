@@ -24,7 +24,7 @@ static const nsx_power_profile_reg_t s_nsx_power_profile_regs[] = {
     {&PWRCTRL->SYSPWRSTATUS, "PWRCTRL.SYSPWRSTATUS", "System power status."},
     {&PWRCTRL->SSRAMPWREN, "PWRCTRL.SSRAMPWREN", "Shared SRAM power enable."},
     {&PWRCTRL->SSRAMPWRST, "PWRCTRL.SSRAMPWRST", "Shared SRAM power status."},
-    {&PWRCTRL->SSRAMRETCFG, "PWRCTRL.SSRAMRETCFG", "Shared SRAM retention configuration."},
+    {&PWRCTRL->RETSTATUS, "PWRCTRL.RETSTATUS", "Memory retention status."},
     {&PWRCTRL->VRCTRL, "PWRCTRL.VRCTRL", "Voltage regulator control."},
     {&PWRCTRL->VRSTATUS, "PWRCTRL.VRSTATUS", "Voltage regulator status."},
     {&PWRCTRL->SRAMCTRL, "PWRCTRL.SRAMCTRL", "SRAM control."},

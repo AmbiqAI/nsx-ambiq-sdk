@@ -126,7 +126,7 @@ uint32_t nsx_power_configure(const nsx_power_config_t *pCfg) {
     }
 #endif
 
-#if NSX_STARTUP_GUARDED
+#if NSX_STARTUP_GUARDED || defined(PART_atomiq110)
     extern uint32_t nsx_power_platform_validate_config(const nsx_power_config_t *);
     ui32ReturnStatus = nsx_power_platform_validate_config(pCfg);
     if (ui32ReturnStatus != NSX_STATUS_SUCCESS) return ui32ReturnStatus;
