@@ -10,7 +10,10 @@ int main(void) {
 #if !defined(AM_PART_APOLLO330P)
         power_probe = nsx_power_shutdown_peripherals();
         power_probe = nsx_power_minimize_memory();
+#if !defined(PART_atomiq110)
         nsx_power_disable_nvm();
+        NSX_POWER_DRAIN_NVM();
+#endif
         nsx_power_disable_caches();
         nsx_power_disable_debug();
         nsx_power_tristate_gpios(0, 0);

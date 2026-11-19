@@ -44,9 +44,15 @@ def test_power_module_links(repo_root: Path, tmp_path: Path, board: str, family:
         assert symbol in symbols
     if board != 'apollo330mP_evb':
         for symbol in ('nsx_power_shutdown_peripherals', 'nsx_power_minimize_memory',
-                       'nsx_power_disable_nvm', 'nsx_power_disable_caches',
+                       'nsx_power_disable_caches',
                        'nsx_power_disable_debug', 'nsx_power_tristate_gpios'):
             assert symbol in symbols
+        if board == "atomiq110_fpga_turbo":
+            archive = build / "nsx-power/libnsx_power.a"
+            definitions = subprocess.check_output([str(nm), "--defined-only", str(archive)], text=True)
+            assert "nsx_power_disable_nvm" not in definitions
+        else:
+            assert "nsx_power_disable_nvm" in symbols
 
 
 @pytest.mark.parametrize("disable_validation", [False, True])

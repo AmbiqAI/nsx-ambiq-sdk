@@ -205,33 +205,9 @@ void nsx_power_platform_deep_sleep(void) {
  * Power measurement helpers
  * =================================================================== */
 
-uint32_t nsx_power_shutdown_peripherals(void) {
-    uint32_t status = nsx_debug_before_hw_init();
-    if (status != 0) return status;
-    // Disable all device and audio-subsystem power domains
-    am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_DIS_PERIPHS_ALL, 0);
-    am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, 0);
-
-    // Voltage comparator off
-    VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
-
-    // Stop all 16 hardware timers
-    for (uint32_t t = 0; t < 16; t++) {
-        am_hal_timer_stop(t);
-    }
-
-    return AM_HAL_STATUS_SUCCESS;
-}
-
 uint32_t nsx_power_minimize_memory(void) {
     // The caller supplies a constrained layout for this explicit measurement helper.
     return configure_memory(AM_HAL_PWRCTRL_DTCM128K, AM_HAL_PWRCTRL_SRAM_NONE);
-}
-
-void nsx_power_disable_nvm(void) {
-    PWRCTRL->MEMPWREN_b.PWRENNVM = 0;
-    __DSB();
-    __ISB();
 }
 
 void nsx_power_disable_caches(void) {

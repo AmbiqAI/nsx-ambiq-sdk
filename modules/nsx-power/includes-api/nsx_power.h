@@ -252,7 +252,7 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode);
  *   nsx_power_disable_debug()        — disable SWO/ITM + debug domain
  *   nsx_power_disable_caches()       — invalidate + disable I/D cache
  *
- * NVM shutdown (irreversible — power measurement only):
+ * NVM shutdown (unavailable on AT110; irreversible, power measurement only):
  *   nsx_power_disable_nvm()          — request MRAM power-off
  *   NSX_POWER_DRAIN_NVM()            — finalize NVM shutdown
  *
@@ -269,10 +269,13 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode);
 /**
  * @brief Shut down the staged non-core peripheral domains.
  *
- * Disables all device power domains (USB, audio, crypto, IOM, etc.),
- * XTAL oscillator, voltage comparator, and all 16 hardware timers.
+ * Requests shutdown of the device power domains (USB, audio, crypto, IOM,
+ * etc.), allows XTAL power-down in deep sleep, powers down the voltage
+ * comparator and stops timers. AT110 preserves the two HAL-reserved timers.
  * Releases NSX-managed debug output first; a reported release error stops
- * shutdown. The HAL all-peripheral gate also disables trace. Memory config
+ * shutdown. On AT110 the first reported error is returned, later steps are
+ * skipped and earlier hardware changes remain in effect.
+ * The HAL all-peripheral gate also disables trace. Memory config
  * and GPIO are unchanged — use the dedicated helpers for those.
  *
  * Safe to call from any app that no longer needs peripheral I/O.
@@ -301,6 +304,9 @@ uint32_t nsx_power_shutdown_peripherals(void);
  */
 uint32_t nsx_power_minimize_memory(void);
 
+/* Only these targets provide the paired request and drain sequence. */
+#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || defined(AM_PART_APOLLO510L) || \
+    defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B)
 /**
  * @brief Request NVM (MRAM) power-off.
  *
@@ -318,9 +324,6 @@ void nsx_power_disable_nvm(void);
 /**
  * @brief Force one MRAM read to drain the NVM pipeline.
  *
- * The drain address below is outside the AT110 RRAM window. Do not use this
- * measurement sequence on AT110 (#233).
- *
  * After nsx_power_disable_nvm(), the NVM controller waits for
  * outstanding MRAM fetches before powering down.  If the CPU never
  * touches MRAM (e.g. all code inlined into ITCM), NVM stays on.
@@ -333,6 +336,7 @@ void nsx_power_disable_nvm(void);
         volatile uint32_t _nvm_drain = *(volatile uint32_t *)0x00430000; \
         (void)_nvm_drain; \
     } while (0)
+#endif
 
 /**
  * @brief Invalidate and disable I-cache and D-cache.
