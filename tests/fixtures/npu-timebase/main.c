@@ -45,6 +45,9 @@ int main(void)
 #else
     const uint32_t counts[] = {400000, 25000, 6400, 1600, 400, 200, 100, 100};
 #endif
+    assert(nsx_npu_timebase_status() == NSX_NPU_TIMEBASE_NOT_INITIALIZED);
+    assert(nsx_ethos_u_ticks() == 0);
+    assert(nsx_ethos_u_ticks_per_ms() == 0);
     assert(nsx_npu_timebase_init() == NSX_NPU_TIMEBASE_ARMED);
     assert(nsx_ethos_u_ticks_per_ms() == 1000);
     for (unsigned i = 0; i < sizeof(counts) / sizeof(counts[0]); ++i) {
@@ -71,9 +74,29 @@ int main(void)
     raw += counts[0];
     assert(nsx_ethos_u_ticks() - before == 100000);
 
+    // Repeated init must preserve both elapsed time and any ticks since the last read.
+    before = nsx_ethos_u_ticks();
+    raw += counts[0];
+    assert(nsx_npu_timebase_init() == NSX_NPU_TIMEBASE_ARMED);
+    assert(nsx_ethos_u_ticks() == before + 100000);
+
     nsx_npu_timebase_deinit();
+    raw += counts[0];
+    assert(nsx_npu_timebase_status() == NSX_NPU_TIMEBASE_NOT_INITIALIZED);
+    assert(nsx_ethos_u_ticks() == 0);
+    assert(nsx_ethos_u_ticks_per_ms() == 0);
+
     running = false;
     assert(nsx_npu_timebase_init() == NSX_NPU_TIMEBASE_COUNTER_STOPPED);
+    assert(nsx_ethos_u_ticks() == 0);
     assert(nsx_ethos_u_ticks_per_ms() == 0);
+
+    running = true;
+    assert(nsx_npu_timebase_init() == NSX_NPU_TIMEBASE_ARMED);
+    assert(nsx_npu_timebase_status() == NSX_NPU_TIMEBASE_ARMED);
+    assert(nsx_ethos_u_ticks_per_ms() == 1000);
+    before = nsx_ethos_u_ticks();
+    raw += counts[0];
+    assert(nsx_ethos_u_ticks() - before == 100000);
     return 0;
 }
