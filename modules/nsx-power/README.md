@@ -352,6 +352,9 @@ DTCM with shared SRAM off.
 On AT110, the public header omits both the NVM power-off request and the drain
 macro. They are exposed only when a supported Apollo target is selected before
 including `nsx_power.h`. The shutdown sequence has yet to be verified for AT110 RRAM.
-Rebuild any measurement firmware using this header. Peripheral shutdown returns
+Before any AT110 NVM-off hardware experiment, independently verify that the complete
+test image runs from TCM, including vectors, handlers, stack and data, and establish
+how to restore the board and its application. Rebuild measurement firmware using
+this header to remove any previously inlined drain read. Peripheral shutdown returns
 the first error from debug release, the HAL power controls, or stopping an
 application timer. The two HAL-owned timers are left alone.
