@@ -304,7 +304,9 @@ uint32_t nsx_power_shutdown_peripherals(void);
  */
 uint32_t nsx_power_minimize_memory(void);
 
-#if !defined(PART_atomiq110) && !defined(AM_PART_ATOMIQ110) && !defined(AM_PART_ATOMIQ11X_API)
+/* Only these targets provide the paired request and drain sequence. */
+#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO510B) || defined(AM_PART_APOLLO510L) || \
+    defined(AM_PART_APOLLO5A) || defined(AM_PART_APOLLO5B)
 /**
  * @brief Request NVM (MRAM) power-off.
  *
