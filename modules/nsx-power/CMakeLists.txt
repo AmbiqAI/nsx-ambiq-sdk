@@ -23,6 +23,10 @@ set(NSX_POWER_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power_profile.c
 )
 
+if(NSX_POWER_ARCH_DIR STREQUAL "atomiq110")
+    list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/atomiq110/nsx_power_shutdown.c)
+endif()
+
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo5" OR NSX_POWER_ARCH_DIR STREQUAL "apollo330")
     list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c)
 endif()
