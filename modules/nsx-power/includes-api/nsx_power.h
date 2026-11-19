@@ -269,9 +269,9 @@ uint32_t nsx_power_set_performance_mode(nsx_power_perf_mode_t mode);
 /**
  * @brief Shut down the staged non-core peripheral domains.
  *
- * Disables all device power domains (USB, audio, crypto, IOM, etc.),
- * XTAL deep-sleep bias, voltage comparator, and timers. On AT110, timer
- * shutdown covers application timers and preserves the HAL-reserved timers.
+ * Requests shutdown of the device power domains (USB, audio, crypto, IOM,
+ * etc.), allows XTAL power-down in deep sleep, powers down the voltage
+ * comparator and stops timers. AT110 preserves the two HAL-reserved timers.
  * Releases NSX-managed debug output first; a reported release error stops
  * shutdown. On AT110 the first reported error is returned, later steps are
  * skipped and earlier hardware changes remain in effect.
