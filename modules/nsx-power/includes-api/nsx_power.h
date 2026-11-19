@@ -318,6 +318,9 @@ void nsx_power_disable_nvm(void);
 /**
  * @brief Force one MRAM read to drain the NVM pipeline.
  *
+ * The drain address below is outside the AT110 RRAM window. Do not use this
+ * measurement sequence on AT110 (#233).
+ *
  * After nsx_power_disable_nvm(), the NVM controller waits for
  * outstanding MRAM fetches before powering down.  If the CPU never
  * touches MRAM (e.g. all code inlined into ITCM), NVM stays on.

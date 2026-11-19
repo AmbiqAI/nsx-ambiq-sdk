@@ -347,4 +347,5 @@ An incompatible request returns `NSX_STATUS_INVALID_CONFIG` before debug or powe
 AT110 selects the enabled shared SRAM banks through the HAL. Hardware handles
 retention according to the existing memory votes. The separate measurement helper
 `nsx_power_minimize_memory()` requires a caller-provided layout that fits 128 KiB
-DTCM with shared SRAM off.
+DTCM with shared SRAM off. The NVM-off measurement sequence uses an Apollo
+drain address and is unsupported on AT110 ([#233](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/233)).
