@@ -1,0 +1,31 @@
+NSX Ambiq SDK
+Copyright (c) 2026, Ambiq Micro, Inc.
+
+NSX integration
+
+The root AmbiqSuite BSD terms cover Ambiq-authored NSX integration, including
+original build glue, board and SoC descriptors, module adapters, tools,
+documentation, and tests. The source ownership inventory in
+release/source-ownership.yaml describes the integration and import boundary.
+Follow retained file and component notices for material carried from elsewhere.
+The root license uses the AmbiqSuite AM-BSD-EULA.txt template from
+f90640240ffa5d6c8f96042f2c0b7540247daebe, with the copyright year filled in.
+The third-party terms referenced in that template are located in the
+provider's sdk/docs/licenses/ and the component paths in LICENSES/README.md.
+
+AmbiqSuite provider
+
+modules/nsx-ambiqsuite/sdk/ contains the curated AmbiqSuite provider payload,
+including headers, selected source and HAL/BSP archives. Retain and consult
+the AmbiqSuite Software License Agreement in
+modules/nsx-ambiqsuite/sdk/docs/licenses/LICENSE.rtf and the applicable file
+and third-party notices included in that payload. The provider metadata and
+integration wrapper outside sdk/ fall under the NSX integration scope above.
+
+Separately licensed components
+
+See LICENSES/README.md for the component locations and controlling notices.
+In particular, CMSIS-Core, FreeRTOS, TinyUSB, Cordio, micro-ECC and Unity
+carry upstream terms. The AmbiqSuite-derived USB integration and PSRAM device
+sources retain their upstream notices. SDK intake copies, upstream patches and
+any release artifacts retain the terms applicable to their source material.

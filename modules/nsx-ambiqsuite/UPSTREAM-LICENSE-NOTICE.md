@@ -3,9 +3,9 @@
 `nsx-ambiqsuite` contains imported AmbiqSuite SDK content under
 `sdk/`.
 
-This repo does not apply a new NSX-authored root license over the imported SDK
-payload. Licensing for the imported SDK content remains governed by the
-upstream AmbiqSuite files and notices included in the SDK snapshot.
+The repository [NOTICE](../../NOTICE) describes the scope of the
+AmbiqSuite BSD terms used for NSX integration. The imported SDK content remains
+under the upstream AmbiqSuite files and notices included in the SDK snapshot.
 
 Important notes:
 
