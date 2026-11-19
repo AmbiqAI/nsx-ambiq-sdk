@@ -80,3 +80,24 @@ def test_nsx_npu_sources_cross_compile(repo_root: Path, tmp_path: Path) -> None:
         # actually exercised rather than the tool having silently skipped it.
         assert "[real driver headers] skipped" not in result.stdout
         assert "ok   modules/nsx-npu/src/nsx_npu.c" in result.stdout
+
+
+@pytest.mark.parametrize("fpga", [True, False], ids=["fpga", "silicon"])
+def test_timebase_elapsed(repo_root: Path, tmp_path: Path, fpga: bool) -> None:
+    from tools.nsx_npu_compile_check import STUB_HEADER
+
+    module = repo_root / "modules/nsx-npu"
+    fixture = repo_root / "tests/fixtures/npu-timebase"
+    (tmp_path / "nsx_ethos_u.h").write_text(STUB_HEADER)
+    output = tmp_path / "timebase"
+    command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror"]
+    if fpga:
+        command.append("-DATOMIQ11X_FPGA=25")
+    for path in (tmp_path, fixture, module / "includes-api", module / "src"):
+        command += ["-I", str(path)]
+    command += [str(fixture / "main.c"), str(module / "src/atomiq110/nsx_npu_timebase.c"),
+                "-o", str(output)]
+    host_env = os.environ.copy()
+    host_env.pop("GCC_ROOT", None)
+    subprocess.run(command, check=True, env=host_env)
+    subprocess.run([str(output)], check=True, timeout=5)

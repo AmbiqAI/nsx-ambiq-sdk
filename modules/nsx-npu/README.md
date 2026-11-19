@@ -66,15 +66,18 @@ soft-reset) after `NSX_ETHOSU_INFERENCE_TIMEOUT_MS` — seeded to 5000 ms by
 The time source is STIMER. If the application has already started STIMER
 (`am_hal_stimer_config`, or firmware writing `STCFG` directly) its
 configuration is left alone and used as-is; otherwise `nsx-npu` starts it on
-the ~488 kHz HFRC tap and leaves it running after `nsx_npu_deinit`. The hooks
+the HFRC/1024 tap (~48.8 kHz on the FPGA) and leaves it running after
+`nsx_npu_deinit`. The hooks
 publish a fixed 1 µs virtual clock scaled at the tap rate that is live at each
-read, so reconfiguring or clearing STIMER — before, between, or during
-inferences — never rescales an in-flight deadline.
+read. An observed tap change re-anchors the counter. A switch away and back
+entirely between reads cannot be detected.
 
 The current AT110 register map does not define selector 11.
 It is treated as an unknown rate, like the CTIMER-fed taps;
-the default remains selector 2. FPGA rate calibration still requires hardware
-validation and is not established by a successful compile.
+the default remains selector 2. On the AT110 FPGA, the HFRC taps divide a
+50 MHz root and the low-speed taps divide a 40,916 Hz root. These are the
+rates used by the pinned AmbiqSuite AT110 STIMER speed test. Recheck the
+timeout against a host clock when qualifying an FPGA drop with a new clock tree.
 
 Arming is best-effort: `nsx_npu_init` still succeeds if it fails, but then
 every inference wait is unbounded. That is logged (`WARNING nsx-npu: inference
