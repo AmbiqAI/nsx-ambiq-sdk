@@ -20,7 +20,7 @@ uint32_t nsx_power_tempco_disable(void);
 
 /// One row of a platform staged power-profile register table.
 typedef struct {
-    volatile uint32_t *addr;
+    const volatile uint32_t *addr;
     const char *name;
     const char *description;
 } nsx_power_profile_reg_t;

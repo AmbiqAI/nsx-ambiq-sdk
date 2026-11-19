@@ -91,13 +91,13 @@ typedef struct {
     const nsx_core_api_t *api;       ///< API version
     nsx_power_perf_mode_t perf_mode;       ///< CPU clock mode
     bool need_audadc;               ///< Skip optional audio ADC shutdown where supported
-    bool need_ssram;                ///< Shared SRAM requirement; AP4P/L requires true, AP3/3P unmanaged
+    bool need_ssram;                ///< Shared SRAM requirement; AP4P/L and AT110 require true, AP3/3P unmanaged
     bool need_crypto;               ///< Skip optional crypto shutdown
     bool need_ble;                  ///< Skip optional BLE GPIO shutdown; BSP reset still applies
     bool need_usb;                  ///< Skip optional USB/PHY shutdown on AP4P
     bool need_iom;                  ///< Skip optional IOM shutdown
     bool need_uart;                 ///< Skip optional UART0/3 shutdown on AP4
-    bool small_tcm;                 ///< Reduced TCM request; AP4P/L rejects true, AP3/3P unmanaged
+    bool small_tcm;                 ///< Reduced TCM request; AP4P/L and AT110 reject true, AP3/3P unmanaged
     bool need_tempco;               ///< Enable Apollo4 TempCo where supported
     bool need_itm;                  ///< Keep ITM/SWO debug output
     bool need_xtal;                 ///< Skip optional XTAL deep-sleep powerdown policy
@@ -148,7 +148,7 @@ typedef enum {
  * Preflight validation failures do not claim ownership and can be corrected.
  * BSP-internal operations and TempCo resource cleanup are separate concerns.
  *
- * AP4P/L rejects small_tcm=true or need_ssram=false with INVALID_CONFIG before
+ * AP4P/L and AT110 reject small_tcm=true or need_ssram=false with INVALID_CONFIG before
  * startup ownership or hardware effects, even when API validation is disabled.
  * No supported reduced-memory layout/ownership contract exists yet. Copy the
  * minimal/audio preset and set need_ssram=true; keep small_tcm=false. AP3/3P
@@ -289,6 +289,7 @@ uint32_t nsx_power_shutdown_peripherals(void);
  *
  * Sets 32 KB ITCM + 128 KB DTCM (Apollo510L: 128 KB DTCM, no ITCM),
  * single NVM bank, no shared SRAM, and MRAM low-power read mode.
+ * On AT110 this helper selects 128 KiB DTCM and disables shared SRAM.
  * The application must use a layout that fits the retained regions.
  *
  * Any code or data outside these regions will be inaccessible
@@ -316,6 +317,9 @@ void nsx_power_disable_nvm(void);
 
 /**
  * @brief Force one MRAM read to drain the NVM pipeline.
+ *
+ * The drain address below is outside the AT110 RRAM window. Do not use this
+ * measurement sequence on AT110 (#233).
  *
  * After nsx_power_disable_nvm(), the NVM controller waits for
  * outstanding MRAM fetches before powering down.  If the CPU never

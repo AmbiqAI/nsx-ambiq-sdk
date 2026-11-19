@@ -10,7 +10,7 @@ from test_small_m55_memory import compiler_for_test
 from tools.nsx_link_smoke import write_smoke_source
 from tools.nsx_toolchain_file import write_toolchain_file
 
-BOARDS = ('apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb', 'apollo510dL_evb')
+BOARDS = ('apollo510_evb', 'apollo510b_evb', 'apollo330mP_evb', 'apollo510dL_evb', 'atomiq110_fpga_turbo')
 
 
 @pytest.mark.parametrize('board', BOARDS)
@@ -24,7 +24,8 @@ def test_power_module_links(repo_root: Path, tmp_path: Path, board: str, family:
     write_smoke_source(source, repo_root, board, family)
     shutil.copyfile(repo_root / 'tests/fixtures/ap510l-power/link.c', source / 'main.c')
     with (source / 'CMakeLists.txt').open('a') as stream:
-        for module in ('interrupt', 'timer', 'power'):
+        modules = ('power',) if board == 'atomiq110_fpga_turbo' else ('interrupt', 'timer', 'power')
+        for module in modules:
             stream.write(f'add_subdirectory("${{NSX_ROOT}}/modules/nsx-{module}" nsx-{module})\n')
         stream.write('target_link_libraries(smoke PRIVATE nsx::power)\n')
     toolchain = tmp_path / 'toolchain.cmake'
@@ -46,3 +47,22 @@ def test_power_module_links(repo_root: Path, tmp_path: Path, board: str, family:
                        'nsx_power_disable_nvm', 'nsx_power_disable_caches',
                        'nsx_power_disable_debug', 'nsx_power_tristate_gpios'):
             assert symbol in symbols
+
+
+@pytest.mark.parametrize("disable_validation", [False, True])
+def test_at110_memory_preflight(repo_root, tmp_path, disable_validation):
+    power = repo_root / "modules/nsx-power"
+    core = repo_root / "modules/nsx-core"
+    binary = tmp_path / "preflight"
+    command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-DPART_atomiq110"]
+    if disable_validation:
+        command.append("-DNSX_DISABLE_API_VALIDATION")
+    for directory in (repo_root / "tests/fixtures/power-startup", power / "includes-api",
+                      core / "includes-api", core / "includes-internal"):
+        command += ["-I", str(directory)]
+    command += [str(power / "src/nsx_power.c"), str(power / "src/nsx_power_preflight.c"),
+                str(repo_root / "tests/fixtures/power-startup/at110_preflight.c"), "-o", str(binary)]
+    env = os.environ.copy()
+    env.pop("GCC_ROOT", None)
+    subprocess.run(command, check=True, env=env)
+    subprocess.run([str(binary)], check=True)

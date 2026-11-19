@@ -336,3 +336,16 @@ first reported error from its direct status-returning setup calls, without
 entering the NSX fail loop. This does not bound vendor-internal waits or report
 errors hidden by void BSP helpers, undo partial hardware effects, or promise
 peripheral preservation. Reset before another startup attempt.
+
+
+## AT110 FPGA startup
+
+The packaged layouts allow 512 KiB DTCM and 3 MiB shared SRAM.
+For `nsx_power_configure()`, keep `small_tcm=false` and `need_ssram=true`.
+Set `need_ssram=true` on a copy of the minimal or audio preset before calling.
+An incompatible request returns `NSX_STATUS_INVALID_CONFIG` before debug or power changes.
+AT110 selects the enabled shared SRAM banks through the HAL. Hardware handles
+retention according to the existing memory votes. The separate measurement helper
+`nsx_power_minimize_memory()` requires a caller-provided layout that fits 128 KiB
+DTCM with shared SRAM off. The NVM-off measurement sequence uses an Apollo
+drain address and is unsupported on AT110 ([#233](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/233)).

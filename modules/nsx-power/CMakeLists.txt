@@ -24,9 +24,11 @@ set(NSX_POWER_SOURCES
 )
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo5" OR NSX_POWER_ARCH_DIR STREQUAL "apollo330")
-    list(APPEND NSX_POWER_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c
-        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_preflight.c)
+    list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_performance.c)
+endif()
+
+if(NSX_POWER_ARCH_DIR MATCHES "^(apollo5|apollo330|atomiq110)$")
+    list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_preflight.c)
 endif()
 
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo3" OR NSX_POWER_ARCH_DIR STREQUAL "apollo4")
