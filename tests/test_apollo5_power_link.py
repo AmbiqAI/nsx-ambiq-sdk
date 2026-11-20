@@ -40,7 +40,7 @@ def test_power_module_links(repo_root: Path, tmp_path: Path, board: str, family:
                             capture_output=True, text=True, check=True)
     symbols = {line.split()[-1] for line in result.stdout.splitlines() if line.split()}
     for symbol in ('nsx_power_configure', 'nsx_power_platform_config',
-                   'nsx_power_profile_dump', 'nsx_power_set_performance_mode'):
+                   'nsx_power_status_read', 'nsx_power_profile_dump', 'nsx_power_set_performance_mode'):
         assert symbol in symbols
     if board != 'apollo330mP_evb':
         for symbol in ('nsx_power_shutdown_peripherals', 'nsx_power_minimize_memory',

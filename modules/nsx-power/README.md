@@ -359,6 +359,35 @@ this header to remove any previously inlined drain read. Peripheral shutdown ret
 the first error from debug release, the HAL power controls, or stopping an
 application timer. The two HAL-owned timers are left alone.
 
+## Reading live power status
+
+Call `nsx_power_status_read()` from `nsx_power_status.h` to sample the current
+power domains. It requires no initialization. The snapshot reads status words
+sequentially and preserves the application's power configuration. Check the
+result and the field's validity bit before interpreting a zero.
+
+| Targets | Available snapshot fields |
+| --- | --- |
+| Apollo4 Plus/Lite, Apollo510/B/Lite, Apollo330 Plus | Device, MCU memory, shared SRAM, system, audio subsystem and regulator |
+| Apollo3 and Apollo3 Plus | Device, MCU memory and supply (main and BLE buck status) |
+
+Use the selected SoC’s CMSIS masks to decode a field. For example, on Apollo510,
+the following checks whether the power domain serving IOM0 is on:
+
+```c
+nsx_power_status_t state;
+if (nsx_power_status_read(&state) == NSX_POWER_STATUS_OK &&
+    (state.valid & NSX_POWER_STATUS_VALID_DEVICE)) {
+    bool iom0_domain_on = (state.device & PWRCTRL_DEVPWRSTATUS_PWRSTIOM0_Msk) != 0;
+    /* Use iom0_domain_on here. */
+}
+```
+
+Several IOMs can share a powered domain. Apollo3 groups IOM0–2 under
+`PWRCTRL_DEVPWRSTATUS_HCPB_Msk`. A powered domain alone cannot establish
+which peripheral requested power. Apollo330 Plus and Apollo510 Lite support
+this snapshot independently of their buck pulse inputs.
+
 ## Measuring buck pulses
 
 Include `nsx_power_buck.h` and query `nsx_power_buck_rails()` for the rail mask
