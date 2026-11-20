@@ -6,6 +6,7 @@ module:
 licenses:
   .: BSD-3-Clause
   src/apollo2/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo3/armclang/linker_script.sct: LicenseRef-AmbiqSuite-BSD
   src/apollo3/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
   src/apollo3/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
   src/apollo330P/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
