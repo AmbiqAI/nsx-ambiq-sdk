@@ -12,6 +12,54 @@ support:
 
 summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite third_party Cordio stack (ble-host + ble-profiles + WSF) at AmbiqSuite stable-2026.06.18 (caaf5af860) plus NSX edits, and builds it from source for the active SoC's BLE transport. Low-level stack only; the app-facing convenience API lives in nsx-ble.
 
+licenses:
+  sdk/third_party/uecc: BSD-2-Clause
+  # These files refer to a separate agreement whose terms remain unresolved.
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/da14581/hci_vs_da14581.c: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_cmd.c: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core.c: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.c: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.h: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_evt.c: null
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_tr.c: null
+  sdk/third_party/cordio/wsf/include/ll_defs.h: null
+  sdk/third_party/cordio/wsf/include/wsf_buf.h: null
+  sdk/third_party/cordio/wsf/include/wsf_efs.h: null
+  sdk/third_party/cordio/wsf/include/wsf_math.h: null
+  sdk/third_party/cordio/wsf/include/wsf_msg.h: null
+  sdk/third_party/cordio/wsf/include/wsf_os.h: null
+  sdk/third_party/cordio/wsf/include/wsf_queue.h: null
+  sdk/third_party/cordio/wsf/include/wsf_timer.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_buf.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_cs.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_efs.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_intrinsic.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_math.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_msg.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os_int.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_queue.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_timer.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.c: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.h: null
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_types.h: null
+  sdk/third_party/cordio/wsf/sources/util/bda.c: null
+  sdk/third_party/cordio/wsf/sources/util/bda.h: null
+  sdk/third_party/cordio/wsf/sources/util/bstream.c: null
+  sdk/third_party/cordio/wsf/sources/util/bstream.h: null
+  sdk/third_party/cordio/wsf/sources/util/calc128.c: null
+  sdk/third_party/cordio/wsf/sources/util/calc128.h: null
+  sdk/third_party/cordio/wsf/sources/util/crc32.c: null
+  sdk/third_party/cordio/wsf/sources/util/crc32.h: null
+  sdk/third_party/cordio/wsf/sources/util/print.c: null
+  sdk/third_party/cordio/wsf/sources/util/print.h: null
+  sdk/third_party/cordio/wsf/sources/util/terminal.c: null
+  sdk/third_party/cordio/wsf/sources/util/terminal.h: null
+  sdk/third_party/cordio/wsf/sources/util/wstr.c: null
+  sdk/third_party/cordio/wsf/sources/util/wstr.h: null
+
 vendored:
   cordio:
     upstream: AmbiqSuite third_party/cordio
