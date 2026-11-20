@@ -6,6 +6,17 @@ The unified `nsx-ambiq-sdk` package provides the AmbiqSuite platform substrate u
 
 It is not a full AmbiqSuite mirror. Optional middleware and examples such as FreeRTOS, TinyUSB, Cordio, USB stacks, CMSIS-NN, CMSIS-DSP, and AmbiqSuite sample applications belong in separate optional modules or applications.
 
+## Licensing
+
+The [root license](LICENSE) uses AmbiqSuite's BSD terms for Ambiq-authored NSX
+integration. The [repository notice](NOTICE) and [license index](LICENSES/README.md)
+identify the separately licensed components and their terms.
+
+The imported SDK payload is subject to its upstream terms. For redistribution,
+see sections 2.1 and 2.2 of the [AmbiqSuite agreement](modules/nsx-ambiqsuite/sdk/docs/licenses/LICENSE.rtf)
+and the accompanying [Software License Terms](modules/nsx-ambiqsuite/sdk/docs/licenses/Ambiq-Software-License-Terms.pdf).
+Retain the applicable component notices.
+
 ## Current Coverage
 
 The `5.2.30` release candidate contains the `stable-2026.11.05` intake from
@@ -60,19 +71,6 @@ NSX is the recommended application-facing API surface for common tasks. Apps may
 
 The CMake contract is described in [cmake/README.md](cmake/README.md).
 
-## Local Validation
-
-Install test dependencies and run the validation suite:
-
-```sh
-uv sync --group ci
-uv run --group ci pre-commit run --all-files
-uv run --group ci python -m py_compile sdk-intake/build_ambiqsuite.py
-uv run --group ci python -m pytest
-```
-
-CI runs these checks on pull requests and pushes to `main`. Optional [board tests](docs/local-hardware-tests.md) also run locally.
-
 ## Repository Layout
 
 | Path | Purpose |
@@ -87,4 +85,4 @@ CI runs these checks on pull requests and pushes to `main`. Optional [board test
 | `tests/` | Static and CMake contract tests |
 | `docs/` | Maintainer notes for intake, scope, and platform coverage |
 
-For contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For repeated-START sensor reads, see the [I2C API](modules/nsx-i2c/README.md#combined-writeread-with-repeated-start).
+For local validation and contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For repeated-START sensor reads, see the [I2C API](modules/nsx-i2c/README.md#combined-writeread-with-repeated-start).

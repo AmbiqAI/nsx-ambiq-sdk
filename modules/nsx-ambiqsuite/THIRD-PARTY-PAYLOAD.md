@@ -9,6 +9,7 @@ upstream license bundle is preserved under `sdk/docs/licenses/`.
 The payload carries the upstream AmbiqSuite license directory, including:
 
 - AmbiqSuite software agreement: `sdk/docs/licenses/LICENSE.rtf`
+- Ambiq Software License Terms: `sdk/docs/licenses/Ambiq-Software-License-Terms.pdf`
 - SEGGER RTT notice: `sdk/docs/licenses/SEGGER-RTT-license.txt`
 - Think Silicon/Nema notice: `sdk/docs/licenses/ThinkSi-license.txt`
 - R5-era third-party notices such as MBED TLS, OpenAMP, LibMetal, zlib, jQuery,
