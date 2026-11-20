@@ -19,21 +19,15 @@ Retain the applicable component notices.
 
 ## Current Coverage
 
-The `5.2.30` release candidate contains the `stable-2026.11.05` intake from
-upstream commit `3cfb7d50718e6fb016f1a0128121cb40598109d5`.
+SDK 5.2.31 ships the same AmbiqSuite provider as 5.2.30. Its 73 HAL/BSP archives
+come from prepared source `83bd69c37edf8d94cf77021140d707c3fe886242`, based on
+`stable-2026.11.05` at `3cfb7d50718e6fb016f1a0128121cb40598109d5`. It retains
+the AT110 XSPI fixes, bounded heap integration and four staged payload patches.
+Cordio has its own recorded source revision.
 
-All 73 HAL/BSP archives were rebuilt from prepared source commit
-`83bd69c37edf8d94cf77021140d707c3fe886242`, which adds the reviewed AT110 XSPI
-capacity/alignment patches and removes the invalid vendor heap stub.
-Provider sources retain 5.2.29 bytes; NSX retains bounded allocation and force-link
-protection. The manifest records the archive source and retained source identities.
-Four payload patches preserve C++ compatibility and EM9305 receive scratch capacity.
-Cordio retains its separately recorded base snapshot and selected NSX changes.
-This is not an official numbered AmbiqSuite release.
-
-GCC startup/runtime checks passed on AP330, AP510B and AP4 KXR (21 cases).
-This release does not claim new USB/BLE traffic or cold-boot qualification.
-See the qualification report for exact tested revisions and coverage limits.
+GCC startup and runtime checks passed on AP3 Blue Plus, AP4 Blue Plus KXR,
+AP330 Plus, AP510 and AP510B. AP510 also passed 48 PSRAM cases covering
+blocking and asynchronous reads.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
 Apollo2, Apollo3, Apollo4, Apollo330, and Apollo510 platforms. ACfE artifacts
@@ -45,13 +39,20 @@ are selected by the public `armclang` toolchain family.
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 Release-candidate provenance and qualification are recorded in
-[`release/nsx-ambiq-sdk-5.2.30.yaml`](release/nsx-ambiq-sdk-5.2.30.yaml) and
-[`release/qualification-5.2.30.md`](release/qualification-5.2.30.md).
+[`release/nsx-ambiq-sdk-5.2.31.yaml`](release/nsx-ambiq-sdk-5.2.31.yaml) and
+[`release/qualification-5.2.31.md`](release/qualification-5.2.31.md).
 The records of earlier versions are kept alongside them.
 
 ## Using The Modules
 
-The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports) supports optional UART/SWO on Apollo330P/Apollo510; existing EVBs default to v1 and NSX custom-provider resolution follows separately. Select a board descriptor, add the staged modules your app needs, and consume the stable CMake targets. The board descriptor defines `nsx::board` and `nsx::board_flags`; the platform modules provide targets such as:
+For registry-managed apps, use neuralspotx 0.9.6 or newer before selecting SDK
+5.2.31. Its resolver understands BSP provider roles, including for built-in EVBs.
+Direct CMake users can continue to select their board and staged modules.
+
+The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports)
+supports optional UART/SWO on Apollo330P and Apollo510. Existing EVBs default
+to v1. The board descriptor defines `nsx::board` and `nsx::board_flags`. The
+platform modules provide these CMake targets:
 
 | Target | Purpose |
 | --- | --- |
