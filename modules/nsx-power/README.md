@@ -378,6 +378,12 @@ and board users. TIMER0–4 are reserved for NSX.
 A stopped timer can still belong to another driver. NSX can reject known
 reserved numbers and active hardware, but cannot discover private allocations.
 
+On Apollo3 and Apollo3 Plus the available rails are CPU, memory and BLE.
+Each needs a whole dedicated CTIMER pair. The backend links the A/B halves
+for 32-bit counting and reserves the HAL entropy pair. The BLE supply has a
+separate on/off indication. Use STIMER from HFRC/16, HFRC/256, or XTAL/1,
+/2 or /32. LFRC and timer-derived STIMER clocks are unsupported.
+
 For example, an Apollo510 application that has dedicated TIMER7 and TIMER8
 can declare the following session before the workload:
 

@@ -187,17 +187,22 @@ PERFORMANCE = Suite('performance', 'tests/hardware/test_performance.py::test_per
                     'tests/hardware/performance', 'performance_contract.elf', configure=timer_options)
 
 
-def ap3_performance_options(repo: Path, output: Path, board: str, fault: str,
+def ap3_options(repo: Path, output: Path, board: str, fault: str,
                             sdk_root: Path | None = None) -> list[str]:
     if board not in ('apollo3_evb', 'apollo3p_evb') or fault != 'none':
-        raise ValueError('AP3 performance smoke requires AP3/AP3P without faults')
+        raise ValueError('This suite requires AP3/AP3P without faults')
     return []
+
+
+BUCK_CTIMER = Suite('buck-ctimer', 'tests/hardware/test_buck.py::test_ctimer',
+                    ('initial_supplies', 'ble_powered'), BUCK.source_dir, BUCK.elf_name,
+                    configure=ap3_options)
 
 
 AP3_PERFORMANCE = Suite('ap3-performance', 'tests/hardware/test_ap3_performance.py::test_ap3_performance',
                         ('prepare', 'mixed_transitions', 'divided_normal', 'restore_normal'),
                         'tests/hardware/ap3-performance', 'ap3_performance_contract.elf',
-                        configure=ap3_performance_options)
+                        configure=ap3_options)
 
 
 POWER_STARTUP = Suite('power-startup', 'tests/hardware/test_power_startup_smoke.py::test_power_startup',
@@ -270,4 +275,4 @@ PSRAM_ASYNC_MATRIX = (PSRAM_ASYNC,) + tuple(
     if high or clock_hz != 48000000)
 
 
-SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, BUCK, BUCK_UNSUPPORTED, PERFORMANCE, AP3_PERFORMANCE)
+SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, BUCK, BUCK_UNSUPPORTED, BUCK_CTIMER, PERFORMANCE, AP3_PERFORMANCE)

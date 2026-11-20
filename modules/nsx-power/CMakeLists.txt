@@ -27,6 +27,8 @@ set(NSX_POWER_SOURCES
 # with SIMO active. See #231 for the EVB results.
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo4" OR NSX_SOC_FAMILY MATCHES "^(apollo510|apollo510b)$")
     list(APPEND NSX_POWER_SOURCES src/nsx_power_buck.c src/nsx_power_buck_timer.c)
+elseif(NSX_POWER_ARCH_DIR STREQUAL "apollo3")
+    list(APPEND NSX_POWER_SOURCES src/nsx_power_buck.c src/apollo3/nsx_power_buck_ctimer.c)
 else()
     list(APPEND NSX_POWER_SOURCES src/nsx_power_buck_unsupported.c)
 endif()
