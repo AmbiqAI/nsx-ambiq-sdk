@@ -23,8 +23,8 @@ set(NSX_POWER_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power_profile.c
 )
 
-# AP330 Plus returned zero on all four inputs with SIMO active. Its shared
-# Apollo510 Lite HAL exposes the same selectors; qualification is tracked in #231.
+# Apollo330 Plus and Apollo510 Lite returned zero on all four buck inputs
+# with SIMO active. See #231 for the EVB results.
 if(NSX_POWER_ARCH_DIR STREQUAL "apollo4" OR NSX_SOC_FAMILY MATCHES "^(apollo510|apollo510b)$")
     list(APPEND NSX_POWER_SOURCES src/nsx_power_buck.c src/nsx_power_buck_timer.c)
 else()

@@ -363,11 +363,10 @@ application timer. The two HAL-owned timers are left alone.
 
 Include `nsx_power_buck.h` and query `nsx_power_buck_rails()` for the rail mask
 supported by the build. On Apollo4 Plus/Lite and Apollo510/B, each selected rail
-uses one TIMER in up-count mode. Apollo510/B and Apollo4 Plus KXR have
-passed an EVB smoke test. Apollo4 Lite has build coverage. Apollo330 Plus
-and Apollo510 Lite report zero capabilities pending qualification. On the
-Apollo330 Plus EVB a conventional timer clock counted correctly, but all four
-buck inputs returned zero with SIMO active in LP and HP2. See [SDK #231](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/231).
+uses one TIMER in up-count mode. Apollo330 Plus and Apollo510 Lite report
+zero capabilities. On both EVBs a conventional clock advanced the timer
+while all four buck inputs stayed at zero with SIMO active. Board measurements
+and the outstanding routing question are recorded in [SDK #231](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/231).
 
 Dedicate each timer in the application, including coordination with RTOS, BLE
 and board users. TIMER0–4 are reserved for NSX.
