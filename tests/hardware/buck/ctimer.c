@@ -44,15 +44,19 @@ static void read_bracketed(observed_sample_t *result) {
     read_ctimers(result->after);
 }
 
+static void start_session(void) {
+    nsx_buck_status_t status = nsx_power_buck_start(&session);
+    owns_session = (status == NSX_BUCK_OK || status == NSX_BUCK_CLEANUP_REQUIRED);
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, status);
+}
+
 static void measure(uint32_t window) {
     observed_sample_t first, last;
     nsx_buck_supply_t main_supply = am_hal_pwrctrl_simobuck_enabled_check() ? NSX_BUCK_SUPPLY_ON : NSX_BUCK_SUPPLY_OFF;
     nsx_buck_supply_t ble_supply = am_hal_pwrctrl_blebuck_enabled_check() ? NSX_BUCK_SUPPLY_ON : NSX_BUCK_SUPPLY_OFF;
     nsx_buck_cpu_t cpu = am_hal_burst_mode_status() == AM_HAL_BURST_MODE ? NSX_BUCK_CPU_BURST : NSX_BUCK_CPU_NORMAL;
     TEST_ASSERT_EQUAL_UINT32(session.rails, nsx_power_buck_rails());
-    nsx_buck_status_t status = nsx_power_buck_start(&session);
-    owns_session = (status == NSX_BUCK_OK || status == NSX_BUCK_CLEANUP_REQUIRED);
-    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, status);
+    start_session();
     read_bracketed(&first);
     uint32_t start = am_hal_stimer_counter_get();
     unsigned poll;
@@ -110,9 +114,33 @@ static void ble_powered(void) {
     measure(3 * 32768);
 }
 
+/* Qualify the linked CPU counter with an awake SRAM workload on the EVB. */
+static void loaded_cpu_high_half(void) {
+    static volatile uint32_t work[64];
+    TEST_ASSERT_TRUE_MESSAGE(am_hal_pwrctrl_simobuck_enabled_check(), "Workload requires active SIMO");
+    start_session();
+    observed_sample_t first, last;
+    read_bracketed(&first);
+    uint32_t start = am_hal_stimer_counter_get();
+    for (unsigned batch = 0; batch < 4000000u; ++batch) {
+        for (unsigned i = 0; i < 64; ++i) work[i] += i + batch;
+        uint32_t count = am_hal_ctimer_read(session.timer[NSX_BUCK_CPU], AM_HAL_CTIMER_BOTH);
+        if (count - first.after[0] > UINT16_MAX) break;
+        TEST_ASSERT_TRUE_MESSAGE(am_hal_stimer_counter_get() - start < 8u * 32768u,
+                                 "Workload did not exercise the CPU counter high half");
+    }
+    read_bracketed(&last);
+    uint32_t lower = last.before[0] - first.after[0];
+    uint32_t upper = last.after[0] - first.before[0];
+    uint32_t pulses = last.sample.pulses[NSX_BUCK_CPU] - first.sample.pulses[NSX_BUCK_CPU];
+    TEST_ASSERT_TRUE_MESSAGE(lower > UINT16_MAX, "CPU reference did not cross 16 bits");
+    TEST_ASSERT_TRUE(pulses >= lower && pulses <= upper);
+}
+
 int main(void) {
     nsx_test_begin(__FILE__);
     RUN_TEST(initial_supplies);
     RUN_TEST(ble_powered);
+    RUN_TEST(loaded_cpu_high_half);
     nsx_test_finish();
 }

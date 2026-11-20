@@ -195,7 +195,7 @@ def ap3_options(repo: Path, output: Path, board: str, fault: str,
 
 
 BUCK_CTIMER = Suite('buck-ctimer', 'tests/hardware/test_buck.py::test_ctimer',
-                    ('initial_supplies', 'ble_powered'), BUCK.source_dir, BUCK.elf_name,
+                    ('initial_supplies', 'ble_powered', 'loaded_cpu_high_half'), BUCK.source_dir, BUCK.elf_name,
                     configure=ap3_options)
 
 
