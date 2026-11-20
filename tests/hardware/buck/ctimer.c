@@ -121,19 +121,23 @@ static void loaded_cpu_high_half(void) {
     start_session();
     observed_sample_t first, last;
     read_bracketed(&first);
+    /* The new counter starts at zero and cannot wrap in this short test. */
+    TEST_ASSERT_TRUE(first.after[0] <= UINT16_MAX);
+    uint32_t target = first.after[0] + UINT32_C(65536);
     uint32_t start = am_hal_stimer_counter_get();
     for (unsigned batch = 0; batch < 4000000u; ++batch) {
         for (unsigned i = 0; i < 64; ++i) work[i] += i + batch;
         uint32_t count = am_hal_ctimer_read(session.timer[NSX_BUCK_CPU], AM_HAL_CTIMER_BOTH);
-        if (count - first.after[0] > UINT16_MAX) break;
+        if (count >= target) break;
         TEST_ASSERT_TRUE_MESSAGE(am_hal_stimer_counter_get() - start < 8u * 32768u,
                                  "Workload did not exercise the CPU counter high half");
     }
     read_bracketed(&last);
+    TEST_ASSERT_TRUE_MESSAGE(last.before[0] >= target, "CPU reference did not cross 16 bits");
+    TEST_ASSERT_TRUE_MESSAGE(last.sample.pulses[NSX_BUCK_CPU] > UINT16_MAX, "NSX high half was zero");
     uint32_t lower = last.before[0] - first.after[0];
     uint32_t upper = last.after[0] - first.before[0];
     uint32_t pulses = last.sample.pulses[NSX_BUCK_CPU] - first.sample.pulses[NSX_BUCK_CPU];
-    TEST_ASSERT_TRUE_MESSAGE(lower > UINT16_MAX, "CPU reference did not cross 16 bits");
     TEST_ASSERT_TRUE(pulses >= lower && pulses <= upper);
 }
 
