@@ -10,7 +10,8 @@ under the upstream AmbiqSuite files and notices included in the SDK snapshot.
 Important notes:
 
 - many imported AmbiqSuite source files include Ambiq BSD-style license headers
-- the upstream AmbiqSuite software agreement is carried under `sdk/docs/licenses/`
+- the upstream AmbiqSuite agreement and Software License Terms PDF are carried
+  under `sdk/docs/licenses/`
 - third-party software bundled in the SDK remains subject to its own license
   terms, also carried under `sdk/docs/licenses/`
 - prebuilt binary archives in `sdk/lib/` are imported or generated from the
