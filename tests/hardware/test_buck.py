@@ -1,12 +1,16 @@
 """Raw buck counter measurements with the fixture controlling regulator policy."""
 import pytest
 
-from tools.hardware.suites import BUCK, BUCK_BOARDS, BUCK_UNSUPPORTED, BUCK_UNSUPPORTED_BOARDS
+from tools.hardware.suites import BUCK, BUCK_BOARDS, BUCK_CTIMER, BUCK_UNSUPPORTED, BUCK_UNSUPPORTED_BOARDS
 
 
 @pytest.fixture
 def suite_spec(request):
     board = request.config.getoption('--board')
+    if request.node.originalname == 'test_ctimer':
+        if board not in ('apollo3_evb', 'apollo3p_evb'):
+            pytest.skip('CTIMER fixture requires Apollo3/3 Plus')
+        return BUCK_CTIMER
     if request.node.originalname == 'test_unsupported':
         if board not in BUCK_UNSUPPORTED_BOARDS:
             pytest.skip('Buck pulse unsupported-target fixture requires a gated target')
@@ -25,4 +29,10 @@ def test_buck(suite_result, suite_spec):
 @pytest.mark.hardware
 @pytest.mark.smoke
 def test_unsupported(suite_result, suite_spec):
+    assert suite_result.total == len(suite_spec.cases)
+
+
+@pytest.mark.hardware
+@pytest.mark.smoke
+def test_ctimer(suite_result, suite_spec):
     assert suite_result.total == len(suite_spec.cases)
