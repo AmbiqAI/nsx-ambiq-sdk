@@ -16,8 +16,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.30.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.29.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.31.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.30.yaml")
 MIXED_SNAPSHOT_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
@@ -96,7 +96,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.30"
+    assert root_version == "5.2.31"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -160,7 +160,12 @@ def test_qualified_descriptors_exist_and_match_provider_scope(repo_root: Path) -
     experimental_boards = set(exclusions["experimental"]["boards"])
 
     assert qualified_socs == set(provider["compatibility"]["socs"]) - experimental_socs
-    assert qualified_boards == set(provider["compatibility"]["boards"]) - experimental_boards
+    # The provider also accepts custom boards. The artifact manifest identifies
+    # the bundled BSPs for which this distribution actually supplies archives.
+    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    bundled = {board["nsx_board"] for board in artifact["boards"] if board["bsp_artifacts"]}
+    assert provider["compatibility"]["boards"] == ["*"]
+    assert qualified_boards == bundled - experimental_boards
 
     for soc in qualified_socs:
         assert (repo_root / "cmake" / "socs" / f"{soc}.cmake").is_file()
@@ -191,6 +196,38 @@ def test_release_evidence_exists(repo_root: Path) -> None:
     assert missing == []
 
 
+def test_release_evidence_checksums_cover_qualification_records(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    evidence = release["external_evidence"]
+    checksum_file = evidence["checksums"]
+    assert checksum_file in release["release_evidence"]
+    contents = release_bytes(repo_root, release, repo_root / checksum_file).decode("utf-8")
+    records = set()
+    for line in contents.splitlines():
+        digest, filename = line.split("  ", 1)
+        assert re.fullmatch(r"[0-9a-f]{64}", digest)
+        path = Path(filename)
+        assert not path.is_absolute() and ".." not in path.parts and path not in records
+        records.add(path)
+
+    root = Path(evidence["root"])
+    core = {Path(evidence[key]).relative_to(root) for key in ("assessment", "psram")}
+    core.update(Path(name) / "record.json" for name in (
+        "host-8b505aa", "hardware-ap3", "hardware-ap4", "hardware-ap330", "hardware-ap510",
+        "hardware-ap510b", "hardware-ap510b-retry1", "hardware-ap510b-retry2",
+    ))
+    core.add(Path("snapshot2.log"))
+    assert core <= records
+    psram = records - core
+    supplement = release["qualification"]["psram_supplement"]
+    runs = {path.parent for path in psram}
+    assert len(runs) == supplement["firmware_runs"]
+    for run in runs:
+        assert run.parent == Path("psram-ap510") / supplement["board"]
+        assert re.fullmatch(r"[0-9a-f]{32}", run.name)
+    assert psram == {run / filename for run in runs for filename in ("manifest.json", "result.json")}
+
+
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """A corrected release must never erase the record it corrects.
 
@@ -201,14 +238,14 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.29"
+    assert superseded["distribution"]["version"] == "5.2.30"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "5585350def5fdced39d42bba150042f92f23cf18"
+    assert supersedes["commit"] == "acc97030b7158f81dc11f8df68fc43b8346f6dfe"
     assert supersedes["reason"].strip()
 
 
@@ -387,9 +424,15 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
             history_unavailable(f"{entry['from_commit']} is not in this checkout")
         base = archive_blobs(entry["from_commit"])
         assert set(base) == set(head), entry["from_version"]
+        provider = "modules/nsx-ambiqsuite/sdk"
+        before = git(repo_root, "rev-parse", f"{entry['from_commit']}:{provider}")
+        after = git(repo_root, "rev-parse", f"{release_content_revision(repo_root, release)}:{provider}")
+        assert before.returncode == after.returncode == 0
+        assert entry["provider_content_unchanged"] == (before.stdout == after.stdout)
         changed = {path for path in head if base[path] != head[path]}
         changed_parts = {Path(path).relative_to(lib_rel).parts[1] for path in changed}
         assert changed_parts == set(entry["changed_archive_parts"]), entry["from_version"]
+        assert len(changed) == entry["changed_archive_count"]
         assert len(head) - len(changed) == entry["unchanged_archive_count"], entry["from_version"]
 
 
@@ -636,7 +679,8 @@ def test_current_single_source_provenance_and_archive_hashes(repo_root: Path) ->
         assert train["built_from_source_commit"] == source
         assert train.get("abi_cflags") == artifact["build"]["toolchains"][key].get("abi_cflags")
     for upgrade in release["consumer_upgrade"]:
-        assert upgrade["rebuilt_archive_count"] == sum(counts.values())
+        expected_rebuilds = 0 if upgrade["provider_content_unchanged"] else sum(counts.values())
+        assert upgrade["rebuilt_archive_count"] == expected_rebuilds
         assert upgrade["changed_archive_count"] + upgrade["unchanged_archive_count"] == sum(counts.values())
 
 
@@ -688,7 +732,7 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     assert "inherits_from" not in qualification
     assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
     assert set(qualification["hardware_boards"]) <= set(qualification["scope"]["boards"])
-    assert qualification["evidence_candidate"] == "fa61571630bb0c7ebebb703fbca67b86334b5386"
+    assert qualification["evidence_candidate"] == "8b505aa2a6c6905235065fe7abfbd8337219acc2"
     require_full_history(repo_root)
     provider_path = "modules/nsx-ambiqsuite/sdk"
     tested = git(repo_root, "rev-parse", f"{qualification['evidence_candidate']}:{provider_path}")

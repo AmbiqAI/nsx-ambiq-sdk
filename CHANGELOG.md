@@ -1,5 +1,17 @@
 # Changelog
 
+## 5.2.31 - Unreleased
+
+- Add asynchronous PSRAM reads into DTCM with per-client completion on AP510
+  and AP510B. Preserve blocking DMA buffer ownership after timeouts and improve
+  burst sizing on AP510 (#207, #209, #211, #215).
+- Add an opt-in BSP v2 contract and board-neutral provider dependencies.
+  Registry-managed apps require neuralspotx 0.9.6 or newer, including on built-in EVBs.
+- Correct experimental AT110 startup, shutdown reporting and NPU timer handling.
+- Validate staged SDK snapshots and add revision-bound local and farm checks.
+- Retain the 5.2.30 AmbiqSuite payload and all 73 archives. Update the BLE Device
+  Information firmware revision to 5.2.31.
+
 ## 5.2.30
 
 - Remove the invalid weak vendor `_sbrk` stub from the rebuilt HAL archives;

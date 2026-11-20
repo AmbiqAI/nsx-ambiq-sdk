@@ -2,7 +2,7 @@
 
 ## Distribution Version
 
-`5.2.30` is the proposed `nsx-ambiq-sdk` distribution release version. The
+`5.2.31` is the proposed `nsx-ambiq-sdk` distribution release version. The
 root package and every manifest under `modules/` use this version because the
 repository is released as one coordinated distribution.
 
@@ -26,9 +26,12 @@ NSX edits; the new provider identity does not imply a full Cordio refresh.
 `5.2.30` replaces the 73 archives with a cumulative build that also removes
 the invalid vendor `_sbrk` stub. The reviewed nonarchive provider payload
 remains byte-identical to 5.2.29 except for the artifact manifest, which records
-the new archive provenance. Full re-staging cleanup is tracked in #200.
+the new archive provenance. Subsequent intake tooling records and replays the reviewed sanitation steps.
 The manifest distinguishes the new prepared archive source from retained
 source/header provenance.
+
+`5.2.31` carries the complete 5.2.30 provider payload forward. It introduces
+PSRAM API 1.1 and the opt-in BSP v2 contract at the NSX integration layer.
 
 The distribution version does not assert an official numbered AmbiqSuite
 release. The source identity in the release manifest and promoted artifact

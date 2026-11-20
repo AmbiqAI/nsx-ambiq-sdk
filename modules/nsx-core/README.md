@@ -65,10 +65,9 @@ Legacy void convenience APIs preserve their signatures and cannot report rejecti
 use `nsx_debug_init()` when the caller needs a status. Hardware-error handling and
 single-attempt startup coordination otherwise retain their existing behavior.
 
-This is the SDK CMake/runtime seam. NSX board-provider metadata, resolver/vendoring
-and lock integration are a separate coordinated change; this helper alone does not
-make a custom board selectable in released NSX. Provider provenance is checked by
-that integration, not established by a CMake target name. Sensor/peripheral drivers
+The SDK provides this CMake/runtime contract. For registry-managed apps,
+neuralspotx 0.9.6 and newer resolve, vendor and lock the selected BSP provider
+and check its provenance. Sensor/peripheral drivers
 and actual board initialization remain outside this core contract.
 
 ## nsx_system Quick Start
