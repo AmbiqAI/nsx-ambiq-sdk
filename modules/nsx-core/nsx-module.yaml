@@ -3,6 +3,31 @@ module:
   name: nsx-core
   type: runtime
   version: "5.2.31"
+licenses:
+  .: BSD-3-Clause
+  src/apollo2/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo3/armclang/linker_script.sct: LicenseRef-AmbiqSuite-BSD
+  src/apollo3/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo3/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo330P/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo330P/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo3p/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo3p/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo4l/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo4l/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo4p/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo4p/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510L/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510L/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510b/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo510b/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo5b/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo5b/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+  src/atomiq110/armclang/startup_keil6.c: LicenseRef-AmbiqSuite-BSD
+  src/atomiq110/gcc/startup_gcc.c: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

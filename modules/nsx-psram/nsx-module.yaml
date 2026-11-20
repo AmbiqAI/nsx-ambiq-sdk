@@ -5,6 +5,10 @@ module:
   type: runtime
   version: "5.2.31"
 
+licenses:
+  .: LicenseRef-AmbiqSuite-BSD
+  src/apollo5/devices/am_devices_mspi_psram_aps25616n.c: null
+
 support:
   ambiqsuite: true
   zephyr: false

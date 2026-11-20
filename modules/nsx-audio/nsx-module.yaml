@@ -3,6 +3,9 @@ module:
   name: nsx-audio
   type: backend_specific
   version: "5.2.31"
+licenses:
+  .: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

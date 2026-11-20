@@ -17,3 +17,18 @@ component notices when distributing those components.
 | micro-ECC | [Upstream BSD-2-Clause license](../modules/nsx-cordio/sdk/third_party/uecc/license.txt). |
 | AmbiqSuite-derived PSRAM device drivers | In-file notices under `modules/nsx-psram/src/<family>/devices/`. |
 | Unity hardware tests | [Upstream MIT license](../tests/hardware/vendor/unity/LICENSE.txt). |
+
+## Reading the module declarations
+
+In `nsx-module.yaml`, `LicenseRef-AmbiqSuite-BSD` refers to the AmbiqSuite
+BSD text in the [root license](../LICENSE), including its third-party notice
+clause. A module with a retained BSD-3-Clause or Apache-2.0 license uses
+that identifier directly. A narrower path takes precedence over its parent.
+
+The AmbiqSuite provider declares its wrapper separately from the mixed
+`sdk/` payload. Its `null` entry directs readers to the two retained terms
+documents and component notices listed above. The Apollo4 USB DCD header
+and Apollo5 APS25616N PSRAM driver contain unexpanded upstream copyright
+placeholders. The USB buffer-hook header carries no license notice within
+the imported USB subtree. These files and the separately tracked Cordio
+agreement references retain explicit `null` entries.

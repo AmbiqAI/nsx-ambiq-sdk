@@ -6,6 +6,13 @@ module:
   category: sdk_component
   version: "5.2.31"
 
+licenses:
+  .: BSD-3-Clause
+  sdk/third_party/tinyusb/source: MIT
+  sdk/src: MIT
+  sdk/src/usb/dcd_apollo4.h: null
+  sdk/src/usb/nsx_usb_hooks.h: null
+
 support:
   ambiqsuite: true
   zephyr: false
