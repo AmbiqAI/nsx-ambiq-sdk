@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(nsx_power_buck C CXX ASM)
+include("${NSX_TEST_HARNESS_ROOT}/tests/hardware/common/firmware.cmake")
+if(NSX_TEST_BUCK_UNSUPPORTED)
+    nsx_add_test_firmware(buck_test unsupported.c MODULES interrupt timer power)
+else()
+    nsx_add_test_firmware(buck_test main.c MODULES interrupt timer power)
+endif()

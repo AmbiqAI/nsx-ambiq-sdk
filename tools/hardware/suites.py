@@ -162,6 +162,26 @@ TIMER_PERIOD = Suite('timer-period', 'tests/hardware/test_timer.py::test_timer_p
                      'tests/hardware/timer', 'timer_period.elf', configure=timer_options)
 
 
+BUCK_BOARDS = ('apollo510_evb', 'apollo510b_evb', 'apollo4p_blue_kxr_evb',
+               'apollo4p_blue_kbr_evb', 'apollo4p_evb', 'apollo4l_blue_evb')
+BUCK_UNSUPPORTED_BOARDS = ('apollo330mP_evb', 'apollo510dL_evb')
+
+
+def buck_options(repo: Path, output: Path, board: str, fault: str,
+                 sdk_root: Path | None = None, *, unsupported: bool = False) -> list[str]:
+    if board not in (BUCK_UNSUPPORTED_BOARDS if unsupported else BUCK_BOARDS) or fault != 'none':
+        raise ValueError('Board or fault is incompatible with this buck pulse fixture')
+    return [f'-DNSX_TEST_BUCK_UNSUPPORTED={"ON" if unsupported else "OFF"}']
+
+
+BUCK = Suite('buck', 'tests/hardware/test_buck.py::test_buck',
+             ('initial_supply_window', 'enabled_supply_window'),
+             'tests/hardware/buck', 'buck_test.elf', configure=buck_options)
+BUCK_UNSUPPORTED = Suite('buck-unsupported', 'tests/hardware/test_buck.py::test_unsupported',
+                         ('unsupported_target',), BUCK.source_dir, BUCK.elf_name,
+                         configure=partial(buck_options, unsupported=True))
+
+
 PERFORMANCE = Suite('performance', 'tests/hardware/test_performance.py::test_performance',
                     ('prepare_performance', 'mixed_public_transitions', 'invalid_requests', 'restore_low'),
                     'tests/hardware/performance', 'performance_contract.elf', configure=timer_options)
@@ -250,4 +270,4 @@ PSRAM_ASYNC_MATRIX = (PSRAM_ASYNC,) + tuple(
     if high or clock_hz != 48000000)
 
 
-SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, PERFORMANCE, AP3_PERFORMANCE)
+SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, BUCK, BUCK_UNSUPPORTED, PERFORMANCE, AP3_PERFORMANCE)

@@ -23,6 +23,14 @@ set(NSX_POWER_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power_profile.c
 )
 
+# Apollo330 Plus and Apollo510 Lite returned zero on all four buck inputs
+# with SIMO active. See #231 for the EVB results.
+if(NSX_POWER_ARCH_DIR STREQUAL "apollo4" OR NSX_SOC_FAMILY MATCHES "^(apollo510|apollo510b)$")
+    list(APPEND NSX_POWER_SOURCES src/nsx_power_buck.c src/nsx_power_buck_timer.c)
+else()
+    list(APPEND NSX_POWER_SOURCES src/nsx_power_buck_unsupported.c)
+endif()
+
 if(NSX_POWER_ARCH_DIR STREQUAL "atomiq110")
     list(APPEND NSX_POWER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/atomiq110/nsx_power_shutdown.c)
 endif()

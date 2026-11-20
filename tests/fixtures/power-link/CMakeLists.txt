@@ -8,6 +8,10 @@ nsx_add_test_firmware(power_link
 target_link_options(power_link PRIVATE
     "LINKER:-u,nsx_power_monitor_init"
     "LINKER:-u,nsx_power_monitor_set_state"
+    "LINKER:-u,nsx_power_buck_rails"
+    "LINKER:-u,nsx_power_buck_start"
+    "LINKER:-u,nsx_power_buck_read"
+    "LINKER:-u,nsx_power_buck_stop"
     "LINKER:-u,nsx_power_configure"
     "LINKER:-u,nsx_power_set_performance_mode"
     "LINKER:-u,nsx_power_profile_dump")
