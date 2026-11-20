@@ -102,6 +102,8 @@ static void measure(uint32_t window) {
 
 static void initial_supplies(void) {
     TEST_ASSERT_EQUAL_UINT32(0, am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, NULL));
+    /* Apollo3 CLKGEN requires two seconds after starting XTAL. */
+    am_hal_flash_delay(FLASH_CYCLES_US(2000000));
     am_hal_stimer_config(AM_HAL_STIMER_XTAL_32KHZ);
     measure(8192);
 }
