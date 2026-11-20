@@ -1,23 +1,41 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include "am_mcu_apollo.h"
 #include "nsx_power_buck_internal.h"
 
 static uint32_t now, hz = 32768, counts[16], running;
 static unsigned starts, fail_start, fail_stop, gated_timer;
 static bool skip_touch, freeze_on_start;
+static uint32_t primask, caller_mask;
+static bool in_snapshot;
 static nsx_buck_modes_t modes = {NSX_BUCK_SUPPLY_OFF, NSX_BUCK_SUPPLY_UNKNOWN, NSX_BUCK_CPU_LP};
 static nsx_power_buck_session_t cfg = {
     .rails = NSX_BUCK_RAIL(NSX_BUCK_VDDC) | NSX_BUCK_RAIL(NSX_BUCK_VDDF),
     .timer = {[NSX_BUCK_VDDC] = 7, [NSX_BUCK_VDDF] = 8}
 };
 
+uint32_t am_hal_interrupt_master_disable(void) {
+    assert(!in_snapshot && primask == caller_mask);
+    in_snapshot = true;
+    uint32_t previous = primask;
+    primask = 1;
+    return previous;
+}
+void am_hal_interrupt_master_set(uint32_t mask) {
+    assert(in_snapshot && primask == 1 && mask == caller_mask);
+    primask = mask;
+    in_snapshot = false;
+}
+
 uint32_t nsx_power_buck_rails(void) { return 15; }
 nsx_buck_status_t nsx_buck_hw_check(nsx_buck_rail_t rail, uint8_t timer) {
+    assert(!in_snapshot && primask == caller_mask);
     (void)rail;
     return timer >= 5 && timer < 14 ? NSX_BUCK_OK : NSX_BUCK_INVALID;
 }
 nsx_buck_status_t nsx_buck_hw_start(nsx_buck_rail_t rail, uint8_t timer, bool *touched) {
+    assert(!in_snapshot && primask == caller_mask);
     (void)rail;
     ++starts;
     assert(nsx_power_buck_stop(&cfg) == NSX_BUCK_BUSY);
@@ -28,20 +46,32 @@ nsx_buck_status_t nsx_buck_hw_start(nsx_buck_rail_t rail, uint8_t timer, bool *t
     return timer == fail_start ? NSX_BUCK_HAL_ERROR : NSX_BUCK_OK;
 }
 nsx_buck_status_t nsx_buck_hw_stop(uint8_t timer) {
+    assert(!in_snapshot && primask == caller_mask);
     assert(running & (1u << timer));
     if (timer == fail_stop) return NSX_BUCK_HAL_ERROR;
     running &= ~(1u << timer);
     return NSX_BUCK_OK;
 }
 bool nsx_buck_hw_count(uint8_t timer, uint32_t *count) {
+    assert(in_snapshot && primask == 1);
     if (!(running & (1u << timer)) || timer == gated_timer) return false;
     *count = counts[timer];
     return true;
 }
-uint32_t nsx_buck_hw_time(uint32_t *tick) { *tick = now; return hz; }
-nsx_buck_modes_t nsx_buck_hw_modes(void) { return modes; }
+uint32_t nsx_buck_hw_time(uint32_t *tick) {
+    // Start probes STIMER once before it programs any hardware.
+    assert(running ? (in_snapshot && primask == 1) : (!in_snapshot && primask == caller_mask));
+    *tick = now;
+    return hz;
+}
+nsx_buck_modes_t nsx_buck_hw_modes(void) {
+    assert(in_snapshot && primask == 1);
+    return modes;
+}
 
-int main(void) {
+int main(int argc, char **argv) {
+    assert(argc == 2 && (strcmp(argv[1], "0") == 0 || strcmp(argv[1], "1") == 0));
+    caller_mask = primask = (uint32_t)(argv[1][0] - '0');
     nsx_power_buck_sample_t sample = {0};
     nsx_power_buck_session_t other = cfg;
     assert(nsx_power_buck_start(NULL) == NSX_BUCK_INVALID);
@@ -111,4 +141,5 @@ int main(void) {
     fail_start = 0;
     freeze_on_start = true;
     assert(nsx_power_buck_start(&cfg) == NSX_BUCK_NO_TIMEBASE && !running);
+    assert(!in_snapshot && primask == caller_mask);
 }

@@ -397,11 +397,13 @@ tasks share one measurement session; overlapping calls can return
 `NSX_BUCK_BUSY`. Reserve and serialize direct HAL users in application code.
 
 On Apollo510/B, call `nsx_power_shutdown_peripherals()` before starting a
-measurement because it stops the pulse timers. If a read observes a disabled
-timer or a closed timer gate, it returns `NSX_BUCK_INTERRUPTED`. The read
-preserves the previous sample. Stop the session and start a new window, even
-if the timer has since been re-enabled. A stop and restart between reads can
-go undetected.
+measurement because it stops the pulse timers. On Apollo4 and Apollo510/B,
+a read returns `NSX_BUCK_INTERRUPTED` if a selected timer's local enable
+or global gate is off, or if the audio ADC controls TIMER6 or the ADC controls
+TIMER7 while that timer is selected. The read preserves the previous sample.
+Stop the session and start a new window, even if local control has since been
+restored. Clearing a running counter or stopping and restarting it between
+reads can go undetected.
 
 Each successful read reports deltas since start for `sample.rails`, elapsed
 STIMER ticks, nominal tick frequency, and the observed supply and CPU modes at

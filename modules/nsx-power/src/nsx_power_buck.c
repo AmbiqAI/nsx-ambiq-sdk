@@ -1,5 +1,6 @@
 #include "nsx_power_buck_internal.h"
 
+#include "am_mcu_apollo.h"
 #include <stddef.h>
 #include <stdatomic.h>
 
@@ -46,7 +47,7 @@ static nsx_buck_status_t validate(const nsx_power_buck_session_t *session) {
     return NSX_BUCK_OK;
 }
 
-static nsx_buck_status_t snapshot(counter_snapshot_t *out) {
+static nsx_buck_status_t read_endpoint(counter_snapshot_t *out) {
     out->hz = nsx_buck_hw_time(&out->tick);
     if (!out->hz) return NSX_BUCK_NO_TIMEBASE;
     out->modes = nsx_buck_hw_modes();
@@ -56,6 +57,13 @@ static nsx_buck_status_t snapshot(counter_snapshot_t *out) {
         }
     }
     return NSX_BUCK_OK;
+}
+
+static nsx_buck_status_t snapshot(counter_snapshot_t *out) {
+    uint32_t mask = am_hal_interrupt_master_disable();
+    nsx_buck_status_t status = read_endpoint(out);
+    am_hal_interrupt_master_set(mask);
+    return status;
 }
 
 static nsx_buck_status_t start_locked(const nsx_power_buck_session_t *session) {

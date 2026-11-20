@@ -30,6 +30,14 @@ static nsx_buck_supply_t observed_supply(void) {
     }
 }
 
+static bool wait_ticks(uint32_t ticks) {
+    uint32_t start = am_hal_stimer_counter_get();
+    for (unsigned poll = 0; poll < 4000000u; ++poll) {
+        if ((uint32_t)(am_hal_stimer_counter_get() - start) >= ticks) return true;
+    }
+    return false;
+}
+
 static void measure_window(void) {
     nsx_power_buck_sample_t sample;
     nsx_buck_supply_t before = observed_supply();
@@ -39,13 +47,7 @@ static void measure_window(void) {
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, status);
     nsx_power_buck_session_t other = session;
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_BUSY, nsx_power_buck_start(&other));
-    uint32_t start = am_hal_stimer_counter_get();
-    // Bound a stalled crystal independently of the STIMER being exercised.
-    unsigned poll;
-    for (poll = 0; poll < 4000000u; ++poll) {
-        if ((uint32_t)(am_hal_stimer_counter_get() - start) >= WINDOW_TICKS) break;
-    }
-    TEST_ASSERT_TRUE_MESSAGE(poll < 4000000u, "STIMER stalled");
+    TEST_ASSERT_TRUE_MESSAGE(wait_ticks(WINDOW_TICKS), "STIMER stalled");
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, nsx_power_buck_read(&session, &sample));
     TEST_ASSERT_EQUAL_UINT32(before, sample.start_modes.main_supply);
     TEST_ASSERT_EQUAL_UINT32(observed_supply(), sample.end_modes.main_supply);
@@ -83,7 +85,9 @@ static void measure_window(void) {
 }
 
 static void initial_supply_window(void) {
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_mcuctrl_control(AM_HAL_MCUCTRL_CONTROL_EXTCLK32K_ENABLE, NULL));
     am_hal_stimer_config(AM_HAL_STIMER_XTAL_32KHZ);
+    TEST_ASSERT_TRUE_MESSAGE(wait_ticks(2), "Crystal STIMER did not start");
     measure_window();
 }
 

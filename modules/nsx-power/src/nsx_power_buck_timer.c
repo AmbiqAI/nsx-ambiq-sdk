@@ -22,6 +22,15 @@ uint32_t nsx_power_buck_rails(void) {
            NSX_BUCK_RAIL(NSX_BUCK_VDDS) | NSX_BUCK_RAIL(NSX_BUCK_VDDC_LV);
 }
 
+/* The global gate must permit local control. The ADCs can take over the
+ * enable of TIMER6 and TIMER7 independently of the local enable bit. */
+static bool timer_under_local_control(uint8_t timer) {
+    const uint32_t gates = TIMER->GLOBEN;
+    return (gates & (UINT32_C(1) << timer)) &&
+           !(timer == 6 && (gates & TIMER_GLOBEN_AUDADCEN_Msk)) &&
+           !(timer == 7 && (gates & TIMER_GLOBEN_ADCEN_Msk));
+}
+
 nsx_buck_status_t nsx_buck_hw_check(nsx_buck_rail_t rail, uint8_t timer) {
     if ((unsigned)rail >= sizeof(rail_clocks) / sizeof(rail_clocks[0])) {
         return NSX_BUCK_UNSUPPORTED;
@@ -44,13 +53,7 @@ nsx_buck_status_t nsx_buck_hw_check(nsx_buck_rail_t rail, uint8_t timer) {
 #endif
     /* A stopped synchronization group must keep its global gate unchanged.
      * The HAL's start would otherwise open the gate and stop would leave it open. */
-    uint32_t gates = TIMER->GLOBEN;
-    if (!(gates & (UINT32_C(1) << timer))) {
-        return NSX_BUCK_BUSY;
-    }
-    /* ADCs can take control of their timer while the local enable is clear. */
-    if ((timer == 6 && (gates & TIMER_GLOBEN_AUDADCEN_Msk)) ||
-        (timer == 7 && (gates & TIMER_GLOBEN_ADCEN_Msk))) {
+    if (!timer_under_local_control(timer)) {
         return NSX_BUCK_BUSY;
     }
     IRQn_Type irq = (IRQn_Type)(TIMER0_IRQn + timer);
@@ -91,9 +94,7 @@ nsx_buck_status_t nsx_buck_hw_stop(uint8_t timer) {
 }
 
 bool nsx_buck_hw_count(uint8_t timer, uint32_t *count) {
-    const uint32_t run_control = TIMER_CTRL0_TMR0EN_Msk | TIMER_CTRL0_TMR0CLR_Msk;
-    if (!(TIMER->GLOBEN & (UINT32_C(1) << timer)) ||
-        (TIMERn(timer)->CTRL0 & run_control) != TIMER_CTRL0_TMR0EN_Msk) {
+    if (!timer_under_local_control(timer) || !(TIMERn(timer)->CTRL0 & TIMER_CTRL0_TMR0EN_Msk)) {
         return false;
     }
     *count = am_hal_timer_read(timer);

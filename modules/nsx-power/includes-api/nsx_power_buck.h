@@ -54,13 +54,16 @@ typedef struct {
 
 /* Static mask of routable rail inputs. Zero means unsupported. */
 uint32_t nsx_power_buck_rails(void);
-/* Foreground/task calls only. One session at a time. If start returns
+/* Privileged foreground/task calls only. One session at a time. If start returns
  * CLEANUP_REQUIRED, retain the session and retry stop. */
 nsx_buck_status_t nsx_power_buck_start(const nsx_power_buck_session_t *session);
 /* Read deltas since start. Each count and the timebase must advance by less than
- * 2^32 over the window. Reads are sequential. A rail count of zero is valid.
- * An observed disabled pulse timer returns INTERRUPTED until stop. A failed
- * read preserves the sample. Endpoint checks can miss a timer restart or a
+ * 2^32 over the window. Each endpoint reads time, modes, and the selected
+ * counters sequentially with maskable interrupts disabled. Hardware continues
+ * to run between these reads. The caller's interrupt mask is restored at each
+ * endpoint. A rail count of zero is valid.
+ * An observed disabled timer or ADC takeover returns INTERRUPTED until stop.
+ * A failed read preserves the sample. Endpoint checks can miss a timer restart or a
  * mode transition between reads. */
 nsx_buck_status_t nsx_power_buck_read(const nsx_power_buck_session_t *session,
                                       nsx_power_buck_sample_t *sample);

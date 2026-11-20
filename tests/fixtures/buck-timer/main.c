@@ -49,7 +49,10 @@ uint32_t am_hal_timer_interrupt_clear(uint32_t mask) {
     timers.INTSTAT &= ~mask;
     return AM_HAL_STATUS_SUCCESS;
 }
-uint32_t am_hal_timer_read(uint32_t timer) { assert(timer == CHANNEL); return 0x13579bdf; }
+uint32_t am_hal_timer_read(uint32_t timer) {
+    assert(timer == 6 || timer == 7 || timer == CHANNEL);
+    return 0x13579bdf;
+}
 uint32_t am_hal_stimer_counter_get(void) { return 0xabcdef12; }
 
 static void check_ownership(void) {
@@ -101,9 +104,6 @@ static void check_counters(void) {
         uint32_t count;
         assert(nsx_buck_hw_count(CHANNEL, &count) && count == 0x13579bdf);
         count = 42;
-        channels[CHANNEL].CTRL0 |= TIMER_CTRL0_TMR0CLR_Msk;
-        assert(!nsx_buck_hw_count(CHANNEL, &count) && count == 42);
-        channels[CHANNEL].CTRL0 &= ~TIMER_CTRL0_TMR0CLR_Msk;
         timers.GLOBEN &= ~(1u << CHANNEL);
         assert(!nsx_buck_hw_count(CHANNEL, &count) && count == 42);
         timers.INTSTAT = (3u << (2 * CHANNEL)) | 1u;
@@ -119,6 +119,18 @@ static void check_counters(void) {
     timers.INTSTAT = 3u << (2 * CHANNEL);
     assert(nsx_buck_hw_stop(CHANNEL) == NSX_BUCK_HAL_ERROR);
     assert(timers.INTSTAT == (3u << (2 * CHANNEL)));
+}
+
+static void check_adc_takeover(void) {
+    channels[6].CTRL0 = channels[7].CTRL0 = TIMER_CTRL0_TMR0EN_Msk;
+    timers.GLOBEN = AM_HAL_TIMER_GLOBEN_DEFAULT | TIMER_GLOBEN_AUDADCEN_Msk;
+    uint32_t count = 42;
+    assert(!nsx_buck_hw_count(6, &count) && count == 42);
+    assert(nsx_buck_hw_count(7, &count) && count == 0x13579bdf);
+    timers.GLOBEN = AM_HAL_TIMER_GLOBEN_DEFAULT | TIMER_GLOBEN_ADCEN_Msk;
+    count = 42;
+    assert(!nsx_buck_hw_count(7, &count) && count == 42);
+    assert(nsx_buck_hw_count(6, &count) && count == 0x13579bdf);
 }
 
 static void check_time_and_modes(void) {
@@ -149,5 +161,6 @@ static void check_time_and_modes(void) {
 int main(void) {
     check_ownership();
     check_counters();
+    check_adc_takeover();
     check_time_and_modes();
 }
