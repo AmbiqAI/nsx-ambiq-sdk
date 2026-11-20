@@ -70,6 +70,13 @@ static void measure_window(void) {
     } else {
         TEST_ASSERT_NOT_EQUAL(0, any);
     }
+    // Model a platform shutdown of one dedicated counter during the window.
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_timer_stop(session.timer[NSX_BUCK_VDDC]));
+    sample.rails = 0;
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_INTERRUPTED, nsx_power_buck_read(&session, &sample));
+    TEST_ASSERT_EQUAL_UINT32(0, sample.rails);
+    TEST_ASSERT_EQUAL_UINT32(0, am_hal_timer_start(session.timer[NSX_BUCK_VDDC]));
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_INTERRUPTED, nsx_power_buck_read(&session, &sample));
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, nsx_power_buck_stop(&session));
     owns_session = false;
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_NOT_ACTIVE, nsx_power_buck_read(&session, &sample));

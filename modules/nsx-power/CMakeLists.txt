@@ -25,7 +25,7 @@ set(NSX_POWER_SOURCES
 
 # AP330 Plus returned zero on all four inputs with SIMO active. Its shared
 # Apollo510 Lite HAL exposes the same selectors; qualification is tracked in #231.
-if(NSX_POWER_ARCH_DIR STREQUAL "apollo4" OR NSX_SOC_FAMILY MATCHES "^(apollo510|apollo510b|apollo5b)$")
+if(NSX_POWER_ARCH_DIR STREQUAL "apollo4" OR NSX_SOC_FAMILY MATCHES "^(apollo510|apollo510b)$")
     list(APPEND NSX_POWER_SOURCES src/nsx_power_buck.c src/nsx_power_buck_timer.c)
 else()
     list(APPEND NSX_POWER_SOURCES src/nsx_power_buck_unsupported.c)

@@ -16,7 +16,8 @@ typedef enum {
 
 typedef enum {
     NSX_BUCK_OK = 0, NSX_BUCK_UNSUPPORTED, NSX_BUCK_INVALID, NSX_BUCK_BUSY,
-    NSX_BUCK_NO_TIMEBASE, NSX_BUCK_NOT_ACTIVE, NSX_BUCK_HAL_ERROR, NSX_BUCK_CLEANUP_REQUIRED
+    NSX_BUCK_NO_TIMEBASE, NSX_BUCK_NOT_ACTIVE, NSX_BUCK_HAL_ERROR, NSX_BUCK_CLEANUP_REQUIRED,
+    NSX_BUCK_INTERRUPTED
 } nsx_buck_status_t;
 
 typedef enum {
@@ -58,7 +59,9 @@ uint32_t nsx_power_buck_rails(void);
 nsx_buck_status_t nsx_power_buck_start(const nsx_power_buck_session_t *session);
 /* Read deltas since start. Each count and the timebase must advance by less than
  * 2^32 over the window. Reads are sequential. A rail count of zero is valid.
- * Endpoint modes cannot establish whether an intervening transition occurred. */
+ * An observed disabled pulse timer returns INTERRUPTED until stop. A failed
+ * read preserves the sample. Endpoint checks can miss a timer restart or a
+ * mode transition between reads. */
 nsx_buck_status_t nsx_power_buck_read(const nsx_power_buck_session_t *session,
                                       nsx_power_buck_sample_t *sample);
 /* Release the session's timers. A cleanup failure retains the session for retry. */

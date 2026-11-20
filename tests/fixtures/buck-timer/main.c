@@ -34,8 +34,16 @@ uint32_t am_hal_timer_config(uint32_t timer, am_hal_timer_config_t *config) {
     programmed = *config;
     return AM_HAL_STATUS_SUCCESS;
 }
-uint32_t am_hal_timer_enable(uint32_t timer) { assert(timer == CHANNEL); return start_result; }
-uint32_t am_hal_timer_disable(uint32_t timer) { assert(timer == CHANNEL); return stop_result; }
+uint32_t am_hal_timer_enable(uint32_t timer) {
+    assert(timer == CHANNEL);
+    if (start_result == AM_HAL_STATUS_SUCCESS) channels[timer].CTRL0 |= TIMER_CTRL0_TMR0EN_Msk;
+    return start_result;
+}
+uint32_t am_hal_timer_disable(uint32_t timer) {
+    assert(timer == CHANNEL);
+    if (stop_result == AM_HAL_STATUS_SUCCESS) channels[timer].CTRL0 &= ~TIMER_CTRL0_TMR0EN_Msk;
+    return stop_result;
+}
 uint32_t am_hal_timer_interrupt_clear(uint32_t mask) {
     assert(mask == (3u << (2 * CHANNEL)));
     timers.INTSTAT &= ~mask;
@@ -90,10 +98,19 @@ static void check_counters(void) {
         bool touched = false;
         assert(nsx_buck_hw_start((nsx_buck_rail_t)r, CHANNEL, &touched) == NSX_BUCK_OK && touched);
         assert(programmed.eFunction == AM_HAL_TIMER_FN_UPCOUNT && programmed.eInputClock == expected[r]);
-        assert(nsx_buck_hw_count(CHANNEL) == 0x13579bdf);
+        uint32_t count;
+        assert(nsx_buck_hw_count(CHANNEL, &count) && count == 0x13579bdf);
+        count = 42;
+        channels[CHANNEL].CTRL0 |= TIMER_CTRL0_TMR0CLR_Msk;
+        assert(!nsx_buck_hw_count(CHANNEL, &count) && count == 42);
+        channels[CHANNEL].CTRL0 &= ~TIMER_CTRL0_TMR0CLR_Msk;
+        timers.GLOBEN &= ~(1u << CHANNEL);
+        assert(!nsx_buck_hw_count(CHANNEL, &count) && count == 42);
         timers.INTSTAT = (3u << (2 * CHANNEL)) | 1u;
         assert(nsx_buck_hw_stop(CHANNEL) == NSX_BUCK_OK);
         assert(timers.INTSTAT == 1u);
+        timers.GLOBEN |= 1u << CHANNEL;
+        assert(!nsx_buck_hw_count(CHANNEL, &count) && count == 42);
     }
     bool touched = false;
     start_result = AM_HAL_STATUS_FAIL;

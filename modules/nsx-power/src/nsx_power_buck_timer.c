@@ -90,8 +90,14 @@ nsx_buck_status_t nsx_buck_hw_stop(uint8_t timer) {
         ? NSX_BUCK_OK : NSX_BUCK_HAL_ERROR;
 }
 
-uint32_t nsx_buck_hw_count(uint8_t timer) {
-    return am_hal_timer_read(timer);
+bool nsx_buck_hw_count(uint8_t timer, uint32_t *count) {
+    const uint32_t run_control = TIMER_CTRL0_TMR0EN_Msk | TIMER_CTRL0_TMR0CLR_Msk;
+    if (!(TIMER->GLOBEN & (UINT32_C(1) << timer)) ||
+        (TIMERn(timer)->CTRL0 & run_control) != TIMER_CTRL0_TMR0EN_Msk) {
+        return false;
+    }
+    *count = am_hal_timer_read(timer);
+    return true;
 }
 
 uint32_t nsx_buck_hw_time(uint32_t *tick) {

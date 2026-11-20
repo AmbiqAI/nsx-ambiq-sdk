@@ -1,9 +1,10 @@
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 #include "nsx_power_buck_internal.h"
 
 static uint32_t now, hz = 32768, counts[16], running;
-static unsigned starts, fail_start, fail_stop;
+static unsigned starts, fail_start, fail_stop, gated_timer;
 static bool skip_touch, freeze_on_start;
 static nsx_buck_modes_t modes = {NSX_BUCK_SUPPLY_OFF, NSX_BUCK_SUPPLY_UNKNOWN, NSX_BUCK_CPU_LP};
 static nsx_power_buck_session_t cfg = {
@@ -32,7 +33,11 @@ nsx_buck_status_t nsx_buck_hw_stop(uint8_t timer) {
     running &= ~(1u << timer);
     return NSX_BUCK_OK;
 }
-uint32_t nsx_buck_hw_count(uint8_t timer) { return counts[timer]; }
+bool nsx_buck_hw_count(uint8_t timer, uint32_t *count) {
+    if (!(running & (1u << timer)) || timer == gated_timer) return false;
+    *count = counts[timer];
+    return true;
+}
 uint32_t nsx_buck_hw_time(uint32_t *tick) { *tick = now; return hz; }
 nsx_buck_modes_t nsx_buck_hw_modes(void) { return modes; }
 
@@ -74,6 +79,24 @@ int main(void) {
     assert(nsx_power_buck_read(&cfg, &sample) == NSX_BUCK_NO_TIMEBASE);
     assert(nsx_power_buck_stop(&cfg) == NSX_BUCK_OK && !running);
     assert(nsx_power_buck_stop(&cfg) == NSX_BUCK_NOT_ACTIVE);
+
+    assert(nsx_power_buck_start(&cfg) == NSX_BUCK_OK);
+    unsigned char saved_sample[sizeof(sample)];
+    memcpy(saved_sample, &sample, sizeof(sample));
+    ++now;
+    ++counts[7];
+    gated_timer = 8;
+    assert(nsx_power_buck_read(&cfg, &sample) == NSX_BUCK_INTERRUPTED);
+    assert(memcmp(saved_sample, &sample, sizeof(sample)) == 0);
+    gated_timer = 0;
+    assert(nsx_power_buck_read(&cfg, &sample) == NSX_BUCK_INTERRUPTED);
+    assert(nsx_power_buck_stop(&cfg) == NSX_BUCK_OK && !running);
+    gated_timer = 8;
+    assert(nsx_power_buck_start(&cfg) == NSX_BUCK_INTERRUPTED && !running);
+    gated_timer = 0;
+    assert(nsx_power_buck_start(&cfg) == NSX_BUCK_OK);
+    assert(nsx_power_buck_read(&cfg, &sample) == NSX_BUCK_OK);
+    assert(nsx_power_buck_stop(&cfg) == NSX_BUCK_OK && !running);
 
     fail_start = 8;
     skip_touch = true;

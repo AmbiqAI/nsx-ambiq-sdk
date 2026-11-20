@@ -14,12 +14,11 @@ static atomic_flag lock = ATOMIC_FLAG_INIT;
 static const nsx_power_buck_session_t *owner;
 static nsx_power_buck_session_t config;
 static uint32_t touched_rails;
-static bool ready;
 static counter_snapshot_t baseline;
-static bool timebase_lost;
+static nsx_buck_status_t read_status;
 
 static nsx_buck_status_t release_timers(void) {
-    ready = false;
+    read_status = NSX_BUCK_CLEANUP_REQUIRED;
     for (unsigned r = 0; r < NSX_BUCK_RAIL_COUNT; ++r) {
         uint32_t bit = NSX_BUCK_RAIL(r);
         if ((touched_rails & bit) && nsx_buck_hw_stop(config.timer[r]) == NSX_BUCK_OK) {
@@ -52,7 +51,9 @@ static nsx_buck_status_t snapshot(counter_snapshot_t *out) {
     if (!out->hz) return NSX_BUCK_NO_TIMEBASE;
     out->modes = nsx_buck_hw_modes();
     for (unsigned r = 0; r < NSX_BUCK_RAIL_COUNT; ++r) {
-        if (config.rails & NSX_BUCK_RAIL(r)) out->counts[r] = nsx_buck_hw_count(config.timer[r]);
+        if ((config.rails & NSX_BUCK_RAIL(r)) && !nsx_buck_hw_count(config.timer[r], &out->counts[r])) {
+            return NSX_BUCK_INTERRUPTED;
+        }
     }
     return NSX_BUCK_OK;
 }
@@ -77,8 +78,7 @@ static nsx_buck_status_t start_locked(const nsx_power_buck_session_t *session) {
         nsx_buck_status_t cleanup = release_timers();
         return cleanup == NSX_BUCK_OK ? status : cleanup;
     }
-    timebase_lost = false;
-    ready = true;
+    read_status = NSX_BUCK_OK;
     return NSX_BUCK_OK;
 }
 
@@ -93,12 +93,13 @@ static nsx_buck_status_t read_locked(const nsx_power_buck_session_t *session,
                                      nsx_power_buck_sample_t *sample) {
     if (session == NULL || sample == NULL) return NSX_BUCK_INVALID;
     if (session != owner) return NSX_BUCK_NOT_ACTIVE;
-    if (!ready) return NSX_BUCK_CLEANUP_REQUIRED;
-    if (timebase_lost) return NSX_BUCK_NO_TIMEBASE;
+    if (read_status != NSX_BUCK_OK) return read_status;
     counter_snapshot_t end;
-    if (snapshot(&end) != NSX_BUCK_OK || end.hz != baseline.hz) {
-        timebase_lost = true;
-        return NSX_BUCK_NO_TIMEBASE;
+    read_status = snapshot(&end);
+    if (read_status != NSX_BUCK_OK) return read_status;
+    if (end.hz != baseline.hz) {
+        read_status = NSX_BUCK_NO_TIMEBASE;
+        return read_status;
     }
     *sample = (nsx_power_buck_sample_t){
         .rails = config.rails,

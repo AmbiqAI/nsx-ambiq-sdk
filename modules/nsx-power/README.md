@@ -392,6 +392,13 @@ Keep the session at the same address until released. Foreground and RTOS
 tasks share one measurement session; overlapping calls can return
 `NSX_BUCK_BUSY`. Reserve and serialize direct HAL users in application code.
 
+On Apollo510/B, call `nsx_power_shutdown_peripherals()` before starting a
+measurement because it stops the pulse timers. If a read observes a disabled
+timer or a closed timer gate, it returns `NSX_BUCK_INTERRUPTED`. The read
+preserves the previous sample. Stop the session and start a new window, even
+if the timer has since been re-enabled. A stop and restart between reads can
+go undetected.
+
 Each successful read reports deltas since start for `sample.rails`, elapsed
 STIMER ticks, nominal tick frequency, and the observed supply and CPU modes at
 both endpoints. An active supply can have zero pulses on a selected rail.
@@ -399,7 +406,8 @@ Measurements have no joule conversion. A changed endpoint mode describes a
 mixed window; matching endpoints cannot detect transitions in between.
 CPU modes are status indications, not measured frequencies.
 
-Use an already running independent STIMER clock. The measurement never
+On Apollo4 and Apollo510/B, use an already running independent STIMER clock
+from HFRC (6 MHz or 375 kHz) or XTAL (32768, 16384 or 1024 Hz). The measurement never
 configures the regulator, CPU mode, or STIMER. Keep its source and counter
 continuous through the workload. A disabled, frozen or unrecognized clock
 selection returns `NSX_BUCK_NO_TIMEBASE`; restart the session after recovery.
