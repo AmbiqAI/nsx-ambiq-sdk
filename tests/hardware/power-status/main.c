@@ -70,8 +70,9 @@ static void iom0_power_transition(void) {
     TEST_ASSERT_BITS_LOW_MESSAGE(PWRCTRL_DEVPWREN_PWRIOM1_Msk | PWRCTRL_DEVPWREN_PWRIOM2_Msk,
                                  initial_requests, "Another IOM holds the shared HCPB domain");
 #endif
-    check_snapshot(false);
+    TEST_ASSERT_TRUE_MESSAGE(wait_for_domain(false), "IOM0 domain must be idle for this fixture");
     restore_iom0 = true;
+    check_snapshot(false);
     TEST_ASSERT_EQUAL_UINT32(0, am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_IOM0));
     check_snapshot(true);
     TEST_ASSERT_EQUAL_UINT32(0, am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_IOM0));
