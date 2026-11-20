@@ -162,6 +162,10 @@ TIMER_PERIOD = Suite('timer-period', 'tests/hardware/test_timer.py::test_timer_p
                      'tests/hardware/timer', 'timer_period.elf', configure=timer_options)
 
 
+POWER_STATUS = Suite('power-status', 'tests/hardware/test_power_status.py::test_power_status',
+                     ('iom0_power_transition',), 'tests/hardware/power-status', 'power_status_test.elf')
+
+
 BUCK_BOARDS = ('apollo510_evb', 'apollo510b_evb', 'apollo4p_blue_kxr_evb',
                'apollo4p_blue_kbr_evb', 'apollo4p_evb', 'apollo4l_blue_evb')
 BUCK_UNSUPPORTED_BOARDS = ('apollo330mP_evb', 'apollo510dL_evb')
@@ -275,4 +279,4 @@ PSRAM_ASYNC_MATRIX = (PSRAM_ASYNC,) + tuple(
     if high or clock_hz != 48000000)
 
 
-SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, BUCK, BUCK_UNSUPPORTED, BUCK_CTIMER, PERFORMANCE, AP3_PERFORMANCE)
+SUITES = (*PSRAM_ASYNC_MATRIX, PSRAM_BLOCKING, PSRAM_COMMON, BSP_V2_SYSTEM, POWER_STARTUP, STARTUP, RUNTIME, CLOCK, TEMPCO, TEMPCO_CAPTURE, OWNERSHIP, USB_KEEP, USB_OFF, MEMORY_PREFLIGHT, SYSTEM_FULL, SYSTEM_MINIMAL, DEBUG_STATE, DEBUG_FAILURE, TIMER_PERIOD, POWER_STATUS, BUCK, BUCK_UNSUPPORTED, BUCK_CTIMER, PERFORMANCE, AP3_PERFORMANCE)

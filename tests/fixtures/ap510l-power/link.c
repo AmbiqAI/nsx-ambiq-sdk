@@ -1,9 +1,12 @@
 /* Link-only probe: retain public calls without executing destructive helpers. */
 #include "nsx_power.h"
+#include "nsx_power_status.h"
 
 volatile unsigned power_probe;
 int main(void) {
     if (power_probe) {
+        nsx_power_status_t status;
+        power_probe = nsx_power_status_read(&status);
         power_probe = nsx_power_configure(&nsx_power_all_on);
         power_probe = nsx_power_set_performance_mode(NSX_POWER_PERF_LOW);
         power_probe = nsx_power_profile_dump(0, NSX_POWER_PROFILE_FORMAT_JSON);

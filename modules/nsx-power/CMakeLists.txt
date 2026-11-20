@@ -17,6 +17,7 @@ nsx_select_soc_arch_dir(NSX_POWER_ARCH_DIR
 
 set(NSX_POWER_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_status.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_monitor.c
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_profile.c
     ${CMAKE_CURRENT_LIST_DIR}/src/${NSX_POWER_ARCH_DIR}/nsx_power.c
@@ -57,6 +58,12 @@ if(NSX_POWER_ARCH_DIR STREQUAL "apollo4")
 endif()
 
 add_library(nsx_power STATIC ${NSX_POWER_SOURCES})
+# Select live status by the concrete target. Legacy apollo5b also sets Apollo510 part macros.
+if(NSX_SOC_FAMILY MATCHES "^(apollo3|apollo3p)$")
+    target_compile_definitions(nsx_power PRIVATE NSX_POWER_STATUS_APOLLO3)
+elseif(NSX_SOC_FAMILY MATCHES "^(apollo4p|apollo4l|apollo510|apollo510b|apollo510L|apollo330P)$")
+    target_compile_definitions(nsx_power PRIVATE NSX_POWER_STATUS_HAL)
+endif()
 set_target_properties(nsx_power PROPERTIES EXPORT_NAME power)
 add_library(nsx::power ALIAS nsx_power)
 

@@ -25,8 +25,10 @@ def test_power_module_links_real_sdk(repo_root, tmp_path, board):
     for symbol in ('nsx_power_monitor_init', 'nsx_power_monitor_set_state',
                    'nsx_power_buck_rails', 'nsx_power_buck_start', 'nsx_power_buck_read',
                    'nsx_power_buck_stop', 'nsx_power_configure', 'nsx_power_set_performance_mode',
-                   'nsx_power_profile_dump', 'am_hal_gpio_pinconfig'):
+                   'nsx_power_status_read', 'nsx_power_profile_dump', 'am_hal_gpio_pinconfig'):
         assert symbols[symbol] == 'T', symbol
+    if board not in ('apollo3_evb', 'apollo3p_evb'):
+        assert symbols['am_hal_pwrctrl_status_get'] == 'T'
     config = ('g_AM_HAL_GPIO_OUTPUT' if board in ('apollo3_evb', 'apollo3p_evb')
               else 'am_hal_gpio_pincfg_output')
     assert symbols[config] in ('R', 'T')  # Linker scripts may merge rodata into text.
