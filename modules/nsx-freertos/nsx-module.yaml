@@ -12,6 +12,12 @@ support:
 
 summary: Optional FreeRTOS kernel middleware. Vendors a pinned upstream FreeRTOS-Kernel and builds the SoC-selected CMSIS port. Kernel/heap policy and FreeRTOSConfig.h are owned by the application.
 
+licenses:
+  .: BSD-3-Clause
+  sdk/third_party/FreeRTOS-Kernel: MIT
+  src/nsx_freertos_handlers_cm4f.c: MIT
+  templates/FreeRTOSConfig.h.template: MIT
+
 vendored:
   freertos_kernel:
     upstream: https://github.com/FreeRTOS/FreeRTOS-Kernel
