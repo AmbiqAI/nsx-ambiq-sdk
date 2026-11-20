@@ -19,22 +19,15 @@ Retain the applicable component notices.
 
 ## Current Coverage
 
-The `5.2.31` release candidate retains the provider from `5.2.30`, including the `stable-2026.11.05` intake from
-upstream commit `3cfb7d50718e6fb016f1a0128121cb40598109d5`.
-
-All 73 HAL/BSP archives were rebuilt from prepared source commit
-`83bd69c37edf8d94cf77021140d707c3fe886242`, which adds the reviewed AT110 XSPI
-capacity/alignment patches and removes the invalid vendor heap stub.
-Provider sources retain 5.2.29 bytes; NSX retains bounded allocation and force-link
-protection. The manifest records the archive source and retained source identities.
-Four payload patches preserve C++ compatibility and EM9305 receive scratch capacity.
-Cordio retains its separately recorded base snapshot and selected NSX changes.
-This is not an official numbered AmbiqSuite release.
+SDK 5.2.31 ships the same AmbiqSuite provider as 5.2.30. Its 73 HAL/BSP archives
+come from prepared source `83bd69c37edf8d94cf77021140d707c3fe886242`, based on
+`stable-2026.11.05` at `3cfb7d50718e6fb016f1a0128121cb40598109d5`. It retains
+the AT110 XSPI fixes, bounded heap integration and four staged payload patches.
+Cordio has its own recorded source revision.
 
 GCC startup and runtime checks passed on AP3 Blue Plus, AP4 Blue Plus KXR,
-AP330 Plus, AP510 and AP510B. AP510 also passed 48 PSRAM checks, including
-asynchronous DMA reads at both CPU modes and requested PSRAM clocks.
-See the qualification report for exact tested revisions and coverage limits.
+AP330 Plus, AP510 and AP510B. AP510 also passed 48 PSRAM cases covering
+blocking and asynchronous reads.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
 Apollo2, Apollo3, Apollo4, Apollo330, and Apollo510 platforms. ACfE artifacts
