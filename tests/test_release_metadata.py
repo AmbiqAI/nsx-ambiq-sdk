@@ -160,7 +160,12 @@ def test_qualified_descriptors_exist_and_match_provider_scope(repo_root: Path) -
     experimental_boards = set(exclusions["experimental"]["boards"])
 
     assert qualified_socs == set(provider["compatibility"]["socs"]) - experimental_socs
-    assert qualified_boards == set(provider["compatibility"]["boards"]) - experimental_boards
+    # The provider also accepts custom boards. The artifact manifest identifies
+    # the bundled BSPs for which this distribution actually supplies archives.
+    artifact = load_yaml(repo_root, ARTIFACT_MANIFEST)
+    bundled = {board["nsx_board"] for board in artifact["boards"] if board["bsp_artifacts"]}
+    assert provider["compatibility"]["boards"] == ["*"]
+    assert qualified_boards == bundled - experimental_boards
 
     for soc in qualified_socs:
         assert (repo_root / "cmake" / "socs" / f"{soc}.cmake").is_file()
