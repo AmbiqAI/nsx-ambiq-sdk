@@ -12,9 +12,9 @@ The [root license](LICENSE) uses AmbiqSuite's BSD terms for Ambiq-authored NSX
 integration. The [repository notice](NOTICE) and [license index](LICENSES/README.md)
 identify the separately licensed components and their terms.
 
-For the terms carried with the AmbiqSuite payload, see the
-[bundled agreement](modules/nsx-ambiqsuite/sdk/docs/licenses/LICENSE.rtf) and
-[Software License Terms](modules/nsx-ambiqsuite/sdk/docs/licenses/Ambiq-Software-License-Terms.pdf).
+The imported SDK payload is subject to its upstream terms. For redistribution,
+see sections 2.1 and 2.2 of the [AmbiqSuite agreement](modules/nsx-ambiqsuite/sdk/docs/licenses/LICENSE.rtf)
+and the accompanying [Software License Terms](modules/nsx-ambiqsuite/sdk/docs/licenses/Ambiq-Software-License-Terms.pdf).
 Retain the applicable component notices.
 
 ## Current Coverage
