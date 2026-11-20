@@ -9,7 +9,7 @@ Both revisions use the same AmbiqSuite provider, including all 73 archives.
 | --- | --- |
 | Host | GCC compatibility gate 1,993 passed. Full host suite 4,174 passed, 200 skipped. Repository hygiene passed. |
 | AP3 Blue Plus, AP4 Blue Plus KXR, AP330 Plus, AP510, AP510B | Four suites on each revision and board. All 100 Unity case executions passed across 40 firmware runs. The checks exercise C/C++ startup, heap and stack behavior, SVC dispatch, initialization ownership and full system initialization. |
-| AP510 PSRAM on the candidate | Six firmware runs, 48 Unity cases passed. Three common cases, five blocking cases and ten async cases for each combination of 96/250 MHz CPU and requested 48/96 MHz PSRAM. Coverage includes per-client completion, queue depth, XIP during DMA and blocking/async interaction. |
+| AP510 PSRAM on the candidate | Six firmware runs, 48 Unity cases passed. At the requested 48 MHz PSRAM setting, the common suite ran once (3 passes) and the blocking suite ran once (5 passes). The async suite ran four times (10 passes each), once per combination of 96/250 MHz CPU and requested 48/96 MHz PSRAM. Coverage includes per-client completion, queue depth, XIP during DMA and blocking/async interaction. |
 
 All hardware checks used debugger reset. AP510B timed out observing the
 v5.2.30 startup result on the first attempt and the v5.2.30 startup-ownership
