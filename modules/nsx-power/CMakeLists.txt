@@ -100,6 +100,12 @@ install(FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_internal.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src
 )
+if(NSX_POWER_ARCH_DIR STREQUAL "apollo3")
+    install(FILES
+        ${CMAKE_CURRENT_LIST_DIR}/src/nsx_power_buck_internal.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nsx/modules/nsx-power/src
+    )
+endif()
 
 install(TARGETS
     nsx_power

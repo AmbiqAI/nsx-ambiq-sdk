@@ -66,6 +66,12 @@ static void measure(uint32_t window) {
                                  sample.pulses[NSX_BUCK_MEMORY] > UINT16_MAX,
                                  "Linked high half was not observed");
     }
+    am_hal_ctimer_stop(session.timer[NSX_BUCK_CPU], AM_HAL_CTIMER_BOTH);
+    sample.rails = 0;
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_INTERRUPTED, nsx_power_buck_read(&session, &sample));
+    TEST_ASSERT_EQUAL_UINT32(0, sample.rails);
+    am_hal_ctimer_start(session.timer[NSX_BUCK_CPU], AM_HAL_CTIMER_BOTH);
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_INTERRUPTED, nsx_power_buck_read(&session, &sample));
 }
 
 static void initial_supplies(void) {

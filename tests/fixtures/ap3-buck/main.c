@@ -3,7 +3,7 @@
 #include <assert.h>
 
 static struct { uint32_t CTRL0, AUX0; } pairs[AM_HAL_CTIMER_TIMERS_NUM];
-static struct { uint32_t INTEN, INTSTAT, STCFG; } block;
+static struct { uint32_t INTEN, INTSTAT, STCFG, GLOBEN; } block;
 static struct { uint32_t SUPPLYSTATUS; } power;
 static struct { struct { uint32_t BURSTSTATUS; } FREQCTRL_b; } clockgen;
 #undef CTIMERn
@@ -27,6 +27,7 @@ void am_hal_ctimer_config_single(uint32_t timer, uint32_t segment, uint32_t conf
 }
 void am_hal_ctimer_start(uint32_t timer, uint32_t segment) {
     assert(timer == 4 && segment == AM_HAL_CTIMER_BOTH);
+    pairs[timer].CTRL0 |= CTIMER_CTRL4_TMRA4EN_Msk | CTIMER_CTRL4_TMRB4EN_Msk;
     starts++;
 }
 void am_hal_ctimer_stop(uint32_t timer, uint32_t segment) {
@@ -43,6 +44,25 @@ uint32_t am_hal_ctimer_read(uint32_t timer, uint32_t segment) {
 }
 uint32_t am_hal_stimer_counter_get(void) { return 0x98761234; }
 
+static void check_interrupted_pair(void) {
+    const uint32_t original = pairs[4].CTRL0;
+    const uint32_t controls[] = {
+        AM_HAL_CTIMER_LINK, CTIMER_CTRL4_TMRA4EN_Msk, CTIMER_CTRL4_TMRB4EN_Msk,
+        CTIMER_CTRL4_TMRA4CLR_Msk, CTIMER_CTRL4_TMRB4CLR_Msk,
+    };
+    uint32_t count = 0xfeed1234;
+    for (unsigned i = 0; i < sizeof(controls) / sizeof(controls[0]); ++i) {
+        pairs[4].CTRL0 = original ^ controls[i];
+        assert(!nsx_buck_hw_count(4, &count) && count == 0xfeed1234);
+    }
+    pairs[4].CTRL0 = original;
+    block.GLOBEN = CTIMER_GLOBEN_ENA4_Msk;
+    assert(!nsx_buck_hw_count(4, &count) && count == 0xfeed1234);
+    block.GLOBEN = CTIMER_GLOBEN_ENB4_Msk;
+    assert(!nsx_buck_hw_count(4, &count) && count == 0xfeed1234);
+    block.GLOBEN |= CTIMER_GLOBEN_ENA4_Msk;
+}
+
 int main(void) {
     assert(nsx_power_buck_rails() == (NSX_BUCK_RAIL(NSX_BUCK_CPU) | NSX_BUCK_RAIL(NSX_BUCK_MEMORY) |
                                       NSX_BUCK_RAIL(NSX_BUCK_BLE)));
@@ -50,6 +70,11 @@ int main(void) {
     assert(nsx_buck_hw_check(NSX_BUCK_CPU, 8) == NSX_BUCK_INVALID);
     assert(nsx_buck_hw_check(NSX_BUCK_CPU, AM_HAL_ENTROPY_CTIMER) == NSX_BUCK_BUSY);
 
+    block.GLOBEN = CTIMER_GLOBEN_ENA4_Msk;
+    assert(nsx_buck_hw_check(NSX_BUCK_CPU, 4) == NSX_BUCK_BUSY);
+    block.GLOBEN = CTIMER_GLOBEN_ENB4_Msk;
+    assert(nsx_buck_hw_check(NSX_BUCK_CPU, 4) == NSX_BUCK_BUSY);
+    block.GLOBEN |= CTIMER_GLOBEN_ENA4_Msk;
     pairs[4].CTRL0 = CTIMER_CTRL4_TMRB4EN_Msk;
     assert(nsx_buck_hw_check(NSX_BUCK_CPU, 4) == NSX_BUCK_BUSY);
     pairs[4].CTRL0 = 0;
@@ -70,7 +95,9 @@ int main(void) {
         assert(nsx_buck_hw_check(rails[i], 4) == NSX_BUCK_OK);
         assert(nsx_buck_hw_start(rails[i], 4, &touched) == NSX_BUCK_OK && touched);
         assert(control == (_VAL2FLD(CTIMER_CTRL4_TMRA4CLK, sels[i]) | AM_HAL_CTIMER_FN_CONTINUOUS));
-        assert(nsx_buck_hw_count(4) == 0x1234abcd);
+        uint32_t count;
+        assert(nsx_buck_hw_count(4, &count) && count == 0x1234abcd);
+        check_interrupted_pair();
         assert(nsx_buck_hw_stop(4) == NSX_BUCK_OK);
     }
     assert(starts == 3 && stops == 3 && clears == 3);

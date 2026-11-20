@@ -14,6 +14,11 @@ static uint32_t pair_interrupt_mask(uint8_t timer) {
     return pair0 << (2U * timer);
 }
 
+static bool pair_gates_open(uint8_t timer) {
+    const uint32_t gates = (CTIMER_GLOBEN_ENA0_Msk | CTIMER_GLOBEN_ENB0_Msk) << (2U * timer);
+    return (CTIMER->GLOBEN & gates) == gates;
+}
+
 nsx_buck_status_t nsx_buck_hw_check(nsx_buck_rail_t rail, uint8_t timer) {
     if (rail != NSX_BUCK_CPU && rail != NSX_BUCK_MEMORY && rail != NSX_BUCK_BLE) {
         return NSX_BUCK_UNSUPPORTED;
@@ -26,7 +31,7 @@ nsx_buck_status_t nsx_buck_hw_check(nsx_buck_rail_t rail, uint8_t timer) {
     }
     /* The caller dedicates both halves. Also reject an already configured
      * pair, auxiliary trigger configuration, and enabled or pending IRQs. */
-    if (CTIMERn(timer)->CTRL0 != 0 || CTIMERn(timer)->AUX0 != 0 ||
+    if (!pair_gates_open(timer) || CTIMERn(timer)->CTRL0 != 0 || CTIMERn(timer)->AUX0 != 0 ||
         ((CTIMER->INTEN | CTIMER->INTSTAT) & pair_interrupt_mask(timer)) != 0) {
         return NSX_BUCK_BUSY;
     }
@@ -57,8 +62,14 @@ nsx_buck_status_t nsx_buck_hw_stop(uint8_t timer) {
     return NSX_BUCK_OK;
 }
 
-uint32_t nsx_buck_hw_count(uint8_t timer) {
-    return am_hal_ctimer_read(timer, AM_HAL_CTIMER_BOTH);
+bool nsx_buck_hw_count(uint8_t timer, uint32_t *count) {
+    const uint32_t running = AM_HAL_CTIMER_LINK | CTIMER_CTRL0_TMRA0EN_Msk | CTIMER_CTRL0_TMRB0EN_Msk;
+    const uint32_t clear = CTIMER_CTRL0_TMRA0CLR_Msk | CTIMER_CTRL0_TMRB0CLR_Msk;
+    if ((CTIMERn(timer)->CTRL0 & (running | clear)) != running || !pair_gates_open(timer)) {
+        return false;
+    }
+    *count = am_hal_ctimer_read(timer, AM_HAL_CTIMER_BOTH);
+    return true;
 }
 
 uint32_t nsx_buck_hw_time(uint32_t *tick) {
