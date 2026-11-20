@@ -196,6 +196,38 @@ def test_release_evidence_exists(repo_root: Path) -> None:
     assert missing == []
 
 
+def test_release_evidence_checksums_cover_qualification_records(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    evidence = release["external_evidence"]
+    checksum_file = evidence["checksums"]
+    assert checksum_file in release["release_evidence"]
+    contents = release_bytes(repo_root, release, repo_root / checksum_file).decode("utf-8")
+    records = set()
+    for line in contents.splitlines():
+        digest, filename = line.split("  ", 1)
+        assert re.fullmatch(r"[0-9a-f]{64}", digest)
+        path = Path(filename)
+        assert not path.is_absolute() and ".." not in path.parts and path not in records
+        records.add(path)
+
+    root = Path(evidence["root"])
+    core = {Path(evidence[key]).relative_to(root) for key in ("assessment", "psram")}
+    core.update(Path(name) / "record.json" for name in (
+        "host-8b505aa", "hardware-ap3", "hardware-ap4", "hardware-ap330", "hardware-ap510",
+        "hardware-ap510b", "hardware-ap510b-retry1", "hardware-ap510b-retry2",
+    ))
+    core.add(Path("snapshot2.log"))
+    assert core <= records
+    psram = records - core
+    supplement = release["qualification"]["psram_supplement"]
+    runs = {path.parent for path in psram}
+    assert len(runs) == supplement["firmware_runs"]
+    for run in runs:
+        assert run.parent == Path("psram-ap510") / supplement["board"]
+        assert re.fullmatch(r"[0-9a-f]{32}", run.name)
+    assert psram == {run / filename for run in runs for filename in ("manifest.json", "result.json")}
+
+
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """A corrected release must never erase the record it corrects.
 

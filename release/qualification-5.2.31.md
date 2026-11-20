@@ -20,6 +20,10 @@ passed with the original probe settings and 40-second timeout. The cause is open
 Physical SCK, throughput ([#214](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/214)),
 cold power-on and ATfE/ACfE execution were outside this run. The host and board
 records are retained under `artifacts/nsx/sdk207-release-IlEYlQ` in the parent
-workspace. The release manifest pins SHA-256 digests for the assessment, host
-and board records, both timed-out attempts, and the six PSRAM build manifests
-and results. Verify a retained file with `sha256sum` from that evidence root.
+workspace. From that evidence directory, verify the assessment, host record,
+board records, diagnostic read and PSRAM build/result pairs with the committed
+checksum list (set `SDK` to the absolute path of this SDK checkout).
+
+```sh
+sha256sum --check "$SDK/release/evidence-5.2.31.sha256"
+```
