@@ -5,6 +5,9 @@ module:
   type: board
   version: "0.1.0"
 
+licenses:
+  .: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

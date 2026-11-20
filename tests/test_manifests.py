@@ -106,6 +106,14 @@ def test_all_manifests_parse(manifests: dict[Path, dict]) -> None:
         assert manifest["module"]["type"] in VALID_MODULE_TYPES, path
 
 
+def test_manifest_license_scopes(manifests: dict[Path, dict]) -> None:
+    for path, manifest in manifests.items():
+        scopes = manifest.get("licenses")
+        assert isinstance(scopes, dict) and scopes, path
+        for scope in scopes:
+            assert (path.parent / scope).exists(), (path, scope)
+
+
 def test_module_manifest_names_match_directories(module_dirs: list[Path], manifests: dict[Path, dict]) -> None:
     for module_dir in module_dirs:
         manifest = manifests[module_dir / "nsx-module.yaml"]
