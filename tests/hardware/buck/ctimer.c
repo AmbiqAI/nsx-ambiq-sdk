@@ -25,8 +25,27 @@ void tearDown(void) {
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, stop);
 }
 
-static void measure(uint32_t window) {
+typedef struct {
+    uint32_t before[3], after[3];
     nsx_power_buck_sample_t sample;
+} observed_sample_t;
+
+static const nsx_buck_rail_t rails[] = {NSX_BUCK_CPU, NSX_BUCK_MEMORY, NSX_BUCK_BLE};
+
+static void read_ctimers(uint32_t counts[3]) {
+    for (unsigned i = 0; i < 3; ++i) {
+        counts[i] = am_hal_ctimer_read(session.timer[rails[i]], AM_HAL_CTIMER_BOTH);
+    }
+}
+
+static void read_bracketed(observed_sample_t *result) {
+    read_ctimers(result->before);
+    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, nsx_power_buck_read(&session, &result->sample));
+    read_ctimers(result->after);
+}
+
+static void measure(uint32_t window) {
+    observed_sample_t first, last;
     nsx_buck_supply_t main_supply = am_hal_pwrctrl_simobuck_enabled_check() ? NSX_BUCK_SUPPLY_ON : NSX_BUCK_SUPPLY_OFF;
     nsx_buck_supply_t ble_supply = am_hal_pwrctrl_blebuck_enabled_check() ? NSX_BUCK_SUPPLY_ON : NSX_BUCK_SUPPLY_OFF;
     nsx_buck_cpu_t cpu = am_hal_burst_mode_status() == AM_HAL_BURST_MODE ? NSX_BUCK_CPU_BURST : NSX_BUCK_CPU_NORMAL;
@@ -34,13 +53,15 @@ static void measure(uint32_t window) {
     nsx_buck_status_t status = nsx_power_buck_start(&session);
     owns_session = (status == NSX_BUCK_OK || status == NSX_BUCK_CLEANUP_REQUIRED);
     TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, status);
+    read_bracketed(&first);
     uint32_t start = am_hal_stimer_counter_get();
     unsigned poll;
     for (poll = 0; poll < 64000000u; ++poll) {
         if ((uint32_t)(am_hal_stimer_counter_get() - start) >= window) break;
     }
     TEST_ASSERT_TRUE_MESSAGE(poll < 64000000u, "STIMER stalled");
-    TEST_ASSERT_EQUAL_UINT32(NSX_BUCK_OK, nsx_power_buck_read(&session, &sample));
+    read_bracketed(&last);
+    nsx_power_buck_sample_t sample = last.sample;
     TEST_ASSERT_EQUAL_UINT32(session.rails, sample.rails);
     TEST_ASSERT_EQUAL_UINT32(32768, sample.tick_hz);
     TEST_ASSERT_TRUE(sample.elapsed_ticks >= window && sample.elapsed_ticks < window + 512);
@@ -58,13 +79,14 @@ static void measure(uint32_t window) {
         UnityPrintNumberUnsigned(sample.pulses[i]); UNITY_OUTPUT_CHAR(' ');
     }
     UNITY_OUTPUT_CHAR('\n');
-    TEST_ASSERT_EQUAL_UINT32(main_supply == NSX_BUCK_SUPPLY_ON,
-                             (sample.pulses[NSX_BUCK_CPU] | sample.pulses[NSX_BUCK_MEMORY]) != 0);
-    TEST_ASSERT_EQUAL_UINT32(ble_supply == NSX_BUCK_SUPPLY_ON, sample.pulses[NSX_BUCK_BLE] != 0);
-    if (window == 3 * 32768 && main_supply == NSX_BUCK_SUPPLY_ON) {
-        TEST_ASSERT_TRUE_MESSAGE(sample.pulses[NSX_BUCK_CPU] > UINT16_MAX ||
-                                 sample.pulses[NSX_BUCK_MEMORY] > UINT16_MAX,
-                                 "Linked high half was not observed");
+    for (unsigned i = 0; i < 3; ++i) {
+        nsx_buck_rail_t rail = rails[i];
+        uint32_t pulses = sample.pulses[rail] - first.sample.pulses[rail];
+        TEST_ASSERT_TRUE(pulses >= last.before[i] - first.after[i]);
+        TEST_ASSERT_TRUE(pulses <= last.after[i] - first.before[i]);
+        if ((rail == NSX_BUCK_BLE ? ble_supply : main_supply) == NSX_BUCK_SUPPLY_OFF) {
+            TEST_ASSERT_EQUAL_UINT32(0, sample.pulses[rail]);
+        }
     }
     am_hal_ctimer_stop(session.timer[NSX_BUCK_CPU], AM_HAL_CTIMER_BOTH);
     sample.rails = 0;
@@ -84,7 +106,7 @@ static void ble_powered(void) {
     TEST_ASSERT_EQUAL_UINT32(0, am_hal_ble_initialize(0, &ble));
     TEST_ASSERT_EQUAL_UINT32(0, am_hal_ble_power_control(ble, AM_HAL_BLE_POWER_ACTIVE));
     TEST_ASSERT_TRUE(am_hal_pwrctrl_blebuck_enabled_check());
-    // Keep the linked counters running long enough to exercise the high halves.
+    // Longer observation permits high-half counts when the workload produces them.
     measure(3 * 32768);
 }
 
