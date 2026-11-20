@@ -50,7 +50,7 @@ bundle. `nsx-power` now exposes GPIO state signaling for external power tools,
 plus target-specific power-profile dumps intended for low-power bring-up and
 instrumentation.
 
-The public API is exported as `nsx_power.h`.
+Power policy uses `nsx_power.h`. Raw buck telemetry uses `nsx_power_buck.h`.
 
 Apollo510L uses the Apollo5 backend with its own HAL capabilities: IOM0–5,
 UART0–1, single-bank NVM, 128/256 KiB DTCM and 1.75 MiB shared SRAM.
@@ -358,3 +358,53 @@ how to restore the board and its application. Rebuild measurement firmware using
 this header to remove any previously inlined drain read. Peripheral shutdown returns
 the first error from debug release, the HAL power controls, or stopping an
 application timer. The two HAL-owned timers are left alone.
+
+## Measuring buck pulses
+
+Include `nsx_power_buck.h` and query `nsx_power_buck_rails()` for the rail mask
+supported by the build. On Apollo4 Plus/Lite and Apollo510/B, each selected rail
+uses one TIMER in up-count mode. Apollo510/B and Apollo4 Plus KXR have
+passed an EVB smoke test. Apollo4 Lite has build coverage. Apollo330 Plus
+and Apollo510 Lite report zero capabilities pending qualification. On the
+Apollo330 Plus EVB a conventional timer clock counted correctly, but all four
+buck inputs returned zero with SIMO active in LP and HP2. See [SDK #231](https://github.com/AmbiqAI/nsx-ambiq-sdk/issues/231).
+
+Dedicate each timer in the application, including coordination with RTOS, BLE
+and board users. TIMER0–4 are reserved for NSX.
+A stopped timer can still belong to another driver. NSX can reject known
+reserved numbers and active hardware, but cannot discover private allocations.
+
+For example, an Apollo510 application that has dedicated TIMER7 and TIMER8
+can declare the following session before the workload:
+
+```c
+nsx_power_buck_session_t session = {
+    .rails = NSX_BUCK_RAIL(NSX_BUCK_VDDC) | NSX_BUCK_RAIL(NSX_BUCK_VDDF),
+    .timer = {[NSX_BUCK_VDDC] = 7, [NSX_BUCK_VDDF] = 8},
+};
+```
+
+Call `nsx_power_buck_start(&session)` once and check for `NSX_BUCK_OK`. Run the
+workload, then call `nsx_power_buck_read(&session, &sample)`. Stop with
+`nsx_power_buck_stop(&session)` even if reading failed. A start or stop that
+returns `NSX_BUCK_CLEANUP_REQUIRED` retains the session for a stop retry.
+Keep the session at the same address until released. Foreground and RTOS
+tasks share one measurement session; overlapping calls can return
+`NSX_BUCK_BUSY`. Reserve and serialize direct HAL users in application code.
+
+Each successful read reports deltas since start for `sample.rails`, elapsed
+STIMER ticks, nominal tick frequency, and the observed supply and CPU modes at
+both endpoints. An active supply can have zero pulses on a selected rail.
+Measurements have no joule conversion. A changed endpoint mode describes a
+mixed window; matching endpoints cannot detect transitions in between.
+CPU modes are status indications, not measured frequencies.
+
+Use an already running independent STIMER clock. The measurement never
+configures the regulator, CPU mode, or STIMER. Keep its source and counter
+continuous through the workload. A disabled, frozen or unrecognized clock
+selection returns `NSX_BUCK_NO_TIMEBASE`; restart the session after recovery.
+The nominal rate describes its configuration. A zero elapsed interval cannot
+distinguish a short window from a physically stalled source. Counters are read sequentially. Keep each window
+shorter than one full 32-bit cycle of the timebase **and each pulse counter**.
+For example, a 32,768 Hz timebase wraps after about 36.4 hours; a rail may
+wrap sooner. No interrupts are used to track overflow.
