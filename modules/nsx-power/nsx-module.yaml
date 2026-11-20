@@ -3,6 +3,14 @@ module:
   name: nsx-power
   type: backend_specific
   version: "5.2.31"
+licenses:
+  .: BSD-3-Clause
+  includes-api/nsx_power.h: LicenseRef-AmbiqSuite-BSD
+  src/apollo330/nsx_power.c: LicenseRef-AmbiqSuite-BSD
+  src/apollo5/nsx_power.c: LicenseRef-AmbiqSuite-BSD
+  src/atomiq110/nsx_power.c: LicenseRef-AmbiqSuite-BSD
+  src/nsx_power.c: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

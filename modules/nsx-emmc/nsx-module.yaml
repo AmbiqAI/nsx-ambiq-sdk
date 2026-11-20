@@ -5,6 +5,9 @@ module:
   type: runtime
   version: "5.2.31"
 
+licenses:
+  .: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

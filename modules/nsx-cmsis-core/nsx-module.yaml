@@ -5,6 +5,9 @@ module:
   type: backend_specific
   version: "5.2.31"
 
+licenses:
+  .: Apache-2.0
+
 support:
   ambiqsuite: true
   zephyr: false

@@ -3,6 +3,10 @@ module:
   name: nsx-npu
   type: backend_specific
   version: "5.2.31"
+licenses:
+  .: BSD-3-Clause
+  includes-api/nsx_npu.h: LicenseRef-AmbiqSuite-BSD
+
 support:
   ambiqsuite: true
   zephyr: false

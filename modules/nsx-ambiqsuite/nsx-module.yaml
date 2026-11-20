@@ -9,6 +9,10 @@ module:
   sdk_release: "stable-2026.11.05-sbrk42"
   upstream_revision: "83bd69c37edf8d94cf77021140d707c3fe886242"
 
+licenses:
+  .: LicenseRef-AmbiqSuite-BSD
+  sdk: null
+
 support:
   ambiqsuite: true
   zephyr: false
