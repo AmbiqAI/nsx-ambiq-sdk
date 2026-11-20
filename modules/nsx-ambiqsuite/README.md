@@ -11,16 +11,16 @@ and a thin NSX provider target through `CMakeLists.txt` and `nsx-module.yaml`.
 intake: upstream `3cfb7d50718e6fb016f1a0128121cb40598109d5`, prepared source
 `83bd69c37edf8d94cf77021140d707c3fe886242`. The latter includes the AT110 XSPI
 capacity/alignment and vendor heap-stub source patches, applied before all 73
-HAL/BSP archives were built. This archive-only refresh preserves the reviewed
+HAL/BSP archives were built. The 5.2.30 archive refresh preserves the reviewed
 provider sources and headers from SDK 5.2.29 byte-for-byte. NSX retains its
 bounded allocator and force-link protection. `source_patch_provenance` records the original source and patch hashes.
 The curated payload carries four patches under `sdk-intake/patches/stable/`:
 compiler detection, unnamed-bitfield qualifiers, C++17 CC312 compatibility,
 and EM9305 full-duplex receive scratch capacity.
 
-The proposed coordinated distribution version is `5.2.30`.
+The 5.2.31 distribution retains the complete 5.2.30 provider payload.
 Bounded GCC startup/runtime qualification is recorded in
-`release/qualification-5.2.30.md` at the repository root.
+`release/qualification-5.2.31.md` at the repository root.
 This is not an official numbered AmbiqSuite release.
 
 ## Package Contents

@@ -16,8 +16,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.30.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.29.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.31.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.30.yaml")
 MIXED_SNAPSHOT_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
@@ -96,7 +96,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.30"
+    assert root_version == "5.2.31"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -201,14 +201,14 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.29"
+    assert superseded["distribution"]["version"] == "5.2.30"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "5585350def5fdced39d42bba150042f92f23cf18"
+    assert supersedes["commit"] == "acc97030b7158f81dc11f8df68fc43b8346f6dfe"
     assert supersedes["reason"].strip()
 
 
@@ -387,9 +387,15 @@ def test_consumer_upgrade_archive_claims_match_git_history(repo_root: Path) -> N
             history_unavailable(f"{entry['from_commit']} is not in this checkout")
         base = archive_blobs(entry["from_commit"])
         assert set(base) == set(head), entry["from_version"]
+        provider = "modules/nsx-ambiqsuite/sdk"
+        before = git(repo_root, "rev-parse", f"{entry['from_commit']}:{provider}")
+        after = git(repo_root, "rev-parse", f"{release_content_revision(repo_root, release)}:{provider}")
+        assert before.returncode == after.returncode == 0
+        assert entry["provider_content_unchanged"] == (before.stdout == after.stdout)
         changed = {path for path in head if base[path] != head[path]}
         changed_parts = {Path(path).relative_to(lib_rel).parts[1] for path in changed}
         assert changed_parts == set(entry["changed_archive_parts"]), entry["from_version"]
+        assert len(changed) == entry["changed_archive_count"]
         assert len(head) - len(changed) == entry["unchanged_archive_count"], entry["from_version"]
 
 
@@ -636,7 +642,8 @@ def test_current_single_source_provenance_and_archive_hashes(repo_root: Path) ->
         assert train["built_from_source_commit"] == source
         assert train.get("abi_cflags") == artifact["build"]["toolchains"][key].get("abi_cflags")
     for upgrade in release["consumer_upgrade"]:
-        assert upgrade["rebuilt_archive_count"] == sum(counts.values())
+        expected_rebuilds = 0 if upgrade["provider_content_unchanged"] else sum(counts.values())
+        assert upgrade["rebuilt_archive_count"] == expected_rebuilds
         assert upgrade["changed_archive_count"] + upgrade["unchanged_archive_count"] == sum(counts.values())
 
 
@@ -688,7 +695,7 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     assert "inherits_from" not in qualification
     assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
     assert set(qualification["hardware_boards"]) <= set(qualification["scope"]["boards"])
-    assert qualification["evidence_candidate"] == "fa61571630bb0c7ebebb703fbca67b86334b5386"
+    assert qualification["evidence_candidate"] == "8b505aa2a6c6905235065fe7abfbd8337219acc2"
     require_full_history(repo_root)
     provider_path = "modules/nsx-ambiqsuite/sdk"
     tested = git(repo_root, "rev-parse", f"{qualification['evidence_candidate']}:{provider_path}")

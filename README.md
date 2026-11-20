@@ -19,7 +19,7 @@ Retain the applicable component notices.
 
 ## Current Coverage
 
-The `5.2.30` release candidate contains the `stable-2026.11.05` intake from
+The `5.2.31` release candidate retains the provider from `5.2.30`, including the `stable-2026.11.05` intake from
 upstream commit `3cfb7d50718e6fb016f1a0128121cb40598109d5`.
 
 All 73 HAL/BSP archives were rebuilt from prepared source commit
@@ -31,8 +31,9 @@ Four payload patches preserve C++ compatibility and EM9305 receive scratch capac
 Cordio retains its separately recorded base snapshot and selected NSX changes.
 This is not an official numbered AmbiqSuite release.
 
-GCC startup/runtime checks passed on AP330, AP510B and AP4 KXR (21 cases).
-This release does not claim new USB/BLE traffic or cold-boot qualification.
+GCC startup and runtime checks passed on AP3 Blue Plus, AP4 Blue Plus KXR,
+AP330 Plus, AP510 and AP510B. AP510 also passed 48 PSRAM checks, including
+asynchronous DMA reads at both CPU modes and requested PSRAM clocks.
 See the qualification report for exact tested revisions and coverage limits.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
@@ -45,8 +46,8 @@ are selected by the public `armclang` toolchain family.
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 Release-candidate provenance and qualification are recorded in
-[`release/nsx-ambiq-sdk-5.2.30.yaml`](release/nsx-ambiq-sdk-5.2.30.yaml) and
-[`release/qualification-5.2.30.md`](release/qualification-5.2.30.md).
+[`release/nsx-ambiq-sdk-5.2.31.yaml`](release/nsx-ambiq-sdk-5.2.31.yaml) and
+[`release/qualification-5.2.31.md`](release/qualification-5.2.31.md).
 The records of earlier versions are kept alongside them.
 
 ## Using The Modules
