@@ -52,7 +52,14 @@ The records of earlier versions are kept alongside them.
 
 ## Using The Modules
 
-The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports) supports optional UART/SWO on Apollo330P/Apollo510; existing EVBs default to v1 and NSX custom-provider resolution follows separately. Select a board descriptor, add the staged modules your app needs, and consume the stable CMake targets. The board descriptor defines `nsx::board` and `nsx::board_flags`; the platform modules provide targets such as:
+For registry-managed apps, use neuralspotx 0.9.6 or newer before selecting SDK
+5.2.31. Its resolver understands BSP provider roles, including for built-in EVBs.
+Direct CMake users can continue to select their board and staged modules.
+
+The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports)
+supports optional UART/SWO on Apollo330P and Apollo510. Existing EVBs default
+to v1. The board descriptor defines `nsx::board` and `nsx::board_flags`. The
+platform modules provide these CMake targets:
 
 | Target | Purpose |
 | --- | --- |

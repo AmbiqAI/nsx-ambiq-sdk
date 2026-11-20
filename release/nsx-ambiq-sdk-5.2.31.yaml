@@ -18,6 +18,9 @@ distribution:
     reason: Ship PSRAM API 1.1, BSP integration, AT110 fixes and SDK qualification tooling.
   immutability_note: All earlier tags, releases and commits are preserved. Corrections are published as new
     distribution versions.
+consumer_requirements:
+  neuralspotx_minimum: 0.9.6
+  scope: Registry-managed apps, including built-in EVBs, need BSP role support for dependency resolution.
 consumer_upgrade:
 - from_version: 5.2.30
   from_tag: v5.2.30
