@@ -23,3 +23,15 @@ From the retained evidence directory `artifacts/nsx/release532-mHGviZ`, run
 `sha256sum --check "$SDK/release/evidence-5.2.32.sha256"` with `SDK` set
 to this checkout. The ledger includes the host and board records, generated
 app source and lock, and compiler link records.
+
+## Cordio follow-up
+
+With the Cordio update from AmbiqSuite `eff2a4850038` applied to SDK
+`d04b0c8`, Arm GNU GCC built `libnsx_cordio.a` for Apollo3, Apollo3 Plus,
+Apollo4 Plus Blue KXR and Apollo510B. The Apollo510B BLE smoke application
+linked and ran on the EVB after a debugger reset. A Bluetooth central
+discovered its service, read model `Apollo510B EVB` and firmware `5.2.32`,
+received 10 periodic notifications, and verified the asynchronous payloads
+`123456` and `654321` across a disconnect and reconnect.
+The flashed ELF SHA-256 was
+`79c2f9a1c4ad43e48792161421b88459af3c1edc664c605c29a64cabae219616`.

@@ -8,6 +8,8 @@
   targets, including linked CTIMER pairs on Apollo3. Apollo330 Plus and
   Apollo510 Lite return unsupported for pulse counting (#240, #241, #243).
 - Add path-scoped license declarations to SDK and board manifests (#238, #242).
+- Adopt the upstream Cordio notices for 42 files and remove the unused FreeRTOS
+  port source `wsf_math.c` and header `wsf_intrinsic.h` (#73).
 - Carry forward the v5.2.31 AmbiqSuite provider and all 73 prebuilt archives.
   Update the BLE Device Information default firmware revision to 5.2.32.
 

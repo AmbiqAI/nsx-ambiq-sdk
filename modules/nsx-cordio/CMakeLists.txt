@@ -93,7 +93,6 @@ nsx_cordio_sources(NSX_CORDIO_WSF_FREERTOS_SRC "${NSX_CORDIO_WSF}/sources/port/f
     wsf_assert.c
     wsf_buf.c
     wsf_efs.c
-    wsf_math.c
     wsf_msg.c
     wsf_os.c
     wsf_queue.c

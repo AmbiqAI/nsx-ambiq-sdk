@@ -33,6 +33,57 @@ consumer_upgrade:
   rebuilt_archive_count: 0
   provider_content_unchanged: true
   changes:
+  - &v532-cordio-notices
+    id: v532-cordio-notices
+    summary: Adopt upstream Cordio per-file notices and remove two unused FreeRTOS port files.
+    paths:
+    - modules/nsx-cordio/CMakeLists.txt
+    - modules/nsx-cordio/sdk/third_party/NSX_VENDORED_VERSION.txt
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/da14581/hci_vs_da14581.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_cmd.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.h
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_evt.c
+    - modules/nsx-cordio/sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_tr.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/ll_defs.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_buf.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_efs.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_math.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_msg.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_os.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_queue.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/include/wsf_timer.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_buf.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_cs.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_efs.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_msg.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os_int.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_queue.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_timer.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_types.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/bda.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/bda.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/bstream.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/bstream.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/calc128.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/calc128.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/crc32.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/crc32.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/print.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/print.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/terminal.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/terminal.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/wstr.c
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/util/wstr.h
+    removed_paths:
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_intrinsic.h
+    - modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos/wsf_math.c
   - &v532-license-declarations
     id: v532-license-declarations
     summary: Declare path-specific licenses for all SDK modules and board packages.
@@ -357,6 +408,7 @@ consumer_upgrade:
     - release/nsx-ambiq-sdk-5.2.31.yaml
     - release/qualification-5.2.31.md
     - uv.lock
+  - *v532-cordio-notices
   - *v532-license-declarations
   - *v532-power
   - *v532-power-tests
