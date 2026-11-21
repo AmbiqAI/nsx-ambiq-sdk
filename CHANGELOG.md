@@ -1,6 +1,17 @@
 # Changelog
 
-## 5.2.31 - Unreleased
+## 5.2.32 - Unreleased
+
+- Read live power-domain status through `nsx_power_status_read()`. A validity
+  mask identifies which status words each target supplies (#244).
+- Count raw buck regulator pulses with caller-owned timers on supported Apollo
+  targets, including linked CTIMER pairs on Apollo3. Apollo330 Plus and
+  Apollo510 Lite return unsupported for pulse counting (#240, #241, #243).
+- Add path-scoped license declarations to SDK and board manifests (#238, #242).
+- Carry forward the v5.2.31 AmbiqSuite provider and all 73 prebuilt archives.
+  Update the BLE Device Information default firmware revision to 5.2.32.
+
+## 5.2.31 - 2026-11-20
 
 - Add asynchronous PSRAM reads into DTCM with per-client completion on AP510
   and AP510B. Preserve blocking DMA buffer ownership after timeouts and improve

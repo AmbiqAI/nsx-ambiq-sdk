@@ -2,7 +2,7 @@ schema_version: 1
 module:
   name: nsx-audio
   type: backend_specific
-  version: "5.2.31"
+  version: "5.2.32"
 licenses:
   .: LicenseRef-AmbiqSuite-BSD
 
