@@ -13,7 +13,7 @@ component notices when distributing those components.
 | FreeRTOS kernel | [Upstream MIT license](../modules/nsx-freertos/sdk/third_party/FreeRTOS-Kernel/LICENSE.md). The NSX wrapper carries a [BSD-3-Clause notice](../modules/nsx-freertos/LICENSE). The [CM4F handlers](../modules/nsx-freertos/src/nsx_freertos_handlers_cm4f.c) and [configuration template](../modules/nsx-freertos/templates/FreeRTOSConfig.h.template) carry MIT notices. |
 | TinyUSB | [Upstream MIT license](../modules/nsx-ambiq-usb/sdk/third_party/tinyusb/source/LICENSE). |
 | AmbiqSuite-derived USB integration | In-file notices under [`modules/nsx-ambiq-usb/sdk/`](../modules/nsx-ambiq-usb/sdk), outside the TinyUSB subtree. |
-| Cordio | In-file notices under [`modules/nsx-cordio/sdk/third_party/cordio/`](../modules/nsx-cordio/sdk/third_party/cordio), including [Apache-2.0](Apache-2.0.txt) headers and Software License Agreement references in the [WSF FreeRTOS port](../modules/nsx-cordio/sdk/third_party/cordio/wsf/sources/port/freertos) and other legacy files. Consult the notice on each source file. |
+| Cordio | In-file notices under [`modules/nsx-cordio/sdk/third_party/cordio/`](../modules/nsx-cordio/sdk/third_party/cordio), including the Arm and Packetcraft [Apache-2.0](Apache-2.0.txt) notices on the 42 files identified in the [module manifest](../modules/nsx-cordio/nsx-module.yaml). Consult the notices on other files individually. |
 | micro-ECC | [Upstream BSD-2-Clause license](../modules/nsx-cordio/sdk/third_party/uecc/license.txt). |
 | AmbiqSuite-derived PSRAM device drivers | In-file notices under `modules/nsx-psram/src/<family>/devices/`. |
 | Unity hardware tests | [Upstream MIT license](../tests/hardware/vendor/unity/LICENSE.txt). |
@@ -30,5 +30,4 @@ The AmbiqSuite provider declares its wrapper separately from the mixed
 documents and component notices listed above. The Apollo4 USB DCD header
 and Apollo5 APS25616N PSRAM driver contain unexpanded upstream copyright
 placeholders. The USB buffer-hook header carries no license notice within
-the imported USB subtree. These files and the separately tracked Cordio
-agreement references retain explicit `null` entries.
+the imported USB subtree. These three files retain explicit `null` entries.

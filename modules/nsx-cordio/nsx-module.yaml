@@ -14,51 +14,49 @@ summary: Optional Cordio/WSF Bluetooth LE host stack. Vendors the AmbiqSuite thi
 
 licenses:
   sdk/third_party/uecc: BSD-2-Clause
-  # These files refer to a separate agreement whose terms remain unresolved.
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/da14581/hci_vs_da14581.c: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_cmd.c: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core.c: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.c: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.h: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_evt.c: null
-  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_tr.c: null
-  sdk/third_party/cordio/wsf/include/ll_defs.h: null
-  sdk/third_party/cordio/wsf/include/wsf_buf.h: null
-  sdk/third_party/cordio/wsf/include/wsf_efs.h: null
-  sdk/third_party/cordio/wsf/include/wsf_math.h: null
-  sdk/third_party/cordio/wsf/include/wsf_msg.h: null
-  sdk/third_party/cordio/wsf/include/wsf_os.h: null
-  sdk/third_party/cordio/wsf/include/wsf_queue.h: null
-  sdk/third_party/cordio/wsf/include/wsf_timer.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_buf.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_cs.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_efs.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_intrinsic.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_math.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_msg.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os_int.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_queue.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_timer.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.c: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.h: null
-  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_types.h: null
-  sdk/third_party/cordio/wsf/sources/util/bda.c: null
-  sdk/third_party/cordio/wsf/sources/util/bda.h: null
-  sdk/third_party/cordio/wsf/sources/util/bstream.c: null
-  sdk/third_party/cordio/wsf/sources/util/bstream.h: null
-  sdk/third_party/cordio/wsf/sources/util/calc128.c: null
-  sdk/third_party/cordio/wsf/sources/util/calc128.h: null
-  sdk/third_party/cordio/wsf/sources/util/crc32.c: null
-  sdk/third_party/cordio/wsf/sources/util/crc32.h: null
-  sdk/third_party/cordio/wsf/sources/util/print.c: null
-  sdk/third_party/cordio/wsf/sources/util/print.h: null
-  sdk/third_party/cordio/wsf/sources/util/terminal.c: null
-  sdk/third_party/cordio/wsf/sources/util/terminal.h: null
-  sdk/third_party/cordio/wsf/sources/util/wstr.c: null
-  sdk/third_party/cordio/wsf/sources/util/wstr.h: null
+  # Per-file notices from the AmbiqSuite Cordio update recorded in NSX_VENDORED_VERSION.txt.
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/da14581/hci_vs_da14581.c: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_cmd.c: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core.c: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.c: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_core_ps.h: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_evt.c: Apache-2.0
+  sdk/third_party/cordio/ble-host/sources/hci/ambiq/hci_tr.c: Apache-2.0
+  sdk/third_party/cordio/wsf/include/ll_defs.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_buf.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_efs.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_math.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_msg.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_os.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_queue.h: Apache-2.0
+  sdk/third_party/cordio/wsf/include/wsf_timer.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_assert.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_buf.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_cs.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_efs.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_msg.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_os_int.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_queue.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_timer.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_trace.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/port/freertos/wsf_types.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/bda.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/bda.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/bstream.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/bstream.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/calc128.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/calc128.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/crc32.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/crc32.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/print.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/print.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/terminal.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/terminal.h: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/wstr.c: Apache-2.0
+  sdk/third_party/cordio/wsf/sources/util/wstr.h: Apache-2.0
 
 vendored:
   cordio:

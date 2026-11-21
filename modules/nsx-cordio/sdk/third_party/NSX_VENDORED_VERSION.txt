@@ -40,3 +40,11 @@ uecc is an unmodified copy. cordio is unmodified except for these NSX edits
 - ble-host/sources/hci/ambiq/em9305/hci_drv_em9305.c: NSX rounds queued TX
   storage up to whole words to hold the existing 259-byte packet limit.
   The separate nonblocking transaction-control buffer is unchanged.
+
+Cordio notice update for SDK 5.2.32:
+- Applied the Cordio changes from AmbiqSuite revision
+  eff2a48500381fb2ff1d5ef677f55e08d21bd0f7 to the 44 affected paths.
+  The 42 retained files carry upstream Arm and Packetcraft Apache-2.0 notices.
+  Upstream cites https://github.com/packetcraft-inc/stacks as the source of
+  those notices. The existing AmbiqSuite implementations remain in place.
+- Upstream removed the FreeRTOS port files wsf_math.c and wsf_intrinsic.h.
