@@ -19,15 +19,15 @@ Retain the applicable component notices.
 
 ## Current Coverage
 
-SDK 5.2.31 ships the same AmbiqSuite provider as 5.2.30. Its 73 HAL/BSP archives
+SDK 5.2.32 uses the same AmbiqSuite provider as 5.2.31. Its 73 HAL/BSP archives
 come from prepared source `83bd69c37edf8d94cf77021140d707c3fe886242`, based on
 `stable-2026.11.05` at `3cfb7d50718e6fb016f1a0128121cb40598109d5`. It retains
 the AT110 XSPI fixes, bounded heap integration and four staged payload patches.
 Cordio has its own recorded source revision.
 
-GCC startup and runtime checks passed on AP3 Blue Plus, AP4 Blue Plus KXR,
-AP330 Plus, AP510 and AP510B. AP510 also passed 48 PSRAM cases covering
-blocking and asynchronous reads.
+The [power module](modules/nsx-power/README.md) exposes live domain status and
+raw regulator pulse counts. Apollo330 Plus and Apollo510 Lite support status
+reads and report buck pulse counting as unsupported.
 
 The promoted payload contains GCC, ATfE, and ACfE artifact families for staged
 Apollo2, Apollo3, Apollo4, Apollo330, and Apollo510 platforms. ACfE artifacts
@@ -39,14 +39,14 @@ are selected by the public `armclang` toolchain family.
 
 See [docs/platform-coverage.md](docs/platform-coverage.md) for the current coverage table.
 Release-candidate provenance and qualification are recorded in
-[`release/nsx-ambiq-sdk-5.2.31.yaml`](release/nsx-ambiq-sdk-5.2.31.yaml) and
-[`release/qualification-5.2.31.md`](release/qualification-5.2.31.md).
+[`release/nsx-ambiq-sdk-5.2.32.yaml`](release/nsx-ambiq-sdk-5.2.32.yaml) and
+[`release/qualification-5.2.32.md`](release/qualification-5.2.32.md).
 The records of earlier versions are kept alongside them.
 
 ## Using The Modules
 
 For registry-managed apps, use neuralspotx 0.9.6 or newer before selecting SDK
-5.2.31. Its resolver understands BSP provider roles, including for built-in EVBs.
+5.2.32. Its resolver understands BSP provider roles, including for built-in EVBs.
 Direct CMake users can continue to select their board and staged modules.
 
 The opt-in [BSP contract](modules/nsx-core/README.md#optional-bsp-debug-transports)

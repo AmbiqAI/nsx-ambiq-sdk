@@ -16,8 +16,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.31.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.30.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.32.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.31.yaml")
 MIXED_SNAPSHOT_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
@@ -96,7 +96,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.31"
+    assert root_version == "5.2.32"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -196,8 +196,7 @@ def test_release_evidence_exists(repo_root: Path) -> None:
     assert missing == []
 
 
-def test_release_evidence_checksums_cover_qualification_records(repo_root: Path) -> None:
-    release = load_yaml(repo_root, RELEASE_MANIFEST)
+def evidence_records(repo_root: Path, release: dict) -> set[Path]:
     evidence = release["external_evidence"]
     checksum_file = evidence["checksums"]
     assert checksum_file in release["release_evidence"]
@@ -210,6 +209,13 @@ def test_release_evidence_checksums_cover_qualification_records(repo_root: Path)
         assert not path.is_absolute() and ".." not in path.parts and path not in records
         records.add(path)
 
+    return records
+
+
+def test_previous_psram_release_evidence(repo_root: Path) -> None:
+    release = load_yaml(repo_root, Path("release/nsx-ambiq-sdk-5.2.31.yaml"))
+    records = evidence_records(repo_root, release)
+    evidence = release["external_evidence"]
     root = Path(evidence["root"])
     core = {Path(evidence[key]).relative_to(root) for key in ("assessment", "psram")}
     core.update(Path(name) / "record.json" for name in (
@@ -228,6 +234,36 @@ def test_release_evidence_checksums_cover_qualification_records(repo_root: Path)
     assert psram == {run / filename for run in runs for filename in ("manifest.json", "result.json")}
 
 
+def test_power_release_evidence(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    records = evidence_records(repo_root, release)
+    boards = release["qualification"]["hardware_boards"]
+    evidence = release["external_evidence"]
+    root = Path(evidence["root"])
+    expected = {Path(evidence[key]).relative_to(root) for key in ("assessment", "generated_app")}
+    expected.update(Path(name) for name in ("plan.json", "decisions.json", "host/record.json",
+                    "host/intake-reviewed.json", "host/compatibility/compatibility.json",
+                    "host/host-tests.xml", "power-contracts-final.xml", "provider-baseline.log"))
+    for name in ("main.c", "CMakeLists.txt", "nsx.yml", "nsx.lock"):
+        expected.add(Path("generated-app") / name)
+    for compiler in ("gcc", "atfe", "armclang"):
+        for board in ("apollo330mP_evb", "apollo510_evb", "apollo510b_evb", "apollo510dL_evb"):
+            expected.add(Path(f"links-{compiler}") / compiler / board / "smoke-evidence.json")
+    for board in boards:
+        expected.update({Path(f"core-{board}/record.json"), Path(f"core-{board}/restored.json"),
+                         Path(f"power-{board}/restored.json"), Path(f"power-{board}.xml")})
+    for board in ("apollo330mP_evb", "apollo510b_evb"):
+        expected.update(Path("generated-app") / board / name for name in ("result.json", "restored.json"))
+    runs = {path.parent for path in records if path.name == "manifest.json"}
+    for board in boards:
+        board_runs = [run for run in runs if run.parent == Path(f"power-{board}") / board]
+        assert len(board_runs) == 2
+        for run in board_runs:
+            assert re.fullmatch(r"[0-9a-f]{32}", run.name)
+            expected.update((run / "result.json", run / "manifest.json"))
+    assert expected == records
+
+
 def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """A corrected release must never erase the record it corrects.
 
@@ -238,14 +274,14 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.30"
+    assert superseded["distribution"]["version"] == "5.2.31"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "acc97030b7158f81dc11f8df68fc43b8346f6dfe"
+    assert supersedes["commit"] == "d80399e91d28f78078198b75547bbe651a2e51bd"
     assert supersedes["reason"].strip()
 
 
@@ -732,7 +768,7 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     assert "inherits_from" not in qualification
     assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
     assert set(qualification["hardware_boards"]) <= set(qualification["scope"]["boards"])
-    assert qualification["evidence_candidate"] == "8b505aa2a6c6905235065fe7abfbd8337219acc2"
+    assert qualification["evidence_candidate"] == "decdc3a27824fdf99ae6994462b7b13cf6307e07"
     require_full_history(repo_root)
     provider_path = "modules/nsx-ambiqsuite/sdk"
     tested = git(repo_root, "rev-parse", f"{qualification['evidence_candidate']}:{provider_path}")
@@ -740,6 +776,10 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     shipped = git(repo_root, "rev-parse", f"{release_revision}:{provider_path}")
     assert tested.returncode == shipped.returncode == 0, (tested.stderr, shipped.stderr)
     assert tested.stdout.strip() == shipped.stdout.strip(), "release provider differs from hardware-tested candidate"
+    power_diff = git(repo_root, "diff", "--exit-code", qualification["evidence_candidate"], release_revision,
+                     "--", "modules/nsx-power", ":(exclude)modules/nsx-power/nsx-module.yaml",
+                     ":(exclude)modules/nsx-power/README.md")
+    assert power_diff.returncode == 0, "shipped power implementation differs from the board-tested candidate"
     for train in qualification["toolchains"]:
         if train["artifact_manifest_key"] != "gcc":
             assert train["hardware_status"] == "not_newly_qualified"
