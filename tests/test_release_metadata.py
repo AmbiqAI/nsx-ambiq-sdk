@@ -788,12 +788,20 @@ def test_power_qualification_matches_tested_payload(repo_root: Path) -> None:
 def test_archive_selection_qualification_matches_shipped_inputs(repo_root: Path) -> None:
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     qualification = release["qualification"]
+    assert qualification["status"] == "bounded_gcc_integration"
     assert qualification["hardware_boards"] == ["apollo510_evb"]
     assert qualification["firmware_runs"] == 1
     records = evidence_records(repo_root, release)
     assert {Path(name) for name in ("candidate.sha", "qualified.lock", "host-contract.xml",
                                     "archive-selection.json", "smoke.json", "hello-swo.txt",
                                     "restored.json", "hello/build/shared/hello.bin")} <= records
+    links = qualification["link_smokes"]
+    expected_links = {
+        Path(f"links-{family}") / family / board / "smoke-evidence.json"
+        for board in links["boards"] for family in links["toolchains"]
+    }
+    assert len(expected_links) == links["passed"] == 12
+    assert expected_links <= records
     require_full_history(repo_root)
     revision = release_content_revision(repo_root, release)
     # Object IDs survive squash merging, even if the candidate commit is later pruned.

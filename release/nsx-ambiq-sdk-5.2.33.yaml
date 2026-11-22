@@ -49,6 +49,7 @@ consumer_upgrade:
     - CHANGELOG.md
     - README.md
     - docs/versioning.md
+    - modules/nsx-ambiqsuite/README.md
     - modules/nsx-ble/src/ns_ble.c
     - modules/nsx-cordio/sdk/third_party/cordio/ble-profiles/sources/services/svc_dis.c
     - pyproject.toml
@@ -362,6 +363,7 @@ payload_provenance:
     except_paths:
     - artifact-manifest.yaml
 qualification:
+  status: bounded_gcc_integration
   scope:
     socs:
     - apollo2
@@ -406,11 +408,22 @@ qualification:
     hardware_status: not_newly_qualified
   hardware_status: bounded_debugger_reset_gcc_only
   report: release/qualification-5.2.33.md
-  evidence_candidate: 881749e36fa175f014938a22c4a87f3d37de3fec
+  evidence_candidate: bddbe4e0b1a6e4d39722cf0cfa1714e997e8514b
   tested_trees:
     boards: 857686005fa7bf71092adb971fa12d4a548dd21f
     cmake: 4450a840389ddc2bf65d9d758a6a802942788695
-    modules: c1b75be28dfef9dcd943d880c7a220e6076d0778
+    modules: edb6d858fa37b497b91ef927477149c27af21f89
+  link_smokes:
+    boards:
+    - apollo330mP_evb
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+    toolchains:
+    - gcc
+    - atfe
+    - armclang
+    passed: 12
   hardware_boards:
   - apollo510_evb
   firmware_runs: 1
@@ -439,8 +452,8 @@ release_evidence:
 - tests/test_cmake_contract.py
 - tests/test_vendor_abi.py
 external_evidence:
-  root: artifacts/nsx/release533-uQnTKu
-  generated_app: artifacts/nsx/release533-uQnTKu/smoke.json
+  root: artifacts/nsx/release533-wx9TIP
+  generated_app: artifacts/nsx/release533-wx9TIP/smoke.json
   checksums: release/evidence-5.2.33.sha256
 known_deviations:
 - id: prepared-source-xspi-abi
