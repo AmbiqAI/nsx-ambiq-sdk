@@ -2,7 +2,7 @@ schema_version: 1
 module:
   name: nsx-npu
   type: backend_specific
-  version: "5.2.32"
+  version: "5.2.33"
 licenses:
   .: BSD-3-Clause
   includes-api/nsx_npu.h: LicenseRef-AmbiqSuite-BSD
