@@ -1,6 +1,15 @@
 # Changelog
 
-## 5.2.32 - Unreleased
+## 5.2.33 - Unreleased
+
+- Reconfiguring a build directory with a different SDK root now selects the
+  matching HAL and BSP archives. Explicit archive selections stay pinned.
+  For an ambiguous legacy cache entry, CMake prints how to clear it with
+  `-U` or explicitly pin the archive with `-D`.
+- Retain the AmbiqSuite payload and all 73 archives from 5.2.32. Update the
+  BLE Device Information default firmware revision to 5.2.33.
+
+## 5.2.32 - 2026-11-21
 
 - Read live power-domain status through `nsx_power_status_read()`. A validity
   mask identifies which status words each target supplies (#244).

@@ -16,8 +16,8 @@ import pytest
 import yaml
 
 
-RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.32.yaml")
-SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.31.yaml")
+RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.33.yaml")
+SUPERSEDED_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.32.yaml")
 MIXED_SNAPSHOT_RELEASE_MANIFEST = Path("release/nsx-ambiq-sdk-5.2.28.yaml")
 ARTIFACT_MANIFEST = Path("modules/nsx-ambiqsuite/sdk/artifact-manifest.yaml")
 PROVIDER_MANIFEST = Path("modules/nsx-ambiqsuite/nsx-module.yaml")
@@ -96,7 +96,7 @@ def test_distribution_versions_are_consistent(repo_root: Path, module_dirs: list
     root_version = pyproject["project"]["version"]
     release = load_yaml(repo_root, RELEASE_MANIFEST)
 
-    assert root_version == "5.2.32"
+    assert root_version == "5.2.33"
     assert release["distribution"]["version"] == root_version
     assert release["distribution"]["tag"] == f"v{root_version}"
 
@@ -235,7 +235,7 @@ def test_previous_psram_release_evidence(repo_root: Path) -> None:
 
 
 def test_power_release_evidence(repo_root: Path) -> None:
-    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    release = load_yaml(repo_root, Path("release/nsx-ambiq-sdk-5.2.32.yaml"))
     records = evidence_records(repo_root, release)
     boards = release["qualification"]["hardware_boards"]
     evidence = release["external_evidence"]
@@ -274,14 +274,14 @@ def test_superseded_release_records_are_preserved(repo_root: Path) -> None:
     """
     assert (repo_root / SUPERSEDED_RELEASE_MANIFEST).is_file()
     superseded = load_yaml(repo_root, SUPERSEDED_RELEASE_MANIFEST)
-    assert superseded["distribution"]["version"] == "5.2.31"
+    assert superseded["distribution"]["version"] == "5.2.32"
     assert (repo_root / superseded["qualification"]["report"]).is_file()
 
     release = load_yaml(repo_root, RELEASE_MANIFEST)
     supersedes = release["distribution"]["supersedes"]
     assert supersedes["version"] == superseded["distribution"]["version"]
     assert supersedes["tag"] == superseded["distribution"]["tag"]
-    assert supersedes["commit"] == "d80399e91d28f78078198b75547bbe651a2e51bd"
+    assert supersedes["commit"] == "fc660806bacdfe4b9f84f1e2ea2bd9ada918cda6"
     assert supersedes["reason"].strip()
 
 
@@ -762,8 +762,8 @@ def test_current_source_and_staging_patch_provenance(repo_root: Path) -> None:
         assert patch["reason"] == metadata["reason"]
 
 
-def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: Path) -> None:
-    release = load_yaml(repo_root, RELEASE_MANIFEST)
+def test_power_qualification_matches_tested_payload(repo_root: Path) -> None:
+    release = load_yaml(repo_root, Path("release/nsx-ambiq-sdk-5.2.32.yaml"))
     qualification = release["qualification"]
     assert "inherits_from" not in qualification
     assert qualification["hardware_status"] == "bounded_debugger_reset_gcc_only"
@@ -783,6 +783,34 @@ def test_current_qualification_does_not_inherit_old_payload_evidence(repo_root: 
     for train in qualification["toolchains"]:
         if train["artifact_manifest_key"] != "gcc":
             assert train["hardware_status"] == "not_newly_qualified"
+
+
+def test_archive_selection_qualification_matches_shipped_inputs(repo_root: Path) -> None:
+    release = load_yaml(repo_root, RELEASE_MANIFEST)
+    qualification = release["qualification"]
+    assert qualification["status"] == "bounded_gcc_integration"
+    assert qualification["hardware_boards"] == ["apollo510_evb"]
+    assert qualification["firmware_runs"] == 1
+    records = evidence_records(repo_root, release)
+    assert {Path(name) for name in ("candidate.sha", "qualified.lock", "host-contract.xml",
+                                    "archive-selection.json", "smoke.json", "hello-swo.txt",
+                                    "restored.json", "hello/build/shared/hello.bin")} <= records
+    links = qualification["link_smokes"]
+    expected_links = {
+        Path(f"links-{family}") / family / board / "smoke-evidence.json"
+        for board in links["boards"] for family in links["toolchains"]
+    }
+    assert len(expected_links) == links["passed"] == 12
+    assert expected_links <= records
+    require_full_history(repo_root)
+    revision = release_content_revision(repo_root, release)
+    # Object IDs survive squash merging, even if the candidate commit is later pruned.
+    inputs = qualification["tested_trees"]
+    assert set(inputs) == {"boards", "cmake", "modules"}
+    for path, tested_tree in inputs.items():
+        shipped = git(repo_root, "rev-parse", f"{revision}:{path}")
+        assert shipped.returncode == 0, shipped.stderr
+        assert shipped.stdout.strip() == tested_tree, path
 
 
 def test_ble_firmware_defaults_match_distribution(repo_root: Path) -> None:
