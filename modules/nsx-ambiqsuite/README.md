@@ -18,9 +18,8 @@ The curated payload carries four patches under `sdk-intake/patches/stable/`:
 compiler detection, unnamed-bitfield qualifiers, C++17 CC312 compatibility,
 and EM9305 full-duplex receive scratch capacity.
 
-The 5.2.32 distribution retains the complete 5.2.31 provider payload.
-Bounded GCC startup/runtime qualification is recorded in
-`release/qualification-5.2.32.md` at the repository root.
+The [SDK coverage summary](../../README.md#current-coverage) links to the
+release manifest and the hardware qualification for this distribution.
 This is not an official numbered AmbiqSuite release.
 
 ## Package Contents
