@@ -140,7 +140,10 @@ def test_legacy_archive_cache_requires_a_choice_when_paths_diverge(repo_root: Pa
     hal = sdk / "lib/gcc/apollo510/libam_hal.a"
     explicit = tmp_path / "custom-hal.a"
     shutil.copyfile(hal, explicit)
-    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc")
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", prelude=(
+        "if(DEFINED BOARD_HAL)", '  set(NSX_HAL_LIB "${BOARD_HAL}")', "endif()",
+    ), post_board_include=('file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/hal-link" CONTENT '
+                           '"$<TARGET_PROPERTY:nsx_ambiq_hal,INTERFACE_LINK_LIBRARIES>")',))
     assert result.returncode == 0, result.stdout
     source = tmp_path / "gcc/apollo510_evb"
     build = source / "build"
@@ -151,7 +154,9 @@ def test_legacy_archive_cache_requires_a_choice_when_paths_diverge(repo_root: Pa
     result = subprocess.run([*command, "-C", str(legacy)], capture_output=True, text=True)
     assert result.returncode != 0
     assert "legacy cached path" in result.stderr
-    subprocess.run([*command, f"-DNSX_HAL_LIB:FILEPATH={explicit.as_posix()}"], check=True)
+    subprocess.run([*command, f"-DBOARD_HAL={hal.as_posix()}"], check=True)
+    assert hal.as_posix() in (build / "hal-link").read_text().split(";")
+    subprocess.run([*command, "-UBOARD_HAL", f"-DNSX_HAL_LIB:FILEPATH={explicit.as_posix()}"], check=True)
     subprocess.run(command, check=True)
     assert f"NSX_HAL_LIB:FILEPATH={explicit.as_posix()}" in (build / "CMakeCache.txt").read_text()
     subprocess.run([*command, "-UNSX_HAL_LIB"], check=True)
