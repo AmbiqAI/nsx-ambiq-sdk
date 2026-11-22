@@ -154,8 +154,9 @@ def test_legacy_archive_cache_requires_a_choice_when_paths_diverge(repo_root: Pa
     result = subprocess.run([*command, "-C", str(legacy)], capture_output=True, text=True)
     assert result.returncode != 0
     assert "legacy cached path" in result.stderr
-    subprocess.run([*command, f"-DBOARD_HAL={hal.as_posix()}"], check=True)
-    assert hal.as_posix() in (build / "hal-link").read_text().split(";")
+    for board_hal in (hal, explicit):
+        subprocess.run([*command, f"-DBOARD_HAL={board_hal.as_posix()}"], check=True)
+        assert board_hal.as_posix() in (build / "hal-link").read_text().split(";")
     subprocess.run([*command, "-UBOARD_HAL", f"-DNSX_HAL_LIB:FILEPATH={explicit.as_posix()}"], check=True)
     subprocess.run(command, check=True)
     assert f"NSX_HAL_LIB:FILEPATH={explicit.as_posix()}" in (build / "CMakeCache.txt").read_text()

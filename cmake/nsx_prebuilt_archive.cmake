@@ -6,9 +6,15 @@ function(nsx_select_prebuilt_archive variable default_path role)
     set(auto_help "Selected AmbiqSuite ${role} archive")
     if(NOT DEFINED ${variable} OR (cache_type STREQUAL "INTERNAL" AND cache_help STREQUAL auto_help))
         set(${variable} "${default_path}" CACHE INTERNAL "${auto_help}")
-    elseif(cache_help STREQUAL "Path to AmbiqSuite ${role} static library")
-        # Older wrappers stored both explicit overrides and defaults as FILEPATH.
-        if("${${variable}}" STREQUAL "$CACHE{${variable}}" AND NOT "${${variable}}" STREQUAL "${default_path}")
+    elseif(cache_help STREQUAL "Path to AmbiqSuite ${role} static library"
+           AND NOT "$CACHE{${variable}}" STREQUAL "${default_path}")
+        # The old FILEPATH can be either a pin or a stale default. A normal
+        # board variable wins even when its spelling equals the cached path.
+        set(legacy_path "$CACHE{${variable}}")
+        set_property(CACHE "${variable}" PROPERTY VALUE "")
+        set(board_path "${${variable}}")
+        set_property(CACHE "${variable}" PROPERTY VALUE "${legacy_path}")
+        if(board_path STREQUAL "")
             message(FATAL_ERROR
                 "${variable} has a legacy cached path '$CACHE{${variable}}'; the selected "
                 "SDK default is '${default_path}'. Reconfigure with -U${variable} to "
