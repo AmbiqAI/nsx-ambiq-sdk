@@ -97,15 +97,71 @@ def test_reconfigure_does_not_keep_incompatible_cached_libraries(repo_root: Path
     build = source / "build"
     command = ["cmake", "-S", str(source), "-B", str(build), "-DNSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN=atfe"]
     result = subprocess.run(command, capture_output=True, text=True)
-    assert result.returncode != 0
-    assert "selects gcc artifacts" in result.stdout + result.stderr
-    assert "Clear the CMake cache" in " ".join((result.stdout + result.stderr).split())
-    # Explicit cache cleanup permits the new, internally consistent selection.
-    result = subprocess.run([*command, "-UNSX_HAL_LIB", "-UNSX_BSP_LIB"], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
     cache = (build / "CMakeCache.txt").read_text()
-    assert f"NSX_HAL_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/libam_hal.a" in cache
-    assert f"NSX_BSP_LIB:FILEPATH={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a" in cache
+    assert f"NSX_HAL_LIB:INTERNAL={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/libam_hal.a" in cache
+    assert f"NSX_BSP_LIB:INTERNAL={repo_root}/modules/nsx-ambiqsuite/sdk/lib/atfe/apollo510/apollo510_evb/libam_bsp.a" in cache
+
+
+def test_selected_sdk_archives_follow_root_and_preserve_overrides(repo_root: Path, tmp_path: Path) -> None:
+    sdk = repo_root / "modules/nsx-ambiqsuite/sdk"
+    trial = tmp_path / "second sdk"
+    try:
+        trial.symlink_to(sdk, target_is_directory=True)
+    except OSError:
+        pytest.skip("Directory symlinks unavailable")
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc",
+        post_board_include=('file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/archive-links" CONTENT '
+                            '"$<TARGET_PROPERTY:nsx_ambiq_hal,INTERFACE_LINK_LIBRARIES>;'
+                            '$<TARGET_PROPERTY:nsx_ambiq_bsp,INTERFACE_LINK_LIBRARIES>")',))
+    assert result.returncode == 0, result.stdout
+    source = tmp_path / "gcc/apollo510_evb"
+    build = source / "build"
+    hal = Path("lib/gcc/apollo510/libam_hal.a")
+    bsp = Path("lib/gcc/apollo510/apollo510_evb/libam_bsp.a")
+
+    def check(root: Path, expected_hal: Path, *args: str) -> None:
+        subprocess.run(["cmake", "-S", str(source), "-B", str(build),
+                        f"-DNSX_AMBIQSUITE_ROOT={root.as_posix()}", *args], check=True)
+        links = (build / "archive-links").read_text().split(";")
+        assert expected_hal.as_posix() in links
+        assert (root / bsp).as_posix() in links
+
+    check(trial, trial / hal)
+    check(sdk, sdk / hal)
+    check(trial, sdk / hal, f"-DNSX_HAL_LIB={(sdk / hal).as_posix()}")
+    check(sdk, sdk / hal)
+    check(trial, sdk / hal)
+    check(trial, trial / hal, "-UNSX_HAL_LIB")
+
+
+def test_legacy_archive_cache_requires_a_choice_when_paths_diverge(repo_root: Path, tmp_path: Path) -> None:
+    sdk = repo_root / "modules/nsx-ambiqsuite/sdk"
+    hal = sdk / "lib/gcc/apollo510/libam_hal.a"
+    explicit = tmp_path / "custom-hal.a"
+    shutil.copyfile(hal, explicit)
+    result = configure_contract_project(repo_root, tmp_path, "apollo510_evb", "gcc", prelude=(
+        "if(DEFINED BOARD_HAL)", '  set(NSX_HAL_LIB "${BOARD_HAL}")', "endif()",
+    ), post_board_include=('file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/hal-link" CONTENT '
+                           '"$<TARGET_PROPERTY:nsx_ambiq_hal,INTERFACE_LINK_LIBRARIES>")',))
+    assert result.returncode == 0, result.stdout
+    source = tmp_path / "gcc/apollo510_evb"
+    build = source / "build"
+    command = ["cmake", "-S", str(source), "-B", str(build)]
+    legacy = tmp_path / "legacy.cmake"
+    legacy.write_text(f'set(NSX_HAL_LIB "{explicit.as_posix()}" CACHE FILEPATH '
+                      '"Path to AmbiqSuite HAL static library" FORCE)\n')
+    result = subprocess.run([*command, "-C", str(legacy)], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "legacy cached path" in result.stderr
+    for board_hal in (hal, explicit):
+        subprocess.run([*command, f"-DBOARD_HAL={board_hal.as_posix()}"], check=True)
+        assert board_hal.as_posix() in (build / "hal-link").read_text().split(";")
+    subprocess.run([*command, "-UBOARD_HAL", f"-DNSX_HAL_LIB:FILEPATH={explicit.as_posix()}"], check=True)
+    subprocess.run(command, check=True)
+    assert f"NSX_HAL_LIB:FILEPATH={explicit.as_posix()}" in (build / "CMakeCache.txt").read_text()
+    subprocess.run([*command, "-UNSX_HAL_LIB"], check=True)
+    assert f"NSX_HAL_LIB:INTERNAL={hal.as_posix()}" in (build / "CMakeCache.txt").read_text()
 
 
 @pytest.mark.parametrize("wrong_library", (False, True))

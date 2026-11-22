@@ -371,7 +371,7 @@ def configure_contract_project(
                 f'set(NSX_SDK_PROVIDER "{provider}")',
                 f'set(NSX_TOOLCHAIN_FAMILY "{toolchain_family}")',
                 f'set(NSX_AMBIQSUITE_VERSION "{ambiqsuite_version}")',
-                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / provider_module / "sdk").as_posix()}")',
+                f'set(NSX_AMBIQSUITE_ROOT "{(repo_root / "modules" / provider_module / "sdk").as_posix()}" CACHE PATH "SDK payload")',
                 f'include("{(repo_root / "boards" / board / "board.cmake").as_posix()}")',
                 *post_board_include,
                 f'add_subdirectory("{(repo_root / "modules" / "nsx-cmsis-core").as_posix()}" nsx-cmsis-core)',

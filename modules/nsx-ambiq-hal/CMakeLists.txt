@@ -55,7 +55,8 @@ nsx_assert_path_component(NSX_AMBIQ_MCU_INSTALL_NAME)
 # The atfe->gcc USB CDC workaround is applied centrally by
 # nsx_resolve_ambiqsuite_artifact_toolchain.
 set(NSX_HAL_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_HAL_LIB_PART_NAME}/libam_hal.a")
-set(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite HAL static library")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/nsx_prebuilt_archive.cmake")
+nsx_select_prebuilt_archive(NSX_HAL_LIB "${NSX_HAL_LIB_DEFAULT}" HAL)
 
 # Core CMSIS headers (core_cm*, cmsis_compiler.h, m-profile/*) come from
 # nsx-cmsis-core via target_link_libraries below. Only AmbiqMicro device,

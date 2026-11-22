@@ -36,7 +36,8 @@ nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_PART_NAME)
 nsx_assert_path_component(NSX_AMBIQ_BSP_LIB_SUBDIR)
 
 set(NSX_BSP_LIB_DEFAULT "${NSX_AMBIQSUITE_ROOT}/lib/${NSX_AMBIQSUITE_ARTIFACT_TOOLCHAIN}/${NSX_AMBIQ_BSP_LIB_PART_NAME}/${NSX_AMBIQ_BSP_LIB_SUBDIR}/libam_bsp.a")
-set(NSX_BSP_LIB "${NSX_BSP_LIB_DEFAULT}" CACHE FILEPATH "Path to AmbiqSuite BSP static library")
+include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/nsx_prebuilt_archive.cmake")
+nsx_select_prebuilt_archive(NSX_BSP_LIB "${NSX_BSP_LIB_DEFAULT}" BSP)
 
 add_library(nsx_ambiq_bsp INTERFACE)
 set_target_properties(nsx_ambiq_bsp PROPERTIES EXPORT_NAME ambiq_bsp)
