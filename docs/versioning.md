@@ -2,7 +2,7 @@
 
 ## Distribution Version
 
-`5.2.32` is the proposed `nsx-ambiq-sdk` distribution release version. The
+`5.2.33` is the proposed `nsx-ambiq-sdk` distribution release version. The
 root package and every manifest under `modules/` use this version because the
 repository is released as one coordinated distribution.
 
@@ -34,6 +34,9 @@ source/header provenance.
 PSRAM API 1.1 and the opt-in BSP v2 contract at the NSX integration layer.
 
 `5.2.32` adds power-status and buck-pulse APIs while retaining the same provider.
+
+`5.2.33` updates CMake selection of prebuilt HAL and BSP archives when an app
+changes its SDK root in an existing build directory. It retains the 5.2.32 payload.
 
 The distribution version does not assert an official numbered AmbiqSuite
 release. The source identity in the release manifest and promoted artifact
