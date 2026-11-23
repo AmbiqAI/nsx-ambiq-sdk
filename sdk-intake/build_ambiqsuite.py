@@ -488,12 +488,18 @@ def ensure_bsp_pins(sdk_root: Path, bsp_dir: Path) -> None:
         return
     generator = sdk_root / "tools" / "bsp_generator" / "pinconfig.py"
     require_file(generator)
-    if not (bsp_dir / "am_bsp_pins.c").is_file():
-        with (bsp_dir / "am_bsp_pins.c").open("w", encoding="utf-8") as output:
-            subprocess.run([sys.executable, str(generator), "bsp_pins.src", "C"], cwd=bsp_dir, stdout=output, check=True)
-    if not (bsp_dir / "am_bsp_pins.h").is_file():
-        with (bsp_dir / "am_bsp_pins.h").open("w", encoding="utf-8") as output:
-            subprocess.run([sys.executable, str(generator), "bsp_pins.src", "H"], cwd=bsp_dir, stdout=output, check=True)
+    # Both native builds and provider staging may reuse a source checkout.
+    # Generate the pair before replacing either file, and keep matching files' mtimes.
+    generated = {}
+    for kind in ("C", "H"):
+        output = bsp_dir / f"am_bsp_pins.{kind.lower()}"
+        data = subprocess.check_output([sys.executable, str(generator), source.name, kind], cwd=bsp_dir)
+        if not data.strip():
+            raise ValueError(f"{generator.name} produced no {kind} output for {source}")
+        generated[output] = data
+    for output, data in generated.items():
+        if not output.is_file() or output.read_bytes() != data:
+            output.write_bytes(data)
 
 
 def ensure_bsp_gpio_header(sdk_root: Path, bsp_dir: Path) -> None:

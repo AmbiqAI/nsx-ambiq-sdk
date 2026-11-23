@@ -19,6 +19,50 @@ def load_build_ambiqsuite(repo_root: Path):
     return module
 
 
+def test_regenerate_bsp_pin_pair_from_current_inputs(repo_root: Path, tmp_path: Path) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    bsp = tmp_path / "board"
+    bsp.mkdir()
+    # Boards without this source use other BSP conventions.
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    generator = tmp_path / "tools/bsp_generator/pinconfig.py"
+    generator.parent.mkdir(parents=True)
+    generator.write_text(
+        "import sys\nfrom pathlib import Path\n"
+        "print(sys.argv[2], Path(sys.argv[1]).read_text())\n",
+        encoding="utf-8",
+    )
+    (bsp / "bsp_pins.src").write_text("pin 0", encoding="utf-8")
+    outputs = [bsp / "am_bsp_pins.c", bsp / "am_bsp_pins.h"]
+    for output in outputs:
+        output.write_bytes(b"pin 14")
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert [p.read_bytes().split() for p in outputs] == [[b"C", b"pin", b"0"], [b"H", b"pin", b"0"]]
+    timestamps = [p.stat().st_mtime_ns for p in outputs]
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert [p.stat().st_mtime_ns for p in outputs] == timestamps
+
+
+@pytest.mark.parametrize("failure", ["raise SystemExit(1)", "pass"])
+def test_failed_pin_generation_preserves_existing_pair(
+    repo_root: Path, tmp_path: Path, failure: str
+) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    generator = tmp_path / "tools/bsp_generator/pinconfig.py"
+    generator.parent.mkdir(parents=True)
+    generator.write_text(
+        "import sys\nif sys.argv[2] == 'C':\n    print('new C')\nelse:\n    " + failure + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "bsp_pins.src").write_bytes(b"pins")
+    outputs = [tmp_path / "am_bsp_pins.c", tmp_path / "am_bsp_pins.h"]
+    for output in outputs:
+        output.write_bytes(b"previous")
+    with pytest.raises((ValueError, subprocess.CalledProcessError)):
+        helper.ensure_bsp_pins(tmp_path, tmp_path)
+    assert [p.read_bytes() for p in outputs] == [b"previous", b"previous"]
+
+
 def _apollo2_train(helper):
     """The unified `stable` train narrowed to its single legacy part (apollo2 /
     apollo2_evb, gcc+atfe). Gives these unit tests a small, fully-enumerable
