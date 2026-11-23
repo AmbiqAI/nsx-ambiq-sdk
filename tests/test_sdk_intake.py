@@ -19,6 +19,62 @@ def load_build_ambiqsuite(repo_root: Path):
     return module
 
 
+def test_verify_bsp_pin_pair_before_reusing_source_or_archives(repo_root: Path, tmp_path: Path) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    train = _apollo2_train(helper)
+    bsp = tmp_path / "boards" / train.boards[0].name / "bsp"
+    bsp.mkdir(parents=True)
+    helper.ensure_bsp_pins(tmp_path, bsp)  # Boards without bsp_pins.src use their own conventions.
+    generator = tmp_path / "tools/bsp_generator/pinconfig.py"
+    generator.parent.mkdir(parents=True)
+    generator.write_text(
+        "import sys\nfrom pathlib import Path\n"
+        "print(sys.argv[2], Path(sys.argv[1]).read_text())\n", encoding="utf-8",
+    )
+    (bsp / "bsp_pins.src").write_text("pin 0", encoding="utf-8")
+    c_file, header = bsp / "am_bsp_pins.c", bsp / "am_bsp_pins.h"
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert c_file.read_bytes().split() == [b"C", b"pin", b"0"]
+    assert header.read_bytes().split() == [b"H", b"pin", b"0"]
+    timestamps = [p.stat().st_mtime_ns for p in (c_file, header)]
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert [p.stat().st_mtime_ns for p in (c_file, header)] == timestamps
+
+    c_file.unlink()
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert c_file.read_bytes().split() == [b"C", b"pin", b"0"]
+    assert header.stat().st_mtime_ns == timestamps[1]
+
+    c_file.unlink()
+    header.write_bytes(b"H pin 14")
+    destination = tmp_path / "promoted"
+    destination.mkdir()
+    (destination / "previous").touch()
+    with pytest.raises(ValueError, match="stale generated BSP pin file.*am_bsp_pins.h"):
+        helper.promote_provider_payload(train, "test", tmp_path, destination_root=destination)
+    assert (destination / "previous").is_file()
+    assert header.read_bytes() == b"H pin 14"
+    assert not c_file.exists()
+
+
+@pytest.mark.parametrize("failure", ["raise SystemExit(1)", "pass", "print('Invalid field: bogus')"])
+def test_invalid_pin_generation_leaves_no_partial_pair(
+    repo_root: Path, tmp_path: Path, failure: str
+) -> None:
+    helper = load_build_ambiqsuite(repo_root)
+    generator = tmp_path / "tools/bsp_generator/pinconfig.py"
+    generator.parent.mkdir(parents=True)
+    generator.write_text(
+        "import sys\nif sys.argv[2] == 'C':\n    print('new C')\nelse:\n    " + failure + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "bsp_pins.src").touch()
+    with pytest.raises(helper.BspPinError):
+        helper.ensure_bsp_pins(tmp_path, tmp_path)
+    assert not (tmp_path / "am_bsp_pins.c").exists()
+    assert not (tmp_path / "am_bsp_pins.h").exists()
+
+
 def _apollo2_train(helper):
     """The unified `stable` train narrowed to its single legacy part (apollo2 /
     apollo2_evb, gcc+atfe). Gives these unit tests a small, fully-enumerable

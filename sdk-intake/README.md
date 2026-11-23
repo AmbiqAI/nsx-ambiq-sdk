@@ -150,7 +150,10 @@ A successful stage writes `sdk.stage-receipt.json` beside the staged `sdk/`
 directory. This records the complete file inventory and hashes, destination,
 source identity, and validation-policy fingerprints. Each new stage attempt
 invalidates the old receipt, including when source resolution or preflight fails.
-Existing staged trees without a receipt must be staged again.
+Run `stage` again for trees staged before the BSP pin-input check (receipt version 1)
+or without a receipt. For boards with `bsp_pins.src`, a stale generated C or H file
+requires a fresh source checkout and a rebuild of the affected BSP archives for
+each selected toolchain.
 
 Promotion requires that receipt and validates a temporary copy against it before
 replacing the provider. Source additions, edits, deletions, changed policies, or

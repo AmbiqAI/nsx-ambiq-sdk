@@ -117,7 +117,7 @@ def test_invalid_receipt_refused(flow, fault):
         receipt.write_text('{"schema_version": 1,' + receipt.read_text()[1:])
     else:
         if fault == "schema":
-            data["schema_version"] = 2
+            data["schema_version"] += 1
         elif fault == "target":
             data["provider_path"] = "modules/other/sdk"
         elif fault == "policy":
@@ -128,6 +128,17 @@ def test_invalid_receipt_refused(flow, fault):
             data["files"]["ordinary.h"] = "bad"
         receipt.write_text(json.dumps(data))
     with pytest.raises(flow.helper.IntakeError):
+        flow.helper.promote_from_staging(staged, flow.provider, confirm=True)
+    assert_untouched(flow)
+
+
+def test_promotion_requires_restage_of_pre_pin_check_receipt(flow):
+    staged = flow.stage()
+    receipt = flow.helper.stage_snapshot.receipt_path(staged)
+    data = json.loads(receipt.read_text())
+    data["schema_version"] = 1
+    receipt.write_text(json.dumps(data))
+    with pytest.raises(flow.helper.IntakeError, match="unsupported receipt schema_version.*run stage again"):
         flow.helper.promote_from_staging(staged, flow.provider, confirm=True)
     assert_untouched(flow)
 

@@ -482,18 +482,45 @@ def ensure_hal_generated_sources(sdk_root: Path, part: PartBuild) -> None:
     require_file(hal_dir / "am_hal_status.h")
 
 
+class BspPinError(ValueError):
+    """The selected board's generated pin inputs cannot be used together."""
+
+
 def ensure_bsp_pins(sdk_root: Path, bsp_dir: Path) -> None:
     source = bsp_dir / "bsp_pins.src"
     if not source.is_file():
         return
     generator = sdk_root / "tools" / "bsp_generator" / "pinconfig.py"
     require_file(generator)
-    if not (bsp_dir / "am_bsp_pins.c").is_file():
-        with (bsp_dir / "am_bsp_pins.c").open("w", encoding="utf-8") as output:
-            subprocess.run([sys.executable, str(generator), "bsp_pins.src", "C"], cwd=bsp_dir, stdout=output, check=True)
-    if not (bsp_dir / "am_bsp_pins.h").is_file():
-        with (bsp_dir / "am_bsp_pins.h").open("w", encoding="utf-8") as output:
-            subprocess.run([sys.executable, str(generator), "bsp_pins.src", "H"], cwd=bsp_dir, stdout=output, check=True)
+    # A cached BSP archive may have been compiled with either existing file.
+    # Keep that evidence intact until the maintainer can rebuild the archive set.
+    missing = {}
+    for kind in ("C", "H"):
+        output = bsp_dir / f"am_bsp_pins.{kind.lower()}"
+        try:
+            data = subprocess.check_output([sys.executable, str(generator), source.name, kind], cwd=bsp_dir)
+        except subprocess.CalledProcessError as error:
+            raise BspPinError(f"{generator.name} failed for {source} ({kind}, exit {error.returncode})") from error
+        if not data.strip() or any(line.startswith(b"Invalid field:") for line in data.splitlines()):
+            raise BspPinError(f"{generator.name} produced invalid {kind} output for {source}")
+        if not output.exists():
+            missing[output] = data
+        elif output.read_bytes() != data:
+            raise BspPinError(
+                f"stale generated BSP pin file: {output}; rebuild the affected BSP archives "
+                "for every selected toolchain in a fresh source checkout and artifact directory"
+            )
+
+    created = []
+    try:
+        for output, data in missing.items():
+            with output.open("xb") as stream:
+                created.append(output)
+                stream.write(data)
+    except OSError:
+        for output in created:
+            output.unlink(missing_ok=True)
+        raise
 
 
 def ensure_bsp_gpio_header(sdk_root: Path, bsp_dir: Path) -> None:
@@ -773,7 +800,6 @@ def promote_board_headers(
     train: TrainSpec, version: str, sdk_root: Path, board: BoardBuild, *, destination_root: Path | None = None
 ) -> None:
     bsp_dir = sdk_root / "boards" / board.name / "bsp"
-    ensure_bsp_pins(sdk_root, bsp_dir)
     ensure_bsp_gpio_header(sdk_root, bsp_dir)
     ensure_generated_makefile(bsp_dir / "gcc" / "Makefile", bsp_dir)
     # Staging from a fresh worktree must match headers used by native builds.
@@ -1045,6 +1071,9 @@ def promote_provider_payload(
     the real provider tree, which is required for the staged intake workflow
     in `sdk-intake/intake_workflow.py`."""
     root = destination_root if destination_root is not None else provider_sdk_root(train)
+    # Validate board inputs before clearing a previously promoted provider.
+    for board in train.boards:
+        ensure_bsp_pins(sdk_root, sdk_root / "boards" / board.name / "bsp")
     shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True, exist_ok=True)
     promote_vendor_headers(train, version, sdk_root, destination_root=root)
@@ -1585,7 +1614,7 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except ArtifactManifestMismatch as error:
+    except (ArtifactManifestMismatch, BspPinError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(2) from error
     except subprocess.CalledProcessError as error:
