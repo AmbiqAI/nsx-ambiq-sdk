@@ -19,32 +19,41 @@ def load_build_ambiqsuite(repo_root: Path):
     return module
 
 
-def test_regenerate_bsp_pin_pair_from_current_inputs(repo_root: Path, tmp_path: Path) -> None:
+def test_verify_bsp_pin_pair_before_reusing_source_or_archives(repo_root: Path, tmp_path: Path) -> None:
     helper = load_build_ambiqsuite(repo_root)
-    bsp = tmp_path / "board"
-    bsp.mkdir()
-    # Boards without this source use other BSP conventions.
-    helper.ensure_bsp_pins(tmp_path, bsp)
+    train = _apollo2_train(helper)
+    bsp = tmp_path / "boards" / train.boards[0].name / "bsp"
+    bsp.mkdir(parents=True)
+    helper.ensure_bsp_pins(tmp_path, bsp)  # Boards without bsp_pins.src use their own conventions.
     generator = tmp_path / "tools/bsp_generator/pinconfig.py"
     generator.parent.mkdir(parents=True)
     generator.write_text(
         "import sys\nfrom pathlib import Path\n"
-        "print(sys.argv[2], Path(sys.argv[1]).read_text())\n",
-        encoding="utf-8",
+        "print(sys.argv[2], Path(sys.argv[1]).read_text())\n", encoding="utf-8",
     )
     (bsp / "bsp_pins.src").write_text("pin 0", encoding="utf-8")
-    outputs = [bsp / "am_bsp_pins.c", bsp / "am_bsp_pins.h"]
-    for output in outputs:
-        output.write_bytes(b"pin 14")
+    c_file, header = bsp / "am_bsp_pins.c", bsp / "am_bsp_pins.h"
     helper.ensure_bsp_pins(tmp_path, bsp)
-    assert [p.read_bytes().split() for p in outputs] == [[b"C", b"pin", b"0"], [b"H", b"pin", b"0"]]
-    timestamps = [p.stat().st_mtime_ns for p in outputs]
+    assert c_file.read_bytes().split() == [b"C", b"pin", b"0"]
+    assert header.read_bytes().split() == [b"H", b"pin", b"0"]
+    timestamps = [p.stat().st_mtime_ns for p in (c_file, header)]
     helper.ensure_bsp_pins(tmp_path, bsp)
-    assert [p.stat().st_mtime_ns for p in outputs] == timestamps
+    assert [p.stat().st_mtime_ns for p in (c_file, header)] == timestamps
+
+    c_file.unlink()
+    header.write_bytes(b"H pin 14")
+    destination = tmp_path / "promoted"
+    destination.mkdir()
+    (destination / "previous").touch()
+    with pytest.raises(ValueError, match="stale generated BSP pin file.*am_bsp_pins.h"):
+        helper.promote_provider_payload(train, "test", tmp_path, destination_root=destination)
+    assert (destination / "previous").is_file()
+    assert header.read_bytes() == b"H pin 14"
+    assert not c_file.exists()
 
 
-@pytest.mark.parametrize("failure", ["raise SystemExit(1)", "pass"])
-def test_failed_pin_generation_preserves_existing_pair(
+@pytest.mark.parametrize("failure", ["raise SystemExit(1)", "pass", "print('Invalid field: bogus')"])
+def test_invalid_pin_generation_leaves_no_partial_pair(
     repo_root: Path, tmp_path: Path, failure: str
 ) -> None:
     helper = load_build_ambiqsuite(repo_root)
@@ -54,13 +63,11 @@ def test_failed_pin_generation_preserves_existing_pair(
         "import sys\nif sys.argv[2] == 'C':\n    print('new C')\nelse:\n    " + failure + "\n",
         encoding="utf-8",
     )
-    (tmp_path / "bsp_pins.src").write_bytes(b"pins")
-    outputs = [tmp_path / "am_bsp_pins.c", tmp_path / "am_bsp_pins.h"]
-    for output in outputs:
-        output.write_bytes(b"previous")
+    (tmp_path / "bsp_pins.src").touch()
     with pytest.raises((ValueError, subprocess.CalledProcessError)):
         helper.ensure_bsp_pins(tmp_path, tmp_path)
-    assert [p.read_bytes() for p in outputs] == [b"previous", b"previous"]
+    assert not (tmp_path / "am_bsp_pins.c").exists()
+    assert not (tmp_path / "am_bsp_pins.h").exists()
 
 
 def _apollo2_train(helper):

@@ -488,18 +488,32 @@ def ensure_bsp_pins(sdk_root: Path, bsp_dir: Path) -> None:
         return
     generator = sdk_root / "tools" / "bsp_generator" / "pinconfig.py"
     require_file(generator)
-    # Both native builds and provider staging may reuse a source checkout.
-    # Generate the pair before replacing either file, and keep matching files' mtimes.
-    generated = {}
+    # A cached BSP archive may have been compiled with either existing file.
+    # Keep that evidence intact until the maintainer can rebuild the archive set.
+    missing = {}
     for kind in ("C", "H"):
         output = bsp_dir / f"am_bsp_pins.{kind.lower()}"
         data = subprocess.check_output([sys.executable, str(generator), source.name, kind], cwd=bsp_dir)
-        if not data.strip():
-            raise ValueError(f"{generator.name} produced no {kind} output for {source}")
-        generated[output] = data
-    for output, data in generated.items():
-        if not output.is_file() or output.read_bytes() != data:
-            output.write_bytes(data)
+        if not data.strip() or any(line.startswith(b"Invalid field:") for line in data.splitlines()):
+            raise ValueError(f"{generator.name} produced invalid {kind} output for {source}")
+        if not output.exists():
+            missing[output] = data
+        elif output.read_bytes() != data:
+            raise ValueError(
+                f"stale generated BSP pin file: {output}; rebuild the affected BSP archives "
+                "for every selected toolchain in a fresh source checkout and artifact directory"
+            )
+
+    created = []
+    try:
+        for output, data in missing.items():
+            with output.open("xb") as stream:
+                created.append(output)
+                stream.write(data)
+    except OSError:
+        for output in created:
+            output.unlink(missing_ok=True)
+        raise
 
 
 def ensure_bsp_gpio_header(sdk_root: Path, bsp_dir: Path) -> None:
@@ -779,7 +793,6 @@ def promote_board_headers(
     train: TrainSpec, version: str, sdk_root: Path, board: BoardBuild, *, destination_root: Path | None = None
 ) -> None:
     bsp_dir = sdk_root / "boards" / board.name / "bsp"
-    ensure_bsp_pins(sdk_root, bsp_dir)
     ensure_bsp_gpio_header(sdk_root, bsp_dir)
     ensure_generated_makefile(bsp_dir / "gcc" / "Makefile", bsp_dir)
     # Staging from a fresh worktree must match headers used by native builds.
@@ -1051,6 +1064,9 @@ def promote_provider_payload(
     the real provider tree, which is required for the staged intake workflow
     in `sdk-intake/intake_workflow.py`."""
     root = destination_root if destination_root is not None else provider_sdk_root(train)
+    # Validate board inputs before clearing a previously promoted provider.
+    for board in train.boards:
+        ensure_bsp_pins(sdk_root, sdk_root / "boards" / board.name / "bsp")
     shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True, exist_ok=True)
     promote_vendor_headers(train, version, sdk_root, destination_root=root)
