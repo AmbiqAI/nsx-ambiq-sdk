@@ -15,6 +15,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
 
+# Version 2 receipts include the BSP pin-input check performed during staging.
+RECEIPT_VERSION = 2
+
+
 class SnapshotError(ValueError):
     """The candidate needs to be staged successfully again."""
 
@@ -101,7 +105,7 @@ def load(root: Path) -> StageSnapshot:
         fields = {"schema_version", "provider_path", "train", "version", "source_commit", "policy", "files"}
         if not isinstance(data, dict) or set(data) != fields:
             raise SnapshotError("unexpected receipt fields")
-        if type(data["schema_version"]) is not int or data.pop("schema_version") != 1:
+        if type(data["schema_version"]) is not int or data.pop("schema_version") != RECEIPT_VERSION:
             raise SnapshotError("unsupported receipt schema_version")
         if not _relative(data["provider_path"]):
             raise SnapshotError("invalid provider_path")
@@ -128,7 +132,7 @@ def write(root: Path, snapshot: StageSnapshot) -> None:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
                                          prefix=".stage-receipt-", delete=False) as stream:
             temporary = Path(stream.name)
-            json.dump({"schema_version": 1, **asdict(snapshot)}, stream, indent=2, sort_keys=True)
+            json.dump({"schema_version": RECEIPT_VERSION, **asdict(snapshot)}, stream, indent=2, sort_keys=True)
             stream.write("\n")
         os.replace(temporary, path)
     finally:
