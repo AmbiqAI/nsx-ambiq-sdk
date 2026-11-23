@@ -64,7 +64,7 @@ def test_invalid_pin_generation_leaves_no_partial_pair(
         encoding="utf-8",
     )
     (tmp_path / "bsp_pins.src").touch()
-    with pytest.raises((ValueError, subprocess.CalledProcessError)):
+    with pytest.raises(helper.BspPinError):
         helper.ensure_bsp_pins(tmp_path, tmp_path)
     assert not (tmp_path / "am_bsp_pins.c").exists()
     assert not (tmp_path / "am_bsp_pins.h").exists()

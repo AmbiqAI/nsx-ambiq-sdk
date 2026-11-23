@@ -1420,7 +1420,10 @@ def stage_provider_payload(
             "run build_ambiqsuite.py to build the full train for this version before staging"
         )
 
-    bas.promote_provider_payload(train, version, sdk_root, destination_root=dest)
+    try:
+        bas.promote_provider_payload(train, version, sdk_root, destination_root=dest)
+    except bas.BspPinError as error:
+        raise IntakeVerificationError(str(error)) from error
 
     resolved_patches_dir = patches_dir if patches_dir is not None else default_patches_dir(train.train_id)
     if resolved_patches_dir.is_dir():
