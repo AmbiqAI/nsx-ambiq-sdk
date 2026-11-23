@@ -41,6 +41,11 @@ def test_verify_bsp_pin_pair_before_reusing_source_or_archives(repo_root: Path, 
     assert [p.stat().st_mtime_ns for p in (c_file, header)] == timestamps
 
     c_file.unlink()
+    helper.ensure_bsp_pins(tmp_path, bsp)
+    assert c_file.read_bytes().split() == [b"C", b"pin", b"0"]
+    assert header.stat().st_mtime_ns == timestamps[1]
+
+    c_file.unlink()
     header.write_bytes(b"H pin 14")
     destination = tmp_path / "promoted"
     destination.mkdir()
